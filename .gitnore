@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.py[cod]
+*.so
+.Python
+env/
+venv/
+.venv/
+
+# 打包文件
+dist/
+build/
+*.egg-info/
+
+# IDE 配置
+.vscode/
+.idea/
+*.swp
+
+# 日志和临时文件
+*.log
+*.tmp
+*.bak
+
+# 环境变量（不要上传你的 API Key）
+.env
+config.json
+
+# Node.js（Harness 相关）
+node_modules/
