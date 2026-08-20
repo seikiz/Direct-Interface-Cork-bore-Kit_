@@ -240,6 +240,11 @@ async function main() {
   console.log(`\n${GREEN}════════ 酒馆已就绪 ════════${RESET}`);
   console.log(`  启动：双击 ${YELLOW}start.bat${RESET}，浏览器打开 ${YELLOW}http://localhost:8000${RESET}`);
   console.log(`  数据：${YELLOW}tavern/data${RESET}（角色卡/世界书都在这里）\n`);
+  console.log(`${CYAN}🚀 酒馆快速上手（新手必看）：${RESET}`);
+  console.log(`  1. 打开 http://localhost:8000`);
+  console.log(`  2. 配模型：左下角设置(⚙) → API Connections → 选你的模型商 → 填 Key（和 DICK 同一个 Key）`);
+  console.log(`  3. 导卡：左侧头像图标(👤 或 Edit Characters) → Import Character → 选 PNG/JSON 卡文件`);
+  console.log(`  4. 开始聊：点角色卡片 → 底部输入框说话\n`);
   console.log(`${CYAN}🤝 与 DICK 卡互通：${RESET}`);
   console.log(`  - 酒馆的角色卡（PNG 嵌卡 / v1/v2/v3 JSON）DICK 直接导入`);
   console.log(`  - DICK 导出的卡是干净的酒馆 v2 格式，酒馆直接可用`);
