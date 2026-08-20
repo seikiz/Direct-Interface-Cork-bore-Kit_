@@ -138,7 +138,14 @@ class MechanicsEngine {
             val key = fo.fields["key"]?.str() ?: return@forEach
             fields[key] = fo
         }
-        val statusObj = st.fields["status"] as? J.Obj ?: J.Obj()
+        val statusObj = st.fields["status"] as? J.Obj
+        val statusRef = if (statusObj != null) statusObj else {
+            // 防御：旧快照/restore 的 state 可能没有 status 字段 → 新建并写回 st，
+            // 否则累加结果写入临时对象后丢失（表现为"每次都从0开始加"）
+            val fresh = J.Obj()
+            st.fields["status"] = fresh
+            fresh
+        }
 
         return tagRegex.replace(text) { m ->
             val key = m.groupValues[1].trim()
@@ -170,17 +177,20 @@ class MechanicsEngine {
                 val ftype = fo.fields["type"]?.str() ?: "enum"
                 if (ftype == "int") {
                     val raw = value.toIntOrNull() ?: return@replace m.value
-                    val cur = statusObj.fields[key]?.int()
-                    val delta = if (value.startsWith("+") || value.startsWith("-") && cur != null) {
-                        (cur ?: 0) + raw
+                    val cur = statusRef.fields[key]?.int()
+                    val isRel = (value.startsWith("+") || value.startsWith("-")) && raw != 0
+                    val delta = if (isRel) {
+                        // 相对增减：基于当前值（cur 为 null 时按 initial 或 0 起算，避免"从0开始"）
+                        val base = cur ?: (fo.fields["initial"] as? J.Num)?.v?.toInt() ?: 0
+                        base + raw
                     } else {
                         raw
                     }
                     val lo = fo.fields["min"]?.int() ?: 0
                     val hi = fo.fields["max"]?.int() ?: 100
-                    statusObj.fields[key] = J.Num(delta.coerceIn(lo, hi).toDouble())
+                    statusRef.fields[key] = J.Num(delta.coerceIn(lo, hi).toDouble())
                 } else {
-                    statusObj.fields[key] = J.Str(value)
+                    statusRef.fields[key] = J.Str(value)
                 }
                 ""
             }
@@ -234,7 +244,12 @@ class MechanicsEngine {
         if (stMap.isNullOrEmpty()) return
         val stCfg = cfg.fields["status"] as? J.Obj
         if (stCfg == null || stCfg.fields["enabled"]?.bool() != true) return
-        val statusObj = st.fields["status"] as? J.Obj ?: J.Obj()
+        val statusObj = st.fields["status"] as? J.Obj
+        val statusRef = if (statusObj != null) statusObj else {
+            val fresh = J.Obj()
+            st.fields["status"] = fresh
+            fresh
+        }
         val fields = LinkedHashMap<String, J.Obj>()
         (stCfg.fields["fields"] as? J.Arr)?.items?.forEach {
             val fo = it as? J.Obj ?: return@forEach
@@ -245,13 +260,19 @@ class MechanicsEngine {
             val fo = fields[k] ?: continue
             if (fo.fields["type"]?.str() == "int") {
                 val raw = v.toIntOrNull() ?: continue
-                val cur = statusObj.fields[k]?.int()
-                val next = if ((v.startsWith("+") || v.startsWith("-")) && cur != null) cur + raw else raw
+                val cur = statusRef.fields[k]?.int()
+                val isRel = (v.startsWith("+") || v.startsWith("-")) && raw != 0
+                val next = if (isRel) {
+                    val base = cur ?: (fo.fields["initial"] as? J.Num)?.v?.toInt() ?: 0
+                    base + raw
+                } else {
+                    raw
+                }
                 val lo = fo.fields["min"]?.int() ?: 0
                 val hi = fo.fields["max"]?.int() ?: 100
-                statusObj.fields[k] = J.Num(next.coerceIn(lo, hi).toDouble())
+                statusRef.fields[k] = J.Num(next.coerceIn(lo, hi).toDouble())
             } else {
-                statusObj.fields[k] = J.Str(v)
+                statusRef.fields[k] = J.Str(v)
             }
         }
     }
