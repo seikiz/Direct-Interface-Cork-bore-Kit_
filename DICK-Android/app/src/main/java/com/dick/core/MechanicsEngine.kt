@@ -68,9 +68,12 @@ class MechanicsEngine {
         }
         st.fields["status"] = status
         st.fields["flags"] = J.Obj()
+        sanitize(st)
         val snap = leafSnapshot(tree)
         if (snap != null) {
             state = snap
+            // 旧存档快照可能含 J.Null/缺失字段 → 清洗后再用（否则累加从 0 开始）
+            sanitize(state!!)
         } else if (prev != null && !reset) {
             // 无快照且非强制重置：保留已累加状态，只补缺失字段
             val merged = prev.fields["status"] as? J.Obj ?: J.Obj()
@@ -80,6 +83,7 @@ class MechanicsEngine {
             prev.fields["status"] = merged
             if (!prev.fields.containsKey("flags")) prev.fields["flags"] = J.Obj()
             state = prev
+            sanitize(state!!)
         } else {
             state = st
         }
@@ -88,6 +92,37 @@ class MechanicsEngine {
     fun snapshot(): J.Obj? {
         val s = state ?: return null
         return try { JsonS.parse(JsonS.stringify(s)) as? J.Obj } catch (_: Exception) { s }
+    }
+
+    /**
+     * 清洗机制状态：把状态里缺失/为 J.Null 的字段按配置补齐。
+     * 旧版本存档的 ms 快照里 int 字段可能是 J.Null（J.Null.int()=0 且非 null，
+     * 会导致累加每轮从 0 开始），恢复时必须清洗，否则算法再对也白搭。
+     * int → initial（缺失用 0）；enum → initial（缺失用空串）；缺失字段补上。
+     */
+    private fun sanitize(st: J.Obj) {
+        val cfg = config ?: return
+        val stCfg = cfg.fields["status"] as? J.Obj
+        if (stCfg?.fields?.get("enabled")?.bool() != true) return
+        var status = st.fields["status"] as? J.Obj
+        if (status == null) {
+            status = J.Obj()
+            st.fields["status"] = status
+        }
+        (stCfg.fields["fields"] as? J.Arr)?.items?.forEach { f ->
+            val fo = f as? J.Obj ?: return@forEach
+            val key = fo.fields["key"]?.str() ?: return@forEach
+            val cur = status.fields[key]
+            if (fo.fields["type"]?.str() == "int") {
+                if (cur !is J.Num) {
+                    status.fields[key] = J.Num((fo.fields["initial"]?.int() ?: 0).toDouble())
+                }
+            } else {
+                if (cur !is J.Str) {
+                    status.fields[key] = fo.fields["initial"] ?: J.Str("")
+                }
+            }
+        }
     }
 
     /** METTERTOOLS：按上限百分比一键填好感（percent 0-100，默认 100=满上限） */
@@ -112,6 +147,7 @@ class MechanicsEngine {
             val ms = (node.metadata as? J.Obj)?.fields?.get("ms") as? J.Obj
             if (ms != null) {
                 state = ms
+                sanitize(state!!)  // 旧快照 J.Null/缺失字段清洗
                 return
             }
             nid = node.parentId
