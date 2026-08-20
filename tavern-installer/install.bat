@@ -6,7 +6,7 @@ cd /d "%~dp0"
 echo.
 echo  ============================================
 echo   SillyTavern（酒馆）一键安装器
-echo   与 DICK 分离的独立工具 - 卡互通友军
+echo   与 DICK 分离的独立工具 - 卡互通
 echo  ============================================
 echo.
 
@@ -18,6 +18,9 @@ if errorlevel 1 (
     pause
     exit /b 1
 )
+
+rem 使用系统证书（解决 GitHub 证书验证失败）
+set NODE_OPTIONS=--use-system-ca
 
 node install.js %*
 

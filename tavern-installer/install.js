@@ -2,7 +2,7 @@
 /**
  * SillyTavern（酒馆）一键安装器 v1.0
  * ============================================================
- * 与 DICK 分离的独立工具：帮用户一键装好酒馆（互吹落地）。
+ * 与 DICK 分离的独立工具：一键装好酒馆（SillyTavern）。
  *
  * 功能：
  *   1. 检测 Node.js / npm（酒馆新版需要 Node 18+）
@@ -30,21 +30,14 @@ const ROOT = __dirname;
 const TAVERN_DIR = path.join(ROOT, "tavern");
 const TAVERN_ZIP = path.join(ROOT, "tavern.zip");
 
-// 酒馆发布源：先用 GitHub API 拿最新版资产名，失败则回退已知版本 + 镜像
+// 酒馆发布源：GitHub API 拿最新版 → 源码 zip 下载（release 分支最稳）
 const GITHUB_API = "https://api.github.com/repos/SillyTavern/SillyTavern/releases/latest";
-const FALLBACK_VERSIONS = [
-  "1.12.12", "1.12.11", "1.12.10", "1.12.9", "1.12.8", "1.12.7",
-  "1.12.6", "1.12.5", "1.12.4", "1.12.3", "1.12.2", "1.12.1", "1.12.0",
-];
 
 function releaseUrls(version) {
-  const base = `https://github.com/SillyTavern/SillyTavern/releases/download/${version}/SillyTavern-${version}.zip`;
-  return [
-    base,
-    `https://ghfast.top/${base}`,
-    `https://ghproxy.net/${base}`,
-    `https://gh-proxy.com/${base}`,
-  ];
+  // 酒馆无 release 资产，用 GitHub 自动生成的源码 zip（tag 或 release 分支）
+  const tag = `https://github.com/SillyTavern/SillyTavern/archive/refs/tags/${version}.zip`;
+  const branch = "https://github.com/SillyTavern/SillyTavern/archive/refs/heads/release.zip";
+  return [tag, branch];
 }
 
 async function resolveLatestVersion() {
@@ -130,7 +123,7 @@ async function main() {
 
   console.log(`\n${CYAN}═══════════════════════════════════════${RESET}`);
   console.log(`${CYAN}   SillyTavern（酒馆）一键安装器 v1.0${RESET}`);
-  console.log(`${CYAN}   与 DICK 分离的独立工具 · 卡互通友军${RESET}`);
+  console.log(`${CYAN}   与 DICK 分离的独立工具 · 角色卡互通${RESET}`);
   console.log(`${CYAN}═══════════════════════════════════════${RESET}\n`);
 
   // ---------- 1. Node 检测 ----------
@@ -148,40 +141,49 @@ async function main() {
   const startCmd = findStartCmd();
   if (startCmd) {
     ok(`检测到酒馆已装于 ${TAVERN_DIR}`);
-    if (onlyStart || skipDeps) {
-      info("启动酒馆…（默认端口 8000，浏览器打开 http://localhost:8000）");
-      console.log(`\n${YELLOW}启动方式（任选其一）：${RESET}`);
-      console.log(`  1. 运行 start.bat（已生成）`);
-      console.log(`  2. 进入 tavern 目录执行: npm start`);
-      console.log(`  3. 双击 tavern\\Start.bat\n`);
+    if (onlyStart) {
+      // --start：假定依赖已装好，直接启动
       startTavern();
+      return;
+    }
+    if (skipDeps) {
+      // --skip-deps：跳过装依赖，提示手动操作后退出（不自动启动，避免依赖缺失启动失败）
+      console.log(`\n${YELLOW}依赖未安装，请手动操作：${RESET}`);
+      console.log(`  1. 进入 ${path.relative(ROOT, startCmd)} 目录`);
+      console.log(`  2. 运行 npm install`);
+      console.log(`  3. 运行 npm start（或双击生成的 start.bat）\n`);
+      makeStartBat();
       return;
     }
   }
 
   // ---------- 3. 下载酒馆 ----------
   if (!fs.existsSync(TAVERN_ZIP)) {
-    info("开始下载酒馆（约 100MB，GitHub 不通自动切镜像）…");
-    // 先试 GitHub API 拿最新版本号
+    info("开始下载酒馆（约 100-200MB，GitHub 源码 zip）…");
     const latest = await resolveLatestVersion();
-    let versions = latest ? [latest, ...FALLBACK_VERSIONS.filter(v => v !== latest)] : FALLBACK_VERSIONS;
+    const versions = latest ? [latest] : [];
+    const urls = [];
+    for (const v of versions) urls.push(...releaseUrls(v));
+    // 兜底：直接试 release 分支（即使 API 不通也能下载最新稳定版）
+    if (!urls.includes("https://github.com/SillyTavern/SillyTavern/archive/refs/heads/release.zip")) {
+      urls.push("https://github.com/SillyTavern/SillyTavern/archive/refs/heads/release.zip");
+    }
     let okDl = false;
-    for (const ver of versions) {
-      for (const u of releaseUrls(ver)) {
-        try {
-          info(`下载源: ${u.slice(0, 80)}…`);
-          await download(u, TAVERN_ZIP);
-          okDl = true;
-          ok(`下载完成（版本 ${ver}）`);
-          break;
-        } catch (e) {
-          // 静默试下一个源
-        }
+    for (const u of urls) {
+      try {
+        info(`下载: ${u.slice(0, 70)}…`);
+        await download(u, TAVERN_ZIP);
+        const sz = fs.statSync(TAVERN_ZIP).size;
+        if (sz < 1000000) { warn(`文件过小（${(sz/1024/1024).toFixed(1)}MB），换源`); continue; }
+        okDl = true;
+        ok(`下载完成（${(sz/1024/1024).toFixed(1)}MB）`);
+        break;
+      } catch (e) {
+        warn(`该源失败: ${e.message}`);
       }
-      if (okDl) break;
     }
     if (!okDl) {
-      err("所有下载源都失败。请检查网络，或手动下载酒馆 zip 放到本目录 tavern.zip");
+      err("所有下载源都失败。可手动下载酒馆 zip（GitHub → Code → Download ZIP）放到本目录 tavern.zip 再运行。");
       process.exit(1);
     }
   } else {
@@ -223,7 +225,7 @@ async function main() {
   console.log(`${CYAN}🤝 与 DICK 卡互通：${RESET}`);
   console.log(`  - 酒馆的角色卡（PNG 嵌卡 / v1/v2/v3 JSON）DICK 直接导入`);
   console.log(`  - DICK 导出的卡是干净的酒馆 v2 格式，酒馆直接可用`);
-  console.log(`  - 同一张卡，两个前端都能玩——我们是一个阵营。\n`);
+  console.log(`  - 同一张卡，两个前端都能用。\n`);
   startTavern();
 }
 
