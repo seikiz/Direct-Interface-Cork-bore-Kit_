@@ -12,7 +12,7 @@ hiddenimports = ['openai', 'customtkinter', 'PIL', 'requests', 'flask', 'openpyx
                  'html.parser', 'html', 'urllib.parse', 'asyncio', 'random', 'importlib.util',
                  'webview', 'webview.platforms.edgechromium', 'webview.platforms.winforms',
                  'clr_loader', 'pythonnet', 'bottle',
-                 'voice_engine', 'plugins.jp_patch_plugin',
+                 'voice_engine', 'plugins.jp_patch_plugin', 'voicebank_importer',
                  # UTAU 进程内合成（用户无需安装 utau_env）
                  'putao', 'putao.core', 'putao.utau', 'putao.model', 'putao.exceptions', 'putao.utils',
                  'jaconv', 'mido', 'pykakasi', 'pypinyin', 'pydub', 'numpy', 'plugins.utau_speak']

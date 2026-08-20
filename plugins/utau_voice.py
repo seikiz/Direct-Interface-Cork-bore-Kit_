@@ -199,7 +199,76 @@ class UtauVoicePlugin(PluginBase):
             return self._speak(args), False
         if command in ("voicecheck", "语音检测"):
             return self._voice_check(), False
+        if command in ("voicebank", "导入声库"):
+            return self._import_voicebank(args), False
+        if command in ("voicebanks", "声库列表"):
+            return self._list_voicebanks(), False
         return None
+
+    def _vb_root(self):
+        base = app_paths.get_base_dir()
+        root = os.path.join(base, "utau_voicebanks")
+        os.makedirs(root, exist_ok=True)
+        return root
+
+    def _import_voicebank(self, arg):
+        """/voicebank <路径>：导入声库包；无参则扫描 Downloads/Desktop/DICK 根目录"""
+        try:
+            from voicebank_importer import import_voicebank, scan_for_voicebanks, list_voicebanks
+        except Exception as e:
+            return "⚠️ 声库导入器加载失败：" + str(e)[:100]
+        root = self._vb_root()
+        # 指定文件
+        if arg and arg.strip():
+            path = arg.strip().strip('"').strip("'")
+            if not os.path.isabs(path):
+                path = os.path.join(app_paths.get_base_dir(), path)
+            ok, msg, name = import_voicebank(path, root)
+            if ok:
+                self.set_setting("voicebank", os.path.join("utau_voicebanks", name))
+            return ("✅ " + msg) if ok else ("⚠️ " + msg)
+        # 自动扫描
+        base = app_paths.get_base_dir()
+        home = os.path.expanduser("~")
+        scan_dirs = [base,
+                     os.path.join(home, "Downloads"),
+                     os.path.join(home, "Desktop")]
+        cands = scan_for_voicebanks(scan_dirs)
+        if not cands:
+            exist = list_voicebanks(root)
+            if exist:
+                return "没有发现新的声库包。已导入：" + "、".join(exist)
+            return "未发现声库包。把 zip/7z/rar 放到 DICK 目录、下载文件夹或桌面，再 /voicebank 导入"
+        lines = ["🔍 发现声库包，尝试导入："]
+        done = 0
+        for c in cands:
+            ok, msg, name = import_voicebank(c, root)
+            if ok:
+                done += 1
+                lines.append("  ✅ " + msg)
+            else:
+                lines.append("  ⚠️ " + msg)
+        if done:
+            self.set_setting("voicebank", os.path.join("utau_voicebanks",
+                            list_voicebanks(root)[-1]))
+        lines.append("共导入 " + str(done) + " 个。声库列表：/voicebanks")
+        return "\n".join(lines)
+
+    def _list_voicebanks(self):
+        try:
+            from voicebank_importer import list_voicebanks
+        except Exception:
+            return "⚠️ 导入器不可用"
+        lst = list_voicebanks(self._vb_root())
+        if not lst:
+            return "还没有声库。把 zip/7z/rar 放进来用 /voicebank 导入"
+        cur = str(self.get_setting("voicebank", "") or "")
+        lines = ["🎤 已导入声库："]
+        for n in lst:
+            mark = " ←当前" if ("voicebanks" + os.sep + n) in cur or n in cur else ""
+            lines.append("  " + n + mark)
+        lines.append("切换：在设置里把「声库目录」填 utau_voicebanks\\<名字>")
+        return "\n".join(lines)
 
     def _voice_check(self):
         """日语系统/语音环境冲突检测报告"""
