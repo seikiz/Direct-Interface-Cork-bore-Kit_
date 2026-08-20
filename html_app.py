@@ -3511,7 +3511,11 @@ class HtmlApp:
             if os.path.exists(cached):
                 p._play(cached)
                 return {"ok": True, "cached": True}
-            out, _eng = p._engine().synthesize(text[:200], cache, pitch_mode="auto") if hasattr(p, "_engine") else (None, None)
+            # 合成前预处理：中文 → 日文（走日文补丁翻译，日文声库才能念）
+            final_text = text[:200]
+            if hasattr(p, "_prepare_text"):
+                final_text, _tr = p._prepare_text(final_text, cache)
+            out, _eng = p._engine().synthesize(final_text, cache, pitch_mode="auto") if hasattr(p, "_engine") else (None, None)
             if out and os.path.exists(out):
                 try:
                     import shutil

@@ -56,8 +56,54 @@ class UtauVoicePlugin(PluginBase):
          "type": "int", "default": 3},
         {"key": "hanasu_speed", "label": "HANASU 语速（0.5-2.0，1.0=正常）",
          "type": "text", "default": "1.0"},
+        {"key": "auto_ja", "label": "合成前中译日（中文正文自动翻译成日文再朗读，日文声库专用）",
+         "type": "bool", "default": True},
         {"key": "auto", "label": "AI 回复后自动朗读", "type": "bool", "default": False},
     ]
+
+    def _jp_plugin(self):
+        """找日文补丁插件（提供 LLM 翻译）"""
+        try:
+            if self.plugin_manager:
+                return self.plugin_manager.get_plugin("日文补丁")
+        except Exception:
+            pass
+        return None
+
+    def _is_japanese(self, text):
+        import re
+        return bool(re.search(r'[\u3040-\u30ff]', text or ""))
+
+    def _prepare_text(self, text, cache_dir):
+        """合成前预处理：中文 → 日文（走日文补丁 LLM 翻译，带文本 hash 缓存）。
+        已是日文 / 翻译不可用 / 关闭开关 → 原样返回。返回 (最终文本, 是否翻译过)"""
+        if not self.get_setting("auto_ja", True):
+            return text, False
+        if self._is_japanese(text):
+            return text, False
+        jp = self._jp_plugin()
+        if jp is None or not hasattr(jp, "_translate"):
+            return text, False
+        # 翻译缓存：tts_cache/ja_<hash>.txt
+        try:
+            import hashlib
+            h = hashlib.md5(text.encode("utf-8")).hexdigest()[:16]
+            os.makedirs(cache_dir, exist_ok=True)
+            cf = os.path.join(cache_dir, "ja_" + h + ".txt")
+            if os.path.exists(cf):
+                with open(cf, encoding="utf-8") as f:
+                    return f.read().strip(), True
+            translated = jp._translate(text, "jp")
+            if not translated or translated.startswith("⚠️"):
+                return text, False
+            try:
+                with open(cf, "w", encoding="utf-8") as f:
+                    f.write(translated)
+            except Exception:
+                pass
+            return translated, True
+        except Exception:
+            return text, False
 
     def _engine(self):
         if VoiceEngine is None:
@@ -93,12 +139,18 @@ class UtauVoicePlugin(PluginBase):
             return "⚠️ voice_engine 加载失败（缺依赖？）"
         base = app_paths.get_base_dir()
         cache = os.path.join(base, "tts_cache")
+        # 合成前预处理：中文 → 日文（日文声库才能念），带缓存
+        final_text, translated = self._prepare_text(text, cache)
+        if translated and final_text != text:
+            note = "🌐日译 "
+        else:
+            note = ""
         try:
-            out, eng_name = ve.synthesize(text, cache, pitch_mode="auto")  # 语气分析，避免死气沉沉
+            out, eng_name = ve.synthesize(final_text, cache, pitch_mode="auto")  # 语气分析，避免死气沉沉
         except Exception as e:
             return "⚠️ 语音合成失败：" + str(e)[:150]
         self._play(out)
-        return "🗣️(" + eng_name + ") " + text
+        return "🗣️" + note + "(" + eng_name + ") " + text
 
     def _play(self, path):
         if not _pygame_ok():
