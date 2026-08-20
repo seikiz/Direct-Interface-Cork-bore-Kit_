@@ -1,20 +1,23 @@
 # ============================================================
-#   utau_voice.py - UTAU 语音合成（/speak）
+#   utau_voice.py - DICK 语音插件（UTAU + HANASU 双引擎）
 #
 #   UTAU：每个角色可挂专属声库，纯本地离线合成（putao 纯 Python 引擎）。
-#   需要：
-#     - 独立 Python 3.11 环境（utau_env）装有 putao + pypinyin
-#     - 一个 UTAU 声库目录（已用 `putao extract 声库.zip -t 目录` 解压）
+#   HANASU：VOICEVOX 本地说话引擎（HTTP :50021），自然说话。
+#
+#   傻瓜化：设置里选「引擎」即可——utau / hanasu / auto（auto 优先 HANASU，未就绪回落 UTAU）。
 #   命令：/speak <文本> 合成并播放；设置里可开「AI 回复后自动朗读」
 # ============================================================
 
 import os
-import subprocess
 import threading
-import time
 
 import app_paths
 from plugin_base import PluginBase
+
+try:
+    from voice_engine import VoiceEngine, UtauEngine, HanasuEngine
+except Exception:
+    VoiceEngine = None
 
 
 def _pygame_ok():
@@ -27,8 +30,8 @@ def _pygame_ok():
 
 class UtauVoicePlugin(PluginBase):
     name = "UTAU 语音"
-    version = "0.1"
-    description = "UTAU 声库合成语音：/speak <文本>（需 utau_env + putao + 声库）"
+    version = "0.2"
+    description = "语音引擎：UTAU（唱歌合成）+ HANASU（VOICEVOX 说话）双引擎，/speak <文本> 朗读（可自动朗读）"
     author = "seiki"
     enabled = False
 
@@ -37,50 +40,65 @@ class UtauVoicePlugin(PluginBase):
     ]
 
     settings_schema = [
+        {"key": "engine", "label": "引擎（utau=UTAU / hanasu=VOICEVOX说话 / auto=自动优先HANASU）",
+         "type": "text", "default": "auto"},
         {"key": "python", "label": "utau 环境 python 路径（相对 DICK 根目录或绝对）",
          "type": "text", "default": "utau_env\\Scripts\\python.exe"},
-        {"key": "voicebank", "label": "声库目录（已用 putao extract 解压）",
+        {"key": "voicebank", "label": "UTAU 声库目录（已用 putao extract 解压）",
          "type": "text", "default": "utau_voicebanks\\默认声库"},
-        {"key": "pitch", "label": "音高（0-127，60=中音，男低 48 女高 64）",
+        {"key": "pitch", "label": "UTAU 音高（0-127，60=中音，男低 48 女高 64）",
          "type": "int", "default": 60},
-        {"key": "duration", "label": "每音素时长（毫秒，300≈常速 200≈急促）",
+        {"key": "duration", "label": "UTAU 每音素时长（毫秒，300≈常速 200≈急促）",
          "type": "int", "default": 300},
+        {"key": "hanasu_url", "label": "HANASU（VOICEVOX）地址（默认 http://127.0.0.1:50021）",
+         "type": "text", "default": "http://127.0.0.1:50021"},
+        {"key": "hanasu_speaker", "label": "HANASU 音色 ID（VOICEVOX 音色编号，如 3）",
+         "type": "int", "default": 3},
+        {"key": "hanasu_speed", "label": "HANASU 语速（0.5-2.0，1.0=正常）",
+         "type": "text", "default": "1.0"},
         {"key": "auto", "label": "AI 回复后自动朗读", "type": "bool", "default": False},
     ]
+
+    def _engine(self):
+        if VoiceEngine is None:
+            return None
+        base = app_paths.get_base_dir()
+        eng = str(self.get_setting("engine", "auto") or "auto").strip().lower()
+        utau = UtauEngine(
+            python=str(self.get_setting("python", "utau_env\\Scripts\\python.exe") or ""),
+            voicebank=str(self.get_setting("voicebank", "utau_voicebanks\\默认声库") or ""),
+            pitch=int(self.get_setting("pitch", 60) or 60),
+            duration=int(self.get_setting("duration", 300) or 300),
+            base_dir=base,
+        )
+        try:
+            spd = float(str(self.get_setting("hanasu_speed", "1.0") or "1.0"))
+        except (TypeError, ValueError):
+            spd = 1.0
+        hanasu = HanasuEngine(
+            url=str(self.get_setting("hanasu_url", "http://127.0.0.1:50021") or ""),
+            speaker=int(self.get_setting("hanasu_speaker", 3) or 3),
+            speed=spd,
+            base_dir=base,
+        )
+        return VoiceEngine(engine=eng if eng in ("utau", "hanasu", "auto") else "auto",
+                           utau=utau, hanasu=hanasu)
 
     def _speak(self, text):
         text = (text or "").strip()
         if not text:
             return "说点啥？/speak <文本>"
+        ve = self._engine()
+        if ve is None:
+            return "⚠️ voice_engine 加载失败（缺依赖？）"
         base = app_paths.get_base_dir()
-        py = str(self.get_setting("python", "utau_env\\Scripts\\python.exe") or "")
-        vb = str(self.get_setting("voicebank", "utau_voicebanks\\默认声库") or "")
-        if not os.path.isabs(py):
-            py = os.path.join(base, py)
-        if not os.path.isabs(vb):
-            vb = os.path.join(base, vb)
-        if not os.path.exists(py):
-            return "⚠️ 找不到 utau 环境：" + py + "（需 Python 3.11 venv 装 putao）"
-        if not os.path.exists(vb):
-            return "⚠️ 找不到声库：" + vb + "（放一个 UTAU 声库目录）"
-        helper = os.path.join(os.path.dirname(os.path.abspath(__file__)), "utau_speak.py")
         cache = os.path.join(base, "tts_cache")
-        os.makedirs(cache, exist_ok=True)
-        out = os.path.join(cache, "utau_" + str(int(time.time() * 1000)) + ".wav")
-        pitch = int(self.get_setting("pitch", 60) or 60)
-        duration = int(self.get_setting("duration", 300) or 300)
         try:
-            r = subprocess.run(
-                [py, helper, vb, str(pitch), str(duration), text, out],
-                capture_output=True, timeout=180,
-                encoding="utf-8", errors="replace",
-            )
+            out, eng_name = ve.synthesize(text, cache)
         except Exception as e:
-            return "⚠️ UTAU 合成失败：" + str(e)[:120]
-        if r.returncode != 0 or not os.path.exists(out):
-            return "⚠️ 合成失败：" + ((r.stdout or "") + (r.stderr or ""))[-200:]
+            return "⚠️ 语音合成失败：" + str(e)[:150]
         self._play(out)
-        return "🗣️ " + text
+        return "🗣️(" + eng_name + ") " + text
 
     def _play(self, path):
         if not _pygame_ok():
