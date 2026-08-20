@@ -5,7 +5,7 @@ datas = [('web', 'web'), ('plugins', 'plugins'), ('saves', 'saves'), ('worlds', 
          ('prompt_presets', 'prompt_presets'), ('personas', 'personas'), ('quick_replies.json', '.'),
          ('web_fetch.py', '.'), ('stock_analysis.py', '.'), ('doc_layout.py', '.'),
          ('i18n.py', '.'), ('app_paths.py', '.'), ('card_compat.py', '.'),
-         ('PLUGIN_DEV.md', '.'), ('状态变量说明.md', '.'),
+         ('PLUGIN_DEV.md', '.'), ('状态变量说明.md', '.'), ('声库安装说明.txt', '.'),
          ('financial_history.json', '.')]
 binaries = []
 hiddenimports = ['openai', 'customtkinter', 'PIL', 'requests', 'flask', 'openpyxl', 'docx', 'edge_tts', 'pygame',
