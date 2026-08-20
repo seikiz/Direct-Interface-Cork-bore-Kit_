@@ -9,7 +9,7 @@
  *   2. 镜像下载酒馆（GitHub 直连不通时自动走镜像）
  *   3. 解压到 tavern/ 目录
  *   4. 安装依赖（npm install）
- *   5. 启动酒馆 + 提示卡互通（DICK 与酒馆角色卡通用）
+ *   5. 启动酒馆 + 提示角色卡互通（含转换边界说明）
  *
  * 用法：
  *   node install.js             完整安装
@@ -246,8 +246,9 @@ async function main() {
   console.log(`  3. 导卡：左侧头像图标(👤 或 Edit Characters) → Import Character → 选 PNG/JSON 卡文件`);
   console.log(`  4. 开始聊：点角色卡片 → 底部输入框说话\n`);
   console.log(`${CYAN}🤝 与 DICK 卡互通：${RESET}`);
-  console.log(`  - 酒馆的角色卡（PNG 嵌卡 / v1/v2/v3 JSON）DICK 直接导入`);
-  console.log(`  - DICK 导出的卡是干净的酒馆 v2 格式，酒馆直接可用`);
+  console.log(`  - 酒馆的角色卡（PNG 嵌卡 / v1/v2/v3 JSON）DICK 可直接导入`);
+  console.log(`  - DICK 导出的卡是干净的酒馆 v2 格式，酒馆可直接用`);
+  console.log(`  - 边界：保留人设与世界书；DICK 的树状记忆/机制/战斗转酒馆时会剥离（格式装不下）`);
   console.log(`  - 同一张卡，两个前端都能用。\n`);
   startTavern();
 }

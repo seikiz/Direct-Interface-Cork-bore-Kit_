@@ -77,4 +77,7 @@ _mock/
 /dskin/
 /.dsh-vision-router/
 
+# Cloudflare Workers 本地开发目录
+/_wf/
+
 workshop_data/
