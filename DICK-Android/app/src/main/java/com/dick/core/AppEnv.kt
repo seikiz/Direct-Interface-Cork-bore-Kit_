@@ -12,6 +12,7 @@ object AppEnv {
     fun savesDir(): File = dir("saves")
     fun worldsDir(): File = dir("worlds")
     fun memoryDir(): File = dir("memory")
+    fun mechStateDir(): File = dir("mech_state")  // 第三个文件夹：机制状态实时 JSON（不依赖树快照）
     fun dbFile(): File = File(dataRoot, "policy_db.json")
     fun configFile(): File = File(dataRoot, "config.json")
 }

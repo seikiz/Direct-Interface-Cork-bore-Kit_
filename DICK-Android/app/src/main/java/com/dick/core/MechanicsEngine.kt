@@ -4,6 +4,7 @@ import kotlin.random.Random
 import kotlin.math.ceil
 import kotlin.math.floor
 import kotlin.math.abs
+import java.io.File
 
 /**
  * 机制卡引擎（好感度 / 状态 / 事件）——与桌面版 DICK_core.py 的机制引擎对齐。
@@ -13,7 +14,11 @@ import kotlin.math.abs
  *   [心情:开心]             枚举状态直接赋值
  *   [体力:90] / [体力:-10]   整数状态：绝对值或相对增减（± 前缀）
  *
- * 状态随树节点快照（metadata["ms"]）：回溯到哪一节点，机制就恢复到那一刻。
+ * 分层状态存储（第三个文件夹 mech_state/）：
+ *   里层：stripTags/applyEffect 结算累加；
+ *   外层：泛用变量检测存储——每次结算后实时写 JSON（persistState），
+ *         启动/恢复时优先从 JSON 读（loadState），不再依赖树节点快照。
+ *         这根治"每次从0加"：状态永远落盘最新值，下次直接续算。
  */
 class MechanicsEngine {
     var config: J.Obj? = null
@@ -21,6 +26,9 @@ class MechanicsEngine {
     var pendingEvent: J.Obj? = null
     var battleCfg: J.Obj? = null
     var playerCfg: J.Obj? = null
+
+    /** 状态 JSON 文件（由 App.kt 按角色注入；不注入则不持久化，测试时无文件可用） */
+    var stateFile: File? = null
 
     /** 上次加载的配置签名：reload 时检测配置变化，做字段级对齐（泛用化） */
     private var lastCfgSig: String? = null
@@ -175,7 +183,9 @@ class MechanicsEngine {
         st.fields["status"] = status
         st.fields["flags"] = J.Obj()
         sanitize(st)
-        val snap = if (forceInitial) null else leafSnapshot(tree)
+        // 泛用变量存储优先：第三个文件夹 JSON 比树快照新、可靠（根治"从0加"）
+        val stored = if (forceInitial) null else loadState()
+        val snap = if (stored != null) stored else if (forceInitial) null else leafSnapshot(tree)
         if (snap != null) {
             state = snap
             // 旧存档快照可能含 J.Null/缺失字段 → 清洗后再用（否则累加从 0 开始）
@@ -203,6 +213,38 @@ class MechanicsEngine {
         val s = state ?: return null
         return try { JsonS.parse(JsonS.stringify(s)) as? J.Obj } catch (_: Exception) { s }
     }
+
+    // ---------- 泛用变量检测存储（第三个文件夹 mech_state/） ----------
+    /** 外层存储：把当前机制状态实时写入 JSON（每次结算后调用，值变了才写） */
+    fun persistState() {
+        val file = stateFile ?: return
+        val s = state ?: return
+        try {
+            file.parentFile?.mkdirs()
+            val json = JsonS.stringify(s, pretty = true)
+            // 泛用检测：内容没变不写盘（避免每轮空写）
+            val old = if (file.exists()) file.readText(Charsets.UTF_8) else ""
+            if (old != json) file.writeText(json, Charsets.UTF_8)
+        } catch (_: Exception) {
+        }
+    }
+
+    /** 外层存储：优先从 JSON 恢复状态（比树快照新、可靠）；文件不存在返回 null */
+    fun loadState(): J.Obj? {
+        val file = stateFile ?: return null
+        return try {
+            if (!file.exists()) null
+            else (JsonS.parse(file.readText(Charsets.UTF_8)) as? J.Obj)?.also { sanitize(it) }
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    /** 泛用变量检测：读当前某个 int 状态值（外部 UI/脚本用，J.Null 返回 null 而非 0） */
+    fun getIntStatus(key: String): Int? = (state?.fields?.get("status") as? J.Obj)?.fields?.get(key)?.let { (it as? J.Num)?.v?.toInt() }
+
+    /** 泛用变量检测：读当前某个 enum 状态值 */
+    fun getStrStatus(key: String): String? = (state?.fields?.get("status") as? J.Obj)?.fields?.get(key)?.str()
 
     /**
      * 清洗机制状态：把状态里缺失/为 J.Null 的字段按配置补齐。
@@ -329,8 +371,10 @@ class MechanicsEngine {
                 val ftype = fo.fields["type"]?.str() ?: "enum"
                 if (ftype == "int") {
                     val raw = value.toIntOrNull() ?: return@replace m.value
-                    // 好感度同规格：cur 永远有值（reload 写 J.Num；restore 旧快照缺字段时兜底 initial）
-                    val cur = statusRef.fields[key]?.int() ?: (fo.fields["initial"]?.int() ?: 0)
+                    // 关键：只有 J.Num 才算"有当前值"。J.Null 不能走 .int()（返回0非null，
+                    // 会让 ?: 兜底失效 → 每轮从0加），必须显式类型判断
+                    val cur = (statusRef.fields[key] as? J.Num)?.v?.toInt()
+                        ?: (fo.fields["initial"]?.int() ?: 0)
                     val next = if ((value.startsWith("+") || value.startsWith("-")) && raw != 0) {
                         cur + raw
                     } else {
@@ -410,8 +454,9 @@ class MechanicsEngine {
             val fo = fields[k] ?: continue
             if (fo.fields["type"]?.str() == "int") {
                 val raw = v.toIntOrNull() ?: continue
-                // 好感度同规格：cur 永远有值
-                val cur = statusRef.fields[k]?.int() ?: (fo.fields["initial"]?.int() ?: 0)
+                // 关键：只有 J.Num 才算"有当前值"（J.Null 的 .int()=0 会让兜底失效 → 从0加）
+                val cur = (statusRef.fields[k] as? J.Num)?.v?.toInt()
+                    ?: (fo.fields["initial"]?.int() ?: 0)
                 val next = if ((v.startsWith("+") || v.startsWith("-")) && raw != 0) cur + raw else raw
                 val lo = fo.fields["min"]?.int() ?: 0
                 val hi = fo.fields["max"]?.int() ?: 100

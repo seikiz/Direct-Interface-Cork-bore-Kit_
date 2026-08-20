@@ -614,6 +614,15 @@ val wsExportLauncher = rememberLauncherForActivityResult(ActivityResultContracts
         return File(AppEnv.savesDir(), "_tree_" + safe + ".json")
     }
 
+    /** 第三个文件夹：机制状态实时 JSON（mech_state/），与聊天树同角色命名，互不依赖 */
+    fun stateFileFor(): File {
+        val name = if (selectedRoles.size == 1) selectedRoles.first()
+            else if (selectedRoles.size > 1) "group"
+            else "default"
+        val safe = name.replace('\\', '_').replace('/', '_').replace(':', '_').replace('*', '_').replace('?', '_').replace('<', '_').replace('>', '_').replace('|', '_')
+        return File(AppEnv.mechStateDir(), "_mech_" + safe + ".json")
+    }
+
     // ---------- 玩家角色卡（结构化） ----------
     fun personaFields(): Map<String, String> {
         // persona 存 JSON：与角色卡同标准（legacy/appearance/personality/background/speech/first_mes/mes_example/notes）
@@ -755,6 +764,7 @@ val wsExportLauncher = rememberLauncherForActivityResult(ActivityResultContracts
     fun reloadMech() {
         // 角色配置保存后重新加载：泛用化 —— 引擎检测配置签名变化，自动字段级对齐
         // （新增字段补 initial、定义变了的字段重置、删掉的字段移除、没变的保留累加）
+        mech.stateFile = stateFileFor()  // 确保第三个文件夹状态文件就位
         mech.reload(mechConfig(), tree, reset = true)
         mech.battleCfg = mechBattleConfig()
         mech.playerCfg = playerBattleConfig()
@@ -772,6 +782,7 @@ val wsExportLauncher = rememberLauncherForActivityResult(ActivityResultContracts
             saveTree()
         } catch (_: Exception) {
         }
+        mech.persistState()  // 同时落第三个文件夹 JSON（与树双写，双保险）
         mechTick++
     }
 
@@ -1100,6 +1111,7 @@ val wsExportLauncher = rememberLauncherForActivityResult(ActivityResultContracts
         }
         // 机制/战斗初始化（防御：任何数据异常不得阻断启动）
         try {
+            mech.stateFile = stateFileFor()  // 第三个文件夹：机制状态 JSON（与树解耦）
             mech.reload(mechConfig(), tree, reset = true)
             mech.battleCfg = mechBattleConfig()
         mech.playerCfg = playerBattleConfig()
@@ -1403,6 +1415,8 @@ val wsExportLauncher = rememberLauncherForActivityResult(ActivityResultContracts
                     val parsed = parseSpeaker(reply, selectedRoles)
                     var finalReply = parsed.second
                     val stripped = mech.stripTags(parsed.second, apply = true)
+                    // 里层结算完成 → 外层泛用变量检测存储：实时落盘第三个文件夹 JSON
+                    mech.persistState()
                     // 正则管道（ai 作用域）：标签剥离后、写入树前应用
                     val regexed = applyRegex(stripped, "ai")
                     if (mech.state != null) {
@@ -2362,6 +2376,7 @@ fun wsRefreshLocal() {
                                             try { TreeStore.load(tf).historyTree } catch (_: Exception) { ChatTree().toData() }
                                         } else ChatTree().toData())
                                         tree.fixLeaf()
+                                        mech.stateFile = stateFileFor()  // 换角色 → 换第三个文件夹状态文件
                                         mech.resetConfigTracking()  // 换卡 = 新配置源：不触发字段级对齐（保留新角色累加）
                                         mech.reload(mechConfig(), tree, reset = true)
                                         mech.battleCfg = mechBattleConfig()
