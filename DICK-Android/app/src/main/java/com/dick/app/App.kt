@@ -753,13 +753,14 @@ val wsExportLauncher = rememberLauncherForActivityResult(ActivityResultContracts
     }
 
     fun reloadMech() {
-        // 角色配置保存后重新加载：与桌面版一致（改配置 = 新会话基准，重置初始值）
-        mech.reload(mechConfig(), tree, reset = true, forceInitial = true)
+        // 角色配置保存后重新加载：泛用化 —— 引擎检测配置签名变化，自动字段级对齐
+        // （新增字段补 initial、定义变了的字段重置、删掉的字段移除、没变的保留累加）
+        mech.reload(mechConfig(), tree, reset = true)
         mech.battleCfg = mechBattleConfig()
         mech.playerCfg = playerBattleConfig()
         mech.playerCfg = playerBattleConfig()
         mech.initBattle()
-        // 改配置 = 新基准：把重置后的状态写回当前叶子快照（并落盘），
+        // 改配置 = 新基准：把对齐后的状态写回当前叶子快照（并落盘），
         // 否则下次启动/回溯会从旧快照恢复出旧值（如新增字段 initial=3 却显示旧快照的 2）
         try {
             val leaf = tree.getNode(tree.currentLeafId)
@@ -2361,6 +2362,7 @@ fun wsRefreshLocal() {
                                             try { TreeStore.load(tf).historyTree } catch (_: Exception) { ChatTree().toData() }
                                         } else ChatTree().toData())
                                         tree.fixLeaf()
+                                        mech.resetConfigTracking()  // 换卡 = 新配置源：不触发字段级对齐（保留新角色累加）
                                         mech.reload(mechConfig(), tree, reset = true)
                                         mech.battleCfg = mechBattleConfig()
         mech.playerCfg = playerBattleConfig()

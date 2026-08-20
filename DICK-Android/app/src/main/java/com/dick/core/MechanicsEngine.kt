@@ -22,6 +22,9 @@ class MechanicsEngine {
     var battleCfg: J.Obj? = null
     var playerCfg: J.Obj? = null
 
+    /** 上次加载的配置签名：reload 时检测配置变化，做字段级对齐（泛用化） */
+    private var lastCfgSig: String? = null
+
     companion object {
         const val BATTLE_LEGEND_CHANCE = 0.00001
     }
@@ -31,18 +34,118 @@ class MechanicsEngine {
 
     private val tagRegex = Regex("\\[([^\\[\\]:：]+?)\\s*[:：]\\s*([^\\[\\]]+?)\\]")
 
+    /** 配置关键签名：只取影响状态的字段（好感度 + status 字段定义），事件/正则等不影响状态结构 */
+    private fun configSignature(cfg: J.Obj?): String {
+        if (cfg == null) return ""
+        val sb = StringBuilder()
+        (cfg.fields["affection"] as? J.Obj)?.let { aff ->
+            sb.append("aff|").append(aff.fields["enabled"]).append('|')
+                .append(aff.fields["initial"]).append('|')
+                .append(aff.fields["min"]).append('|')
+                .append(aff.fields["max"]).append(';')
+        }
+        val stCfg = cfg.fields["status"] as? J.Obj
+        if (stCfg?.fields?.get("enabled")?.bool() == true) {
+            (stCfg.fields["fields"] as? J.Arr)?.items?.forEach { f ->
+                val fo = f as? J.Obj ?: return@forEach
+                val key = fo.fields["key"]?.str() ?: return@forEach
+                sb.append(key).append('|')
+                    .append(fo.fields["type"]).append('|')
+                    .append(fo.fields["initial"]).append('|')
+                    .append(fo.fields["min"]).append('|')
+                    .append(fo.fields["max"]).append('|')
+                    .append(fo.fields["options"]).append(';')
+            }
+        }
+        return sb.toString()
+    }
+
+    /** 两个字段定义是否不同（type/initial/min/max/options 任一变化） */
+    private fun fieldDefChanged(a: J.Obj, b: J.Obj): Boolean {
+        fun s(o: J.Obj, k: String) = o.fields[k]?.let { JsonS.stringify(it) } ?: ""
+        return s(a, "type") != s(b, "type") ||
+            s(a, "initial") != s(b, "initial") ||
+            s(a, "min") != s(b, "min") ||
+            s(a, "max") != s(b, "max") ||
+            s(a, "options") != s(b, "options")
+    }
+
+    private fun fieldMapOf(cfg: J.Obj?): LinkedHashMap<String, J.Obj> {
+        val m = LinkedHashMap<String, J.Obj>()
+        val stCfg = cfg?.fields?.get("status") as? J.Obj
+        if (stCfg?.fields?.get("enabled")?.bool() == true) {
+            (stCfg.fields["fields"] as? J.Arr)?.items?.forEach { f ->
+                val fo = f as? J.Obj ?: return@forEach
+                val key = fo.fields["key"]?.str() ?: return@forEach
+                m[key] = fo
+            }
+        }
+        return m
+    }
+
+    /**
+     * 配置变化后的字段级对齐（泛用化，任何入口生效）：
+     *  - 新增字段（旧配置没有）→ 按新 initial 补齐
+     *  - 字段定义变化（initial/type/min/max/options 任一变了）→ 重置为新 initial
+     *  - 删除字段（新配置没有）→ 从状态移除
+     *  - 未变化字段 → 保留当前值（累加不清零）
+     */
+    private fun reconcileWithConfig(oldCfg: J.Obj?, newCfg: J.Obj, st: J.Obj) {
+        // 好感度
+        val oldAff = oldCfg?.fields?.get("affection") as? J.Obj
+        val newAff = newCfg.fields["affection"] as? J.Obj
+        if (newAff != null &&
+            (oldAff == null || fieldDefChanged(oldAff, newAff) || newAff.fields["enabled"]?.bool() != oldAff.fields["enabled"]?.bool())
+        ) {
+            val lo = newAff.fields["min"]?.int() ?: 0
+            val hi = newAff.fields["max"]?.int() ?: 100
+            st.fields["affection"] = J.Num(((newAff.fields["initial"]?.int() ?: 50).coerceIn(lo, hi)).toDouble())
+        }
+        // status 字段
+        val oldFields = fieldMapOf(oldCfg)
+        val newFields = fieldMapOf(newCfg)
+        if (newFields.isEmpty() && oldFields.isNotEmpty()) return  // status 整体被关：交给 sanitize/重建
+        var status = st.fields["status"] as? J.Obj
+        if (status == null) {
+            status = J.Obj()
+            st.fields["status"] = status
+        }
+        for ((key, fo) in newFields) {
+            val oldFo = oldFields[key]
+            if (oldFo == null || fieldDefChanged(oldFo, fo)) {
+                // 新增或定义变化 → 按新 initial 重置（int 缺失用 0，enum 缺失用空串）
+                status.fields[key] = if (fo.fields["type"]?.str() == "int") {
+                    J.Num((fo.fields["initial"]?.int() ?: 0).toDouble())
+                } else {
+                    fo.fields["initial"] ?: J.Str("")
+                }
+            }
+        }
+        for (key in oldFields.keys) {
+            if (key !in newFields) status.fields.remove(key)  // 配置删掉的字段 → 清除
+        }
+        sanitize(st)
+    }
+
+    /** 切角色/换卡 = 新配置源：清除配置追踪，reload 视为首次加载（不触发字段级对齐） */
+    fun resetConfigTracking() {
+        lastCfgSig = null
+    }
+
     // ---------- 初始化 / 恢复 ----------
     /**
      * 重载机制配置。reset=true（切角色/新会话）：无快照用 initial；
      * reset=false（回溯/续聊兜底）：无快照时保留已累加状态（int 累加不清零）。
-     * forceInitial=true（改配置保存）：无视树快照，一律用配置 initial 重建——
-     * 否则旧快照里同名字段（旧值）会覆盖新配置的 initial（如新增"敏感度" initial=3
-     * 却显示旧快照的 2）。
+     * forceInitial=true：无视树快照，一律用配置 initial 重建（显式全量重置）。
+     * 泛用化：进程内同一配置源变化（未调 resetConfigTracking 且签名不同）→ 自动字段级对齐。
      */
     fun reload(cfg: J.Obj?, tree: ChatTree, reset: Boolean = false, forceInitial: Boolean = false) {
+        val oldCfg = config
+        val newSig = configSignature(cfg)
+        val cfgChanged = lastCfgSig != null && newSig != lastCfgSig  // 进程内同一源配置变化
         config = cfg
         pendingEvent = null
-        if (cfg == null) { state = null; return }
+        if (cfg == null) { state = null; lastCfgSig = null; return }
         val prev = state
         state = null
         val st = J.Obj()
@@ -77,6 +180,7 @@ class MechanicsEngine {
             state = snap
             // 旧存档快照可能含 J.Null/缺失字段 → 清洗后再用（否则累加从 0 开始）
             sanitize(state!!)
+            if (cfgChanged) reconcileWithConfig(oldCfg, cfg, state!!)  // 配置变了 → 字段级对齐
         } else if (prev != null && !reset) {
             // 无快照且非强制重置：保留已累加状态，只补缺失字段
             val merged = prev.fields["status"] as? J.Obj ?: J.Obj()
@@ -87,9 +191,12 @@ class MechanicsEngine {
             if (!prev.fields.containsKey("flags")) prev.fields["flags"] = J.Obj()
             state = prev
             sanitize(state!!)
+            if (cfgChanged) reconcileWithConfig(oldCfg, cfg, state!!)
         } else {
             state = st
+            // 全新会话：配置已是新值，无需 reconcile
         }
+        lastCfgSig = newSig
     }
 
     fun snapshot(): J.Obj? {
