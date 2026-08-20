@@ -11,7 +11,8 @@ binaries = []
 hiddenimports = ['openai', 'customtkinter', 'PIL', 'requests', 'flask', 'openpyxl', 'docx', 'edge_tts', 'pygame',
                  'html.parser', 'html', 'urllib.parse', 'asyncio', 'random', 'importlib.util',
                  'webview', 'webview.platforms.edgechromium', 'webview.platforms.winforms',
-                 'clr_loader', 'pythonnet', 'bottle']
+                 'clr_loader', 'pythonnet', 'bottle',
+                 'voice_engine', 'plugins.jp_patch_plugin']
 tmp_ret = collect_all('customtkinter')
 datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
 
