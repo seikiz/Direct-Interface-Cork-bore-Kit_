@@ -29,6 +29,7 @@ class GalgamePlugin : Plugin {
     var engine: ChatEngine? = null
     var tree: ChatTree? = null
     var mechConfigProvider: (() -> J.Obj?)? = null
+    var mechStateProvider: (() -> J.Obj?)? = null
 
     var count: Int by mutableStateOf(3)
     var auto: Boolean by mutableStateOf(true)
@@ -115,10 +116,16 @@ class GalgamePlugin : Plugin {
             val stFields = stCfg?.fields?.get("fields") as? J.Arr
             val hasSt = stCfg != null && stCfg.fields["enabled"]?.bool() == true && stFields?.items?.isNotEmpty() == true
             val effectFmt = mutableListOf<String>()
-            if (hasAff) effectFmt.add("\"aff\": 好感度变化整数（如 +2 / -1；无影响则省略）")
+            if (hasAff) effectFmt.add("\"aff\": 好感度变化整数，必须用 ±N 相对值（如 +2 / -1；无影响则省略）")
             if (hasSt) {
                 val keys = stFields!!.items.mapNotNull { (it as? J.Obj)?.fields?.get("key")?.str() }
-                effectFmt.add("\"st\": 状态变化对象，键为 ${keys.joinToString("、")}，值为目标值或 ±N（无变化则省略）")
+                val curVals = stFields!!.items.mapNotNull { (it as? J.Obj)?.let { fo ->
+                    val k = fo.fields["key"]?.str() ?: return@mapNotNull null
+                    val cur = mechStateProvider?.invoke()?.fields?.get("status")?.obj()?.fields?.get(k)
+                    val shown = cur?.let { c -> if (c is J.Num) c.v.toInt().toString() else c.str() } ?: (fo.fields["initial"]?.let { i -> if (i is J.Num) i.v.toInt().toString() else i.str() } ?: "")
+                    "$k=${shown}"
+                } }
+                effectFmt.add("\"st\": 状态变化对象，键为 ${keys.joinToString("、")}（当前值：${curVals.joinToString("，")}）。整数型必须用 ±N 相对值（如 \"sex\":+1 表示在当前值上加 1），禁止写绝对值目标值；枚举型给新值（如 \"心情\":\"开心\"）")
             }
             val system = buildString {
                 append("你是视觉小说（Galgame）的选项生成器。根据最近剧情，为玩家（用户）生成 $n 个简短、可行、有区分度的下一步行动选项。")

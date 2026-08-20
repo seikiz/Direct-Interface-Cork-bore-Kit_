@@ -146,12 +146,24 @@ class GalgameChoicesPlugin(PluginBase):
             has_st = isinstance(st_cfg, dict) and bool(st_cfg.get("enabled")) and bool(st_cfg.get("fields"))
             effect_fmt = []
             if has_aff:
-                effect_fmt.append('"aff": 好感度变化整数（如 +2 / -1；无影响则省略）')
+                effect_fmt.append('"aff": 好感度变化整数，必须用 ±N 相对值（如 +2 / -1；无影响则省略）')
             if has_st:
                 keys = [str(f.get("key")) for f in st_cfg.get("fields") or []
                         if isinstance(f, dict) and f.get("key")]
+                # 注入当前状态，让模型基于当前值写相对值（避免绝对值覆盖累加）
+                st_state = (getattr(self.core, "mechanism_state", None) or {}).get("status") or {}
+                cur_vals = []
+                for f in st_cfg.get("fields") or []:
+                    if not isinstance(f, dict) or not f.get("key"):
+                        continue
+                    k = str(f.get("key"))
+                    cur = st_state.get(k)
+                    shown = cur if isinstance(cur, (int, float, str)) else f.get("initial", "")
+                    cur_vals.append(f"{k}={shown}")
                 effect_fmt.append('"st": 状态变化对象，键为 ' + "、".join(keys)
-                                  + "，值为目标值或 ±N（无变化则省略）")
+                                  + f"（当前值：{'，'.join(cur_vals)}）。整数型必须用 ±N 相对值"
+                                  + '（如 "sex":+1 表示在当前值上加 1），禁止写绝对值目标值；'
+                                  + '枚举型给新值（如 "心情":"开心"）')
             system = (
                 "你是视觉小说（Galgame）的选项生成器。根据最近剧情，"
                 f"为玩家（用户）生成 {count} 个简短、可行、有区分度的下一步行动选项。"

@@ -1152,6 +1152,7 @@ val wsExportLauncher = rememberLauncherForActivityResult(ActivityResultContracts
         gal.engine = engine
         gal.tree = tree
         gal.mechConfigProvider = { mechConfig() }
+        gal.mechStateProvider = { mech.state }
         for ((name, en) in savedStates) {
             registry.plugins.firstOrNull { it.name == name }?.enabled = en
         }
@@ -1321,6 +1322,7 @@ val wsExportLauncher = rememberLauncherForActivityResult(ActivityResultContracts
             // 无机制效果的选项：暴击/失败不空转提示
         }
         mech.applyEffect(aff, item.st)
+        mech.persistState()  // GAL 选项结算后实时落盘（否则重启从旧 JSON 恢复 → 看似"从0加"）
         mechTick++
         if (kind == "rare") {
             mech.pendingEvent = J.Obj().apply {
