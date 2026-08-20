@@ -183,11 +183,25 @@ async function main() {
     for (const u of urls) {
       try {
         info(`下载: ${u.slice(0, 70)}…`);
-        let pctShow = "";
+        let lastPct = -1;
+        let lastMB = -1;
         await download(u, TAVERN_ZIP, (pct, got, total) => {
-          if (pctShow !== String(pct)) {
-            pctShow = String(pct);
-            process.stdout.write(`\r  进度 ${pct}% (${(got/1048576).toFixed(1)}/${(total/1048576).toFixed(0)}MB)`);
+          const mb = Math.floor(got / 1048576);
+          if (total > 0) {
+            // 有总大小：画进度条
+            if (pct !== lastPct) {
+              lastPct = pct;
+              const W = 30;
+              const filled = Math.round((pct / 100) * W);
+              const bar = "█".repeat(filled) + "░".repeat(W - filled);
+              process.stdout.write(`\r  [${bar}] ${String(pct).padStart(3)}% ${(got/1048576).toFixed(1)}/${(total/1048576).toFixed(1)}MB`);
+            }
+          } else {
+            // 无总大小（GitHub 常见）：滚动 MB，让用户知道还在动
+            if (mb !== lastMB) {
+              lastMB = mb;
+              process.stdout.write(`\r  下载中 ${(got/1048576).toFixed(1)}MB …`);
+            }
           }
         });
         process.stdout.write("\n");
