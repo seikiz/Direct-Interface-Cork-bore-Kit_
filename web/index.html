@@ -48,12 +48,12 @@ body{ background:var(--bg); color:var(--text); font-family:"Segoe UI","Microsoft
 .role-card .rc-name{
   display:flex; align-items:center; gap:8px; padding:2px 2px 6px;
 }
-.role-card .rc-name label{ flex:1; display:flex; align-items:center; gap:8px; cursor:pointer; font-size:14px; font-weight:600; overflow:hidden; }
+.role-card .rc-name label{ flex:1; display:flex; align-items:center; gap:8px; cursor:pointer; font-size:14px; font-weight:600; overflow:hidden; color:var(--text); }
 .role-card .rc-name .avatar{ width:32px; height:32px; border-radius:50%; object-fit:cover; flex:none; }
 .role-card .rc-name .avatar.letter{ display:flex; align-items:center; justify-content:center; color:#fff; font-weight:700; font-size:14px; }
 .role-card .rc-name .rc-unlock{ font-size:12px; color:#f87171; flex:none; }
 .role-card .rc-actions{ display:flex; align-items:center; gap:2px; border-top:1px dashed var(--line); padding-top:6px; }
-.role-card .rc-actions .iconbtn{ background:none; border:none; cursor:pointer; font-size:12px; opacity:.7; padding:2px 6px; border-radius:6px; }
+.role-card .rc-actions .iconbtn{ background:none; border:none; cursor:pointer; font-size:12px; opacity:.7; padding:2px 6px; border-radius:6px; color:var(--sub); }
 .role-card .rc-actions .iconbtn:hover{ opacity:1; background:var(--line); }
 .role-card .rc-actions .act-del{ color:#f87171; margin-left:auto; }
 .avatar{ width:28px; height:28px; border-radius:50%; object-fit:cover; flex:none; background:var(--line); }
@@ -276,7 +276,7 @@ button .ic{ margin-right:2px; }
 .ws-tabbtn.active{ border-color:var(--accent); background:var(--bubble); color:var(--text); }
 </style>
 </head>
-<body>
+<body class="dark">
 <!-- Live2D 看板娘容器（插件启用且资源存在时才显示） -->
 <div id="l2d-stage"></div>
 <div id="l2d-hint" style="display:none;position:fixed;bottom:80px;left:50%;transform:translateX(-50%);
