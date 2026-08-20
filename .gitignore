@@ -1,0 +1,80 @@
+# ============ DICK .gitignore ============
+# 隐私数据（角色卡/聊天记录/设置）
+saves/
+worlds/
+personas/
+config.json
+workshop_config.json
+memory/
+quick_replies.json
+financial_history.json
+
+# API Key / 密钥（任何地方）
+*.key
+.env
+
+# 构建产物
+build/
+dist/
+DICK-HTML/
+DICK.zip
+*.exe
+*.apk
+installer_screenshot.png
+_install_test/
+_zh_test/
+
+# Python 环境/缓存
+utau_env/
+__pycache__/
+*.pyc
+tts_cache/
+codex/
+
+# Android 构建
+DICK-Android/build/
+DICK-Android/.gradle/
+DICK-Android/.kotlin/
+DICK-Android/app/build/
+*.apk
+local.properties
+*.jks
+
+# 插件设置（含用户配置）
+plugin_settings/
+
+# 日志
+*.log
+debug.log
+
+# 编辑器/系统
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# 安装器下载的临时产物
+tavern-installer/tavern/
+tavern-installer/tavern.zip
+tavern-installer/start.bat
+
+# 测试临时
+_apk_inspect/
+_kt_test_data/
+_mock/
+
+# 开发临时脚本（下划线开头）
+/_*.py
+/_*.bat
+/_*.kt
+/_*.ps1
+/_*.txt
+/_wf/.wrangler/
+
+# DSH 环境目录（不属于 DICK 项目）
+/dsh-vision-router/
+/dsh-whale-pet/
+/dskin/
+/.dsh-vision-router/
+
+workshop_data/

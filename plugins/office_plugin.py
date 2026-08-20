@@ -5,13 +5,25 @@ from datetime import datetime
 from typing import Dict, List
 from plugin_base import PluginBase
 
-try:
-    from openpyxl import Workbook
-    from openpyxl.styles import Font, Alignment, PatternFill
-    from openpyxl.utils import get_column_letter
-    OPENPYXL_AVAILABLE = True
-except ImportError:
-    OPENPYXL_AVAILABLE = False
+_openpyxl_loaded = False
+
+
+def _ensure_openpyxl():
+    """惰性导入：首次生成 Excel 时才加载 openpyxl"""
+    global _openpyxl_loaded, Workbook, Font, Alignment, PatternFill, get_column_letter
+    if not _openpyxl_loaded:
+        from openpyxl import Workbook
+        from openpyxl.styles import Font, Alignment, PatternFill
+        from openpyxl.utils import get_column_letter
+        _openpyxl_loaded = True
+
+
+def _openpyxl_available():
+    try:
+        import importlib.util
+        return importlib.util.find_spec("openpyxl") is not None
+    except Exception:
+        return False
 
 
 class OfficeMod(PluginBase):
@@ -68,7 +80,7 @@ class OfficeMod(PluginBase):
         }
 
     def on_command(self, command, args):
-        if not OPENPYXL_AVAILABLE:
+        if not _openpyxl_available():
             return "请安装 openpyxl: pip install openpyxl", False
 
         if command == "office":
@@ -88,28 +100,29 @@ class OfficeMod(PluginBase):
             "",
             "示例: /office school class 班级=2024级1班",
         ]
-        return "\n".join(lines), False
+        return "\n".join(lines)
 
     def _handle(self, args):
+        _ensure_openpyxl()
         parts = args.strip().split()
         if len(parts) < 2:
-            return self._help(), False
+            return self._help()
 
         scene_key, template_key = parts[0].lower(), parts[1].lower()
         data = self._parse(" ".join(parts[2:]))
 
         scene = self.scenes.get(scene_key)
         if not scene:
-            return f"未知场景: {scene_key}\n{self._help()}", False
+            return f"未知场景: {scene_key}\n{self._help()}"
 
         func = scene["templates"].get(template_key)
         if not func:
-            return f"未知模板: {template_key}\n{self._help()}", False
+            return f"未知模板: {template_key}\n{self._help()}"
 
         try:
-            return func(data), False
+            return func(data)
         except Exception as e:
-            return f"生成失败: {e}", False
+            return f"生成失败: {e}"
 
     def _parse(self, raw):
         result = {}
@@ -121,6 +134,11 @@ class OfficeMod(PluginBase):
         return result
 
     def _save(self, wb, name):
+        try:
+            import doc_layout
+            doc_layout.apply_excel_layout(wb)  # 自动列宽 + 表头样式 + 边框
+        except Exception as e:
+            print(f"[通用办公] 排版失败: {e}")
         fn = f"{name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
         path = os.path.join(self.export_dir, fn)
         wb.save(path)

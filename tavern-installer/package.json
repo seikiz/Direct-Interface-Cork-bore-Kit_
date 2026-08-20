@@ -1,0 +1,14 @@
+{
+  "name": "tavern-installer",
+  "version": "1.0.0",
+  "description": "SillyTavern（酒馆）一键安装器 —— 与 DICK 分离的独立工具：检测环境、镜像下载、解压、装依赖、启动。",
+  "main": "install.js",
+  "scripts": {
+    "install": "node install.js"
+  },
+  "author": "DICK",
+  "license": "MIT",
+  "bin": {
+    "tavern-install": "./install.js"
+  }
+}

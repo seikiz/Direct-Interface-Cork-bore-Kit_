@@ -36,6 +36,7 @@ app = Flask(__name__)
 DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "workshop_data")
 CARDS_DIR = os.path.join(DATA_DIR, "cards")
 WORLDS_DIR = os.path.join(DATA_DIR, "worlds")
+PLUGINS_DIR = os.path.join(DATA_DIR, "plugins")
 INDEX_FILE = os.path.join(DATA_DIR, "index.json")
 
 # 运行配置（环境变量可覆盖）
@@ -47,7 +48,7 @@ DEBUG = os.environ.get("WORKSHOP_DEBUG", "0") == "1"
 # 索引文件进程内锁（防并发读写冲突）
 _index_lock = threading.Lock()
 
-for d in [DATA_DIR, CARDS_DIR, WORLDS_DIR]:
+for d in [DATA_DIR, CARDS_DIR, WORLDS_DIR, PLUGINS_DIR]:
     os.makedirs(d, exist_ok=True)
 
 
@@ -60,6 +61,7 @@ def load_index():
         data = {}
     data.setdefault("cards", [])
     data.setdefault("worlds", [])
+    data.setdefault("plugins", [])
     data.setdefault("users", {})
     return data
 
@@ -73,7 +75,7 @@ def save_index(index):
 
 
 if not os.path.exists(INDEX_FILE):
-    save_index({"cards": [], "worlds": [], "users": {}})
+    save_index({"cards": [], "worlds": [], "plugins": [], "users": {}})
 
 
 # ============ 工具函数 ============
@@ -146,6 +148,39 @@ def health():
         "auth": "key" if API_KEY else "open",
         "timestamp": datetime.now().isoformat(),
     })
+
+
+# ============ 内置代理通道（中转转发） ============
+@app.route("/relay/<b64target>/<path:subpath>", methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"])
+@app.route("/relay/<b64target>", methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"])
+def relay_proxy(b64target, subpath=""):
+    """透明转发：把请求原样转发到 <解码后的目标>/<subpath>，密钥经 Authorization 原样透传。
+    客户端把 base_url 做 urlsafe-base64（去 padding）放进路径即可让本地/云端服务代为访问，
+    用于直连被墙的通道（如 OpenAI 官方 API）。"""
+    try:
+        import base64
+        pad = "=" * (-len(b64target) % 4)
+        target = base64.urlsafe_b64decode(b64target + pad).decode("utf-8")
+    except Exception:
+        return jsonify({"error": "bad target"}), 400
+    if not (target.startswith("http://") or target.startswith("https://")):
+        return jsonify({"error": "bad target"}), 400
+    url = target.rstrip("/") + (("/" + subpath) if subpath else "")
+    hdrs = {}
+    for k, v in request.headers.items():
+        if k.lower() in ("authorization", "content-type", "accept", "x-api-key", "user-agent"):
+            hdrs[k] = v
+    try:
+        import requests as _rq
+        r = _rq.request(request.method, url, headers=hdrs,
+                        data=request.get_data(), timeout=600)
+        resp = app.response_class(
+            response=r.content,
+            status=r.status_code,
+            content_type=r.headers.get("Content-Type", "application/json"))
+        return resp
+    except Exception as e:
+        return jsonify({"error": "relay fail: " + str(e)[:200]}), 502
 
 
 @app.get("/api/stats")
@@ -369,6 +404,92 @@ def upload_card():
 def upload_world():
     """上传世界卡"""
     return handle_upload("worlds", WORLDS_DIR, "未命名世界")
+
+
+# ============ 插件市场（创意工坊插件 Tab） ============
+
+@app.get("/api/plugins/list")
+def list_plugins():
+    """获取所有插件列表"""
+    index = load_index()
+    plugins = sorted(index.get("plugins", []), key=lambda x: x.get("updated_at", ""), reverse=True)
+    return jsonify(plugins)
+
+
+@app.get("/api/plugins/<plugin_id>")
+def download_plugin(plugin_id):
+    """下载插件 .py 文件"""
+    with _index_lock:
+        index = load_index()
+        info = find_entry(index, "plugins", plugin_id)
+        if not info:
+            return jsonify({"error": "插件不存在"}), 404
+        filename = info.get("filename", "")
+        filepath = os.path.join(PLUGINS_DIR, filename)
+        if not filename or not os.path.exists(filepath):
+            return jsonify({"error": "文件丢失"}), 404
+        info["downloads"] = info.get("downloads", 0) + 1
+        save_index(index)
+    download_name = info.get("original_name") or filename
+    return send_file(filepath, as_attachment=True, download_name=download_name)
+
+
+@app.post("/api/plugins/upload")
+@require_auth
+def upload_plugin():
+    """上传插件（.py 文件 + 表单 name/version/description）"""
+    file = request.files.get("file")
+    if not file or not file.filename:
+        return jsonify({"error": "缺少插件文件"}), 400
+    if not file.filename.lower().endswith(".py"):
+        return jsonify({"error": "仅支持 .py 插件文件"}), 400
+    original_name = os.path.basename(file.filename or "") or "plugin.py"
+    content = file.read()
+    if not content.strip():
+        return jsonify({"error": "插件文件为空"}), 400
+    new_filename = f"{uuid.uuid4().hex}.py"
+    filepath = os.path.join(PLUGINS_DIR, new_filename)
+    with open(filepath, "wb") as f:
+        f.write(content)
+    name = (request.form.get("name") or original_name[:-3]).strip()[:60]
+    entry = {
+        "id": str(uuid.uuid4()),
+        "name": name,
+        "version": (request.form.get("version") or "1.0").strip()[:20],
+        "filename": new_filename,
+        "original_name": original_name,
+        "author": (request.form.get("author") or "anonymous").strip()[:60] or "anonymous",
+        "description": (request.form.get("description") or "").strip()[:500],
+        "created_at": datetime.now().isoformat(),
+        "updated_at": datetime.now().isoformat(),
+        "downloads": 0,
+        "likes": 0,
+    }
+    with _index_lock:
+        index = load_index()
+        index["plugins"].append(entry)
+        save_index(index)
+    return jsonify({"success": True, "id": entry["id"], "message": f"上传成功：{name}"}), 201
+
+
+@app.post("/api/plugins/<plugin_id>/like")
+def like_plugin(plugin_id):
+    """点赞插件"""
+    return like_entry("plugins", plugin_id, "插件")
+
+
+@app.delete("/api/plugins/<plugin_id>")
+@require_auth
+def delete_plugin(plugin_id):
+    """删除插件（保留本地文件，仅从索引移除）"""
+    with _index_lock:
+        index = load_index()
+        info = find_entry(index, "plugins", plugin_id)
+        if not info:
+            return jsonify({"error": "插件不存在"}), 404
+        remove_entry(index, "plugins", plugin_id)
+        save_index(index)
+    return jsonify({"success": True})
 
 
 if __name__ == "__main__":

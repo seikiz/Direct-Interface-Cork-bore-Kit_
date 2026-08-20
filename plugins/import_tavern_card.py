@@ -19,6 +19,7 @@ import re
 from datetime import datetime
 from tkinter import filedialog
 from plugin_base import PluginBase
+import app_paths
 
 # 可选解析库
 try:
@@ -72,10 +73,10 @@ class ImportTavernCard(PluginBase):
             self.world_dir = core.world_dir
 
         if self.save_dir is None:
-            base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            base_dir = app_paths.get_base_dir()  # exe 模式跟随 exe 目录
             self.save_dir = os.path.join(base_dir, "saves")
         if self.world_dir is None:
-            base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            base_dir = app_paths.get_base_dir()
             self.world_dir = os.path.join(base_dir, "worlds")
 
         self.index_dir = os.path.join(self.world_dir, ".indices")

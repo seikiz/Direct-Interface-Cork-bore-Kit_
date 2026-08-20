@@ -12,11 +12,11 @@ import io
 import os
 
 import ui_fonts as uf
+import app_paths
 
 # 独立配置文件（放在项目根目录，避免与主程序 config.json 互相覆盖）
 def _get_config_path():
-    base = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    return os.path.join(base, "image_plugin_config.json")
+    return os.path.join(app_paths.get_base_dir(), "image_plugin_config.json")
 
 
 class ImageUploadPlugin(PluginBase):
@@ -25,6 +25,11 @@ class ImageUploadPlugin(PluginBase):
     description = "导入本地图片，自动生成描述并附加到消息"
     author = "seiki"
     enabled = True
+
+    # 声明式 UI 模组：主界面 🧩 插件坞自动出现该按钮
+    ui_buttons = [
+        {"type": "method", "label": "🖼️ 图片", "method": "show_window"},
+    ]
 
     def __init__(self, core):
         super().__init__(core)

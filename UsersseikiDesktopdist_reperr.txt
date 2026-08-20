@@ -1,0 +1,7 @@
+﻿cmd : The filename, directory name, or volume label syntax is incorrect.
+At line:8 char:1
++ cmd /c "C:Usersseikikotlin-toolskotlincinkotlinc.bat @C:UsersseikiDe ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (The filename, d...x is incorrect.:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 

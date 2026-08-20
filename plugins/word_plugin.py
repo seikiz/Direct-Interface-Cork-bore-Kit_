@@ -4,14 +4,26 @@ import re
 from datetime import datetime
 from plugin_base import PluginBase
 
-try:
-    from docx import Document
-    from docx.shared import Inches, Pt, RGBColor
-    from docx.enum.text import WD_ALIGN_PARAGRAPH
-    from docx.enum.table import WD_TABLE_ALIGNMENT
-    DOCX_AVAILABLE = True
-except ImportError:
-    DOCX_AVAILABLE = False
+_docx_loaded = False
+
+
+def _ensure_docx():
+    """惰性导入：首次生成 Word 时才加载 python-docx"""
+    global _docx_loaded, Document, Inches, Pt, RGBColor, WD_ALIGN_PARAGRAPH, WD_TABLE_ALIGNMENT
+    if not _docx_loaded:
+        from docx import Document
+        from docx.shared import Inches, Pt, RGBColor
+        from docx.enum.text import WD_ALIGN_PARAGRAPH
+        from docx.enum.table import WD_TABLE_ALIGNMENT
+        _docx_loaded = True
+
+
+def _docx_available():
+    try:
+        import importlib.util
+        return importlib.util.find_spec("docx") is not None
+    except Exception:
+        return False
 
 
 class WordPlugin(PluginBase):
@@ -28,7 +40,7 @@ class WordPlugin(PluginBase):
 
     def on_command(self, command, args):
         if command == "doc":
-            if not DOCX_AVAILABLE:
+            if not _docx_available():
                 return "⚠️ 请安装 python-docx: pip install python-docx", False
             return self._handle(args), False
         elif command == "doc_help":
@@ -55,11 +67,12 @@ class WordPlugin(PluginBase):
             "/doc meeting 议题=项目会 决议=通过方案A",
             "/doc notice 标题=放假通知 内容=8月15日放假一天",
         ]
-        return "\n".join(lines), False
+        return "\n".join(lines)
 
     def _handle(self, args):
+        _ensure_docx()
         if not args:
-            return self._help(), False
+            return self._help()
 
         parts = args.strip().split(maxsplit=1)
         template = parts[0].lower()
@@ -77,12 +90,12 @@ class WordPlugin(PluginBase):
 
         func = templates.get(template)
         if not func:
-            return f"未知模板: {template}\n{self._help()}", False
+            return f"未知模板: {template}\n{self._help()}"
 
         try:
-            return func(data), False
+            return func(data)
         except Exception as e:
-            return f"生成失败: {e}", False
+            return f"生成失败: {e}"
 
     def _parse(self, raw):
         result = {}
@@ -94,6 +107,11 @@ class WordPlugin(PluginBase):
         return result
 
     def _save(self, doc, name):
+        try:
+            import doc_layout
+            doc_layout.apply_official_format(doc)  # 公文排版算法
+        except Exception as e:
+            print(f"[Word导出] 排版失败: {e}")
         fn = f"{name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.docx"
         path = os.path.join(self.export_dir, fn)
         doc.save(path)
