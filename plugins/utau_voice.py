@@ -94,7 +94,7 @@ class UtauVoicePlugin(PluginBase):
         base = app_paths.get_base_dir()
         cache = os.path.join(base, "tts_cache")
         try:
-            out, eng_name = ve.synthesize(text, cache)
+            out, eng_name = ve.synthesize(text, cache, pitch_mode="auto")  # 语气分析，避免死气沉沉
         except Exception as e:
             return "⚠️ 语音合成失败：" + str(e)[:150]
         self._play(out)

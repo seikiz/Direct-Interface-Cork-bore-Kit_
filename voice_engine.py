@@ -36,20 +36,20 @@ class UtauEngine:
         vb = self.voicebank if os.path.isabs(self.voicebank) else os.path.join(self.base_dir, self.voicebank)
         return os.path.exists(py) and os.path.exists(vb)
 
-    def synthesize(self, text, out_path):
-        """合成文本 → wav。返回 (wav路径, 说明)"""
+    def synthesize(self, text, out_path, pitch_mode="auto"):
+        """合成文本 → wav。返回 (wav路径, 说明)。pitch_mode: auto=语气分析 / flat / happy / sad / angry / question"""
         if not self.is_ready():
             raise VoiceEngineError("UTAU 环境或声库未就绪")
         py = self.python if os.path.isabs(self.python) else os.path.join(self.base_dir, self.python)
         vb = self.voicebank if os.path.isabs(self.voicebank) else os.path.join(self.base_dir, self.voicebank)
         helper = os.path.join(os.path.dirname(os.path.abspath(__file__)), "utau_speak.py")
         r = subprocess.run(
-            [py, helper, vb, str(self.pitch), str(self.duration), text, out_path],
+            [py, helper, vb, str(self.pitch), str(self.duration), text, out_path, pitch_mode],
             capture_output=True, timeout=180, encoding="utf-8", errors="replace",
         )
         if r.returncode != 0 or not os.path.exists(out_path):
             raise VoiceEngineError("UTAU 合成失败：" + ((r.stdout or "") + (r.stderr or ""))[-200:])
-        return out_path, "utau"
+        return out_path, "utau:" + pitch_mode
 
 
 class HanasuEngine:
@@ -71,8 +71,9 @@ class HanasuEngine:
         except Exception:
             return False
 
-    def synthesize(self, text, out_path):
-        """VOICEVOX 双请求：audio_query → synthesis。返回 (wav路径, 说明)"""
+    def synthesize(self, text, out_path, pitch_mode="auto"):
+        """VOICEVOX 双请求：audio_query → synthesis。返回 (wav路径, 说明)
+        pitch_mode: auto=按文本情绪调语速/音调 / flat / happy / sad / angry / question"""
         if not self.is_ready():
             raise VoiceEngineError("HANASU（VOICEVOX）未运行——请先启动 VOICEVOX 引擎（默认 :50021）")
         try:
@@ -80,9 +81,24 @@ class HanasuEngine:
             req = urllib.request.Request(q, method="POST")
             with urllib.request.urlopen(req, timeout=30) as r:
                 query = json.loads(r.read().decode("utf-8"))
-            # 调语速
+            # 语气 → 语速/音调微调（避免死气沉沉）
+            mode = pitch_mode
+            if mode == "auto":
+                mode = _analyze_tone(text)
+            spd = self.speed
+            intn = 1.0
+            if mode == "happy":
+                spd *= 1.12; intn = 1.08
+            elif mode == "sad":
+                spd *= 0.9; intn = 0.92
+            elif mode == "angry":
+                spd *= 1.08; intn = 1.1
+            elif mode == "question":
+                spd *= 1.0; intn = 1.15
             try:
-                query["speedScale"] = self.speed
+                query["speedScale"] = max(0.5, min(2.0, spd))
+                query["intonationScale"] = max(0.0, min(2.0, intn))
+                query["pitchScale"] = 0.0
             except Exception:
                 pass
             body = json.dumps(query).encode("utf-8")
@@ -94,11 +110,32 @@ class HanasuEngine:
                 f.write(data)
             if not os.path.exists(out_path) or os.path.getsize(out_path) == 0:
                 raise VoiceEngineError("HANASU 返回空音频")
-            return out_path, "hanasu"
+            return out_path, "hanasu:" + mode
         except VoiceEngineError:
             raise
         except Exception as e:
             raise VoiceEngineError("HANASU 合成失败：" + str(e)[:150])
+
+
+def _analyze_tone(text):
+    """文本语气分析（与 utau_speak._analyze_tone 同规则，供 HANASU 用）"""
+    t = (text or "").strip()
+    happy_kw = ("哈哈", "嘿嘿", "好耶", "太好了", "开心", "嘻嘻", "笑", "♪", "~", "～", "うれ", "嬉", "楽し")
+    sad_kw = ("哭", "呜呜", "难过", "伤心", "寂寞", "不要走", "泣", "悲", "さみ", "寂")
+    angry_kw = ("哼", "才不", "讨厌", "混蛋", "可恶", "生气", "怒", "む", "ふん")
+    if any(k in t for k in happy_kw):
+        return "happy"
+    if any(k in t for k in sad_kw):
+        return "sad"
+    if any(k in t for k in angry_kw):
+        return "angry"
+    if t.endswith("？") or t.endswith("?") or t.endswith("吗"):
+        return "question"
+    if t.endswith("！") or t.endswith("!"):
+        return "angry"
+    if "……" in t or "..." in t or "。。" in t:
+        return "sad"
+    return "flat"
 
 
 class VoiceEngine:
@@ -120,8 +157,8 @@ class VoiceEngine:
             return self.hanasu, "hanasu"
         return self.utau, "utau"
 
-    def synthesize(self, text, cache_dir):
+    def synthesize(self, text, cache_dir, pitch_mode="auto"):
         os.makedirs(cache_dir, exist_ok=True)
         eng, name = self._pick()
         out = os.path.join(cache_dir, name + "_" + str(int(time.time() * 1000)) + ".wav")
-        return eng.synthesize(text, out)
+        return eng.synthesize(text, out, pitch_mode)

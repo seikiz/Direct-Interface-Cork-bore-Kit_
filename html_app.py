@@ -3511,7 +3511,7 @@ class HtmlApp:
             if os.path.exists(cached):
                 p._play(cached)
                 return {"ok": True, "cached": True}
-            out, _eng = p._engine().synthesize(text[:200], cache) if hasattr(p, "_engine") else (None, None)
+            out, _eng = p._engine().synthesize(text[:200], cache, pitch_mode="auto") if hasattr(p, "_engine") else (None, None)
             if out and os.path.exists(out):
                 try:
                     import shutil

@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 # utau_speak.py —— UTAU 合成 helper，由 utau_env（Python 3.11，含 putao/pykakasi/pypinyin）运行。
-# 用法: python utau_speak.py <voicebank_dir> <pitch> <duration_ms> <text> <out.wav>
+# 用法: python utau_speak.py <voicebank_dir> <pitch> <duration_ms> <text> <out.wav> [pitch_mode]
+#   pitch_mode: flat(默认,全平) / happy(上扬轻快) / sad(降调缓慢) / angry(句尾强降) / question(句尾上扬)
+#   语气分析：按标点/语气词自动生成音高曲线，避免"死气沉沉"
 # 文本 → 音素（日文假名优先 / 中文拼音 fallback）→ putao（纯 Python UTAU 合成器）→ WAV
 # 音素按声库 oto.ini 实际条目匹配（罗马音/假名/片假名变体兜底）
 import sys
@@ -92,19 +94,79 @@ def _phoneme_candidates(text, vb_keys):
     return out
 
 
+def _analyze_tone(text):
+    """语气分析：按文本特征返回 (模式, 参数)。
+    模式: flat / happy / sad / angry / question
+    参数: {start, end, dur_scale} —— start/end 为音高偏移（相对基准），dur_scale 为语速倍率
+    """
+    t = text.strip()
+    if not t:
+        return "flat", {}
+    # 情绪词（中文为主，兼顾日文）
+    happy_kw = ("哈哈", "嘿嘿", "好耶", "太好了", "开心", "嘻嘻", "笑", "♪", "~", "～", "うれ", "嬉", "楽し")
+    sad_kw = ("哭", "呜呜", "难过", "伤心", "寂寞", "不要走", "泣", "悲", "さみ", "寂")
+    angry_kw = ("哼", "才不", "讨厌", "混蛋", "可恶", "生气", "怒", "む", "ふん")
+    if any(k in t for k in happy_kw):
+        return "happy", {"start": +2, "end": +5, "dur_scale": 0.85}
+    if any(k in t for k in sad_kw):
+        return "sad", {"start": -2, "end": -6, "dur_scale": 1.25}
+    if any(k in t for k in angry_kw):
+        return "angry", {"start": +4, "end": -8, "dur_scale": 0.8}
+    # 标点判断
+    if t.endswith("？") or t.endswith("?") or t.endswith("吗"):
+        return "question", {"start": 0, "end": +7, "dur_scale": 1.0}
+    if t.endswith("！") or t.endswith("!"):
+        return "angry", {"start": +3, "end": -5, "dur_scale": 0.9}
+    if "……" in t or "..." in t or "。。" in t:
+        return "sad", {"start": -1, "end": -4, "dur_scale": 1.15}
+    return "flat", {}
+
+
+def _pitch_for(i, total, mode, base_pitch, params):
+    """第 i 个音素（共 total 个）的音高：按模式插值，制造起伏而非全平"""
+    if total <= 1:
+        return base_pitch
+    start = params.get("start", 0)
+    end = params.get("end", 0)
+    # 线性渐变 + 轻微波浪（±1 让听感自然，不机械）
+    frac = i / max(1, total - 1)
+    p = base_pitch + start + (end - start) * frac
+    import math
+    p += math.sin(i * 1.7) * 1.0  # 微起伏
+    return int(round(p))
+
+
 def main():
-    voicebank, pitch, duration, text, out = sys.argv[1:6]
+    args = sys.argv[1:]
+    voicebank, pitch, duration, text, out = args[0], args[1], args[2], args[3], args[4]
+    pitch_mode = args[5] if len(args) > 5 else "flat"
     from putao.core import Config, Project, TrackError
     cfg = Config(name="dick", author="dick", voicebank=voicebank, resampler="world")
     proj = Project(cfg)
     tr = proj.new_track("voice")
     vb_keys = set(tr.resampler.voicebank.entries.keys())
     phonemes = _phoneme_candidates(text, vb_keys)
+    if pitch_mode == "auto":
+        pitch_mode, params = _analyze_tone(text)
+    else:
+        params = {"start": 0, "end": 0, "dur_scale": 1.0}
+        if pitch_mode == "happy":
+            params = {"start": +2, "end": +5, "dur_scale": 0.85}
+        elif pitch_mode == "sad":
+            params = {"start": -2, "end": -6, "dur_scale": 1.25}
+        elif pitch_mode == "angry":
+            params = {"start": +4, "end": -8, "dur_scale": 0.8}
+        elif pitch_mode == "question":
+            params = {"start": 0, "end": +7, "dur_scale": 1.0}
     used = 0
     missing = []
-    for ph in phonemes:
+    dur_scale = params.get("dur_scale", 1.0)
+    d = max(60, int(int(duration) * dur_scale))
+    total = len(phonemes)
+    base_pitch = int(pitch)
+    for i, ph in enumerate(phonemes):
         try:
-            tr.note(ph, int(pitch), int(duration))
+            tr.note(ph, _pitch_for(i, total, pitch_mode, base_pitch, params), d)
             used += 1
         except TrackError:
             missing.append(ph)
@@ -117,7 +179,7 @@ def main():
     note = ""
     if missing:
         note = "（跳过音素：" + " ".join(missing) + "）"
-    print("OK:" + out + note)
+    print("OK:" + out + note + " mode=" + pitch_mode)
 
 
 if __name__ == "__main__":
