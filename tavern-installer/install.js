@@ -307,11 +307,26 @@ function makeStartBat() {
   const pkgDir = findPkgDir();
   const startDir = pkgDir ? path.relative(ROOT, pkgDir).replace(/\//g, "\\") : "tavern";
   const bat = `@echo off
-cd /d "%~dp0${startDir}"
-echo Starting SillyTavern...
-echo Open http://localhost:8000 in your browser
-npm start
-pause
+chcp 65001 >nul
+cd /d "%~dp0"
+set TAVERN_DIR=tavern
+if exist "tavern\\SillyTavern-*" (
+    for /d %%d in (tavern\\SillyTavern-*) do set TAVERN_DIR=%%d
+)
+if not exist "%TAVERN_DIR%\\server.js" (
+    echo ✖ 未找到酒馆，请先运行 install.bat 安装。
+    pause
+    exit /b 1
+)
+cd /d "%~dp0%TAVERN_DIR%"
+echo ✔ 找到酒馆：%TAVERN_DIR%
+echo ✔ 启动中... 浏览器打开 http://localhost:8000
+node server.js
+if errorlevel 1 (
+    echo.
+    echo ✖ 启动失败。依赖未装全时请进 %TAVERN_DIR% 运行 npm install
+    pause
+)
 `;
   fs.writeFileSync(path.join(ROOT, "start.bat"), bat, { encoding: "utf8" });
   ok("已生成 start.bat 启动入口");
