@@ -143,10 +143,8 @@ def _pitch_for(i, total, mode, base_pitch, params):
     return int(round(p))
 
 
-def main():
-    args = sys.argv[1:]
-    voicebank, pitch, duration, text, out = args[0], args[1], args[2], args[3], args[4]
-    pitch_mode = args[5] if len(args) > 5 else "flat"
+def _run_synthesis(voicebank, pitch, duration, text, out, pitch_mode="flat"):
+    """核心合成：音素化 + putao 渲染 + 语气音高曲线。供命令行与进程内调用共用。"""
     from putao.core import Config, Project, TrackError
     cfg = Config(name="dick", author="dick", voicebank=voicebank, resampler="world")
     proj = Project(cfg)
@@ -180,9 +178,20 @@ def main():
         except Exception:
             pass
     if used == 0:
-        print("ERR: 声库中找不到任何音素：" + " ".join(phonemes))
-        sys.exit(2)
+        raise RuntimeError("ERR: 声库中找不到任何音素：" + " ".join(phonemes))
     proj.render(out)
+    return missing
+
+
+def main():
+    args = sys.argv[1:]
+    voicebank, pitch, duration, text, out = args[0], args[1], args[2], args[3], args[4]
+    pitch_mode = args[5] if len(args) > 5 else "flat"
+    try:
+        missing = _run_synthesis(voicebank, pitch, duration, text, out, pitch_mode)
+    except RuntimeError as e:
+        print(str(e))
+        sys.exit(2)
     note = ""
     if missing:
         note = "（跳过音素：" + " ".join(missing) + "）"

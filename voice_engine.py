@@ -91,18 +91,37 @@ class UtauEngine:
         self.base_dir = base_dir or os.getcwd()
 
     def is_ready(self):
-        py = self.python if os.path.isabs(self.python) else os.path.join(self.base_dir, self.python)
+        """就绪判断：声库存在，且 putao 可用（打包内嵌或外部 utau_env）"""
         vb = self.voicebank if os.path.isabs(self.voicebank) else os.path.join(self.base_dir, self.voicebank)
-        return os.path.exists(py) and os.path.exists(vb)
+        if not os.path.exists(vb):
+            return False
+        try:
+            import putao  # noqa: F401
+            return True
+        except Exception:
+            return os.path.exists(self._resolve_python())
+
+    def _resolve_python(self):
+        py = self.python if os.path.isabs(self.python) else os.path.join(self.base_dir, self.python)
+        return py
 
     def synthesize(self, text, out_path, pitch_mode="auto"):
-        """合成文本 → wav。返回 (wav路径, 说明)。pitch_mode: auto=语气分析 / flat / happy / sad / angry / question"""
-        if not self.is_ready():
-            raise VoiceEngineError("UTAU 环境或声库未就绪")
-        py = self.python if os.path.isabs(self.python) else os.path.join(self.base_dir, self.python)
+        """合成文本 → wav。返回 (wav路径, 说明)。pitch_mode: auto=语气分析 / flat / happy / sad / angry / question
+        用户不需要装 UTAU 环境：putao 打进包后本进程直接合成；无打包环境才回落外部 utau_env 子进程。"""
         vb = self.voicebank if os.path.isabs(self.voicebank) else os.path.join(self.base_dir, self.voicebank)
+        if not os.path.exists(vb):
+            raise VoiceEngineError("未找到声库：" + vb + "（声音需自己准备：放一个 UTAU 声库目录）")
         helper = os.path.join(os.path.dirname(os.path.abspath(__file__)), "utau_speak.py")
-        # 日语系统冲突防护：强制子进程 UTF-8（避免 cp932 下日文路径/输出崩溃）
+        # 方式一：本进程直接合成（putao 已打包进 EXE，用户零安装）
+        try:
+            import putao  # noqa: F401
+            return self._synthesize_inline(text, out_path, vb, pitch_mode)
+        except Exception:
+            pass
+        # 方式二：外部 utau_env 子进程（开发态/未打包时）
+        py = self._resolve_python()
+        if not os.path.exists(py):
+            raise VoiceEngineError("UTAU 环境缺失：既无打包 putao，也找不到 " + py)
         env = dict(os.environ)
         env.setdefault("PYTHONIOENCODING", "utf-8")
         env.setdefault("PYTHONUTF8", "1")
@@ -112,6 +131,20 @@ class UtauEngine:
         )
         if r.returncode != 0 or not os.path.exists(out_path):
             raise VoiceEngineError("UTAU 合成失败：" + ((r.stdout or "") + (r.stderr or ""))[-200:])
+        return out_path, "utau:" + pitch_mode
+
+    def _synthesize_inline(self, text, out_path, vb, pitch_mode):
+        """进程内合成：复用 utau_speak.py 的合成逻辑（import 其函数，避免重复实现）"""
+        import importlib.util
+        helper = os.path.join(os.path.dirname(os.path.abspath(__file__)), "utau_speak.py")
+        spec = importlib.util.spec_from_file_location("utau_speak", helper)
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        # 模拟子进程参数调用核心合成
+        args = [vb, str(self.pitch), str(self.duration), text, out_path, pitch_mode]
+        mod._run_synthesis(*args)
+        if not os.path.exists(out_path):
+            raise VoiceEngineError("UTAU 进程内合成失败")
         return out_path, "utau:" + pitch_mode
 
 
