@@ -1,0 +1,33 @@
+@echo off
+chcp 65001 >nul
+cd /d "%~dp0"
+echo ═══════════════════════════════════════
+echo   SillyTavern（酒馆）启动器
+echo ═══════════════════════════════════════
+echo.
+
+REM 自动找酒馆目录：tavern\SillyTavern-* 或 tavern（不写死版本号）
+set TAVERN_DIR=tavern
+if exist "tavern\SillyTavern-*" (
+    for /d %%d in (tavern\SillyTavern-*) do set TAVERN_DIR=%%d
+)
+
+if not exist "%TAVERN_DIR%\server.js" (
+    echo ✖ 未找到酒馆（%TAVERN_DIR%\server.js 不存在）。
+    echo   请先运行 install.bat 安装酒馆。
+    echo.
+    pause
+    exit /b 1
+)
+
+cd /d "%~dp0%TAVERN_DIR%"
+echo ✔ 找到酒馆：%TAVERN_DIR%
+echo ✔ 启动中... 浏览器打开 http://localhost:8000
+echo.
+REM 直接 node server.js（绕过 npm 额外层，更稳更快）
+node server.js
+if errorlevel 1 (
+    echo.
+    echo ✖ 启动失败。可能是依赖未装全：cd 到 %TAVERN_DIR% 后运行 npm install
+    pause
+)

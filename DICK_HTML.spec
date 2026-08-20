@@ -9,7 +9,7 @@ datas = [('web', 'web'), ('plugins', 'plugins'), ('saves', 'saves'), ('worlds', 
          ('financial_history.json', '.'),
          # 酒馆安装器（第一级目录，只带脚本，酒馆本体由 install.js 下载）
          ('tavern-installer/install.js', 'tavern-installer'), ('tavern-installer/install.bat', 'tavern-installer'),
-         ('tavern-installer/start.bat', 'tavern-installer'), ('tavern-installer/package.json', 'tavern-installer'),
+         ('tavern-installer/start.bat.template', 'tavern-installer'), ('tavern-installer/package.json', 'tavern-installer'),
          ('tavern-installer/README.md', 'tavern-installer')]
 binaries = []
 hiddenimports = ['openai', 'customtkinter', 'PIL', 'requests', 'flask', 'openpyxl', 'docx', 'edge_tts', 'pygame',
