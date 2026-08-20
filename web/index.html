@@ -1215,6 +1215,7 @@ function appendMessage(m) {
     ctl += '<button data-act="edit">' + (ICONS['✏'] || '✏️') + '</button>';
   }
   if (m.kind === 'ai') {
+    ctl += '<button data-act="speak" title="🔊 朗读">' + (ICONS['🔊'] || '🔊') + '</button>';
     if (m.swipes && m.swipes.total > 1) {
       ctl += '<button data-act="sprev">◀</button><span class="swipe-n">' + (m.swipes.index + 1) + '/' + m.swipes.total + '</span><button data-act="snext">▶</button>';
     }
@@ -2326,6 +2327,14 @@ document.getElementById('chat').addEventListener('click', function (e) {
     document.getElementById('emInput').value = bub ? bub.textContent : '';
     document.getElementById('emTitle').textContent = T.editMsg;
     document.getElementById('editMsgModal').classList.add('open');
+  } else if (act === 'speak') {
+    var nid = msgEl.getAttribute('data-node');
+    var sbtn = btn;
+    sbtn.disabled = true;
+    pywebview.api.speak_node(nid).then(function (r) {
+      sbtn.disabled = false;
+      if (r && !r.ok && r.err) alert(r.err);
+    }).catch(function () { sbtn.disabled = false; });
   } else if (act === 'regen') {
     pywebview.api.regenerate(seq).then(function (r) {
       if (r && !r.ok) alert((r && r.err) || 'failed');

@@ -3472,6 +3472,62 @@ class HtmlApp:
                     pass
         return {"ok": True, "files": out}
 
+    def api_speak_node(self, node_id):
+        """消息旁喇叭按钮：按 node_id 朗读该条 AI 消息（合成缓存于 tts_cache，重复点击不重合成）。
+        取 [ja] 日配句优先，无则用正文；走 UTAU/HANASU 双引擎。"""
+        try:
+            node = self.core.tree.nodes.get(node_id)
+            if not node:
+                return {"ok": False, "err": "节点不存在"}
+            if node.role != "assistant":
+                return {"ok": False, "err": "仅 AI 消息可朗读"}
+            p = None
+            try:
+                if self.plugin_manager:
+                    p = self.plugin_manager.get_plugin("UTAU 语音")
+            except Exception:
+                p = None
+            if not p or not getattr(p, "enabled", False):
+                return {"ok": False, "err": "未启用语音插件（设置 → 插件 → UTAU 语音）"}
+            if not hasattr(p, "_speak"):
+                return {"ok": False, "err": "语音插件缺少合成接口"}
+            # 优先 [ja] 日配句
+            text = ""
+            try:
+                ja = (node.metadata or {}).get("ja")
+                if isinstance(ja, str) and ja.strip():
+                    text = ja.strip()
+            except Exception:
+                pass
+            if not text:
+                text = str(node.content or "").strip()
+            if not text:
+                return {"ok": False, "err": "无内容可朗读"}
+            # 合成缓存：按 node_id 复用
+            base = getattr(app_paths, "get_base_dir", lambda: BASE_DIR)()
+            cache = os.path.join(base, "tts_cache")
+            os.makedirs(cache, exist_ok=True)
+            cached = os.path.join(cache, "node_" + str(node_id) + ".wav")
+            if os.path.exists(cached):
+                p._play(cached)
+                return {"ok": True, "cached": True}
+            out, _eng = p._engine().synthesize(text[:200], cache) if hasattr(p, "_engine") else (None, None)
+            if out and os.path.exists(out):
+                try:
+                    import shutil
+                    shutil.copyfile(out, cached)
+                except Exception:
+                    pass
+                p._play(out)
+                return {"ok": True}
+            # 兼容旧插件（无 _engine 的 _speak 直接播放）
+            res = p._speak(text[:200])
+            if isinstance(res, str) and res.startswith("⚠️"):
+                return {"ok": False, "err": res}
+            return {"ok": True}
+        except Exception as e:
+            return {"ok": False, "err": str(e)[:120]}
+
     def api_codex_run_action(self, cmd):
         """播放器行动钩子（CODEX 深度集成 DICK 的系统权限）。
         支持：
