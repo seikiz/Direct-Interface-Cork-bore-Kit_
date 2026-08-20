@@ -35,8 +35,11 @@ class MechanicsEngine {
     /**
      * 重载机制配置。reset=true（切角色/新会话）：无快照用 initial；
      * reset=false（回溯/续聊兜底）：无快照时保留已累加状态（int 累加不清零）。
+     * forceInitial=true（改配置保存）：无视树快照，一律用配置 initial 重建——
+     * 否则旧快照里同名字段（旧值）会覆盖新配置的 initial（如新增"敏感度" initial=3
+     * 却显示旧快照的 2）。
      */
-    fun reload(cfg: J.Obj?, tree: ChatTree, reset: Boolean = false) {
+    fun reload(cfg: J.Obj?, tree: ChatTree, reset: Boolean = false, forceInitial: Boolean = false) {
         config = cfg
         pendingEvent = null
         if (cfg == null) { state = null; return }
@@ -69,7 +72,7 @@ class MechanicsEngine {
         st.fields["status"] = status
         st.fields["flags"] = J.Obj()
         sanitize(st)
-        val snap = leafSnapshot(tree)
+        val snap = if (forceInitial) null else leafSnapshot(tree)
         if (snap != null) {
             state = snap
             // 旧存档快照可能含 J.Null/缺失字段 → 清洗后再用（否则累加从 0 开始）

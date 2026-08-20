@@ -754,11 +754,23 @@ val wsExportLauncher = rememberLauncherForActivityResult(ActivityResultContracts
 
     fun reloadMech() {
         // 角色配置保存后重新加载：与桌面版一致（改配置 = 新会话基准，重置初始值）
-        mech.reload(mechConfig(), tree, reset = true)
+        mech.reload(mechConfig(), tree, reset = true, forceInitial = true)
         mech.battleCfg = mechBattleConfig()
         mech.playerCfg = playerBattleConfig()
         mech.playerCfg = playerBattleConfig()
         mech.initBattle()
+        // 改配置 = 新基准：把重置后的状态写回当前叶子快照（并落盘），
+        // 否则下次启动/回溯会从旧快照恢复出旧值（如新增字段 initial=3 却显示旧快照的 2）
+        try {
+            val leaf = tree.getNode(tree.currentLeafId)
+            if (leaf != null && mech.state != null) {
+                val meta = leaf.metadata as? J.Obj
+                val metaRef = if (meta != null) meta else J.Obj().also { leaf.metadata = it }
+                metaRef.fields["ms"] = mech.snapshot() ?: J.Null
+            }
+            saveTree()
+        } catch (_: Exception) {
+        }
         mechTick++
     }
 
