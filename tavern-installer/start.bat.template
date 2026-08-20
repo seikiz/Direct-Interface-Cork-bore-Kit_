@@ -5,26 +5,70 @@ echo   SillyTavern Launcher
 echo ============================================
 echo.
 
-set TAVERN_DIR=tavern
+REM ========== Step 1: standard locations (fast) ==========
+set TAVERN_DIR=
 if exist "tavern\SillyTavern-1.18.0\server.js" set TAVERN_DIR=tavern\SillyTavern-1.18.0
 if exist "tavern\SillyTavern-1.19.0\server.js" set TAVERN_DIR=tavern\SillyTavern-1.19.0
 if exist "tavern\SillyTavern-1.20.0\server.js" set TAVERN_DIR=tavern\SillyTavern-1.20.0
 if exist "tavern\SillyTavern-1.21.0\server.js" set TAVERN_DIR=tavern\SillyTavern-1.21.0
 if exist "tavern\SillyTavern-release\server.js" set TAVERN_DIR=tavern\SillyTavern-release
 if exist "tavern\server.js" set TAVERN_DIR=tavern
+if not "%TAVERN_DIR%"=="" goto found
 
-if not exist "%TAVERN_DIR%\server.js" (
-    echo [X] Tavern not found. Run install.bat first.
-    pause
-    exit /b 1
-)
+REM ========== Step 2: search this device ==========
+echo Searching for SillyTavern on this device...
+set SEARCH_TMP=%TEMP%\st_find.txt
+del /q "%SEARCH_TMP%" 2>nul
 
-cd /d "%~dp0%TAVERN_DIR%"
+REM 2a. DICK folder siblings (one level up, recursive)
+dir /s /b "%~dp0..\server.js" > "%SEARCH_TMP%" 2>nul
+
+REM 2b. User profile common folders
+dir /s /b "%USERPROFILE%\Desktop\server.js" >> "%SEARCH_TMP%" 2>nul
+dir /s /b "%USERPROFILE%\Downloads\server.js" >> "%SEARCH_TMP%" 2>nul
+dir /s /b "%USERPROFILE%\Documents\server.js" >> "%SEARCH_TMP%" 2>nul
+
+REM 2c. Drive roots (shallow known names)
+if exist "C:\SillyTavern\server.js" echo C:\SillyTavern\server.js >> "%SEARCH_TMP%"
+if exist "C:\SillyTavern-1.18.0\server.js" echo C:\SillyTavern-1.18.0\server.js >> "%SEARCH_TMP%"
+if exist "C:\SillyTavern-1.19.0\server.js" echo C:\SillyTavern-1.19.0\server.js >> "%SEARCH_TMP%"
+if exist "C:\SillyTavern-1.20.0\server.js" echo C:\SillyTavern-1.20.0\server.js >> "%SEARCH_TMP%"
+if exist "C:\SillyTavern-release\server.js" echo C:\SillyTavern-release\server.js >> "%SEARCH_TMP%"
+if exist "D:\SillyTavern\server.js" echo D:\SillyTavern\server.js >> "%SEARCH_TMP%"
+if exist "D:\SillyTavern-1.18.0\server.js" echo D:\SillyTavern-1.18.0\server.js >> "%SEARCH_TMP%"
+if exist "D:\SillyTavern-1.19.0\server.js" echo D:\SillyTavern-1.19.0\server.js >> "%SEARCH_TMP%"
+if exist "D:\SillyTavern-1.20.0\server.js" echo D:\SillyTavern-1.20.0\server.js >> "%SEARCH_TMP%"
+if exist "D:\SillyTavern-release\server.js" echo D:\SillyTavern-release\server.js >> "%SEARCH_TMP%"
+if exist "E:\SillyTavern\server.js" echo E:\SillyTavern\server.js >> "%SEARCH_TMP%"
+if exist "E:\SillyTavern-1.18.0\server.js" echo E:\SillyTavern-1.18.0\server.js >> "%SEARCH_TMP%"
+if exist "E:\SillyTavern-1.19.0\server.js" echo E:\SillyTavern-1.19.0\server.js >> "%SEARCH_TMP%"
+if exist "E:\SillyTavern-1.20.0\server.js" echo E:\SillyTavern-1.20.0\server.js >> "%SEARCH_TMP%"
+if exist "E:\SillyTavern-release\server.js" echo E:\SillyTavern-release\server.js >> "%SEARCH_TMP%"
+
+REM Read first hit (no parens block: avoids %var% expansion timing in cmd)
+set FOUND_LINE=
+if exist "%SEARCH_TMP%" set /p FOUND_LINE=<"%SEARCH_TMP%"
+if not defined FOUND_LINE goto notfound
+for %%f in ("%FOUND_LINE%") do set FOUND_DIR=%%~dpf
+del /q "%SEARCH_TMP%" 2>nul
+if not defined FOUND_DIR goto notfound
+set TAVERN_DIR=%FOUND_DIR%
+goto found
+
+:notfound
+del /q "%SEARCH_TMP%" 2>nul
+echo [X] SillyTavern not found on this device.
+echo     Run install.bat first, or place the tavern folder next to this launcher.
+pause
+exit /b 1
+
+:found
+cd /d "%TAVERN_DIR%"
 echo [OK] Found tavern: %TAVERN_DIR%
 echo [OK] Starting... open http://localhost:8000
 node server.js
 if errorlevel 1 (
-    echo.
-    echo [X] Start failed. If deps missing, cd to %TAVERN_DIR% and run: npm install
-    pause
+  echo.
+  echo [X] Start failed. If deps missing, cd to %TAVERN_DIR% and run: npm install
+  pause
 )
