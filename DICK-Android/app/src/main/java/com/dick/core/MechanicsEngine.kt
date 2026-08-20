@@ -57,7 +57,13 @@ class MechanicsEngine {
             (stCfg.fields["fields"] as? J.Arr)?.items?.forEach { f ->
                 val fo = f as? J.Obj ?: return@forEach
                 val key = fo.fields["key"]?.str() ?: return@forEach
-                status.fields[key] = fo.fields["initial"] ?: J.Null
+                // 与好感度同规格：int 型永远写具体数值（缺失用 0），enum 型缺失用空串
+                // 绝不能写 J.Null —— J.Null.int()=0 且非 null，会导致累加每轮从 0 开始
+                status.fields[key] = if (fo.fields["type"]?.str() == "int") {
+                    J.Num((fo.fields["initial"]?.int() ?: 0).toDouble())
+                } else {
+                    fo.fields["initial"] ?: J.Str("")
+                }
             }
         }
         st.fields["status"] = status
@@ -177,18 +183,16 @@ class MechanicsEngine {
                 val ftype = fo.fields["type"]?.str() ?: "enum"
                 if (ftype == "int") {
                     val raw = value.toIntOrNull() ?: return@replace m.value
-                    val cur = statusRef.fields[key]?.int()
-                    val isRel = (value.startsWith("+") || value.startsWith("-")) && raw != 0
-                    val delta = if (isRel) {
-                        // 相对增减：基于当前值（cur 为 null 时按 initial 或 0 起算，避免"从0开始"）
-                        val base = cur ?: (fo.fields["initial"] as? J.Num)?.v?.toInt() ?: 0
-                        base + raw
+                    // 好感度同规格：cur 永远有值（reload 写 J.Num；restore 旧快照缺字段时兜底 initial）
+                    val cur = statusRef.fields[key]?.int() ?: (fo.fields["initial"]?.int() ?: 0)
+                    val next = if ((value.startsWith("+") || value.startsWith("-")) && raw != 0) {
+                        cur + raw
                     } else {
                         raw
                     }
                     val lo = fo.fields["min"]?.int() ?: 0
                     val hi = fo.fields["max"]?.int() ?: 100
-                    statusRef.fields[key] = J.Num(delta.coerceIn(lo, hi).toDouble())
+                    statusRef.fields[key] = J.Num(next.coerceIn(lo, hi).toDouble())
                 } else {
                     statusRef.fields[key] = J.Str(value)
                 }
@@ -260,14 +264,9 @@ class MechanicsEngine {
             val fo = fields[k] ?: continue
             if (fo.fields["type"]?.str() == "int") {
                 val raw = v.toIntOrNull() ?: continue
-                val cur = statusRef.fields[k]?.int()
-                val isRel = (v.startsWith("+") || v.startsWith("-")) && raw != 0
-                val next = if (isRel) {
-                    val base = cur ?: (fo.fields["initial"] as? J.Num)?.v?.toInt() ?: 0
-                    base + raw
-                } else {
-                    raw
-                }
+                // 好感度同规格：cur 永远有值
+                val cur = statusRef.fields[k]?.int() ?: (fo.fields["initial"]?.int() ?: 0)
+                val next = if ((v.startsWith("+") || v.startsWith("-")) && raw != 0) cur + raw else raw
                 val lo = fo.fields["min"]?.int() ?: 0
                 val hi = fo.fields["max"]?.int() ?: 100
                 statusRef.fields[k] = J.Num(next.coerceIn(lo, hi).toDouble())
