@@ -6,7 +6,11 @@ datas = [('web', 'web'), ('plugins', 'plugins'), ('saves', 'saves'), ('worlds', 
          ('web_fetch.py', '.'), ('stock_analysis.py', '.'), ('doc_layout.py', '.'),
          ('i18n.py', '.'), ('app_paths.py', '.'), ('card_compat.py', '.'),
          ('PLUGIN_DEV.md', '.'), ('状态变量说明.md', '.'), ('声库安装说明.txt', '.'),
-         ('financial_history.json', '.')]
+         ('financial_history.json', '.'),
+         # 酒馆安装器（第一级目录，只带脚本，酒馆本体由 install.js 下载）
+         ('tavern-installer/install.js', 'tavern-installer'), ('tavern-installer/install.bat', 'tavern-installer'),
+         ('tavern-installer/start.bat', 'tavern-installer'), ('tavern-installer/package.json', 'tavern-installer'),
+         ('tavern-installer/README.md', 'tavern-installer')]
 binaries = []
 hiddenimports = ['openai', 'customtkinter', 'PIL', 'requests', 'flask', 'openpyxl', 'docx', 'edge_tts', 'pygame',
                  'html.parser', 'html', 'urllib.parse', 'asyncio', 'random', 'importlib.util',
