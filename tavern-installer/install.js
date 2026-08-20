@@ -19,6 +19,12 @@
  */
 "use strict";
 
+// Windows 控制台默认 GBK，中文/emoji 输出会崩（闪退）→ 强制 UTF-8
+try {
+  process.stdout.setDefaultEncoding("utf8");
+  process.stderr.setDefaultEncoding("utf8");
+} catch (e) { /* 非关键 */ }
+
 const { execSync, spawn } = require("child_process");
 const fs = require("fs");
 const path = require("path");
