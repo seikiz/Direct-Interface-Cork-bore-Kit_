@@ -10,6 +10,7 @@
 
 import os
 import subprocess
+import sys
 import time
 import urllib.request
 import json
@@ -17,6 +18,64 @@ import json
 
 class VoiceEngineError(Exception):
     pass
+
+
+# ---------- 日语系统/环境冲突检测 ----------
+def detect_jp_conflicts():
+    """检测与日语系统/日语环境可能冲突的点，返回 {key: (ok, 说明)}。
+    用于设置页/启动时提示：日语区域、控制台编码、IME、VOICEVOX 状态等。
+    """
+    out = {}
+    # 1) 系统语言/区域（Windows）
+    try:
+        import ctypes
+        lang = ctypes.windll.kernel32.GetUserDefaultUILanguage()
+        lang_id = lang & 0xFFFF
+        is_jp_system = (lang_id == 0x0411)  # ja-JP
+        out["jp_system"] = (not is_jp_system,
+                            "系统界面为日语（可能影响控制台编码/路径显示）" if is_jp_system else "系统非日语")
+    except Exception:
+        out["jp_system"] = (True, "无法检测系统语言")
+    # 2) Python 默认编码（日语系统 cp932 风险）
+    try:
+        pref = sys.getfilesystemencoding()
+        out["fs_encoding"] = (pref.lower() in ("utf-8", "utf8"),
+                              "文件系统编码: " + pref + ("（UTF-8 安全）" if pref.lower() in ("utf-8", "utf8") else "（非 UTF-8，日文路径可能出错）"))
+    except Exception:
+        out["fs_encoding"] = (True, "无法检测编码")
+    # 3) 控制台输出编码
+    try:
+        try:
+            out_enc = sys.stdout.encoding or "unknown"
+        except Exception:
+            out_enc = "unknown"
+        out["console_encoding"] = (out_enc.lower() in ("utf-8", "utf8"),
+                                   "控制台编码: " + str(out_enc))
+    except Exception:
+        out["console_encoding"] = (True, "无法检测")
+    # 4) 日语 IME（简判：系统语言是日文且非日语系统项已判定）
+    # 5) VOICEVOX 就绪状态
+    try:
+        vv = HanasuEngine().is_ready()
+        out["voicevox"] = (vv, "VOICEVOX 运行中" if vv else "VOICEVOX 未启动（auto 模式会回落 UTAU）")
+    except Exception:
+        out["voicevox"] = (True, "无法检测 VOICEVOX")
+    return out
+
+
+def _safe_stdout():
+    """日语系统下 stdout 可能是 cp932，日文路径/文本 print 会崩 → 强制 UTF-8"""
+    try:
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
+    try:
+        sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
+
+
+_safe_stdout()  # 模块加载即加固（含独立子进程场景）
 
 
 class UtauEngine:
@@ -43,9 +102,13 @@ class UtauEngine:
         py = self.python if os.path.isabs(self.python) else os.path.join(self.base_dir, self.python)
         vb = self.voicebank if os.path.isabs(self.voicebank) else os.path.join(self.base_dir, self.voicebank)
         helper = os.path.join(os.path.dirname(os.path.abspath(__file__)), "utau_speak.py")
+        # 日语系统冲突防护：强制子进程 UTF-8（避免 cp932 下日文路径/输出崩溃）
+        env = dict(os.environ)
+        env.setdefault("PYTHONIOENCODING", "utf-8")
+        env.setdefault("PYTHONUTF8", "1")
         r = subprocess.run(
             [py, helper, vb, str(self.pitch), str(self.duration), text, out_path, pitch_mode],
-            capture_output=True, timeout=180, encoding="utf-8", errors="replace",
+            capture_output=True, timeout=180, encoding="utf-8", errors="replace", env=env,
         )
         if r.returncode != 0 or not os.path.exists(out_path):
             raise VoiceEngineError("UTAU 合成失败：" + ((r.stdout or "") + (r.stderr or ""))[-200:])

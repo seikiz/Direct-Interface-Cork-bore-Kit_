@@ -7,6 +7,13 @@
 # 音素按声库 oto.ini 实际条目匹配（罗马音/假名/片假名变体兜底）
 import sys
 
+# 日语系统冲突防护：cp932 控制台输出日文会崩 → 强制 UTF-8
+try:
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+except Exception:
+    pass
+
 KANA_ROMAN = {  # 50音 + 浊/半浊/拗音（小写罗马音，与多数 CV 声库一致）
     'あ': 'a', 'い': 'i', 'う': 'u', 'え': 'e', 'お': 'o',
     'か': 'ka', 'き': 'ki', 'く': 'ku', 'け': 'ke', 'こ': 'ko',

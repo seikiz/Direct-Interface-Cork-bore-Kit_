@@ -197,4 +197,26 @@ class UtauVoicePlugin(PluginBase):
     def on_command(self, command, args):
         if command == "speak":
             return self._speak(args), False
+        if command in ("voicecheck", "语音检测"):
+            return self._voice_check(), False
         return None
+
+    def _voice_check(self):
+        """日语系统/语音环境冲突检测报告"""
+        try:
+            from voice_engine import detect_jp_conflicts
+            rep = detect_jp_conflicts()
+            lines = ["🎙️ 语音环境检测："]
+            for k, (ok, desc) in rep.items():
+                lines.append(("  ✅ " if ok else "  ⚠️ ") + desc)
+            # UTAU 就绪
+            ve = self._engine()
+            if ve:
+                lines.append(("  ✅ " if ve.utau.is_ready() else "  ⚠️ ") + "UTAU 声库/环境" +
+                             ("就绪" if ve.utau.is_ready() else "未就绪"))
+                lines.append(("  ✅ " if ve.hanasu.is_ready() else "  ⚠️ ") + "HANASU(VOICEVOX)" +
+                             ("运行中" if ve.hanasu.is_ready() else "未启动"))
+                lines.append("  当前引擎: " + ve.engine)
+            return "\n".join(lines)
+        except Exception as e:
+            return "⚠️ 语音环境检测失败：" + str(e)[:120]
