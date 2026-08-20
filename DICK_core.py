@@ -698,8 +698,10 @@ class ChatCore:
             if on_error: on_error("候选生成失败：找不到用户节点")
             return
         self.tree.current_leaf_id = user_node_id
+        # 翻译隐藏：聊天显示原文（content），发 AI 用译文（metadata.ja_input，中字日配不露痕迹）
+        send_text = (node.metadata or {}).get('ja_input') or node.content
         threading.Thread(target=self._fetch_response,
-                         args=(node.content, node.metadata.get('speaker'),
+                         args=(send_text, node.metadata.get('speaker'),
                                on_response, on_error, user_node_id, on_stream),
                          daemon=True).start()
 

@@ -2545,7 +2545,15 @@ class ChatApp:
         chain_len = len(self.core.get_current_chain())
         print(f"[DEBUG] 当前历史链长度: {chain_len}")
 
-        self._last_user_input = user_input
+        # 翻译隐藏：聊天显示原文，发 AI 用译文（jp_patch 返回 \u200b原文\u200b译文）
+        display_input = user_input
+        send_input = user_input
+        try:
+            from plugins.jp_patch_plugin import JpPatchPlugin
+            display_input, send_input = JpPatchPlugin.split_hidden(user_input)
+        except Exception:
+            pass
+        self._last_user_input = display_input
 
         # 群聊自动接话：每次用户发言重置轮数
         self.auto_remaining = self.AUTO_MAX_ROUNDS if (
@@ -2554,11 +2562,11 @@ class ChatApp:
         self.msg_entry.delete(0, tk.END)
         self.msg_entry.configure(state="disabled")
         persona_name = self.persona_data.get('name') if self.persona_data else None
-        self._insert_message(persona_name or "你", user_input, is_user=True)
+        self._insert_message(persona_name or "你", display_input, is_user=True)
         self._show_loading()
         self.root.update()
         self._stream_active = False  # 新回复开始，重置流式状态
-        self.core.send_message(user_input, on_response=self._on_response,
+        self.core.send_message(send_input, on_response=self._on_response,
                                on_error=self._on_error, on_stream=self._on_stream)
 
     # ==================== 流式输出 ====================

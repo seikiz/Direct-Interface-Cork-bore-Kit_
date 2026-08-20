@@ -1279,6 +1279,8 @@ class HtmlApp:
         processed = self.plugin_manager.onMessageSend(text) if hasattr(self.plugin_manager, "onMessageSend") else text
         if processed is None:
             return {"ok": False, "err": "blocked"}
+        # 翻译隐藏：显示/存储用原文，发给 AI 用译文（中字日配不露痕迹）
+        display_text, send_text = self._split_hidden(processed)
         # 玩家发送新消息（打字或点选项之外的自由输入）后，旧剧情选项作废
         self._clear_choices()
         image = None
@@ -1288,7 +1290,7 @@ class HtmlApp:
         if image_b64:
             self.busy = True
             speaker = (self.persona or {}).get("name") or "你"
-            node_id = self.core.add_user_message(processed)
+            node_id = self.core.add_user_message(display_text)  # 树里存原文（翻译隐藏）
             try:
                 self.core.tree.nodes[node_id].metadata["speaker"] = speaker
             except Exception:
@@ -1296,9 +1298,9 @@ class HtmlApp:
             self.node_images[node_id] = image
             self._rebuild_messages()
             threading.Thread(target=self._vision_then_send,
-                             args=(node_id, processed, image_b64, mime), daemon=True).start()
+                             args=(node_id, send_text, image_b64, mime), daemon=True).start()  # 发译文给 AI
             return {"ok": True}
-        self._send_text(processed, None, None)
+        self._send_text(display_text, send_text, None)
 
         return {"ok": True}
 
@@ -1352,14 +1354,29 @@ class HtmlApp:
             on_error=self._on_error,
         )
 
-    def _send_text(self, display_text, tree_content, image):
-        # 正则管道（user 作用域）：存储前应用 → 树里存转换后文本
-        content = self._apply_regex_pipeline(tree_content or display_text, "user")
+    def _split_hidden(self, processed):
+        """翻译隐藏标记解析 → (显示文本, 发送文本)。无标记则两者相同。
+        约定：jp_patch 自动日译返回 "\u200b<原文>\u200b<译文>"。"""
+        if not processed:
+            return processed, processed
+        mark = "\u200b"
+        if isinstance(processed, str) and processed.startswith(mark):
+            parts = processed.split(mark)
+            if len(parts) >= 3:
+                return parts[1], mark.join(parts[2:])
+        return processed, processed
+
+    def _send_text(self, display_text, hidden_send, image):
+        # 显示/存储用原文；若翻译隐藏（hidden_send 非空且不同），译文存 metadata["ja_input"]，
+        # _fetch_response 发 AI 时优先用译文（聊天永远看不到日文）
+        content = self._apply_regex_pipeline(display_text or "", "user")
         self._last_user = display_text or ""
         speaker = (self.persona or {}).get("name") or "你"
         node_id = self.core.add_user_message(content)
         try:
             self.core.tree.nodes[node_id].metadata["speaker"] = speaker
+            if hidden_send and hidden_send != display_text:
+                self.core.tree.nodes[node_id].metadata["ja_input"] = hidden_send
             if self.core.mechanism_state is not None:
                 self.core.tree.nodes[node_id].metadata["ms"] = self.core.mechanism_snapshot()
         except Exception:

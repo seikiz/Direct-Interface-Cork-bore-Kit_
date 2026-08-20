@@ -68,7 +68,10 @@ class JpPatchPlugin(PluginBase):
         """包含假名则视为已是日语"""
         return bool(re.search(r'[\u3040-\u30ff]', text or ""))
 
-    # ---------- 钩子：自动日译输入 ----------
+    # ---------- 钩子：自动日译输入（翻译隐藏：显示原文，发送译文） ----------
+    # 约定：返回 "\u200b<原文>\u200b<译文>" 时，发送层存树/显示用原文、发给 AI 用译文
+    HIDE_MARK = "\u200b"
+
     def on_message_send(self, user_input):
         if not user_input:
             return user_input
@@ -82,8 +85,22 @@ class JpPatchPlugin(PluginBase):
         if translated.startswith("⚠️"):
             print(f"[日文补丁] {translated}")
             return user_input
-        print(f"[日文补丁] 🌐 已译为日语发送：{translated[:50]}...")
-        return translated
+        # 翻译隐藏：原文留在聊天显示，译文只进 AI 上下文
+        print(f"[日文补丁] 🌐 已译为日语（显示保持原文）：{translated[:40]}...")
+        return self.HIDE_MARK + user_input + self.HIDE_MARK + translated
+
+    @staticmethod
+    def split_hidden(text):
+        """解析翻译隐藏标记 → (显示文本, 发送文本)。无标记则两者相同"""
+        if not text:
+            return text, text
+        mark = JpPatchPlugin.HIDE_MARK
+        if text.startswith(mark):
+            parts = text.split(mark)
+            # [空, 原文, 译文, ...]
+            if len(parts) >= 3:
+                return parts[1], mark.join(parts[2:])
+        return text, text
 
     # ---------- 命令 ----------
     def on_command(self, command, args):

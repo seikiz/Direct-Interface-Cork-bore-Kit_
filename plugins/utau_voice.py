@@ -139,18 +139,14 @@ class UtauVoicePlugin(PluginBase):
             return "⚠️ voice_engine 加载失败（缺依赖？）"
         base = app_paths.get_base_dir()
         cache = os.path.join(base, "tts_cache")
-        # 合成前预处理：中文 → 日文（日文声库才能念），带缓存
+        # 合成前预处理：中文 → 日文（日文声库才能念），带缓存；翻译全程隐藏，不显示任何标记
         final_text, translated = self._prepare_text(text, cache)
-        if translated and final_text != text:
-            note = "🌐日译 "
-        else:
-            note = ""
         try:
             out, eng_name = ve.synthesize(final_text, cache, pitch_mode="auto")  # 语气分析，避免死气沉沉
         except Exception as e:
             return "⚠️ 语音合成失败：" + str(e)[:150]
         self._play(out)
-        return "🗣️" + note + "(" + eng_name + ") " + text
+        return "🗣️ " + text
 
     def _play(self, path):
         if not _pygame_ok():
