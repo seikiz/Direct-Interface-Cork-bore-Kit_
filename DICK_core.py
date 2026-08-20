@@ -1129,14 +1129,16 @@ class ChatCore:
                     continue
                 f = fields[k]
                 if f.get("type") == "int":
+                    raw_s = str(v).strip()
                     try:
-                        v = int(v)
+                        v = int(raw_s)
                     except (TypeError, ValueError):
                         continue
                     lo = int(f.get("min", 0) or 0)
                     hi = int(f.get("max", 100) or 100)
                     cur = st["status"].get(k)
-                    if isinstance(cur, (int, float)) and isinstance(v, int) and (str(v).startswith("+") or str(v).startswith("-")):
+                    # GAL 选项：int 一律按相对值累加（无符号也 +N），杜绝"1 覆盖 2"
+                    if isinstance(cur, (int, float)) and v != 0:
                         v = int(cur) + v
                     st["status"][k] = max(lo, min(hi, v))
                 else:

@@ -420,7 +420,12 @@ class MechanicsEngine {
     }
 
     // ---------- GAL 选项效果 ----------
-    fun applyEffect(aff: Int?, stMap: Map<String, String>?) {
+    /**
+     * 应用选项机制效果。forceRelative=true（GAL 选项）：int 字段一律按相对值累加——
+     * 即使模型偷懒写了绝对值（如 "sex":1）也强制当作 +1 在当前值上累加，
+     * 杜绝"1 覆盖 2"。enum 字段不受影响（始终直接赋值新值）。
+     */
+    fun applyEffect(aff: Int?, stMap: Map<String, String>?, forceRelative: Boolean = false) {
         val cfg = config ?: return
         val st = state ?: return
         val affCfg = cfg.fields["affection"] as? J.Obj
@@ -457,7 +462,9 @@ class MechanicsEngine {
                 // 关键：只有 J.Num 才算"有当前值"（J.Null 的 .int()=0 会让兜底失效 → 从0加）
                 val cur = (statusRef.fields[k] as? J.Num)?.v?.toInt()
                     ?: (fo.fields["initial"]?.int() ?: 0)
-                val next = if ((v.startsWith("+") || v.startsWith("-")) && raw != 0) cur + raw else raw
+                // forceRelative（GAL 选项）：无符号也按 +N 累加，杜绝绝对值覆盖
+                val isRel = forceRelative || ((v.startsWith("+") || v.startsWith("-")) && raw != 0)
+                val next = if (isRel) cur + raw else raw
                 val lo = fo.fields["min"]?.int() ?: 0
                 val hi = fo.fields["max"]?.int() ?: 100
                 statusRef.fields[k] = J.Num(next.coerceIn(lo, hi).toDouble())

@@ -1321,7 +1321,7 @@ val wsExportLauncher = rememberLauncherForActivityResult(ActivityResultContracts
         } else if (kind == "crit" || kind == "fail") {
             // 无机制效果的选项：暴击/失败不空转提示
         }
-        mech.applyEffect(aff, item.st)
+        mech.applyEffect(aff, item.st, forceRelative = true)  // GAL 选项：int 强制累加（无符号也按 +N）
         mech.persistState()  // GAL 选项结算后实时落盘（否则重启从旧 JSON 恢复 → 看似"从0加"）
         mechTick++
         if (kind == "rare") {
