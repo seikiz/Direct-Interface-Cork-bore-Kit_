@@ -79,26 +79,37 @@ function nodeVersion() {
   }
 }
 
-function download(url, dest) {
+function download(url, dest, onProgress) {
   return new Promise((resolve, reject) => {
     const lib = url.startsWith("https") ? https : http;
     const req = lib.get(url, { headers: { "User-Agent": "DICK-tavern-installer" } }, (res) => {
       if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
         info(`重定向 → ${res.headers.location}`);
-        download(res.headers.location, dest).then(resolve, reject);
+        download(res.headers.location, dest, onProgress).then(resolve, reject);
         return;
       }
       if (res.statusCode !== 200) {
         reject(new Error(`HTTP ${res.statusCode}`));
         return;
       }
+      const total = parseInt(res.headers["content-length"] || "0", 10);
       const f = fs.createWriteStream(dest);
+      let got = 0;
+      let lastPct = -1;
+      res.on("data", (c) => {
+        got += c.length;
+        if (onProgress && total > 0) {
+          const pct = Math.floor((got / total) * 100 / 10) * 10;
+          if (pct !== lastPct) { lastPct = pct; onProgress(pct, got, total); }
+        }
+      });
       res.pipe(f);
       f.on("finish", () => f.close(resolve));
       f.on("error", reject);
     });
     req.on("error", reject);
-    req.setTimeout(120000, () => req.destroy(new Error("下载超时")));
+    // 大文件慢网络：超时放宽到 10 分钟（之前 120s 对 36MB 不够）
+    req.setTimeout(600000, () => req.destroy(new Error("下载超时（10分钟）")));
   });
 }
 
@@ -172,7 +183,14 @@ async function main() {
     for (const u of urls) {
       try {
         info(`下载: ${u.slice(0, 70)}…`);
-        await download(u, TAVERN_ZIP);
+        let pctShow = "";
+        await download(u, TAVERN_ZIP, (pct, got, total) => {
+          if (pctShow !== String(pct)) {
+            pctShow = String(pct);
+            process.stdout.write(`\r  进度 ${pct}% (${(got/1048576).toFixed(1)}/${(total/1048576).toFixed(0)}MB)`);
+          }
+        });
+        process.stdout.write("\n");
         const sz = fs.statSync(TAVERN_ZIP).size;
         if (sz < 1000000) { warn(`文件过小（${(sz/1024/1024).toFixed(1)}MB），换源`); continue; }
         okDl = true;
@@ -255,7 +273,8 @@ function startTavern() {
   }
   info(`启动酒馆（${path.relative(ROOT, pkgDir)}）…`);
   try {
-    const child = spawn("cmd", ["/c", "npm start"], { cwd: pkgDir, detached: true, stdio: "ignore" });
+    // 直接 node server.js（绕过 npm 额外层，更快更稳），detached + unref 保持后台运行
+    const child = spawn("node", ["server.js"], { cwd: pkgDir, detached: true, stdio: "ignore", windowsHide: true });
     child.unref();
     console.log(`\n${GREEN}酒馆已在后台启动：http://localhost:8000${RESET}`);
     console.log(`${YELLOW}第一次启动请设置 API Key（设置 → API 连接）。\n${RESET}`);
