@@ -648,19 +648,19 @@ class HtmlApp:
         print("[Ollama] 未检测到本地服务（需要时先安装并启动 Ollama）")
 
     def _vision_describe(self, image_b64, mime):
-        """看图描述：优先用已配置的 DeepSeek 视觉模型（deepseek-v4-flash-vision-exp），
-        未配 key 或无视觉模型时回落免费视觉链。"""
+        """看图描述：DICK 的眼睛 = DeepSeek-V4-Flash-Vision-Exp（DSFVE）。
+        只要配了 DeepSeek key 就固定用它看图（与主对话模型无关），失败才回落免费链。"""
         import requests
         proxy = self.config.get("proxy") or None
         proxies = {"http": proxy, "https": proxy} if proxy else None
-        # 优先：DeepSeek 官方视觉模型（用户配了 key 且模型支持视觉）
         ds_key = (self.config.get("api_key") or "").strip()
         ds_base = (self.config.get("base_url") or "https://api.deepseek.com").strip()
-        ds_model = self.config.get("model") or ""
-        if ds_key and ds_base and ("vision" in ds_model.lower() or ds_model == "deepseek-v4-flash-vision-exp"):
+        # 独立视觉模型 ID（DSFVE），不依赖主模型
+        vision_model = "deepseek-v4-flash-vision-exp"
+        if ds_key and ds_base:
             data_url = "data:" + mime + ";base64," + image_b64
             body = {
-                "model": ds_model,
+                "model": vision_model,
                 "messages": [{"role": "user", "content": [
                     {"type": "image_url", "image_url": {"url": data_url}},
                     {"type": "text", "text": "请用中文详细描述这张图片的内容（包括文字、物体、场景、数据，如有表格请逐项列出）。"},
@@ -1338,12 +1338,56 @@ class HtmlApp:
         return {"ok": True}
 
     def _vision_then_send(self, node_id, text, image_b64, mime):
+        """发图 = DSFVE 直接看图回答：视觉模型基于图片+用户文本，以角色口吻直接生成回复。
+        失败则回落到"描述中转 + 主模型"。"""
+        import requests
+        proxy = self.config.get("proxy") or None
+        proxies = {"http": proxy, "https": proxy} if proxy else None
+        node = self.core.tree.nodes.get(node_id)
+        ds_key = (self.config.get("api_key") or "").strip()
+        ds_base = (self.config.get("base_url") or "https://api.deepseek.com").strip()
+        vision_model = "deepseek-v4-flash-vision-exp"
+        data_url = "data:" + (mime or "image/png") + ";base64," + image_b64
+        direct = None
+        if ds_key and ds_base:
+            # 用当前系统提示（角色人设）让 DSFVE 以角色身份看图回答
+            try:
+                sys_prompt = ""
+                for nid, n in (self.core.tree.nodes or {}).items():
+                    if n.role == "system" and n.content:
+                        sys_prompt = n.content
+                        break
+                body = {
+                    "model": vision_model,
+                    "messages": [{"role": "system", "content": sys_prompt or "你是角色扮演助手，请以角色口吻自然回应。"},
+                                 {"role": "user", "content": [
+                                     {"type": "image_url", "image_url": {"url": data_url}},
+                                     {"type": "text", "text": text or "请描述这张图片并自然回应。"},
+                                 ]}],
+                    "max_tokens": 1024,
+                    "stream": False,
+                }
+                r = requests.post(ds_base.rstrip("/") + "/chat/completions",
+                                  json=body,
+                                  headers={"Content-Type": "application/json",
+                                           "Authorization": "Bearer " + ds_key},
+                                  timeout=120, proxies=proxies)
+                if r.status_code < 400:
+                    content = ((r.json().get("choices") or [{}])[0].get("message") or {}).get("content")
+                    if isinstance(content, str) and content.strip():
+                        direct = content.strip()
+            except Exception as e:
+                print(f"[视觉] DSFVE 直答失败: {e}")
+        if direct:
+            # DSFVE 直接回答 → 作为 AI 回复（新增 assistant 节点，不动 user 节点）
+            self._vision_direct_done(node_id, direct)
+            return
+        # 回落：描述中转（原逻辑）
         try:
             desc = self._vision_describe(image_b64, mime or "image/png")
         except Exception as e:
             desc = None
             print(f"[视觉] 描述失败: {e}")
-        node = self.core.tree.nodes.get(node_id)
         if desc:
             tree_content = "用户发送了一张图片。视觉模型对图片的描述：\n" + desc + "\n\n用户输入：" + text
             if node:
@@ -1353,6 +1397,53 @@ class HtmlApp:
         else:
             self.busy = False
             self._append_sys(i18n.t("vision_fail", "⚠️ 图片识别失败（免费视觉链被限流或网络问题），请稍后重试"))
+
+    def _vision_direct_done(self, node_id, direct):
+        """DSFVE 直答完成：user 节点保持原样，新增 assistant 节点存 AI 回复。
+        处理机制标签/正则/事件，与正常 AI 回复一致。"""
+        try:
+            import re as _re
+            ai_reply = direct
+            ja_text = ""
+            m = _re.search(r"\[ja\]([\s\S]*?)\[/ja\]", ai_reply or "")
+            if m:
+                ja_text = m.group(1).strip()
+                ai_reply = _re.sub(r"\[ja\][\s\S]*?\[/ja\]", "", ai_reply)
+            clean = self.core.strip_mechanism_tags(ai_reply or "", apply=True)
+            clean = self._apply_regex_pipeline(clean, "ai")
+            # 新增 assistant 节点挂在 user 节点下
+            meta = {}
+            speaker = self.selected_roles[0] if len(self.selected_roles) == 1 else None
+            if speaker:
+                meta["speaker"] = speaker
+            if self.core.mechanism_state is not None:
+                meta["ms"] = self.core.mechanism_snapshot()
+            if ja_text:
+                meta["ja"] = ja_text
+            self.core.tree.add_node("assistant", clean, node_id, meta)
+            # 事件检查
+            try:
+                ev = self.core.check_mech_events(getattr(self, "_last_user", ""))
+                if ev:
+                    self.core.pending_event = ev
+            except Exception:
+                pass
+            self._save_tree()
+            self._rebuild_messages()
+            self.streaming = ""
+            self.busy = False
+            for p in self.plugin_manager.get_all_plugins():
+                if p.enabled:
+                    try:
+                        p.on_message_received(getattr(self, "_last_user", ""), clean)
+                    except Exception:
+                        pass
+        except Exception as e:
+            print(f"[视觉] 直答落树失败: {e}")
+            self._append_sys(direct, kind="ai")
+            self._rebuild_messages()
+            self.busy = False
+            self.streaming = ""
 
     def _handle_travel(self, text):
         """/穿越 [世界名]：列出可穿越世界或直接穿越；返回提示文本或 None（不是穿越命令）"""
