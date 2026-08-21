@@ -358,8 +358,40 @@ button .ic{ margin-right:2px; }
     <div id="inputbar">
       <button class="plus" id="plusBtn">➕</button>
       <textarea id="input" placeholder="输入消息... (使用 @角色名 指定说话者)"></textarea>
+      <button id="genImgBtn" title="🎨 生图" style="background:none;border:none;color:var(--text);font-size:18px;cursor:pointer;padding:0 8px">🎨</button>
       <button id="send">发送</button>
       <input type="file" id="fileInput" accept="image/*" style="display:none">
+<!-- 生图模态 -->
+<div class="modal" id="genImgModal">
+  <div class="modal-box" style="width:440px">
+    <h3>🎨 生图</h3>
+    <div class="field"><label>风格预设</label>
+      <select id="genPreset"></select>
+      <div id="genPresetDesc" style="font-size:11px;color:var(--sub);margin-top:3px"></div>
+    </div>
+    <div class="field"><label>画面内容（描述要生成什么）</label>
+      <textarea id="genPrompt" rows="3" placeholder="例如：她站在樱花树下回头微笑，微风拂起银白发丝"></textarea>
+    </div>
+    <div class="field"><label>负面提示（可选，不想要的内容）</label>
+      <input id="genNegative" placeholder="例如：模糊, 变形, 多余手指"></div>
+    <div class="row" style="justify-content:flex-start">
+      <label style="font-size:12px;color:var(--sub);margin-right:6px">尺寸</label>
+      <select id="genSize" style="width:110px">
+        <option value="1024x1024">方形 1024</option>
+        <option value="1024x768">横版 1024x768</option>
+        <option value="768x1024">竖版 768x1024</option>
+        <option value="512x512">小方形 512</option>
+      </select>
+    </div>
+    <div id="genResult" style="margin-top:8px;display:none;text-align:center">
+      <img id="genResultImg" style="max-width:100%;max-height:260px;border-radius:8px">
+    </div>
+    <div class="row">
+      <button class="btn2 ghost" onclick="document.getElementById('genImgModal').classList.remove('open')">取消</button>
+      <button class="btn2" id="genGo" style="width:auto;margin:0">✨ 生成</button>
+    </div>
+  </div>
+</div>
 <!-- 头像裁剪模态 -->
 <div class="modal" id="cropModal">
   <div class="modal-box" style="width:420px">
@@ -556,6 +588,18 @@ button .ic{ margin-right:2px; }
       <button type="button" class="btn2 ghost" id="stModelBtn" style="width:100%;text-align:left">模型：— ▾</button>
       <div class="dd-overlay" id="stModelMenu" style="display:none"></div>
       <input id="stModelInput" list="stModelList" placeholder="或输入自定义模型 ID" style="margin-top:6px"><datalist id="stModelList"></datalist>
+    </div>
+    <div class="mech-fold" id="foldImgGen">
+      <div class="fold-head" onclick="toggleFold('foldImgGen')"><span>🎨 生图设置</span><span class="fold-arrow">▾</span></div>
+      <div class="fold-body">
+        <div class="field"><label>生图 API Key（默认 SiliconFlow，可换）</label>
+          <input id="stImgKey" type="password" placeholder="sk-..."></div>
+        <div class="field"><label>生图端点（OpenAI 兼容 /images/generations）</label>
+          <input id="stImgBase" placeholder="https://api.siliconflow.cn/v1"></div>
+        <div class="field"><label>生图模型</label>
+          <input id="stImgModel" placeholder="black-forest-labs/FLUX.1-schnell"></div>
+        <button class="btn2 ghost" id="stImgSave" style="width:auto;margin:0">💾 保存生图设置</button>
+      </div>
     </div>
     <div class="field"><label id="stTheme">主题 / Theme</label>
       <button class="btn" style="width:auto" id="stThemeBtn">深色</button>
@@ -1510,6 +1554,10 @@ function loadStateFill(s) {
     currentProviderId = s.provider || 'deepseek';
     renderProviderSel(currentProviderId);
     document.getElementById('stModelInput').value = s.model || 'deepseek-v4-flash';
+    // 生图配置回填
+    document.getElementById('stImgKey').value = s.image_gen_key ? '••••••••' : '';
+    document.getElementById('stImgBase').value = s.image_gen_base_url || 'https://api.siliconflow.cn/v1';
+    document.getElementById('stImgModel').value = s.image_gen_model || 'black-forest-labs/FLUX.1-schnell';
     fillProvider(currentProviderId, true);
     document.getElementById('stBaseInput').value = s.base_url || document.getElementById('stBaseInput').value;
     document.getElementById('stProxyInput').value = s.proxy || '';
@@ -1700,6 +1748,49 @@ document.getElementById('fileInput').onchange = function () {
 };
 document.getElementById('imgprevRemove').onclick = clearImage;
 document.getElementById('send').onclick = send;
+// ---------- 生图 ----------
+var genPresets = [];
+function loadGenPresets() {
+  pywebview.api.gen_presets().then(function (r) {
+    if (r && r.ok && r.presets) {
+      genPresets = r.presets;
+      var sel = document.getElementById('genPreset');
+      sel.innerHTML = '';
+      r.presets.forEach(function (p) {
+        var o = document.createElement('option');
+        o.value = p.id; o.textContent = p.label;
+        sel.appendChild(o);
+      });
+      sel.onchange = function () {
+        var p = genPresets.find(function (x) { return x.id === sel.value; });
+        document.getElementById('genPresetDesc').textContent = p ? p.desc : '';
+      };
+      sel.onchange();
+    }
+  });
+}
+document.getElementById('genImgBtn').onclick = function () {
+  loadGenPresets();
+  document.getElementById('genResult').style.display = 'none';
+  document.getElementById('genImgModal').classList.add('open');
+};
+document.getElementById('genGo').onclick = function () {
+  var prompt = document.getElementById('genPrompt').value.trim();
+  if (!prompt) { alert('请输入画面内容'); return; }
+  var btn = this; btn.disabled = true; btn.textContent = '⏳ 生成中...';
+  var preset = document.getElementById('genPreset').value;
+  var size = document.getElementById('genSize').value;
+  var neg = document.getElementById('genNegative').value.trim();
+  pywebview.api.gen_image(prompt, preset, size, neg).then(function (r) {
+    btn.disabled = false; btn.textContent = '✨ 生成';
+    if (r && r.ok && r.image) {
+      document.getElementById('genResultImg').src = r.image;
+      document.getElementById('genResult').style.display = 'block';
+    } else {
+      alert((r && r.err) || '生成失败');
+    }
+  }).catch(function () { btn.disabled = false; btn.textContent = '✨ 生成'; });
+};
 document.getElementById('input').addEventListener('keydown', function (e) {
   if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); }
 });
@@ -2526,6 +2617,14 @@ document.getElementById('btnSettings').onclick = function () {
   document.getElementById('settingsModal').classList.add('open');
 };
 document.getElementById('stCancel').onclick = function () { document.getElementById('settingsModal').classList.remove('open'); };
+document.getElementById('stImgSave').onclick = function () {
+  var key = document.getElementById('stImgKey').value.trim();
+  if (key === '••••••••') key = '';
+  pywebview.api.save_image_gen(key, document.getElementById('stImgBase').value.trim(), document.getElementById('stImgModel').value.trim()).then(function (r) {
+    if (r && r.ok) alert('✅ 生图设置已保存');
+    else alert((r && r.err) || '保存失败');
+  });
+};
 document.getElementById('stProviderBtn').onclick = function (e) {
   e.stopPropagation();
   showOverlay('stProviderBtn', 'stProviderMenu', PROVIDERS.map(function (x) {

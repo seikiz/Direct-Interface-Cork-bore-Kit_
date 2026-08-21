@@ -352,7 +352,8 @@ def _render_world_desc(w):
 PROVIDERS = [
     {"id": "deepseek", "name": "DeepSeek 官方", "free": False,
      "base_url": "https://api.deepseek.com",
-     "models": ["deepseek-v4-flash", "deepseek-v4-pro", "deepseek-chat", "deepseek-reasoner"],
+     "models": ["deepseek-v4-flash", "deepseek-v4-pro", "deepseek-chat", "deepseek-reasoner",
+                "deepseek-v4-flash-vision-exp"],
      "buy_url": "https://platform.deepseek.com/"},
     {"id": "ovh", "name": "OVH 免费链（免 Key）", "free": True,
      "base_url": "https://oai.endpoints.kepler.ai.cloud.ovh.net/v1",
@@ -647,10 +648,39 @@ class HtmlApp:
         print("[Ollama] 未检测到本地服务（需要时先安装并启动 Ollama）")
 
     def _vision_describe(self, image_b64, mime):
-        """走免费视觉链描述图片；配置了代理时一并走代理"""
+        """看图描述：优先用已配置的 DeepSeek 视觉模型（deepseek-v4-flash-vision-exp），
+        未配 key 或无视觉模型时回落免费视觉链。"""
         import requests
         proxy = self.config.get("proxy") or None
         proxies = {"http": proxy, "https": proxy} if proxy else None
+        # 优先：DeepSeek 官方视觉模型（用户配了 key 且模型支持视觉）
+        ds_key = (self.config.get("api_key") or "").strip()
+        ds_base = (self.config.get("base_url") or "https://api.deepseek.com").strip()
+        ds_model = self.config.get("model") or ""
+        if ds_key and ds_base and ("vision" in ds_model.lower() or ds_model == "deepseek-v4-flash-vision-exp"):
+            data_url = "data:" + mime + ";base64," + image_b64
+            body = {
+                "model": ds_model,
+                "messages": [{"role": "user", "content": [
+                    {"type": "image_url", "image_url": {"url": data_url}},
+                    {"type": "text", "text": "请用中文详细描述这张图片的内容（包括文字、物体、场景、数据，如有表格请逐项列出）。"},
+                ]}],
+                "max_tokens": 4096,
+                "stream": False,
+            }
+            try:
+                r = requests.post(ds_base.rstrip("/") + "/chat/completions",
+                                  json=body,
+                                  headers={"Content-Type": "application/json",
+                                           "Authorization": "Bearer " + ds_key},
+                                  timeout=90, proxies=proxies)
+                if r.status_code < 400:
+                    content = ((r.json().get("choices") or [{}])[0].get("message") or {}).get("content")
+                    if isinstance(content, str) and content.strip():
+                        return content.strip()
+            except Exception:
+                pass
+        # 回落：免费视觉链
         return _vision_describe(image_b64, mime, proxies=proxies)
 
     def _load_worlds(self):
@@ -711,7 +741,7 @@ class HtmlApp:
                     s = {"kind": "sys", "speaker": "系统", "content": s}
                 msgs.append({"seq": nxt(("sys", i)), "kind": s.get("kind", "sys"),
                              "speaker": s.get("speaker", "系统"),
-                             "content": s.get("content", ""), "image": None, "node_id": None})
+                             "content": s.get("content", ""), "image": s.get("image"), "node_id": None})
             for n in self._chain_nodes():
                 seq = nxt(("node", n.id))
                 meta = n.metadata or {}
@@ -886,6 +916,9 @@ class HtmlApp:
                 "welcome_shown": bool(self.config.get("welcome_shown", False)),
                 "ollama_online": bool(getattr(self, "ollama_online", False)),
                 "api_keys": self.api_keys,
+                "image_gen_key": self.config.get("image_gen_key", ""),
+                "image_gen_base_url": self.config.get("image_gen_base_url", "https://api.siliconflow.cn/v1"),
+                "image_gen_model": self.config.get("image_gen_model", "black-forest-labs/FLUX.1-schnell"),
                 "auto_turn": self.auto_turn,
                 "font": self.font_size,
                 "budget": int(self.config.get("context_budget", 0) or 0),
@@ -3549,6 +3582,45 @@ class HtmlApp:
         except Exception as e:
             return {"ok": False, "err": str(e)[:120]}
 
+    def api_gen_image(self, prompt, preset="anime", size="1024x1024", negative_prompt="", extra=""):
+        """生图：预设风格 + 提示词 → 图片（base64/url）。配置走设置里的生图 Key/端点。"""
+        import image_gen
+        try:
+            cfg = self.config
+            key = (cfg.get("image_gen_key") or "").strip()
+            base_url = (cfg.get("image_gen_base_url") or "https://api.siliconflow.cn/v1").strip()
+            model = (cfg.get("image_gen_model") or "black-forest-labs/FLUX.1-schnell").strip()
+        except Exception:
+            key, base_url, model = "", "https://api.siliconflow.cn/v1", "black-forest-labs/FLUX.1-schnell"
+        if not key:
+            return {"ok": False, "err": "未配置生图 API Key（设置 → 生图）"}
+        ok, data, msg = image_gen.generate(
+            prompt, preset=preset, size=size, api_key=key,
+            base_url=base_url, model=model, negative_prompt=negative_prompt, extra=extra)
+        if not ok:
+            return {"ok": False, "err": msg}
+        # 生图结果进聊天（sys_msgs 带 image 字段，_rebuild_messages 会展示）
+        try:
+            if data.get("b64"):
+                import base64 as _b
+                data_url = "data:image/png;base64," + data["b64"]
+            elif data.get("url"):
+                data_url = data["url"]
+            else:
+                return {"ok": False, "err": "生图无结果"}
+            self.sys_msgs.append({"kind": "ai", "speaker": "🎨 生图",
+                                  "content": "[" + preset + "] " + prompt,
+                                  "image": data_url, "node_id": None})
+            self._rebuild_messages()
+            return {"ok": True, "image": data_url, "preset": preset}
+        except Exception as e:
+            return {"ok": False, "err": "生图结果处理失败：" + str(e)[:100]}
+
+    def api_gen_presets(self):
+        """生图预设列表"""
+        import image_gen
+        return {"ok": True, "presets": image_gen.list_presets()}
+
     def api_codex_run_action(self, cmd):
         """播放器行动钩子（CODEX 深度集成 DICK 的系统权限）。
         支持：
@@ -3684,6 +3756,14 @@ class HtmlApp:
         self.core.set_stop_sequences(self._effective_stop())
         self._save_config()
         return {"ok": True, "provider": pid}
+
+    def api_save_image_gen(self, key, base_url, model):
+        """保存生图配置（key/端点/模型），存 config.json"""
+        self.config["image_gen_key"] = (key or "").strip()
+        self.config["image_gen_base_url"] = (base_url or "https://api.siliconflow.cn/v1").strip()
+        self.config["image_gen_model"] = (model or "black-forest-labs/FLUX.1-schnell").strip()
+        self._save_config()
+        return {"ok": True}
 
     def api_set_proxy(self, proxy):
         """设置 LLM 通道代理（http/https/socks5；空串 = 直连）"""
