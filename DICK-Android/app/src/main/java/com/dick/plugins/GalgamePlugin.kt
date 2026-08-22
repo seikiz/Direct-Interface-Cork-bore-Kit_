@@ -178,7 +178,32 @@ class GalgamePlugin : Plugin {
                 "$sp：$content"
             }
         }
-        return if (lines.isEmpty()) "（尚无对话）" else lines.joinToString("\n")
+        val parts = mutableListOf<String>()
+        parts.add("【最近对话】\n" + (if (lines.isEmpty()) "（尚无对话）" else lines.joinToString("\n")))
+        // 当前状态摘要（泛用）
+        try {
+            mechStateProvider?.invoke()?.let { st ->
+                val status = st.fields["status"] as? J.Obj
+                val sts = mutableListOf<String>()
+                st.fields["affection"]?.let { aff -> sts.add("好感度=${(aff as? J.Num)?.v?.toInt() ?: aff.int()}") }
+                status?.fields?.forEach { (k, v) ->
+                    if (k == "buffs") return@forEach
+                    sts.add(if (v is J.Num) "$k=${v.v.toInt()}" else "$k=${v.str() ?: v.int()}")
+                }
+                if (sts.isNotEmpty()) parts.add("【当前状态】" + sts.joinToString("，"))
+            }
+        } catch (_: Exception) {
+        }
+        // 当前事件
+        try {
+            mechEventProvider?.invoke()?.let { ev ->
+                val evName = ev.fields["name"]?.str() ?: ev.fields["id"]?.str() ?: return@let
+                val evPrompt = ev.fields["prompt"]?.str() ?: ""
+                parts.add("【当前剧情事件】触发「$evName」$evPrompt")
+            }
+        } catch (_: Exception) {
+        }
+        return parts.joinToString("\n\n")
     }
 
     // ---------- 解析 ----------

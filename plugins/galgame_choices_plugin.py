@@ -165,24 +165,15 @@ class GalgameChoicesPlugin(PluginBase):
                                   + '（如 "sex":+1 表示在当前值上加 1），禁止写绝对值目标值；'
                                   + '枚举型给新值（如 "心情":"开心"）')
             system = (
-                "你是视觉小说（Galgame）的选项生成器。根据最近剧情，"
+                "你是视觉小说（Galgame）的选项生成器。根据下方【最近对话】和【当前状态/事件】，"
                 f"为玩家（用户）生成 {count} 个简短、可行、有区分度的下一步行动选项。"
                 "要求：每个选项不超过 18 个字，口语化，贴合当前角色性格与剧情走向；"
                 "不要剧透后续剧情，不要输出编号或'选项一'这类前缀。"
                 '每个选项必须带 "result"：一句事件结果提示（≤12 字，模糊、不剧透具体数值，'
                 '如 "她可能会心头一暖" / "气氛可能会尴尬"）。'
+                "选项应针对当前局面推进剧情——若存在【当前剧情事件】，选项应围绕该事件的走向；"
+                "若无特定事件，则自然延续最近对话氛围。"
             )
-            # 结合当前触发事件：选项围绕事件展开（不是通用瞎生成）
-            last_ev = getattr(self.core, "last_event", None) or {}
-            if isinstance(last_ev, dict) and (last_ev.get("name") or last_ev.get("id")):
-                ev_name = last_ev.get("name") or last_ev.get("id")
-                ev_prompt = str(last_ev.get("prompt") or "")
-                system += (
-                    "\n【当前剧情事件】刚才触发了「" + str(ev_name) + "」事件。"
-                    + ("事件描述：" + ev_prompt if ev_prompt else "")
-                    + " 请让这组选项**紧密围绕这个事件展开**——玩家下一步行动应针对该事件的走向"
-                    + "（如触发「告白」：选项应围绕接受/回应/转移话题，而不是无关的日常动作）。"
-                )
             if effect_fmt:
                 system += (
                     "当前角色卡启用了机制（好感度/状态），每个选项还必须附带机制效果标签："
@@ -229,6 +220,8 @@ class GalgameChoicesPlugin(PluginBase):
 
     # ---------- 上下文 ----------
     def _build_transcript(self, max_msgs=8):
+        """结构化剧情摘要：最近对话 + 当前状态 + 当前事件 + 情绪倾向。
+        泛用——无论是否触发事件，模型都能感知"当下局面"再生成选项。"""
         core = self.core
         try:
             chain = [m for m in core.get_current_chain() if m.get("role") != "system"]
@@ -245,7 +238,37 @@ class GalgameChoicesPlugin(PluginBase):
             else:
                 speaker = (m.get("metadata") or {}).get("speaker") or "AI"
                 lines.append(f"{speaker}：" + content)
-        return "\n".join(lines) if lines else "（尚无对话）"
+        parts = []
+        history = "\n".join(lines) if lines else "（尚无对话）"
+        parts.append("【最近对话】\n" + history)
+        # 当前状态摘要（泛用：好感/状态/事件综合）
+        try:
+            st = getattr(core, "mechanism_state", None) or {}
+            sts = []
+            aff = st.get("affection")
+            if aff is not None:
+                sts.append(f"好感度={aff}")
+            status = st.get("status") or {}
+            for k, v in status.items():
+                if k == "buffs":
+                    continue
+                if isinstance(v, (int, float)):
+                    sts.append(f"{k}={v}")
+                else:
+                    sts.append(f"{k}={v}")
+            if sts:
+                parts.append("【当前状态】" + "，".join(sts))
+        except Exception:
+            pass
+        # 当前事件
+        try:
+            ev = getattr(core, "last_event", None) or {}
+            if isinstance(ev, dict) and (ev.get("name") or ev.get("id")):
+                parts.append("【当前剧情事件】触发「" + str(ev.get("name") or ev.get("id"))
+                             + "」" + (str(ev.get("prompt") or "")))
+        except Exception:
+            pass
+        return "\n\n".join(parts)
 
     # ---------- 解析 ----------
     @staticmethod
