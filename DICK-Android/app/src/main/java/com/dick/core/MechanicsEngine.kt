@@ -24,6 +24,7 @@ class MechanicsEngine {
     var config: J.Obj? = null
     var state: J.Obj? = null
     var pendingEvent: J.Obj? = null
+    var lastEvent: J.Obj? = null   // 最近触发的事件（供选项生成/后续剧情参考）
     var battleCfg: J.Obj? = null
     var playerCfg: J.Obj? = null
 
@@ -413,6 +414,7 @@ class MechanicsEngine {
             }
             if (ok) {
                 flags.fields[id] = J.Bool(true)
+                lastEvent = ev  // 保留最近事件，供 GAL 选项生成结合剧情
                 return ev
             }
         }

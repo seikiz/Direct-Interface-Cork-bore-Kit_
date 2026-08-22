@@ -1153,6 +1153,7 @@ val wsExportLauncher = rememberLauncherForActivityResult(ActivityResultContracts
         gal.tree = tree
         gal.mechConfigProvider = { mechConfig() }
         gal.mechStateProvider = { mech.state }
+        gal.mechEventProvider = { mech.lastEvent }
         for ((name, en) in savedStates) {
             registry.plugins.firstOrNull { it.name == name }?.enabled = en
         }

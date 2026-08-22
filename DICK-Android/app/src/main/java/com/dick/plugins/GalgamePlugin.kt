@@ -30,6 +30,7 @@ class GalgamePlugin : Plugin {
     var tree: ChatTree? = null
     var mechConfigProvider: (() -> J.Obj?)? = null
     var mechStateProvider: (() -> J.Obj?)? = null
+    var mechEventProvider: (() -> J.Obj?)? = null
 
     var count: Int by mutableStateOf(3)
     var auto: Boolean by mutableStateOf(true)
@@ -131,6 +132,14 @@ class GalgamePlugin : Plugin {
                 append("你是视觉小说（Galgame）的选项生成器。根据最近剧情，为玩家（用户）生成 $n 个简短、可行、有区分度的下一步行动选项。")
                 append("要求：每个选项不超过 18 个字，口语化，贴合当前角色性格与剧情走向；不要剧透后续剧情，不要输出编号或'选项一'这类前缀。")
                 append("每个选项必须带 \"result\"：一句事件结果提示（≤12 字，模糊、不剧透具体数值，如 \"她可能会心头一暖\" / \"气氛可能会尴尬\"）。")
+                // 结合当前触发事件：选项围绕事件展开
+                mechEventProvider?.invoke()?.let { ev ->
+                    val evName = ev.fields["name"]?.str() ?: ev.fields["id"]?.str() ?: return@let
+                    val evPrompt = ev.fields["prompt"]?.str() ?: ""
+                    append("\n【当前剧情事件】刚才触发了「$evName」事件。")
+                    if (evPrompt.isNotBlank()) append("事件描述：$evPrompt")
+                    append(" 请让这组选项**紧密围绕这个事件展开**——玩家下一步行动应针对该事件的走向，而不是无关的日常动作。")
+                }
                 if (effectFmt.isNotEmpty()) {
                     append("当前角色卡启用了机制（好感度/状态），每个选项还必须附带机制效果标签：")
                     append("只输出 JSON 数组，每项为 {\"text\": \"选项文本\", \"result\": \"结果提示\", ").append(effectFmt.joinToString(", ")).append("}。")

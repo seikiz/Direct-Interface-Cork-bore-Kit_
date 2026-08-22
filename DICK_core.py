@@ -381,6 +381,7 @@ class ChatCore:
         self.mechanism_state: Optional[Dict] = None  # 当前机制状态快照 {affection, status, flags}
         self._mech_config: Optional[Dict] = None     # 当前激活角色的机制配置
         self.pending_event: Optional[Dict] = None    # 待注入的事件（下次请求时进 API 载荷，不入树）
+        self.last_event: Optional[Dict] = None       # 最近触发的事件（供选项生成/后续剧情参考）
 
         # ===== 战斗系统（招式触发 / 伤害防御公式 / buff） =====
         self.battle_state: Optional[Dict] = None     # {player:{hp,atk,def}, turns}（属性值存 mechanism_state.status）
@@ -1935,6 +1936,7 @@ class ChatCore:
             if self.pending_event:
                 ev = self.pending_event
                 self.pending_event = None
+                self.last_event = ev  # 保留最近事件，供本轮后的选项生成结合剧情
                 messages.append({"role": "system", "content":
                     f"【事件触发：{ev.get('name') or ev.get('id')}】\n{ev.get('prompt', '')}"})
 

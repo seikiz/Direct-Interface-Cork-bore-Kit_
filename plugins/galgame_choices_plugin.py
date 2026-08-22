@@ -172,6 +172,17 @@ class GalgameChoicesPlugin(PluginBase):
                 '每个选项必须带 "result"：一句事件结果提示（≤12 字，模糊、不剧透具体数值，'
                 '如 "她可能会心头一暖" / "气氛可能会尴尬"）。'
             )
+            # 结合当前触发事件：选项围绕事件展开（不是通用瞎生成）
+            last_ev = getattr(self.core, "last_event", None) or {}
+            if isinstance(last_ev, dict) and (last_ev.get("name") or last_ev.get("id")):
+                ev_name = last_ev.get("name") or last_ev.get("id")
+                ev_prompt = str(last_ev.get("prompt") or "")
+                system += (
+                    "\n【当前剧情事件】刚才触发了「" + str(ev_name) + "」事件。"
+                    + ("事件描述：" + ev_prompt if ev_prompt else "")
+                    + " 请让这组选项**紧密围绕这个事件展开**——玩家下一步行动应针对该事件的走向"
+                    + "（如触发「告白」：选项应围绕接受/回应/转移话题，而不是无关的日常动作）。"
+                )
             if effect_fmt:
                 system += (
                     "当前角色卡启用了机制（好感度/状态），每个选项还必须附带机制效果标签："
