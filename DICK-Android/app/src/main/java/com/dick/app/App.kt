@@ -102,6 +102,7 @@ import com.dick.core.MessageNode
 import com.dick.core.MechanicsEngine
 import com.dick.core.RegexEngine
 import com.dick.core.SaveFile
+import com.dick.core.TreeData
 import com.dick.core.TreeStore
 import com.dick.core.WorldBook
 import com.dick.core.WorldData
@@ -121,6 +122,7 @@ import com.dick.plugins.MathPlugin
 import com.dick.plugins.UtauPlugin
 import com.dick.plugins.VisionHelper
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.io.File
 import java.util.Locale
@@ -365,6 +367,8 @@ fun App() {
     var busy by remember { mutableStateOf(false) }
     var streaming by remember { mutableStateOf("") }
     var showSettings by remember { mutableStateOf(false) }
+    var showApiSetup by remember { mutableStateOf(false) }   // 抽屉「API 配置」独立入口
+    var showTrpg by remember { mutableStateOf(false) }        // 抽屉「跑团（局域网）」
     var showRoles by remember { mutableStateOf(false) }
     var showWorlds by remember { mutableStateOf(false) }
     var roleEditName by remember { mutableStateOf<String?>(null) }
@@ -481,6 +485,11 @@ val importCardLauncher = rememberLauncherForActivityResult(ActivityResultContrac
                     }
                 }
                 sysMsgs.add(ChatMsg("系统", I18n.t("card_import_ok", "已导入角色：") + name + worldNote))
+                // 若在工坊里导入，同步刷新本地列表（角色卡/世界卡）
+                runCatching {
+                    wsLocalRoles.clear(); wsLocalRoles.addAll(Workshop.localRoles())
+                    wsLocalWorlds.clear(); wsLocalWorlds.addAll(Workshop.localWorlds())
+                }
             } catch (e: Exception) {
                 sysMsgs.add(ChatMsg("系统", I18n.t("card_import_fail", "⚠️ 导入失败：") + (e.message ?: "")))
             }
@@ -675,11 +684,30 @@ val wsExportLauncher = rememberLauncherForActivityResult(ActivityResultContracts
         return sb.toString()
     }
 
+    /** 进度同步用的会话标识：与电脑端「第一个选中角色」一致（单/群聊都取首位角色名） */
+    fun syncCardId(): String = if (selectedRoles.isNotEmpty()) selectedRoles.first() else "default"
+
+    fun utcNowIso(): String {
+        val fmt = java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSXXX", java.util.Locale.US)
+        fmt.timeZone = java.util.TimeZone.getTimeZone("UTC")
+        return fmt.format(java.util.Date())
+    }
+
     fun saveTree() {
         try {
-            val sf = SaveFile("_tree", "", tree.toData())
+            val sf = SaveFile("_tree", "", tree.toData(), treeTs = utcNowIso())
             TreeStore.save(treeFileFor(), sf)
         } catch (_: Exception) {
+        }
+        // 进度同步：后台线程推到工坊服务器（不阻塞保存）
+        if (Workshop.syncEnabled()) {
+            val cardId = syncCardId()
+            try {
+                val treeJson = tree.toData().toJson()
+                Thread {
+                    try { Workshop.pushSave(cardId, treeJson) } catch (_: Exception) {}
+                }.start()
+            } catch (_: Exception) {}
         }
     }
 
@@ -1101,14 +1129,63 @@ val wsExportLauncher = rememberLauncherForActivityResult(ActivityResultContracts
         }
         // 聊天树恢复（按当前选中角色加载对应文件）
         val treeFile = treeFileFor()
+        var localTreeTs: String? = null
         if (treeFile.exists()) {
             try {
                 val save = TreeStore.load(treeFile)
                 tree.loadData(save.historyTree)
                 tree.fixLeaf()
+                localTreeTs = save.treeTs
             } catch (_: Exception) {
             }
         }
+        // 进度同步：后台预热局域网发现（避免主线程阻塞/竞态）
+        Workshop.primeDiscovery()
+        // 进度同步：后台拉取服务器最新树，若比本地新则载入（内部探测配置/局域网/隧道；无则静默跳过）
+        val cardId = syncCardId()
+        Thread {
+            try {
+                val fetched = Workshop.fetchSave(cardId) ?: return@Thread
+                val serverTs = fetched.first
+                val serverTree = fetched.second
+                if (serverTs.isNotEmpty()) {
+                    android.os.Handler(android.os.Looper.getMainLooper()).post {
+                        // 生成中：不覆盖，避免撤回刚生成的回复
+                        if (busy) return@post
+                        // 已切别的角色：这条 fetch 是对旧卡的，丢弃，避免把旧树套到新卡上
+                        if (syncCardId() != cardId) return@post
+                        // 关键：用「当前」本地 ts 再比对（可能已被用户新回复推进），而不用启动时
+                        // 定格的旧 localTreeTs —— 否则慢网络拉取会在回复之后落地，把整树回滚成旧版
+                        val curTs = try { TreeStore.load(treeFileFor()).treeTs } catch (_: Exception) { localTreeTs }
+                        if (curTs == null || serverTs > curTs) {
+                            tree.loadData(TreeData.fromJson(serverTree))
+                            tree.fixLeaf()
+                            saveTree()
+                            refreshChain()
+                        }
+                    }
+                }
+            } catch (_: Exception) {}
+        }.start()
+        // 进度同步：后台拉取共享的模型连接配置（API 码，主线程应用）
+        Thread {
+            try {
+                val api = Workshop.fetchApi() ?: return@Thread
+                val key = (api.fields["api_key"] as? J.Str)?.v?.trim() ?: ""
+                if (key.isEmpty()) return@Thread
+                android.os.Handler(android.os.Looper.getMainLooper()).post {
+                    val pid = (api.fields["provider"] as? J.Str)?.v?.takeIf { it.isNotBlank() } ?: providerId
+                    apiKey = key
+                    apiKeysMap[pid] = key
+                    providerId = pid
+                    (api.fields["model"] as? J.Str)?.v?.takeIf { it.isNotBlank() }?.let { model = it }
+                    (api.fields["base_url"] as? J.Str)?.v?.takeIf { it.isNotBlank() }?.let { baseUrl = it }
+                    engine.apiKey = key
+                    engine.model = model
+                    engine.baseUrl = baseUrl
+                }
+            } catch (_: Exception) {}
+        }.start()
         // 机制/战斗初始化（防御：任何数据异常不得阻断启动）
         try {
             mech.stateFile = stateFileFor()  // 第三个文件夹：机制状态 JSON（与树解耦）
@@ -1217,6 +1294,7 @@ val wsExportLauncher = rememberLauncherForActivityResult(ActivityResultContracts
 
     var doSend: (String, ImageBitmap?, String?) -> Unit = { _, _, _ -> }
     var showQuickPanel by remember { mutableStateOf(false) }
+    var finFolded by remember { mutableStateOf(true) }   // 加号面板「财报」折叠区块默认收起
     val insertCmd: (String) -> Unit = { cmd ->
         input = if (input.isBlank()) cmd else input + " " + cmd
     }
@@ -1790,6 +1868,8 @@ fun wsRefreshLocal() {
                     Text("DICK", Modifier.padding(16.dp), fontWeight = FontWeight.Bold, fontSize = 16.sp)
                     Text(I18n.t("group_other", "其它项目"), Modifier.padding(horizontal = 16.dp, vertical = 4.dp), color = Color(0xFF94A3B8), fontSize = 13.sp)
                     DrawerItem(I18n.t("item_settings", "设置")) { showSettings = true; scope.launch { drawerState.close() } }
+                    DrawerItem(I18n.t("item_api", "🔑 API 配置")) { showApiSetup = true; scope.launch { drawerState.close() } }
+                    DrawerItem("🎭 跑团（局域网）") { showTrpg = true; scope.launch { drawerState.close() } }
                     val arrowAngle by animateFloatAsState(targetValue = if (rolesWorldsExpanded) 90f else 0f, label = "arrow")
                     DrawerItem(
                         I18n.t("item_roles_worlds", "角色与世界") + "（" + selectedRoles.size + "/" + selectedWorlds.size + "）",
@@ -2042,22 +2122,30 @@ fun wsRefreshLocal() {
                         Column(Modifier.padding(6.dp)) {
                             Row {
                                 QuickChip("📷 " + I18n.t("qc_image", "图片")) { showQuickPanel = false; imagePicker.launch("image/*") }
-                                QuickChip("📊 个股") { insertCmd("/股票 ") }
                                 QuickChip("🔍 搜索") { insertCmd("/搜索 ") }
                                 QuickChip("🔍 深搜") { insertCmd("/深搜 ") }
-                            }
-                            Row {
-                                QuickChip("🔍 全市场") { insertCmd("/全市场 ") }
-                                QuickChip("🔗 联动") { insertCmd("/联动 ") }
-                                QuickChip("📈 爬政策") { insertCmd("/财报 爬取") }
-                                QuickChip("📚 入库") { insertCmd("/财报 入库") }
-                            }
-                            Row {
-                                QuickChip("📚 检索") { insertCmd("/财报 检索 ") }
-                                QuickChip("🌐 爬网页") { insertCmd("/爬取 ") }
                                 QuickChip("🎲 骰子") { insertCmd("/r 2d6") }
+                            }
+                            Row {
                                 QuickChip("🧠 记忆") { insertCmd("/memory recall 3") }
                                 QuickChip("🎮 选项") { showQuickPanel = false; gal.manualGenerate() }
+                            }
+                            // 财报：折叠区块，仅启用财报模式才显示（隐藏 + 收起，避免铺满面板）
+                            if (financial.enabled) {
+                                FoldHead("📊 财报", finFolded, { finFolded = !finFolded })
+                                if (!finFolded) {
+                                    Row {
+                                        QuickChip("📊 个股") { insertCmd("/股票 ") }
+                                        QuickChip("🔍 全市场") { insertCmd("/全市场 ") }
+                                        QuickChip("🔗 联动") { insertCmd("/联动 ") }
+                                        QuickChip("📈 爬政策") { insertCmd("/财报 爬取") }
+                                    }
+                                    Row {
+                                        QuickChip("📚 入库") { insertCmd("/财报 入库") }
+                                        QuickChip("📚 检索") { insertCmd("/财报 检索 ") }
+                                        QuickChip("🌐 爬网页") { insertCmd("/爬取 ") }
+                                    }
+                                }
                             }
                             Row {
                                 // 卡片自带快捷回复（高级设置）优先，再跟全局
@@ -2173,52 +2261,34 @@ fun wsRefreshLocal() {
 
     @Composable
     fun SettingsDialogBlock() {
-        if (showSettings) {
+        if (showApiSetup) {
         AlertDialog(
-            onDismissRequest = { showSettings = false },
-            title = { Text(I18n.t("dlg_settings", "DICK · 设置")) },
+            onDismissRequest = { showApiSetup = false },
+            title = { Text("🔑 API 配置（模型商 / 模型 / Key）") },
             text = {
                 Column(Modifier.verticalScroll(rememberScrollState())) {
-                    // 模型商：平铺直显（无弹层，稳定可见）
-                    Text(I18n.t("lbl_provider", "模型商"), fontSize = 13.sp, color = Color(0xFF94A3B8))
+                    Text("模型商", fontSize = 13.sp, color = Color(0xFF94A3B8))
                     val curProvider = PROVIDERS.firstOrNull { it.id == providerId }
                     PROVIDERS.forEach { p ->
                         TextButton(
-                            onClick = {
-                                providerId = p.id
-                                baseUrl = p.baseUrl
-                                model = p.models.first()
-                                apiKey = apiKeysMap[p.id] ?: ""
-                            },
+                            onClick = { providerId = p.id; baseUrl = p.baseUrl; model = p.models.first(); apiKey = apiKeysMap[p.id] ?: "" },
                             modifier = Modifier.fillMaxWidth(),
                         ) {
-                            Text(
-                                (if (p.id == providerId) "● " else "○ ") + p.name +
-                                    (if (p.free) "（免 Key）" else "") +
-                                    (if (p.id == "ollama") (if (ollamaOnline) " · 本地已连接" else " · 本地未检测到") else ""),
-                                fontSize = 13.sp,
-                                color = if (p.id == providerId) Color(0xFF60A5FA) else Color.Unspecified,
-                            )
+                            Text((if (p.id == providerId) "● " else "○ ") + p.name + (if (p.free) "（免 Key）" else "") +
+                                (if (p.id == "ollama") (if (ollamaOnline) " · 本地已连接" else " · 本地未检测到") else ""),
+                                fontSize = 13.sp, color = if (p.id == providerId) Color(0xFF60A5FA) else Color.Unspecified)
                         }
                     }
                     TextButton(onClick = {
                         val p = PROVIDERS.firstOrNull { it.id == providerId }
-                        if (p != null) {
-                            try {
-                                context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(p.buyUrl)))
-                            } catch (_: Exception) {
-                            }
-                        }
+                        if (p != null) { try { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(p.buyUrl))) } catch (_: Exception) {} }
                     }) { IconText(I18n.t("btn_buy", "🔑 去官网注册/充值"), fontSize = 12.sp) }
-                    // 模型：平铺直显 + 自定义输入
-                    Text(I18n.t("lbl_model", "模型"), fontSize = 13.sp, color = Color(0xFF94A3B8))
+                    Spacer(Modifier.height(6.dp))
+                    Text("模型", fontSize = 13.sp, color = Color(0xFF94A3B8))
                     (curProvider?.models ?: emptyList()).forEach { m ->
                         TextButton(onClick = { model = m }, modifier = Modifier.fillMaxWidth()) {
-                            Text(
-                                (if (m == model) "● " else "○ ") + m,
-                                fontSize = 12.sp,
-                                color = if (m == model) Color(0xFF60A5FA) else Color.Unspecified,
-                            )
+                            Text((if (m == model) "● " else "○ ") + m, fontSize = 12.sp,
+                                color = if (m == model) Color(0xFF60A5FA) else Color.Unspecified)
                         }
                     }
                     if (model.isNotBlank() && model !in (curProvider?.models ?: emptyList())) {
@@ -2226,24 +2296,14 @@ fun wsRefreshLocal() {
                             Text("● " + model + "（当前）", fontSize = 12.sp, color = Color(0xFF60A5FA))
                         }
                     }
-                    OutlinedTextField(
-                        value = customModelInput,
-                        onValueChange = { customModelInput = it },
-                        label = { Text("自定义模型 ID") },
-                        singleLine = true,
-                    )
-                    TextButton(onClick = {
-                        if (customModelInput.isNotBlank()) model = customModelInput.trim()
-                    }) { Text("使用自定义模型", fontSize = 12.sp) }
-                    OutlinedTextField(
-                        value = apiKey,
-                        onValueChange = { apiKey = it },
-                        label = { Text(if (curProvider?.free == true) I18n.t("lbl_key_free", "API Key（免 Key，可留空）") else "API Key") },
-                        singleLine = true,
-                        enabled = curProvider?.free != true,
-                    )
+                    OutlinedTextField(value = customModelInput, onValueChange = { customModelInput = it },
+                        label = { Text("自定义模型 ID") }, singleLine = true)
+                    TextButton(onClick = { if (customModelInput.isNotBlank()) model = customModelInput.trim() }) { Text("使用自定义模型", fontSize = 12.sp) }
+                    OutlinedTextField(value = apiKey, onValueChange = { apiKey = it },
+                        label = { Text(if (curProvider?.free == true) "API Key（免 Key，可留空）" else "API Key") }, singleLine = true,
+                        enabled = curProvider?.free != true)
                     Spacer(Modifier.height(6.dp))
-                    OutlinedTextField(value = baseUrl, onValueChange = { baseUrl = it }, label = { Text(I18n.t("lbl_baseurl", "Base URL（选模型商自动填）")) }, singleLine = true)
+                    OutlinedTextField(value = baseUrl, onValueChange = { baseUrl = it }, label = { Text("Base URL（选模型商自动填）") }, singleLine = true)
                     Spacer(Modifier.height(6.dp))
                     OutlinedTextField(value = proxy, onValueChange = { proxy = it }, label = { Text("代理（可选，通道不通时填，如 http://127.0.0.1:7890）") }, singleLine = true)
                     Spacer(Modifier.height(6.dp))
@@ -2253,6 +2313,38 @@ fun wsRefreshLocal() {
                     Spacer(Modifier.height(6.dp))
                     OutlinedTextField(value = stopInput, onValueChange = { stopInput = it },
                         label = { Text("停止序列（指令模板，逗号分隔，如 <|im_end|>, </s>）") }, singleLine = true)
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    apiKeysMap[providerId] = apiKey.trim()
+                    engine.apiKey = apiKey.trim()
+                    engine.model = model
+                    engine.baseUrl = baseUrl.trim().ifBlank { "https://api.deepseek.com" }
+                    engine.proxy = proxy.trim().ifBlank { null }
+                    val effRelay = relayUrl.trim().ifBlank { BUILTIN_RELAY }
+                    if (engine.relayBase != effRelay) engine.relayOn = false
+                    engine.relayBase = effRelay
+                    engine.stopSequences = parseStops(stopInput)
+                    engine.allowEmptyKey = PROVIDERS.firstOrNull { it.id == providerId }?.free == true
+                    saveConfig()
+                    val k = apiKey.trim()
+                    Thread {
+                        try { Workshop.pushApi(k, baseUrl.trim().ifBlank { "https://api.deepseek.com" }, model, providerId) } catch (_: Exception) {}
+                    }.start()
+                    showApiSetup = false
+                }) { Text(I18n.t("btn_save", "保存")) }
+            },
+            dismissButton = { TextButton(onClick = { showApiSetup = false }) { Text(I18n.t("btn_cancel", "取消")) } },
+        )
+        }
+        if (showSettings) {
+        AlertDialog(
+            onDismissRequest = { showSettings = false },
+            title = { Text(I18n.t("dlg_settings", "DICK · 设置")) },
+            text = {
+                Column(Modifier.verticalScroll(rememberScrollState())) {
+                    // API 配置（模型商/模型/Key/代理/中转/停止序列）已抽到「抽屉 → 🔑 API 配置」
                     Spacer(Modifier.height(6.dp))
                     OutlinedTextField(value = regexInput, onValueChange = { regexInput = it },
                         label = { Text("🔤 正则规则（每行 id|名称|正则|替换|作用域；ai/user/both）\n例：rm_star|动作去星号|\\*([^*]+)\\*|（$1）|both") },
@@ -2285,7 +2377,9 @@ fun wsRefreshLocal() {
                     Row { Checkbox(checked = devMode, onCheckedChange = { devMode = it }); Text("🔧 开发者模式（解锁角色卡高级设置/内置游戏）", Modifier.padding(top = 14.dp)) }
                     Row { Checkbox(checked = humanize, onCheckedChange = { humanize = it }); Text("🧍 去 AI 味（具体细节/生活有变化/口语不完美/引用共同记忆）", Modifier.padding(top = 14.dp)) }
                     Spacer(Modifier.height(10.dp))
-                    Text(I18n.t("lbl_plugins", "插件"), color = Color(0xFF94A3B8), fontSize = 14.sp)
+                    var foldPlugins by remember { mutableStateOf(false) }
+                    FoldHead("🔌 插件", foldPlugins, onToggle = { foldPlugins = !foldPlugins })
+                    if (foldPlugins) {
                     for (p in registry.plugins) {
                         // p.enabled 是普通 var，Compose 不观察 → 用局部可观察状态，勾选立即刷新界面
                         var enabled by remember(p) { mutableStateOf(p.enabled) }
@@ -2317,6 +2411,7 @@ fun wsRefreshLocal() {
                             Spacer(Modifier.height(4.dp))
                         }
                     }
+                    }  // end foldPlugins
                     Spacer(Modifier.height(8.dp))
                     Text("📦 手机端仅 ~9MB，电脑端 ~50MB —— 咋看都像脚本，但它真不是 😏", fontSize = 11.sp, color = Color(0xFF6B7280))
                 }
@@ -2338,6 +2433,13 @@ fun wsRefreshLocal() {
                     // 保存全局正则规则
                     saveGlobalRegex(regexInput)
                     saveConfig()
+                    // 进度同步：推送模型连接配置（后台线程）
+                    val k = apiKey.trim()
+                    Thread {
+                        try {
+                            Workshop.pushApi(k, baseUrl.trim().ifBlank { "https://api.deepseek.com" }, model, providerId)
+                        } catch (_: Exception) {}
+                    }.start()
                     showSettings = false
                 }) { Text(I18n.t("btn_save", "保存")) }
             },
@@ -2346,6 +2448,86 @@ fun wsRefreshLocal() {
         }
     }
     SettingsDialogBlock()
+
+    @Composable
+    fun TrpgDialogBlock() {
+        if (showTrpg) {
+        var sessions by remember { mutableStateOf(listOf<J.Obj>()) }
+        var base by remember { mutableStateOf("") }
+        var myPc by remember { mutableStateOf("") }
+        var story by remember { mutableStateOf(listOf<J.Obj>()) }
+        var pcs by remember { mutableStateOf(listOf<String>()) }
+        var turn by remember { mutableStateOf("") }
+        var action by remember { mutableStateOf("") }
+        var busy by remember { mutableStateOf(false) }
+
+        LaunchedEffect(base) {
+            if (base.isBlank()) return@LaunchedEffect
+            while (showTrpg && base.isNotBlank()) {
+                try {
+                    val st = Workshop.trpgState(base)
+                    if (st != null) {
+                        story = (st.fields["story"] as? J.Arr)?.items?.filterIsInstance<J.Obj>() ?: emptyList()
+                        pcs = (st.fields["pcs"] as? J.Arr)?.items?.mapNotNull { it.str() } ?: emptyList()
+                        turn = st.fields["turn"]?.str() ?: ""
+                    }
+                } catch (_: Exception) {}
+                delay(2000)
+            }
+        }
+        AlertDialog(
+            onDismissRequest = { showTrpg = false; base = ""; myPc = "" },
+            title = { Text("🎭 跑团（局域网）") },
+            text = {
+                Column(Modifier.verticalScroll(rememberScrollState())) {
+                    if (base.isBlank()) {
+                        Button(onClick = { sessions = Workshop.discoverTrpg() }, modifier = Modifier.fillMaxWidth()) { Text("📡 查找附近跑团") }
+                        if (sessions.isEmpty()) Text("先让电脑跑 python trpg_server.py，双方同一 Wi-Fi 再查找", fontSize = 11.sp, color = Color(0xFF94A3B8))
+                        sessions.forEach { s ->
+                            TextButton(onClick = { base = s.fields["url"]?.str() ?: "" }, modifier = Modifier.fillMaxWidth()) {
+                                Text("🎲 " + (s.fields["gm"]?.str() ?: "未知GM") + " @ " + (s.fields["url"]?.str() ?: ""), fontSize = 13.sp)
+                            }
+                        }
+                    } else {
+                        Text("已连接：" + base, fontSize = 11.sp, color = Color(0xFF94A3B8))
+                        if (myPc.isBlank()) {
+                            Text("选择你的角色：", fontSize = 12.sp)
+                            pcs.forEach { pc ->
+                                TextButton(onClick = { if (Workshop.trpgJoin(base, pc)) myPc = pc }, modifier = Modifier.fillMaxWidth()) {
+                                    Text("👤 " + pc, fontSize = 13.sp)
+                                }
+                            }
+                            if (pcs.isEmpty()) Text("等待主机设置队伍…", fontSize = 11.sp, color = Color(0xFF94A3B8))
+                        } else {
+                            Text("当前行动者：" + (turn.ifBlank { myPc }), fontSize = 12.sp, color = Color(0xFF94A3B8))
+                            story.forEach { s ->
+                                val actor = s.fields["actor"]?.str() ?: ""
+                                val gm = s.fields["gm"]?.str() ?: ""
+                                Text("👤 " + actor + "：" + (s.fields["action"]?.str() ?: ""), fontSize = 12.sp, color = Color(0xFF94A3B8))
+                                if (gm.isNotBlank()) Text("🗣 GM：" + gm, fontSize = 13.sp, color = Color(0xFFE2E8F0))
+                            }
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                OutlinedTextField(value = action, onValueChange = { action = it },
+                                    label = { Text("$myPc 的行动") }, singleLine = true, modifier = Modifier.weight(1f))
+                                Button(onClick = {
+                                    if (action.isBlank()) return@Button
+                                    busy = true
+                                    Workshop.trpgAct(base, myPc, action)
+                                    action = ""; busy = false
+                                }, enabled = !busy) { Text("行动") }
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showTrpg = false; base = ""; myPc = "" }) { Text("完成") }
+            },
+            dismissButton = { TextButton(onClick = { showTrpg = false; base = ""; myPc = "" }) { Text("取消") } },
+        )
+        }
+    }
+    TrpgDialogBlock()
 
     @Composable
     fun RolesDialogBlock() {
@@ -3474,24 +3656,46 @@ fun wsRefreshLocal() {
                             Column(Modifier.weight(1f)) {
                                 IconText("📂 角色卡", fontSize = 12.sp, color = Color(0xFF94A3B8))
                                 wsLocalRoles.forEachIndexed { i, f ->
-                                    TextButton(onClick = {
-                                        wsLocalType = "角色卡"; wsLocalIdx = i
-                                        wsPreview = Workshop.preview("角色卡", f)
-                                    }) { Text(f.removeSuffix(".json"), fontSize = 12.sp) }
+                                    val sel = wsLocalType == "角色卡" && wsLocalIdx == i
+                                    Surface(
+                                        shape = RoundedCornerShape(8.dp),
+                                        color = if (sel) Color(0xFF182636) else Color(0xFF0F1620),
+                                        modifier = Modifier.fillMaxWidth().padding(vertical = 1.dp).clickable {
+                                            wsLocalType = "角色卡"; wsLocalIdx = i
+                                            wsPreview = Workshop.preview("角色卡", f)
+                                        },
+                                    ) {
+                                        Text(f.removeSuffix(".json"), fontSize = 12.sp, modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp), maxLines = 1)
+                                    }
                                 }
                             }
                             Column(Modifier.weight(1f)) {
                                 IconText("🌍 世界卡", fontSize = 12.sp, color = Color(0xFF94A3B8))
                                 wsLocalWorlds.forEachIndexed { i, f ->
-                                    TextButton(onClick = {
-                                        wsLocalType = "世界卡"; wsLocalIdx = i
-                                        wsPreview = Workshop.preview("世界卡", f)
-                                    }) { Text(f.removeSuffix(".json"), fontSize = 12.sp) }
+                                    val sel = wsLocalType == "世界卡" && wsLocalIdx == i
+                                    Surface(
+                                        shape = RoundedCornerShape(8.dp),
+                                        color = if (sel) Color(0xFF182636) else Color(0xFF0F1620),
+                                        modifier = Modifier.fillMaxWidth().padding(vertical = 1.dp).clickable {
+                                            wsLocalType = "世界卡"; wsLocalIdx = i
+                                            wsPreview = Workshop.preview("世界卡", f)
+                                        },
+                                    ) {
+                                        Text(f.removeSuffix(".json"), fontSize = 12.sp, modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp), maxLines = 1)
+                                    }
                                 }
                             }
                         }
-                        Text(wsPreview, fontSize = 11.sp, maxLines = 8, color = Color(0xFF94A3B8))
+                        if (wsPreview.isNotBlank()) {
+                            Surface(shape = RoundedCornerShape(10.dp), color = Color(0xFF0B1220), modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp)) {
+                                Text(wsPreview, fontSize = 11.sp, color = Color(0xFFCBD5E1), modifier = Modifier.padding(10.dp), maxLines = 10)
+                            }
+                        }
                         Row {
+                            TextButton(onClick = {
+                                // 支持图片导入：PNG/WebP 嵌卡 或 v1/v2/v3 JSON 角色卡
+                                importCardLauncher.launch(arrayOf("image/png", "image/webp", "application/json"))
+                            }) { IconText(I18n.t("btn_import_card", "📥 导入"), fontSize = 12.sp) }
                             TextButton(onClick = {
                                 val fname = if (wsLocalType == "角色卡") wsLocalRoles.getOrNull(wsLocalIdx)
                                     else wsLocalWorlds.getOrNull(wsLocalIdx)
@@ -3549,14 +3753,62 @@ fun wsRefreshLocal() {
                         }
                         TextButton(onClick = { wsLoadOnline() }) { Text("全部作品", fontSize = 12.sp) }
                         wsOnlineList.forEachIndexed { i, r ->
-                            TextButton(onClick = { wsOnlineIdx = i }) {
-                                Text(wsOnlineDisplay(r), fontSize = 11.sp, maxLines = 1)
+                            val t = r.fields["_type"]?.str() ?: "角色卡"
+                            val name = r.fields["name"]?.str() ?: "?"
+                            val author = r.fields["author"]?.str() ?: "?"
+                            val dl = (r.fields["downloads"] as? J.Num)?.v?.toInt() ?: 0
+                            val lk = (r.fields["likes"] as? J.Num)?.v?.toInt() ?: 0
+                            val tags = (r.fields["tags"] as? J.Arr)?.items?.mapNotNull { it.str() } ?: emptyList()
+                            val desc = r.fields["description"]?.str() ?: ""
+                            val sel = i == wsOnlineIdx
+                            Surface(
+                                shape = RoundedCornerShape(12.dp),
+                                color = if (sel) Color(0xFF182636) else Color(0xFF0F1620),
+                                modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp).clickable { wsOnlineIdx = i },
+                            ) {
+                                Column(Modifier.padding(10.dp)) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Text((if (t == "角色卡") "🎭 " else "🌍 ") + name, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+                                        Text("↓" + dl + "  ❤" + lk, fontSize = 11.sp, color = Color(0xFF94A3B8))
+                                    }
+                                    Text(author, fontSize = 11.sp, color = Color(0xFF94A3B8))
+                                    if (tags.isNotEmpty()) Text(tags.joinToString(" · "), fontSize = 10.sp, color = Color(0xFF6B7280))
+                                    if (desc.isNotBlank()) Text(desc, fontSize = 11.sp, color = Color(0xFFCBD5E1), maxLines = 2)
+                                }
                             }
                         }
-                        Row {
+                        // 选中的作品 → 详情卡
+                        val selR = wsOnlineList.getOrNull(wsOnlineIdx)
+                        if (selR != null) {
+                            val t = selR.fields["_type"]?.str() ?: "角色卡"
+                            val name = selR.fields["name"]?.str() ?: "?"
+                            val author = selR.fields["author"]?.str() ?: "?"
+                            val dl = (selR.fields["downloads"] as? J.Num)?.v?.toInt() ?: 0
+                            val lk = (selR.fields["likes"] as? J.Num)?.v?.toInt() ?: 0
+                            val tags = (selR.fields["tags"] as? J.Arr)?.items?.mapNotNull { it.str() } ?: emptyList()
+                            val desc = selR.fields["description"]?.str() ?: ""
+                            val created = selR.fields["created_at"]?.str() ?: ""
+                            val preview = selR.fields["system_prompt_preview"]?.str() ?: ""
+                            Surface(shape = RoundedCornerShape(12.dp), color = Color(0xFF0B1220), modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+                                Column(Modifier.padding(12.dp)) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Text((if (t == "角色卡") "🎭 " else "🌍 ") + name, fontSize = 15.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                                        Text("↓" + dl + "  ❤" + lk, fontSize = 12.sp, color = Color(0xFF94A3B8))
+                                    }
+                                    Text("作者：" + author, fontSize = 12.sp, color = Color(0xFF94A3B8))
+                                    if (created.isNotBlank()) Text("上传：" + created.take(10), fontSize = 10.sp, color = Color(0xFF6B7280))
+                                    if (tags.isNotEmpty()) Text("标签：" + tags.joinToString(" · "), fontSize = 11.sp, color = Color(0xFF94A3B8))
+                                    if (desc.isNotBlank()) Text(desc, fontSize = 13.sp, color = Color(0xFFE2E8F0))
+                                    if (preview.isNotBlank()) Text("人设：" + preview.take(120), fontSize = 11.sp, color = Color(0xFF6B7280), maxLines = 4)
+                                }
+                            }
+                        }
+                        Row(verticalAlignment = Alignment.CenterVertically) {
                             TextButton(onClick = { wsDownloadSelected() }) { IconText(I18n.t("ws_download", "⬇️ 下载"), fontSize = 12.sp) }
                             TextButton(onClick = { wsLikeSelected() }) { IconText(I18n.t("ws_like", "❤️ 点赞"), fontSize = 12.sp) }
                             TextButton(onClick = { wsDeleteSelected() }) { IconText(I18n.t("ws_delete", "🗑️ 删除"), fontSize = 12.sp, color = Color(0xFFF87171)) }
+                            Spacer(Modifier.weight(1f))
+                            Text("已选：" + (selR?.fields?.get("name")?.str() ?: "无"), fontSize = 10.sp, color = Color(0xFF94A3B8))
                         }
                     } else {
                         // 插件市场：联网列表 + 一键安装

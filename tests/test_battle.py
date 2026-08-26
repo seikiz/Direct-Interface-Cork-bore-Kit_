@@ -51,6 +51,16 @@ try:
 except ValueError:
     check(True, "未知变量被拦截")
 
+print("== ①b 傻瓜化公式（×÷/全角括号/中文标签） ==")
+FB = {"player_atk": 10, "atk": 10, "def": 5, "spd": 8, "mp": 20, "hp": 100}
+check(eval_battle_formula("攻击×2-防御", FB) == 15.0, "攻击×2-防御 → 15")
+check(eval_battle_formula("（攻击+5）×2", FB) == 30.0, "全角括号+× → 30")
+check(eval_battle_formula("max(1, 攻击×2-防御)", FB) == 15.0, "max + 中文标签")
+check(eval_battle_formula("攻击÷2", FB) == 5.0, "÷ → 5")
+check(eval_battle_formula("攻击力×3+速度", FB) == 38.0, "攻击力/速度 → 38")
+check(eval_battle_formula("灵力", FB) == 20.0, "灵力(中文) → 20")
+check(eval_battle_formula("player_atk * 2 - def", FB) == 15.0, "英文变量仍兼容")
+
 print("== ② 战斗属性初始化 + 系统提示注入 ==")
 c = ChatCore()
 c.set_active_roles([{"name": "战士", "system_prompt": "你是战士", "unlocked": False,
@@ -110,7 +120,7 @@ c4.set_active_roles([{"name": "魔物", "system_prompt": "x", "unlocked": False,
 check(c4.mechanism_state["player"]["atk"] == 20 and c4.mechanism_state["player"]["def"] == 8,
       "玩家卡战斗属性生效: %r" % c4.mechanism_state["player"])
 txt7, _ = c4.resolve_battle_move("fire")
-check(txt7 is not None and "55" in txt7, "玩家 atk=20 结算 55 伤害: %s" % txt7)  # fire: 20*3-5=55
+check(txt7 is not None and "50" in txt7, "玩家 atk=20 火球 55 但被招式封顶 50: %s" % txt7)  # fire: 20*3-5=55 → 招式封顶 50
 n7 = c4.add_user_message("开战")
 c4.tree.nodes[n7].metadata["ms"] = c4.mechanism_snapshot()
 c4.strip_mechanism_tags("[ph:-10] 被打", apply=True)

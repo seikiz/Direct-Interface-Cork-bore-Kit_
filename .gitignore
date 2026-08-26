@@ -81,3 +81,10 @@ _mock/
 /_wf/
 
 workshop_data/
+
+# 新增：机器/构建产物（绝不能进仓库）
+tavern-installer/node/
+server_build/
+DICK-HTML.zip
+*.bak
+aoqi_crawler.py

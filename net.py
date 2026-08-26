@@ -16,7 +16,7 @@ import os
 import sys
 import threading
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from functools import wraps
 
 from flask import Flask, request, jsonify, send_file
@@ -32,11 +32,22 @@ for _stream in (sys.stdout, sys.stderr):
 
 app = Flask(__name__)
 
+
+def _app_root() -> str:
+    """应用根目录：源码运行用 __file__；冻结为 EXE 后用 sys.executable，
+    保证 net_server.exe 能定位旁边的 config.json / workshop_data。"""
+    if getattr(sys, "frozen", False):
+        return os.path.dirname(os.path.abspath(sys.executable))
+    return os.path.dirname(os.path.abspath(__file__))
+
+
 # 数据存储目录
-DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "workshop_data")
+DATA_DIR = os.path.join(_app_root(), "workshop_data")
 CARDS_DIR = os.path.join(DATA_DIR, "cards")
 WORLDS_DIR = os.path.join(DATA_DIR, "worlds")
 PLUGINS_DIR = os.path.join(DATA_DIR, "plugins")
+SAVES_DIR = os.path.join(DATA_DIR, "saves")
+SYNC_SETTINGS_FILE = os.path.join(DATA_DIR, "sync_settings.json")
 INDEX_FILE = os.path.join(DATA_DIR, "index.json")
 
 # 运行配置（环境变量可覆盖）
@@ -45,10 +56,14 @@ HOST = os.environ.get("WORKSHOP_HOST", "0.0.0.0")
 PORT = int(os.environ.get("WORKSHOP_PORT", "5000"))
 DEBUG = os.environ.get("WORKSHOP_DEBUG", "0") == "1"
 
+# 局域网发现：手机向该 UDP 端口发探测包，服务器回复自身 IP + HTTP 端口
+DISCOVER_PORT = int(os.environ.get("WORKSHOP_DISCOVER_PORT", "5001"))
+DISCOVER_MAGIC = b"DICK_DISCOVER_V1"
+
 # 索引文件进程内锁（防并发读写冲突）
 _index_lock = threading.Lock()
 
-for d in [DATA_DIR, CARDS_DIR, WORLDS_DIR, PLUGINS_DIR]:
+for d in [DATA_DIR, CARDS_DIR, WORLDS_DIR, PLUGINS_DIR, SAVES_DIR]:
     os.makedirs(d, exist_ok=True)
 
 
@@ -72,6 +87,23 @@ def save_index(index):
     with open(tmp, "w", encoding="utf-8") as f:
         json.dump(index, f, ensure_ascii=False, indent=2)
     os.replace(tmp, INDEX_FILE)
+
+
+def _load_sync_settings() -> dict:
+    """读取跨设备共享的同步设置（API 码等），容错"""
+    try:
+        with open(SYNC_SETTINGS_FILE, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        return data if isinstance(data, dict) else {}
+    except Exception:
+        return {}
+
+
+def _save_sync_settings(data: dict):
+    tmp = SYNC_SETTINGS_FILE + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+    os.replace(tmp, SYNC_SETTINGS_FILE)
 
 
 if not os.path.exists(INDEX_FILE):
@@ -195,6 +227,79 @@ def stats():
         "downloads": sum(c.get("downloads", 0) for c in cards + worlds),
         "likes": sum(c.get("likes", 0) for c in cards + worlds),
     })
+
+
+# ============ 树存档同步（聊天进度互通） ============
+
+def _save_path(card_id: str) -> str:
+    """把角色名转成安全的存档文件名（防路径穿越）"""
+    safe = (card_id or "unknown").strip()
+    safe = safe.replace("/", "_").replace("\\", "_").replace("..", "_")
+    safe = safe[:80] or "unknown"
+    return os.path.join(SAVES_DIR, safe + ".json")
+
+
+@app.post("/api/save/<card_id>")
+def save_upload(card_id):
+    """上传某个角色的聊天树存档（后来者胜，服务器盖时间戳）。"""
+    try:
+        body = request.get_json(force=True, silent=True) or {}
+    except Exception:
+        body = {}
+    tree = body.get("tree")
+    if not isinstance(tree, dict):
+        return jsonify({"error": "tree 缺失或非法"}), 400
+    if not (tree.get("nodes") or {}):
+        return jsonify({"error": "empty tree"}), 400
+    ts = datetime.now(timezone.utc).isoformat()
+    with _index_lock:
+        try:
+            with open(_save_path(card_id), "w", encoding="utf-8") as f:
+                json.dump({"kind": "dick_tree", "ts": ts, "tree": tree}, f, ensure_ascii=False)
+        except Exception as e:
+            return jsonify({"error": "save fail: " + str(e)[:200]}), 500
+    return jsonify({"ok": True, "ts": ts})
+
+
+@app.get("/api/save/<card_id>")
+def save_download(card_id):
+    """下载某个角色最新的聊天树存档；不存在返回 404。"""
+    p = _save_path(card_id)
+    if not os.path.exists(p):
+        return jsonify({"error": "no save"}), 404
+    try:
+        with open(p, "r", encoding="utf-8") as f:
+            data = json.load(f)
+    except Exception:
+        return jsonify({"error": "bad save"}), 500
+    return jsonify({"kind": data.get("kind"), "ts": data.get("ts", ""), "tree": data.get("tree", {})})
+
+
+# ============ 同步设置（API 码等跨设备共享） ============
+
+@app.get("/api/sync/api")
+def sync_api_get():
+    """获取共享的模型连接配置（API 码等）；无则返回空对象。"""
+    return jsonify(_load_sync_settings().get("api") or {})
+
+
+@app.post("/api/sync/api")
+def sync_api_post():
+    """保存共享的模型连接配置（后来者胜）。"""
+    try:
+        body = request.get_json(force=True, silent=True) or {}
+    except Exception:
+        body = {}
+    if not isinstance(body, dict):
+        return jsonify({"error": "bad payload"}), 400
+    with _index_lock:
+        cfg = _load_sync_settings()
+        cfg["api"] = body
+        try:
+            _save_sync_settings(cfg)
+        except Exception as e:
+            return jsonify({"error": "save fail: " + str(e)[:200]}), 500
+    return jsonify({"ok": True})
 
 
 # ============ 列表与搜索 ============
@@ -492,9 +597,52 @@ def delete_plugin(plugin_id):
     return jsonify({"success": True})
 
 
+def _lan_ip() -> str:
+    """获取本机局域网 IP（连接外网探测到的本地地址；失败回退回环）"""
+    try:
+        import socket
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(("8.8.8.8", 80))
+        ip = s.getsockname()[0]
+        s.close()
+        return ip or "127.0.0.1"
+    except Exception:
+        return "127.0.0.1"
+
+
+def _udp_discover_loop():
+    """局域网自动发现：手机发 DISCOVER_MAGIC 到本端口，服务器回自己 IP + HTTP 端口。
+    手机据此自动找到电脑，无需手动填 IP。"""
+    import socket
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    try:
+        s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        s.bind(("0.0.0.0", DISCOVER_PORT))
+    except Exception as e:
+        print(f"[局域网发现] UDP 监听失败（端口 {DISCOVER_PORT}）: {e}")
+        return
+    print(f"[局域网发现] 已启动：手机发探测包到 UDP {DISCOVER_PORT} 即可自动找到本机")
+    while True:
+        try:
+            data, addr = s.recvfrom(1024)
+        except Exception:
+            continue
+        if data and data.strip() == DISCOVER_MAGIC:
+            try:
+                reply = json.dumps(
+                    {"service": "dick-sync", "port": PORT, "host": addr[0]}
+                ).encode("utf-8")
+                s.sendto(reply, addr)
+            except Exception:
+                pass
+
+
 if __name__ == "__main__":
+    import threading as _th
+    _th.Thread(target=_udp_discover_loop, daemon=True).start()
     print("🚀 创意工坊服务器启动中...")
     print(f"📂 数据目录: {DATA_DIR}")
-    print(f"🌐 访问地址: http://localhost:{PORT}")
+    print(f"🌐 本机访问: http://localhost:{PORT}")
+    print(f"📱 手机直连（同一 Wi-Fi）: http://{_lan_ip()}:{PORT}   ← 把这段填到手机工坊地址")
     print(f"🔑 认证模式: {'需要 X-API-Key' if API_KEY else '开放模式（无需认证）'}")
     app.run(host=HOST, port=PORT, debug=DEBUG, threaded=True)

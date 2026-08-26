@@ -94,6 +94,11 @@ class PluginBase:
         """AI 回复后调用"""
         pass
 
+    def contextInjection(self):
+        """返回注入到系统提示词（角色卡上下文）的附加文本；附加跑团 GM 提示/回合状态用。
+        默认空串；子类可覆写。"""
+        return ""
+
     def on_command(self, command, args):
         """
         处理自定义命令，如 /help

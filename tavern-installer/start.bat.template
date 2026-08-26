@@ -5,6 +5,14 @@ echo   SillyTavern Launcher
 echo ============================================
 echo.
 
+REM ========== Node: prefer bundled portable (zero-install) ==========
+if exist "%~dp0node\node.exe" (
+    set "PATH=%~dp0node;%PATH%"
+    set "_NODE=%~dp0node\node.exe"
+) else (
+    set "_NODE=node"
+)
+
 REM ========== Step 1: standard locations (fast) ==========
 set TAVERN_DIR=
 if exist "tavern\SillyTavern-1.18.0\server.js" set TAVERN_DIR=tavern\SillyTavern-1.18.0
@@ -66,7 +74,7 @@ exit /b 1
 cd /d "%TAVERN_DIR%"
 echo [OK] Found tavern: %TAVERN_DIR%
 echo [OK] Starting... open http://localhost:8000
-node server.js
+"%_NODE%" server.js
 if errorlevel 1 (
   echo.
   echo [X] Start failed. If deps missing, cd to %TAVERN_DIR% and run: npm install

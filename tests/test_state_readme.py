@@ -93,9 +93,9 @@ check(c5.mechanism_state["status"]["mood"] == "开心", "[mood:开心] 枚举赋
 print("== ⑥ 战斗公式变量 ==")
 c6 = make_core()
 txt, _ = c6.resolve_battle_move("fire")
-# fire: player_atk*3 - def = 20*3 - 5 = 55
-check(txt is not None and "55" in txt, "fire 公式 player_atk*3-def = 55（player_atk=20, def=5）: %s" % (txt or ""))
-check(c6.mechanism_state["status"]["hp"] == 45, "敌方 hp 100→45")
+# fire: player_atk*3 - def = 20*3 - 5 = 55 → 招式封顶 50
+check(txt is not None and "50" in txt, "fire 公式 55 被封顶到 50（招式，player_atk=20, def=5）: %s" % (txt or ""))
+check(c6.mechanism_state["status"]["hp"] == 50, "敌方 hp 100→50（招式封顶 50）")
 
 print("== ⑦ ROLL 档位（文档六） ==")
 import html_app

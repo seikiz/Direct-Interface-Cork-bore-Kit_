@@ -129,7 +129,7 @@ fun FoldHead(title: String, folded: Boolean, onToggle: () -> Unit, modifier: Mod
         modifier = modifier.fillMaxWidth().clickable { onToggle() }.padding(top = 10.dp, bottom = 2.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(title, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+        IconText(title, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
         Spacer(Modifier.weight(1f))
         Text(if (folded) "▸" else "▾", fontSize = 12.sp, color = Color(0xFF94A3B8))
     }

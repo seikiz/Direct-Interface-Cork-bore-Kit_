@@ -75,9 +75,16 @@ function sh(cmd, opts = {}) {
   return execSync(cmd, { stdio: "inherit", shell: true, ...opts });
 }
 
+function bundledNode() {
+  const p = path.join(ROOT, "node", "node.exe");
+  return fs.existsSync(p) ? p : null;
+}
+
 function nodeVersion() {
   try {
-    const v = execSync("node --version", { encoding: "utf8" }).trim();
+    const bin = bundledNode();
+    const cmd = bin ? `"${bin}" --version` : "node --version";
+    const v = execSync(cmd, { encoding: "utf8" }).trim();
     const major = parseInt(v.replace(/^v/, "").split(".")[0], 10);
     return { v, major };
   } catch {
@@ -143,14 +150,19 @@ async function main() {
   console.log(`${CYAN}   与 DICK 分离的独立工具 · 角色卡互通${RESET}`);
   console.log(`${CYAN}═══════════════════════════════════════${RESET}\n`);
 
-  // ---------- 1. Node 检测 ----------
+  // ---------- 1. 内置 Node 入 PATH（零依赖） ----------
+  const _bn = bundledNode();
+  if (_bn) {
+    process.env.PATH = path.dirname(_bn) + path.delimiter + (process.env.PATH || "");
+  }
+
   const node = nodeVersion();
   if (!node) {
-    err("未检测到 Node.js。酒馆新版需要 Node 18+。");
-    err("请先安装 Node.js：https://nodejs.org/ 或 `winget install OpenJS.NodeJS`");
+    err("未检测到可用的 Node.js。酒馆新版需要 Node 18+。");
+    err("请运行 install.bat（会自动从命令行安装 Node，Linux 式），或手动安装：https://nodejs.org/");
     process.exit(1);
   }
-  ok(`Node.js ${node.v}（需要 18+，${node.major >= 18 ? "满足" : "不满足！"}` + (node.major >= 18 ? "）" : "，请升级）"));
+  ok(`Node.js ${node.v}（需要 18+，${node.major >= 18 ? "满足" : "不满足！"}` + (node.major >= 18 ? "）" : "，请运行 install.bat 或升级）"));
   if (node.major < 18) process.exit(1);
 
   // ---------- 2. 已安装 → 直接启动 ----------
@@ -318,6 +330,12 @@ echo ============================================
 echo   SillyTavern Launcher
 echo ============================================
 echo.
+if exist "%~dp0node\\node.exe" (
+    set "PATH=%~dp0node;%PATH%"
+    set "_NODE=%~dp0node\\node.exe"
+) else (
+    set "_NODE=node"
+)
 set TAVERN_DIR=tavern
 if exist "tavern\\SillyTavern-1.18.0\\server.js" set TAVERN_DIR=tavern\\SillyTavern-1.18.0
 if exist "tavern\\SillyTavern-1.19.0\\server.js" set TAVERN_DIR=tavern\\SillyTavern-1.19.0
@@ -333,7 +351,7 @@ if not exist "%TAVERN_DIR%\\server.js" (
 cd /d "%~dp0%TAVERN_DIR%"
 echo [OK] Found tavern: %TAVERN_DIR%
 echo [OK] Starting... open http://localhost:8000
-node server.js
+"%_NODE%" server.js
 if errorlevel 1 (
     echo.
     echo [X] Start failed. If deps missing, cd to %TAVERN_DIR% and run: npm install

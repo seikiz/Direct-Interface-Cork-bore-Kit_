@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+# <seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌<seikiz>  DICK source mark (invisible)
 # ============================================================
 #   html_app.py - HTML 前端（pywebview 壳）
 #   后端复用 ChatCore + 插件体系；前端 web/index.html（纯 HTML/CSS/JS）
@@ -571,6 +572,8 @@ class HtmlApp:
             except Exception as e:
                 print(f"[HtmlApp] 启动恢复选中角色失败: {e}")
         self._rebuild_messages()
+        # 进度同步：后台拉取共享的模型连接配置（不阻塞启动；服务器在线才生效）
+        threading.Thread(target=self._ws_pull_api, daemon=True).start()
         # 存档守护：后台扫描一次，坏档自动修复/从备份恢复
         save_guard.sweep_async(self.base_dir)
 
@@ -592,6 +595,8 @@ class HtmlApp:
         self.roles = []
         try:
             for fn in sorted(os.listdir(self.save_dir)):
+                if fn.startswith("."):
+                    continue  # 跳过跑团会期锁等隐藏/元数据文件
                 if not fn.endswith(".json"):
                     continue
                 try:
@@ -773,6 +778,9 @@ class HtmlApp:
         """把当前聊天树写回第一个选中角色的文件（保留 name/system_prompt/card_data）"""
         if not self.selected_roles:
             return
+        # 跑团会期锁定：被锁卡不可被当前会话清写/推送记忆树（防导入存档与跑团混淆）
+        if self.selected_roles[0] in self._trpg_locked_names():
+            return
         tree_data = self.core.get_all_nodes_data()
         # 空树（只有系统节点）不覆盖已有历史，防止切换/误操作清档
         if len(tree_data.get("nodes", {})) <= 1:
@@ -782,7 +790,14 @@ class HtmlApp:
                 data = dict(r.get("data") or {})
                 data["name"] = r["name"]
                 data["system_prompt"] = r["prompt"]
+                data["kind"] = "dick_card"
                 data["history_tree"] = self.core.get_all_nodes_data()
+                # 进度同步时间戳（UTC ISO，跨设备按该串比较新旧）
+                try:
+                    from datetime import datetime, timezone
+                    data["_tree_ts"] = datetime.now(timezone.utc).isoformat()
+                except Exception:
+                    pass
                 try:
                     # 存档守护：覆盖前留底 + 原子写入（写一半崩溃也不会截断存档）
                     save_guard.backup_file(os.path.join(self.save_dir, r["file"]))
@@ -793,6 +808,8 @@ class HtmlApp:
                 # r["data"]["history_tree"] 取记录，不同步会导致同一会话内
                 # 重新勾选只恢复到旧快照（新建角色的记录甚至取不回）
                 r["data"] = data
+                # 进度同步：把聊天树推送到工坊服务器（后台线程，不阻塞保存）
+                self._ws_save_upload_async(r["name"], data["history_tree"])
                 break
 
     # ---------- 系统提示 ----------
@@ -1060,8 +1077,10 @@ class HtmlApp:
                 self._append_sys(note)
         elif kind in ("crit", "fail") and note:
             self._append_sys(note)
+        # 世界线切换（B）：隐藏 ROLL 命中预设世界线时自动跳线（如坍缩→黑化线）
+        self._maybe_world_line_on(kind)
         self._clear_choices()
-        self._send_text(text, None, None)
+        self._send_text(text, None, None, is_choice=True)
         return {"ok": True}
 
     def api_cyoa(self):
@@ -1071,6 +1090,29 @@ class HtmlApp:
             return {"ok": False, "err": "插件未启用（⚙️ 设置 → 插件 → Galgame 选项）"}
         ok, msg = p.manual_generate()
         return {"ok": ok, "msg": msg}
+
+    def _switch_world(self, name):
+        """切换到指定世界线（若存在）；同步 UI 状态并加横幅。返回是否成功。"""
+        name = str(name or "").strip()
+        if not name:
+            return False
+        if self.core.set_current_world(name):
+            self.current_world = name
+            self.config["current_world"] = name
+            self._save_config()
+            self._append_sys("🌐 已穿越到世界线「" + name + "」")
+            return True
+        return False
+
+    def _maybe_world_line_on(self, kind):
+        """机制/ROLL 事件 → 世界线切换（config.world_lines 映射，键：_roll_collapse/_roll_chosen/_roll_rare/crit/fail）。"""
+        try:
+            wl = self.config.get("world_lines") or {}
+            name = wl.get(str(kind))
+            if name:
+                self._switch_world(name)
+        except Exception:
+            pass
 
     def api_battle_move(self, move_id):
         """战斗：玩家出招 → 引擎结算伤害/消耗 → 结算文本作为系统横幅 + 行动作为玩家消息发出（AI 演出）"""
@@ -1490,7 +1532,7 @@ class HtmlApp:
                 return parts[1], mark.join(parts[2:])
         return processed, processed
 
-    def _send_text(self, display_text, hidden_send, image):
+    def _send_text(self, display_text, hidden_send, image, is_choice=False):
         # 显示/存储用原文；若翻译隐藏（hidden_send 非空且不同），译文存 metadata["ja_input"]，
         # _fetch_response 发 AI 时优先用译文（聊天永远看不到日文）
         content = self._apply_regex_pipeline(display_text or "", "user")
@@ -1499,6 +1541,9 @@ class HtmlApp:
         node_id = self.core.add_user_message(content)
         try:
             self.core.tree.nodes[node_id].metadata["speaker"] = speaker
+            if is_choice:
+                # GAL 选项点：标记该用户节点为「选项」，供树视图选项骨架/收纳用
+                self.core.tree.nodes[node_id].metadata["is_choice"] = True
             if hidden_send and hidden_send != display_text:
                 self.core.tree.nodes[node_id].metadata["ja_input"] = hidden_send
             if self.core.mechanism_state is not None:
@@ -1540,6 +1585,17 @@ class HtmlApp:
                     if ja_text:
                         node.metadata["ja"] = ja_text
             ai_reply = clean
+        except Exception:
+            pass
+        # 世界线切换同步到 UI（GM 标记已由 core 解析并切换）——更新当前世界/配置/横幅
+        try:
+            sw = getattr(self.core, "last_world_switch", None)
+            if sw:
+                self.core.last_world_switch = None
+                self.current_world = sw
+                self.config["current_world"] = sw
+                self._save_config()
+                self._append_sys("🌐 已穿越到世界线「" + str(sw) + "」")
         except Exception:
             pass
         self._save_tree()
@@ -1604,6 +1660,9 @@ class HtmlApp:
         self._save_config()
         # 切换角色 = 新会话：清空系统横幅（欢迎语/命令回显等），界面彻底初始化
         self.sys_msgs = []
+        # 进度同步：拉取该角色最新树存档（若比本地新则用服务器版本，实现跨设备续聊）
+        if self._ws_sync_enabled() and names:
+            self._ws_pull_tree(names[0])
         self._activate_core(reload_tree=True)
         return {"ok": True}
 
@@ -1841,8 +1900,28 @@ class HtmlApp:
                            "fields": fields, "legacy": legacy, "unlocked": bool(unlocked)})
         return {"ok": True}
 
+    def _trpg_locked_names(self):
+        """当前被跑团锁定的角色名集合。
+        锁文件由 /trpg 插件与 trpg_server（局域网多人）共同写入 .trpg_lock.json，
+        字段 {"locked": [gm]+pcs}，读不到视为无锁定。"""
+        try:
+            p = os.path.join(self.save_dir, ".trpg_lock.json")
+            if os.path.exists(p):
+                with open(p, "r", encoding="utf-8") as f:
+                    d = json.load(f)
+                return set(d.get("locked") or [])
+        except Exception:
+            pass
+        return set()
+
+    def _is_card_locked(self, name):
+        """会期锁定：跑团会话进行中（.trpg_lock.json 存在且含该卡）→ 拒绝改卡。"""
+        return name in self._trpg_locked_names()
+
     def api_update_role(self, name, fields_json=None):
         """编辑人物卡（保持文件名/头像/聊天树/卡数据，只更新设定与结构化字段）"""
+        if self._is_card_locked(name):
+            return {"ok": False, "err": "🎭 会期进行中，该角色卡已锁定（先 /trpg end 解锁）"}
         legacy, fields, unlocked, advanced = self._parse_role_input(name, fields_json)
         advanced = self._clean_advanced(advanced)
         prompt = assemble_role_prompt(name, fields, legacy)
@@ -1979,6 +2058,8 @@ class HtmlApp:
             return {"ok": False, "err": "AI 起草失败：" + str(e)[:200]}
 
     def api_delete_role(self, name):
+        if self._is_card_locked(name):
+            return {"ok": False, "err": "🎭 会期进行中，该角色卡已锁定（先 /trpg end 解锁）"}
         was_selected = name in self.selected_roles
         for r in self.roles:
             if r["name"] == name:
@@ -2162,11 +2243,15 @@ class HtmlApp:
         self._rebuild_messages()
         return {"ok": True}
 
-    def api_tree(self):
+    def api_tree(self, scope="all"):
         """树状回溯：返回完整历史树（主线平铺 + 分支收纳）。
         当前路径（主线）上的节点 on_path=True（不缩进、不右窜）；
         离线分支以 branch_root 标识：branch_root==自身 的行是「分支收纳行」，
-        其 branch_size 为分支节点数，展开后成员按 branch_depth（分支内深度）显示。"""
+        其 branch_size 为分支节点数，展开后成员按 branch_depth（分支内深度）显示。
+
+        scope="all"：完整树（含选项间对话）。
+        scope="choices"：选项骨架——只保留「选项节点」+ 当前叶子，隐藏选项间的对话，
+        平铺展示（branch_root 置空，不做分支收纳行），用于分线剧情下快速聚焦选项。"""
         tree = self.core.tree
         nodes = tree.nodes
         # 当前路径（root → 当前叶子），主线 = 路径上的节点
@@ -2209,12 +2294,18 @@ class HtmlApp:
                 "branch_size": branch_sizes.get(in_branch, 0),
                 "is_current": nid == tree.current_leaf_id,
                 "is_leaf": not node.children_ids,
+                "is_choice": bool((node.metadata or {}).get("is_choice")),
             })
             for c in node.children_ids:
                 walk(c, in_branch, branch_depth)
 
         if tree.root_id:
             walk(tree.root_id, None, 0)
+
+        if scope == "choices":
+            # 选项骨架：保留分支归属（branch_root/branch_depth），前端据此按支线分组，
+            # 并把「非选项、非当前」的对话折叠成可展开的 ··· 段。仅视图层折叠，不改存储结构。
+            pass
         return out
 
     def api_backtrack(self, node_id):
@@ -2247,6 +2338,13 @@ class HtmlApp:
                 data = json.loads(raw.decode("utf-8-sig"))
             except Exception as e:
                 return {"ok": False, "err": "JSON 解析失败：" + str(e)}
+        # 类型校验：拒绝把「聊天树快照」当角色卡导入（{kind:dick_tree} 或 裸 {ts,tree}）。
+        # 这是"导入存档 vs 跑团"最容易串的槽位：快照里没有 system_prompt/name，绝不是角色卡。
+        if isinstance(data, dict):
+            _tree_like = (data.get("kind") == "dick_tree") or (
+                isinstance(data.get("tree"), dict) and not data.get("system_prompt") and not data.get("name"))
+            if _tree_like:
+                return {"ok": False, "err": "这是聊天树快照，不是角色卡（请导入角色卡 .json/.png/.webp）"}
         conv = card_compat.to_dick(data)
         if not conv:
             return {"ok": False, "err": "无法识别的角色卡格式（需要 v1/v2/v3 或 DICK 格式）"}
@@ -2257,7 +2355,7 @@ class HtmlApp:
             name = base_name + "_" + str(i)
             i += 1
         fn = self._safe_name(name) + ".json"
-        saved = {"name": name, "system_prompt": conv["system_prompt"]}
+        saved = {"kind": "dick_card", "name": name, "system_prompt": conv["system_prompt"]}
         if isinstance(conv.get("card_data"), dict):
             saved["card_data"] = conv["card_data"]
         # 完全适配：结构化字段拆分（可编辑）+ 备用开场白
@@ -2469,12 +2567,13 @@ class HtmlApp:
         if cached and now - cached[1] < 30:
             return cached[0]
         candidates = []
-        # 本机服务器优先（最快最稳）
-        candidates.append("http://127.0.0.1:5000")
-        # 默认隧道地址（保活脚本维护的稳定入口，可能变化但当前可用）
-        candidates.append("https://referrals-lambda-geographical-says.trycloudflare.com")
+        # 优先使用配置的稳定公网地址（命名隧道 https://<id>.cfargotunnel.com，用户填 server_url）
         if cfg_url:
             candidates.append(cfg_url)
+        # 其次本机服务器（局域网直连，最快最稳）
+        candidates.append("http://127.0.0.1:5000")
+        # 不再硬编码易变的 trycloudflare 临时地址，避免连到失效的旧隧道。
+        # 公网访问统一走 server_url（稳定地址），需要时把该地址填到工坊地址。
         import requests as _req
         for base in candidates:
             try:
@@ -2489,11 +2588,159 @@ class HtmlApp:
         self._ws_active_cache = (cfg_url or candidates[1], now)
         return cfg_url or candidates[1]
 
+    # ---------- 树存档同步（复用工坊服务器，聊天进度互通） ----------
+    def _ws_sync_enabled(self):
+        """进度同步开关：
+        ① 显式配置了工坊 server_url → 同步（远程/云端）；
+        ② 未配置但本机 net.py 服务器在线（局域网直连）→ 同步到本机服务器，手机同网连它。
+        本机探测用极短超时，避免每次保存卡顿。"""
+        if (self._ws_load_config().get("server_url") or "").strip():
+            return True
+        try:
+            import requests as _req
+            r = _req.get("http://127.0.0.1:5000/api/health", timeout=0.6,
+                         headers=self._ws_headers(), proxies=self._ws_proxies())
+            return r.status_code < 400
+        except Exception:
+            return False
+
+    def _ws_save_upload(self, card_id, tree_data):
+        """把某角色的聊天树推送到工坊服务器（后来者胜）。返回 (ok, ts)。"""
+        try:
+            import requests as _req
+            url = self._ws_url("/api/save/" + str(card_id))
+            r = _req.post(url, json={"tree": tree_data}, timeout=6,
+                          headers=self._ws_headers(), proxies=self._ws_proxies())
+            if r.status_code < 400:
+                return True, (r.json() or {}).get("ts", "")
+        except Exception as e:
+            print(f"[树存档同步] 推送失败: {e}")
+        return False, ""
+
+    def _ws_save_upload_async(self, card_id, tree_data):
+        """后台线程推送（不阻塞保存）。"""
+        if not self._ws_sync_enabled():
+            return
+        threading.Thread(target=self._ws_save_upload, args=(card_id, tree_data), daemon=True).start()
+
+    def _ws_save_fetch(self, card_id):
+        """从工坊服务器拉取某角色最新的聊天树。返回 {"ts":..., "tree":...} 或 None。"""
+        try:
+            import requests as _req
+            url = self._ws_url("/api/save/" + str(card_id))
+            r = _req.get(url, timeout=6, headers=self._ws_headers(), proxies=self._ws_proxies())
+            if r.status_code < 400:
+                d = r.json() or {}
+                if isinstance(d.get("tree"), dict):
+                    return d
+        except Exception as e:
+            print(f"[树存档同步] 拉取失败: {e}")
+        return None
+
+    def _ws_pull_tree(self, role_name):
+        """拉取服务器上该角色最新的聊天树；若比本地新则替换本地存档（实现跨设备续聊）。
+        返回 True 表示采用了服务器版本。"""
+        # 跑团会期锁定：被锁卡的记忆树绝不被服务器版本覆盖（避免导入/续聊与跑团混淆）
+        if role_name in self._trpg_locked_names():
+            return False
+        fetched = self._ws_save_fetch(role_name)
+        if not fetched:
+            return False
+        server_ts = str(fetched.get("ts") or "")
+        server_tree = fetched.get("tree")
+        if not server_ts or not isinstance(server_tree, dict):
+            return False
+        for r in self.roles:
+            if r["name"] == role_name:
+                data = dict(r.get("data") or {})
+                local_ts = str(data.get("_tree_ts") or "")
+                if server_ts <= local_ts:
+                    return False
+                data["history_tree"] = server_tree
+                data["_tree_ts"] = server_ts
+                r["data"] = data
+                # 同时写回本地文件，避免下次又拉
+                try:
+                    out = dict(data)
+                    out["name"] = r["name"]
+                    out["system_prompt"] = r["prompt"]
+                    save_guard.backup_file(os.path.join(self.save_dir, r["file"]))
+                    save_guard.atomic_write_json(os.path.join(self.save_dir, r["file"]), out)
+                except Exception:
+                    pass
+                return True
+        return False
+
+    # ---------- 同步设置（API 码等） ----------
+    def _ws_push_api(self):
+        """把当前模型连接配置（API 码/端点/模型）推送到工坊服务器（后台线程）。"""
+        if not self._ws_sync_enabled():
+            return
+        payload = {
+            "api_key": (self.config.get("api_key") or "").strip(),
+            "base_url": (self.config.get("base_url") or "").strip(),
+            "model": (self.config.get("model") or "").strip(),
+            "provider": (self.config.get("provider") or "deepseek").strip(),
+        }
+        if not payload["api_key"]:
+            return   # 本地还没填 Key，不覆盖服务器已有配置
+        threading.Thread(target=self._ws_push_api_sync, args=(payload,), daemon=True).start()
+
+    def _ws_push_api_sync(self, payload):
+        try:
+            import requests as _req
+            r = _req.post(self._ws_url("/api/sync/api"), json=payload, timeout=6,
+                          headers=self._ws_headers(), proxies=self._ws_proxies())
+            if r.status_code >= 400:
+                print(f"[API 同步] 推送失败 HTTP {r.status_code}")
+        except Exception as e:
+            print(f"[API 同步] 推送失败: {e}")
+
+    def _ws_pull_api(self):
+        """拉取共享的模型连接配置；若服务器有 Key 且与本地不同则应用（后来者胜）。"""
+        if not self._ws_sync_enabled():
+            return False
+        try:
+            import requests as _req
+            r = _req.get(self._ws_url("/api/sync/api"), timeout=6,
+                         headers=self._ws_headers(), proxies=self._ws_proxies())
+            if r.status_code >= 400:
+                return False
+            d = r.json() or {}
+            key = (d.get("api_key") or "").strip()
+            if not key:
+                return False
+            # 应用服务器共享的连接配置（覆盖本地）
+            self.config["api_key"] = key
+            pid = (d.get("provider") or self.config.get("provider") or "deepseek").strip()
+            self.config["provider"] = pid
+            self.provider_id = pid
+            self.api_keys[pid] = key
+            self.config["api_keys"] = self.api_keys
+            if d.get("base_url"):
+                self.config["base_url"] = d["base_url"].strip()
+                self.core.set_base_url(self.config["base_url"])
+            if d.get("model"):
+                self.config["model"] = d["model"].strip()
+                self.core.set_model(self.config["model"])
+            self.core.set_api_key(key if key else "free")
+            if self.config.get("proxy"):
+                self.core.set_proxy(self.config["proxy"])
+            self.core.set_stop_sequences(self._effective_stop())
+            self._save_config()
+            print("[API 同步] 已应用服务器共享的模型连接配置")
+            return True
+        except Exception as e:
+            print(f"[API 同步] 拉取失败: {e}")
+            return False
+
     def _reload_roles(self):
         """从磁盘重建角色列表（保留选中项）"""
         self.roles = []
         try:
             for fn in sorted(os.listdir(self.save_dir)):
+                if fn.startswith("."):
+                    continue  # 跳过跑团会期锁等隐藏/元数据文件
                 if not fn.endswith(".json"):
                     continue
                 try:
@@ -2533,7 +2780,7 @@ class HtmlApp:
 
     def api_workshop_state(self):
         cfg = self._ws_load_config()
-        roles = [fn for fn in sorted(os.listdir(self.save_dir)) if fn.endswith(".json")]
+        roles = [fn for fn in sorted(os.listdir(self.save_dir)) if not fn.startswith(".") and fn.endswith(".json")]
         worlds = [fn for fn in sorted(os.listdir(self.world_dir)) if fn.endswith(".json")]
         active = ""
         try:
@@ -3846,6 +4093,8 @@ class HtmlApp:
         # 换厂商后停止序列按新模型家族默认生效
         self.core.set_stop_sequences(self._effective_stop())
         self._save_config()
+        # 进度同步：把模型连接配置推到工坊服务器（后台线程，不阻塞）
+        self._ws_push_api()
         return {"ok": True, "provider": pid}
 
     def api_save_image_gen(self, key, base_url, model):

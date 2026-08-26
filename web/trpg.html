@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>🎭 剧情跑团 · DICK TRPG</title>
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;font-family:system-ui,'PingFang SC','Microsoft YaHei',sans-serif;background:#14141c;color:#eee;height:100vh;display:flex;flex-direction:column}
+  header{padding:10px 14px;background:#1d1d2a;border-bottom:1px solid #333;display:flex;align-items:center;justify-content:space-between}
+  header h1{font-size:15px;margin:0}
+  header .turn{font-size:13px;color:#ffd479}
+  main{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:12px}
+  .bubble{max-width:92%;padding:9px 12px;border-radius:12px;background:#232336;font-size:14px;line-height:1.6;white-space:pre-wrap}
+  .bubble.pc{align-self:flex-start;border-left:3px solid #7aa2f7}
+  .bubble.gm{align-self:stretch;background:#1c2a1e;border-left:3px solid #6fd08c;margin-top:4px}
+  .bubble .who{font-size:12px;color:#8f93b0;margin-bottom:3px}
+  footer{padding:10px 14px;background:#1d1d2a;border-top:1px solid #333}
+  footer .row{display:flex;gap:8px}
+  input,button{border-radius:8px;border:0;padding:10px;font-size:14px}
+  input{flex:1;background:#12121a;color:#eee;border:1px solid #333;outline:none}
+  button{background:#4f6ef2;color:#fff;cursor:pointer;font-weight:600}
+  button.secondary{background:#2b2b40}
+  .hint{font-size:12px;color:#8f93b0;margin-top:6px}
+  .join{display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap}
+  .join button{background:#3a5a3a}
+</style>
+</head>
+<body>
+<header>
+  <h1>🎭 DICK 剧情跑团</h1>
+  <div id="turnEl" class="turn">当前： —</div>
+</header>
+<main id="log"></main>
+<footer>
+  <div id="joinBox" class="join"></div>
+  <div class="row">
+    <input id="actInput" placeholder="以当前行动者身份行动…" autocomplete="off">
+    <button id="btnAct" onclick="sendAct()">行动</button>
+  </div>
+  <div class="hint">加入：先在上方选一张 PC 作为你的角色。行动会交给 GM 叙述并推送给所有人。</div>
+</footer>
+<script>
+let state = {story:[], turn:""};
+let joined = null;
+
+function esc(s){ return (s||'').replace(/[<>&]/g, c=>({'<':'&lt;','>':'&gt;','&':'&amp;'}[c])); }
+
+async function refresh(){
+  try{
+    const r = await fetch('/api/state');
+    const d = await r.json();
+    state = d;
+    document.getElementById('turnEl').textContent = '当前： ' + (d.turn||'—');
+    const log = document.getElementById('log');
+    log.innerHTML = '';
+    (d.story||[]).forEach(s=>{
+      const pc = document.createElement('div'); pc.className='bubble pc';
+      pc.innerHTML = '<div class="who">'+esc(s.actor)+' · 行动</div>'+esc(s.action);
+      log.appendChild(pc);
+      const gm = document.createElement('div'); gm.className='bubble gm';
+      gm.innerHTML = '<div class="who">GM</div>'+esc(s.gm);
+      log.appendChild(gm);
+    });
+    if(!d.story||!d.story.length){ log.innerHTML='<div class="hint">剧情还没开始。等 GM 开场，或选好角色后提交第一个行动。</div>'; }
+    // 加入按钮
+    const jb = document.getElementById('joinBox');
+    if(!joined){ jb.innerHTML=''; (d.pcs||[]).forEach(pc=>{
+      const b=document.createElement('button'); b.textContent='选 '+pc; b.onclick=()=>joinAs(pc); jb.appendChild(b);
+    }); }
+    else { jb.innerHTML='<span class="hint">你已作为 '+esc(joined)+' 加入</span>'; }
+    log.scrollTop = log.scrollHeight;
+  }catch(e){ console.error(e); }
+}
+
+async function joinAs(pc){
+  await fetch('/api/join',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:pc})});
+  joined = pc; refresh();
+}
+
+async function sendAct(){
+  const v = document.getElementById('actInput').value.trim();
+  if(!v) return;
+  const actor = joined || state.turn;
+  document.getElementById('actInput').value='';
+  await fetch('/api/act',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({actor, action:v})});
+  refresh();
+}
+
+refresh();
+setInterval(refresh, 2500);
+</script>
+</body>
+</html>

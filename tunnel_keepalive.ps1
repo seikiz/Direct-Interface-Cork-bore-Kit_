@@ -1,40 +1,35 @@
-# ============================================================
-#  tunnel_keepalive.ps1 - 创意工坊隧道保活 + 地址同步
-#  1. 检查 cloudflared 隧道进程，没跑就启动（输出到日志）
-#  2. 调用 tunnel_sync.ps1 同步 Worker 固定地址
-#  计划任务：开机时 + 每 5 分钟
+﻿# ============================================================
+#  tunnel_keepalive.ps1 - 创意工坊「命名隧道」保活（稳定公网地址）
+#  只用 cloudflared tunnel run 保持本命名隧道在跑；URL 是稳定的
+#  https://<隧道ID>.cfargotunnel.com，不会像 trycloudflare 那样变，
+#  因此无需抓取地址/重部署 Worker。
+#  计划任务：开机时 + 每 5 分钟。首次请先运行 设置-公网隧道.ps1。
 # ============================================================
 $ErrorActionPreference = "Continue"
-$dist = "C:\Users\seiki\Desktop\dist"
-$logFile = Join-Path $dist "_tunnel_err.txt"
-$outFile = Join-Path $dist "_tunnel_out.txt"
+$dist = Split-Path -Parent $MyInvocation.MyCommand.Path
+$configPath = Join-Path $dist "tunnel-config.yml"
+$cf = "C:\Program Files (x86)\cloudflared\cloudflared.exe"
+$TUNNEL_NAME = "dick-workshop"
 
-$tunnelRunning = $false
-$procs = Get-CimInstance Win32_Process -Filter "Name='cloudflared.exe'" -ErrorAction SilentlyContinue
-foreach ($p in $procs) {
-    if ($p.CommandLine -match "tunnel.*url http://127.0.0.1:5000") {
-        $tunnelRunning = $true
+# 是否有本命名隧道的进程在跑
+$running = $false
+Get-CimInstance Win32_Process -Filter "Name='cloudflared.exe'" -ErrorAction SilentlyContinue | ForEach-Object {
+    if ($_.CommandLine -match "tunnel\s+run" -and $_.CommandLine -match [regex]::Escape($TUNNEL_NAME)) {
+        $running = $true
         break
     }
 }
 
-if (-not $tunnelRunning) {
-    Write-Output "TUNNEL_NOT_RUNNING - starting..."
-    Start-Process -FilePath "C:\Program Files (x86)\cloudflared\cloudflared.exe" -ArgumentList "tunnel","--url","http://127.0.0.1:5000","--no-autoupdate" -WindowStyle Hidden -RedirectStandardOutput $outFile -RedirectStandardError $logFile
-    $found = $false
-    for ($i = 0; $i -lt 30; $i++) {
-        Start-Sleep -Seconds 1
-        if (Test-Path $logFile) {
-            $c = Get-Content $logFile -Raw -ErrorAction SilentlyContinue
-            if ($c -match "https://[a-z0-9\-]+\.trycloudflare\.com") {
-                $found = $true
-                break
-            }
-        }
-    }
-    if ($found) { Write-Output "TUNNEL_STARTED" } else { Write-Output "TUNNEL_START_WAIT" }
-} else {
+if ($running) {
     Write-Output "TUNNEL_RUNNING"
+    exit 0
 }
 
-& powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $dist "tunnel_sync.ps1")
+if (-not (Test-Path $configPath)) {
+    Write-Output "NO_CONFIG - 请先运行 设置-公网隧道.ps1"
+    exit 0
+}
+
+Write-Output "TUNNEL_NOT_RUNNING - starting..."
+Start-Process -FilePath $cf -ArgumentList @("tunnel", "run", $TUNNEL_NAME, "--config", $configPath) -WindowStyle Hidden
+Write-Output "TUNNEL_STARTED"

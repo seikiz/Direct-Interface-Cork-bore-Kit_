@@ -11,7 +11,7 @@ DICK 和酒馆（SillyTavern）是同一个沙盒的两种玩法：DICK 轻量�
 ## 用法
 
 1. **双击 `install.bat`**（或 `node install.js`）
-2. 脚本自动：检测 Node → 下载酒馆 → 解压 → 装依赖 → 启动
+2. 脚本自动：**检查 Node →（没有就自动从命令行安装，Linux 式）→ 下载酒馆 → 解压 → 装依赖 → 启动**
 3. 浏览器打开 `http://localhost:8000` 开始用
 
 ## 其他命令
@@ -24,8 +24,8 @@ node install.js --start     直接启动（已装好时）
 
 ## 环境要求
 
-- **Node.js 18+**（酒馆新版需要；没有会提示安装）
-- Windows 10+（自带 tar 解压 zip）
+- **Node.js 18+**（酒馆新版需要。**本安装器会在命令行自动安装 Node**——无 Node 时自动从 nodejs.org 下载便携版，无需预装任何环境）
+- Windows 10+（自带 tar 解压 zip；下载依赖的 PowerShell）
 
 ## 安装后
 

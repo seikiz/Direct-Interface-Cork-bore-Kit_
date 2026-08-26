@@ -127,6 +127,21 @@ class PluginManager:
     def get_all_plugins(self) -> List[PluginBase]:
         return list(self.plugins.values())
 
+    def contextInjection(self) -> str:
+        """聚合所有已启用插件的 contextInjection()，用于往系统提示词注入附加上下文。
+        例如跑团模式的 GM 提示词/回合状态。"""
+        parts = []
+        for p in self.plugins.values():
+            if not getattr(p, "enabled", False):
+                continue
+            try:
+                s = p.contextInjection()
+            except Exception:
+                continue
+            if s and str(s).strip():
+                parts.append(str(s).strip())
+        return "\n\n".join(parts)
+
     def reload_plugins(self):
         self.unload_plugins()
         self.load_plugins()

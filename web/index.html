@@ -103,6 +103,10 @@ body{ background:var(--bg); color:var(--text); font-family:"Segoe UI","Microsoft
 #quickpanel .chip{ flex:1; background:var(--bubble); border:1px solid var(--line); color:var(--text);
   border-radius:8px; padding:6px 4px; font-size:11px; cursor:pointer; }
 #quickpanel .chip:hover{ border-color:var(--accent); }
+#quickpanel .fold{ margin:4px 0; border-top:1px dashed var(--line); padding-top:4px; }
+#quickpanel .fold-head{ font-size:12px; color:var(--sub); cursor:pointer; padding:3px 0; user-select:none; }
+#quickpanel .fold-head:hover{ color:var(--accent); }
+#quickpanel .fold-arrow{ float:right; color:var(--sub); }
 @keyframes slideup{ from{ transform:translateY(8px); opacity:0; } to{ transform:translateY(0); opacity:1; } }
 #imgprev{ display:flex; align-items:center; gap:8px; padding:4px 14px; font-size:12px; color:var(--sub); }
 #imgprev img{ width:44px; height:44px; border-radius:8px; object-fit:cover; }
@@ -189,6 +193,9 @@ button .ic{ margin-right:2px; }
 #branchPanel .b-item.cur{ background:var(--bubble); }
 #branchPanel .b-head{ padding:7px 12px; font-size:11px; color:var(--sub); border-bottom:1px solid var(--line); }
 #branchPanel .b-hint{ padding:7px 12px; font-size:11px; color:var(--sub); }
+#branchPanel .b-item.seg{ padding:5px 10px; font-size:11px; color:var(--sub); font-style:italic; }
+#branchPanel .b-item.seg:hover{ background:transparent; color:var(--accent); }
+#branchPanel .b-item .b-prev.seg-label{ white-space:nowrap; }
 
 /* ---------- 首次启动引导框 ---------- */
 #onboard{ position:fixed; inset:0; z-index:200; }
@@ -252,7 +259,11 @@ button .ic{ margin-right:2px; }
 .prow{ border:1px solid var(--line); border-radius:10px; padding:8px 10px; margin:6px 0; background:var(--bg); }
 .prow .phead{ display:flex; align-items:center; gap:6px; font-size:12px; }
 .prow .phead .pname{ font-weight:600; color:var(--text); }
+.prow .phead .pname-toggle{ cursor:pointer; }
+.prow .phead .pname-toggle:hover{ color:var(--accent); }
+.prow .phead .parrow{ cursor:pointer; }
 .prow .pdesc{ font-size:11px; color:var(--sub); margin:2px 0 4px; }
+.prow .psets{ border-top:1px dashed var(--line); margin-top:4px; padding-top:4px; }
 .prow .pset{ margin:4px 0; font-size:11px; }
 .prow .pset label{ display:inline-block; min-width:90px; color:var(--sub); font-size:11px; }
 .prow .pset input[type=text],.prow .pset input[type=number],.prow .pset select{
@@ -328,28 +339,36 @@ button .ic{ margin-right:2px; }
     <div id="quickpanel">
       <div class="row">
         <button class="chip" id="qcImage">📷 图片</button>
-        <button class="chip" data-cmd="/股票 ">📊 个股</button>
         <button class="chip" data-cmd="/搜索 ">🔍 搜索</button>
         <button class="chip" data-cmd="/深搜 ">🔍 深搜</button>
-      </div>
-      <div class="row">
-        <button class="chip" data-cmd="/全市场 ">🔍 全市场</button>
-        <button class="chip" data-cmd="/联动 ">🔗 联动</button>
-        <button class="chip" data-cmd="/财报 爬取">📈 爬政策</button>
-        <button class="chip" data-cmd="/财报 入库">📚 入库</button>
-      </div>
-      <div class="row">
-        <button class="chip" data-cmd="/财报 检索 ">📚 检索</button>
-        <button class="chip" data-cmd="/爬取 ">🌐 爬网页</button>
         <button class="chip" data-cmd="/r 2d6">🎲 骰子</button>
+      </div>
+      <div class="row">
         <button class="chip" data-cmd="/memory recall 3">🧠 记忆</button>
         <button class="chip" data-cmd="/cyoa">🎮 选项</button>
-      </div>
-      <div class="row">
         <button class="chip" id="qcRead">📄 读文档</button>
         <button class="chip" id="qcClearDoc">🧹 清文档</button>
+      </div>
+      <div class="row">
         <button class="chip" id="qcExport">💾 导出Word</button>
         <button class="chip" id="qcTheme">🎨 主题</button>
+      </div>
+      <!-- 财报：折叠区块，仅启用财报模式才显示（未启用隐藏，不铺满面板） -->
+      <div id="finFold" class="fold" style="display:none">
+        <div class="fold-head" id="finFoldHead">📊 财报 <span class="fold-arrow" id="finFoldArrow">▸</span></div>
+        <div class="fold-body" id="finFoldBody" style="display:none">
+          <div class="row">
+            <button class="chip" data-cmd="/股票 ">📊 个股</button>
+            <button class="chip" data-cmd="/全市场 ">🔍 全市场</button>
+            <button class="chip" data-cmd="/联动 ">🔗 联动</button>
+            <button class="chip" data-cmd="/财报 爬取">📈 爬政策</button>
+          </div>
+          <div class="row">
+            <button class="chip" data-cmd="/财报 入库">📚 入库</button>
+            <button class="chip" data-cmd="/财报 检索 ">📚 检索</button>
+            <button class="chip" data-cmd="/爬取 ">🌐 爬网页</button>
+          </div>
+        </div>
       </div>
       <div class="row" id="qrRow"></div>
     </div>
@@ -972,6 +991,9 @@ var pendingImage = null;   // {b64, mime}
 var avatarCache = {};      // name -> dataURL | 'LETTER'
 var branchList = [];
 var treeList = [];
+var treeScope = 'all';
+var manualScope = false;   // 用户手动切过树范围后，不再自动默认
+var expandSeg = {};        // 选项骨架：段展开状态（key = prevId>nextId）
 var editTarget = null;
 var wmEntries = [];
 var lang = 'zh';
@@ -1725,6 +1747,19 @@ document.getElementById('plusBtn').onclick = function () {
   p.classList.toggle('open');
   this.textContent = p.classList.contains('open') ? '✕' : '➕';
 };
+// 财报折叠：点头部展开/收起；未启用财报模式则整块隐藏
+document.getElementById('finFoldHead').onclick = function () {
+  var body = document.getElementById('finFoldBody');
+  var arrow = document.getElementById('finFoldArrow');
+  var open = body.style.display !== 'none';
+  body.style.display = open ? 'none' : '';
+  arrow.textContent = open ? '▸' : '▾';
+};
+function setFinEnabled(en) {
+  window.finEnabled = !!(en);
+  var f = document.getElementById('finFold');
+  if (f) f.style.display = window.finEnabled ? '' : 'none';
+}
 document.querySelectorAll('.chip[data-cmd]').forEach(function (c) {
   c.onclick = function () {
     var cmd = this.getAttribute('data-cmd');
@@ -2461,8 +2496,52 @@ document.getElementById('emCancel').onclick = function () {
 };
 // ---- 树状回溯（主线平铺 + 分支收纳，点击任意节点跳回） ----
 var expandedBranches = {};
+function loadTree(smart) {
+  pywebview.api.tree(treeScope).then(function (list) {
+    treeList = list || [];
+    // 首次打开且未手动切过：若存在选项节点，自动切到「只看选项」骨架（分线剧情默认清爽）
+    if (smart && !manualScope) {
+      var hasChoice = (list || []).some(function (n) { return n.is_choice; });
+      if (hasChoice && treeScope !== 'choices') {
+        treeScope = 'choices';
+        loadTree(false);
+        return;
+      }
+    }
+    var p = document.getElementById('branchPanel');
+    renderTreePanel(p);
+  }).catch(function () {});
+}
 function renderTreePanel(p) {
-  p.innerHTML = '<div class="b-head">' + (T.treeTitle || '回溯') + '</div>';
+  p.innerHTML = '';
+  var head = document.createElement('div');
+  head.className = 'b-head';
+  head.style.cssText = 'display:flex;align-items:center;gap:8px;';
+  var title = document.createElement('span');
+  title.style.cssText = 'flex:1;';
+  title.textContent = (T.treeTitle || '回溯');
+  head.appendChild(title);
+  var cap = document.createElement('span');
+  cap.textContent = '⊟ 收纳';
+  cap.style.cssText = 'cursor:pointer;color:var(--sub);font-weight:600;user-select:none;';
+  cap.title = '全部收起（折叠选项间的对话）';
+  cap.onclick = function (ev) {
+    ev.stopPropagation();
+    collapseAll();
+  };
+  head.appendChild(cap);
+  var tg = document.createElement('span');
+  tg.textContent = (treeScope === 'choices') ? '🔖 只看选项' : '📄 全部节点';
+  tg.style.cssText = 'cursor:pointer;color:var(--accent);font-weight:600;user-select:none;';
+  tg.onclick = function (ev) {
+    ev.stopPropagation();
+    manualScope = true;
+    treeScope = (treeScope === 'choices') ? 'all' : 'choices';
+    saveTreeView();
+    loadTree(false);
+  };
+  head.appendChild(tg);
+  p.appendChild(head);
   if (!treeList.length) {
     var hint = document.createElement('div');
     hint.className = 'b-hint';
@@ -2484,11 +2563,12 @@ function renderTreePanel(p) {
       it.onclick = function () {
         if (expandedBranches[n.id]) delete expandedBranches[n.id];
         else expandedBranches[n.id] = true;
+        saveTreeView();
         renderTreePanel(p);
       };
     } else {
       it.innerHTML = '<span class="b-who">' + who + '</span><span class="b-prev">' +
-        escapeHtml(n.content || '') + '</span>' + badge;
+        (n.is_choice ? '🔖 ' : '') + escapeHtml(n.content || '') + '</span>' + badge;
       it.onclick = function () {
         pywebview.api.backtrack(n.id).then(function (r) {
           if (r && r.ok) {
@@ -2503,6 +2583,10 @@ function renderTreePanel(p) {
       };
     }
     p.appendChild(it);
+  }
+  if (treeScope === 'choices') {
+    renderChoices(p, addRow);
+    return;
   }
   var i = 0;
   while (i < treeList.length) {
@@ -2525,15 +2609,113 @@ function renderTreePanel(p) {
     }
   }
 }
+// ---- 选项骨架（只看选项）：按支线分组 + 折叠选项间对话为可展开 ··· 段 ----
+function renderChoices(p, addRow) {
+  var hasChoice = treeList.some(function (n) { return n.is_choice; });
+  if (!hasChoice) {
+    // 无选项：直接平铺全部（保留定位与回溯，避免空视图）
+    treeList.forEach(function (n) { addRow(n, 0, false); });
+    return;
+  }
+  var i = 0;
+  while (i < treeList.length) {
+    var n = treeList[i];
+    if (n.role === 'system') { i++; continue; }        // 系统节点不占位
+    if (n.on_path) {
+      // 主线：连续一段 on_path 节点，折叠其中非选项/非当前的对白
+      var run = [];
+      while (i < treeList.length && treeList[i].role !== 'system' && treeList[i].on_path) { run.push(treeList[i]); i++; }
+      renderCollapsedRun(p, run, addRow, 0);
+    } else {
+      // 支线：按 branch_root 收纳成「分支」行，展开后同样折叠对白
+      var open = !!expandedBranches[n.branch_root];
+      addRow(n, 0, true);
+      i++;
+      if (open) {
+        var members = [];
+        while (i < treeList.length && treeList[i].branch_root === n.branch_root) { members.push(treeList[i]); i++; }
+        renderCollapsedRun(p, members, addRow, 1);
+      } else {
+        while (i < treeList.length && treeList[i].branch_root === n.branch_root) i++;
+      }
+    }
+  }
+}
+function renderCollapsedRun(p, nodes, addRow, indent) {
+  var i = 0, prevId = null;
+  while (i < nodes.length) {
+    var n = nodes[i];
+    if (n.role === 'system') { i++; continue; }
+    if (n.is_choice || n.is_current) {
+      addRow(n, indent, false);
+      prevId = n.id;
+      i++;
+      continue;
+    }
+    var start = i;
+    while (i < nodes.length && !(nodes[i].is_choice || nodes[i].is_current)) { i++; }
+    var seg = nodes.slice(start, i);
+    var nextId = null;
+    for (var j = i; j < nodes.length; j++) {
+      if (nodes[j].is_choice || nodes[j].is_current) { nextId = nodes[j].id; break; }
+    }
+    addSegmentRow(p, seg, addRow, prevId, nextId, indent);
+  }
+}
+function addSegmentRow(p, seg, addRow, prevId, nextId, indent) {
+  indent = indent || 0;
+  var key = (prevId || '') + '>' + (nextId || '');
+  var open = !!expandSeg[key];
+  var it = document.createElement('div');
+  it.className = 'b-item seg' + (open ? ' seg-open' : '');
+  it.style.paddingLeft = (10 + indent * 14) + 'px';
+  it.innerHTML = '<span class="b-who">' + (open ? '▾' : '▸') + '</span>' +
+    '<span class="b-prev seg-label">⋯ ' + seg.length + ' 条对话</span>';
+  it.onclick = function (e) {
+    e.stopPropagation();
+    if (expandSeg[key]) delete expandSeg[key];
+    else expandSeg[key] = true;
+    saveTreeView();
+    renderTreePanel(document.getElementById('branchPanel'));
+  };
+  p.appendChild(it);
+  if (open) {
+    seg.forEach(function (sn) { addRow(sn, indent, false); });
+  }
+}
+// ---- 树视图状态持久化（localStorage）+ 全部收纳 ----
+function saveTreeView() {
+  try {
+    localStorage.setItem('dick_tree_view', JSON.stringify({
+      treeScope: treeScope, manualScope: manualScope,
+      expandSeg: expandSeg, expandedBranches: expandedBranches
+    }));
+  } catch (e) {}
+}
+function loadTreeView() {
+  try {
+    var raw = localStorage.getItem('dick_tree_view');
+    if (!raw) return;
+    var d = JSON.parse(raw);
+    if (d.treeScope) treeScope = d.treeScope;
+    if (typeof d.manualScope === 'boolean') manualScope = d.manualScope;
+    if (d.expandSeg) expandSeg = d.expandSeg;
+    if (d.expandedBranches) expandedBranches = d.expandedBranches;
+  } catch (e) {}
+}
+function collapseAll() {
+  expandSeg = {};
+  expandedBranches = {};
+  saveTreeView();
+  renderTreePanel(document.getElementById('branchPanel'));
+}
+loadTreeView();
 document.getElementById('btnBranches').onclick = function (e) {
   e.stopPropagation();
   var p = document.getElementById('branchPanel');
   if (p.classList.contains('open')) { p.classList.remove('open'); return; }
-  pywebview.api.tree().then(function (list) {
-    treeList = list || [];
-    renderTreePanel(p);
-    p.classList.add('open');
-  }).catch(function () {});
+  loadTree(true);
+  p.classList.add('open');
 };
 document.addEventListener('click', function (e) {
   var p = document.getElementById('branchPanel');
@@ -4067,11 +4249,16 @@ function applyFont(idx) {
 function renderPlugins(plugins) {
   var box = document.getElementById('stPluginList');
   box.innerHTML = '';
+  var fin = false;
   (plugins || []).forEach(function (p) {
+    if (p.name === '财报助手') fin = !!p.enabled;
     var row = document.createElement('div');
     row.className = 'prow';
-    var head = '<div class="phead"><input type="checkbox" data-plug="' + escapeHtml(p.name) + '"' + (p.enabled ? ' checked' : '') + '>' +
-      '<span class="pname">' + escapeHtml(p.name) + '</span><span style="color:var(--sub)">v' + escapeHtml(p.version || '') + '</span></div>' +
+    var head = '<div class="phead">' +
+      '<input type="checkbox" data-plug="' + escapeHtml(p.name) + '"' + (p.enabled ? ' checked' : '') + '>' +
+      '<span class="pname pname-toggle" data-ptog="' + escapeHtml(p.name) + '">' + escapeHtml(p.name) + '</span>' +
+      '<span style="color:var(--sub)">v' + escapeHtml(p.version || '') + '</span>' +
+      '<span class="parrow" data-parrow="' + escapeHtml(p.name) + '" style="float:right;color:var(--sub)">▸</span></div>' +
       '<div class="pdesc">' + escapeHtml(p.description || '') + '</div>';
     var sets = '';
     (p.schema || []).forEach(function (s) {
@@ -4095,9 +4282,11 @@ function renderPlugins(plugins) {
       }
       sets += '</div>';
     });
-    row.innerHTML = head + sets;
+    var psetsWrap = '<div class="psets" data-psets="' + escapeHtml(p.name) + '" style="display:none">' + sets + '</div>';
+    row.innerHTML = head + psetsWrap;
     box.appendChild(row);
   });
+  setFinEnabled(fin);   // 财报模式启用与否 → 控制快捷面板财报折叠区显隐
 }
 
 document.getElementById('stBudgetBtn').onclick = function () {
@@ -4135,6 +4324,19 @@ document.getElementById('stPluginList').addEventListener('change', function (e) 
     var val = type === 'bool' ? t.checked : t.value;
     pywebview.api.set_plugin_setting(name, key, val);
   }
+});
+// 点插件名/箭头 → 展开/收起该插件的设置（默认折叠）
+document.getElementById('stPluginList').addEventListener('click', function (e) {
+  var t = e.target;
+  var name = t.getAttribute('data-ptog') || t.getAttribute('data-parrow');
+  if (!name) return;
+  var prow = t.closest ? t.closest('.prow') : null;
+  var psets = prow ? prow.querySelector('.psets') : null;
+  var arrow = prow ? prow.querySelector('.parrow') : null;
+  if (!psets) return;
+  var open = psets.style.display !== 'none';
+  psets.style.display = open ? 'none' : '';
+  if (arrow) arrow.textContent = open ? '▸' : '▾';
 });
 document.getElementById('qcRead').onclick = function () {
   pywebview.api.read_document(null).then(function (r) {

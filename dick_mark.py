@@ -47,6 +47,43 @@ def mark_dict(extra=None):
 
 
 # ============================================================
+# 零宽水印（隐写，肉眼不可见，copy 即带走）
+#   用 4 个零宽字符当 2 位数字（base-4）编码签名，
+#   视觉上只剩 <seiki>…<seikiz> 两个标签（中间是隐形字符）。
+#   用于源码/文本的隐性溯源；酒馆导出卡保持干净（不下这层）。
+# ============================================================
+ZW_CHARS = "\u200b\u200c\u200d\u200e"      # 0,1,2,3（各 2 bit）
+ZW_START = "<seiki>"
+ZW_END = "<seikiz>"
+
+
+def zero_width_mark(sig="", wrap=True):
+    """把签名编码成零宽字符串。默认输出 <seiki>…<seikiz> 形式。
+    sig 只支持 ASCII（默认用 MARK_JS）。"""
+    sig = (sig or MARK_JS)
+    out = []
+    for ch in sig:
+        n = ord(ch)
+        for shift in (6, 4, 2, 0):
+            out.append(ZW_CHARS[(n >> shift) & 3])
+    data = "".join(out)
+    return (ZW_START + data + ZW_END) if wrap else data
+
+
+def decode_zero_width(s):
+    """从零宽串还原签名（忽略所有非零宽字符）。供校验/举证。"""
+    digits = {c: i for i, c in enumerate(ZW_CHARS)}
+    vals = [digits[c] for c in s if c in digits]
+    out = []
+    for i in range(0, len(vals) - 3, 4):
+        n = 0
+        for digit in vals[i:i + 4]:
+            n = (n << 2) | digit
+        out.append(chr(n))
+    return "".join(out)
+
+
+# ============================================================
 # 合作边界声明（重要）
 #
 #   DICK 的反抄袭水印只存在于【自己的地盘】：

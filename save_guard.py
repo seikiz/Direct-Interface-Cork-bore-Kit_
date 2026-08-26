@@ -433,6 +433,10 @@ def sweep(data_dir, include_worlds=True, include_memory=True, do_repair=True, do
         if not os.path.isdir(d):
             continue
         for fn in sorted(os.listdir(d)):
+            # 跳过隐藏/元数据文件（如跑团会期锁 .trpg_lock.json）：
+            # 它们不是角色卡/世界卡/记忆树，绝不能当作存档来校验、修复或备份。
+            if fn.startswith("."):
+                continue
             if not fn.endswith(".json"):
                 continue
             if fn.endswith(".tmp"):

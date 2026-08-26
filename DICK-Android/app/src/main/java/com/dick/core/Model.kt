@@ -78,6 +78,7 @@ class SaveFile(
     val systemPrompt: String? = null,
     val historyTree: TreeData = TreeData(),
     val cardData: J.Obj? = null,
+    var treeTs: String? = null,   // 树存档同步时间戳（UTC ISO，跨设备比新旧）
 ) {
     fun toJson(): J.Obj {
         val o = J.Obj()
@@ -85,6 +86,8 @@ class SaveFile(
         o.fields["system_prompt"] = J.strOr(systemPrompt)
         o.fields["history_tree"] = historyTree.toJson()
         if (cardData != null) o.fields["card_data"] = cardData
+        val ts = treeTs
+        if (ts != null) o.fields["tree_ts"] = J.strOr(ts)
         return o
     }
 
@@ -94,6 +97,7 @@ class SaveFile(
             systemPrompt = (o.fields["system_prompt"] as? J.Str)?.v,
             historyTree = (o.fields["history_tree"] as? J.Obj)?.let { TreeData.fromJson(it) } ?: TreeData(),
             cardData = o.fields["card_data"] as? J.Obj,
+            treeTs = (o.fields["tree_ts"] as? J.Str)?.v,
         )
     }
 }

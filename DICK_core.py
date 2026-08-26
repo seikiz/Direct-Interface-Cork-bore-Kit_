@@ -1,3 +1,4 @@
+# <seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌<seikiz>  DICK source mark (invisible)
 # ============================================================
 #   DICK_core.py - 核心引擎（树状分支版 + 动态注入）
 #   独立模块，供 UI 导入使用
@@ -41,11 +42,35 @@ _BATTLE_FUNCS = {
 }
 
 
+# 傻瓜化公式：中文标签 → 变量名（写卡用大白话，无需背英文变量）
+_FORMULA_LABELS = {
+    "我方攻击": "player_atk", "玩家攻击": "player_atk", "攻击力": "player_atk", "攻击": "player_atk",
+    "我方防御": "player_def", "玩家防御": "player_def", "防御力": "_def_", "防御": "_def_",
+    "敌方攻击": "atk", "对方攻击": "atk",
+    "敌方防御": "def", "对方防御": "def",
+    "速度": "spd", "速": "spd",
+    "灵力": "mp", "法力": "mp", "灵": "mp",
+    "生命": "hp", "血量": "hp", "血": "hp",
+}
+
+
+def _normalize_formula(expr):
+    """傻瓜化公式 → 可求值表达式：×→*、÷→/、全角括号→半角、中文标签→变量名（长词优先）。"""
+    e = (expr or "")
+    e = e.replace("×", "*").replace("÷", "/").replace("Ｘ", "x").replace("Ｘ", "X")
+    e = e.replace("（", "(").replace("）", ")")
+    for k in sorted(_FORMULA_LABELS, key=len, reverse=True):
+        e = e.replace(k, _FORMULA_LABELS[k])
+    return e
+
+
 def eval_battle_formula(expr, vars_dict):
     """求值战斗伤害/防御公式（属性变量 + 四则运算 + max/min/floor/ceil/abs/random）。
-    只接受白名单节点，杜绝任意代码执行。失败抛 ValueError。"""
+    只接受白名单节点，杜绝任意代码执行。失败抛 ValueError。
+    支持傻瓜化写法：×→*、÷→/、全角括号，以及中文标签（攻击/防御/速度/灵力/生命…）。"""
     if not isinstance(expr, str) or not expr.strip():
         raise ValueError("空公式")
+    expr = _normalize_formula(expr)
     # 属性名可能是 Python 关键字（防御 def），做标识符替换
     expr = re.sub(r"\bdef\b", "_def_", expr.strip())
     vars_dict = dict(vars_dict)
@@ -382,6 +407,7 @@ class ChatCore:
         self._mech_config: Optional[Dict] = None     # 当前激活角色的机制配置
         self.pending_event: Optional[Dict] = None    # 待注入的事件（下次请求时进 API 载荷，不入树）
         self.last_event: Optional[Dict] = None       # 最近触发的事件（供选项生成/后续剧情参考）
+        self.last_world_switch: Optional[str] = None  # 最近一次 GM 标记触发的世界线切换（供 UI 同步）
 
         # ===== 战斗系统（招式触发 / 伤害防御公式 / buff） =====
         self.battle_state: Optional[Dict] = None     # {player:{hp,atk,def}, turns}（属性值存 mechanism_state.status）
@@ -489,6 +515,20 @@ class ChatCore:
                 self._rebuild_system_node()
                 return True
         return False
+
+    def apply_world_marker(self, text: str):
+        """解析 GM 回复里的「【世界线：xxx】」标记：若该世界存在则自动穿越并注入。
+        返回 (清洗后的文本, 命中的世界名或 None)。标记本身从文本剔除。"""
+        if not text:
+            return text, None
+        m = re.search(r'[\[【]\s*世界线\s*[:：]\s*([^\]】]{1,24}?)\s*[\]】]', text)
+        if not m:
+            return text, None
+        name = m.group(1).strip()
+        if name and self.set_current_world(name):
+            cleaned = re.sub(r'[\[【]\s*世界线\s*[:：]\s*[^\]】]{1,24}?\s*[\]】]', "", text)
+            return cleaned, name
+        return text, None
 
     # ---------- 玩家角色卡（用户自己扮演的角色） ----------
     def set_player_persona(self, persona: Optional[Dict]):
@@ -1039,7 +1079,7 @@ class ChatCore:
                 if not player:
                     return m.group(0)
                 cur = int(player.get("hp", 100) or 100)
-                player["hp"] = max(0, min(999999, cur + delta))
+                player["hp"] = max(0, min(self.BATTLE_HP_CAP, cur + delta))
                 return ""
             if key in status_fields:
                 f = status_fields[key]
@@ -1191,6 +1231,10 @@ class ChatCore:
 
     # ================= 战斗系统（招式触发 / 伤害防御公式 / buff） =================
     BATTLE_LEGEND_CHANCE = 0.00001  # 天选之人：战斗系统独占，不能作弊
+    # 防数值膨胀：人物血上限 150（写卡不可超，BOSS 卡可豁免）；普攻封顶到「满血 150 至少 5 回合杀不死」（5×29<150，第6回合才死）；招式最高 50。
+    BATTLE_HP_CAP = 150
+    BASIC_ATTACK_DAMAGE_CAP = max(1, 150 // 5 - 1)  # 29（普攻，5 回合杀不死满血）
+    MOVE_DAMAGE_CAP = 50                                    # 招式（技能）最高 50 点
 
     def _battle_config(self):
         """取激活角色的战斗配置（第一个启用的）"""
@@ -1243,8 +1287,12 @@ class ChatCore:
                 continue
             key = str(key)
             if key not in status:
-                status[key] = int(a.get("max", 999999) or 999999) if key == "hp" \
-                    else int(a.get("initial", 10) or 10)
+                if key == "hp":
+                    _v = int(a.get("max", 999999) or 999999)
+                    # BOSS 卡可突破血上限（cfg.boss=true）；普通人物硬上限 150
+                    status[key] = _v if cfg.get("boss") else min(self.BATTLE_HP_CAP, _v)
+                else:
+                    status[key] = int(a.get("initial", 10) or 10)
         # 机制属性（第四属性等）：独立初值
         for a in (cfg.get("mech_attrs") or []):
             if isinstance(a, dict) and a.get("key") and str(a["key"]) not in status:
@@ -1265,7 +1313,7 @@ class ChatCore:
                 if not isinstance(a, dict):
                     continue
                 key = str(key)
-                player[key] = int(a.get("max", 999999) or 999999) if key == "hp" \
+                player[key] = min(self.BATTLE_HP_CAP, int(a.get("max", 999999) or 999999)) if key == "hp" \
                     else int(a.get("initial", 10) or 10)
             for a in (pb.get("mech_attrs") or []):
                 if isinstance(a, dict) and a.get("key"):
@@ -1354,6 +1402,9 @@ class ChatCore:
         except ValueError as e:
             return f"⚠️ 招式公式错误：{e}", False
         dmg = max(1, dmg)
+        # 防数值膨胀：普攻（无自定义公式，走默认伤害）封顶 29（满血150至少5回合打不死）；招式（自带公式）最高50。
+        cap = self.MOVE_DAMAGE_CAP if move.get("formula") else self.BASIC_ATTACK_DAMAGE_CAP
+        dmg = min(dmg, cap)
         hp_key = "hp"
         status[hp_key] = max(0, int(status.get(hp_key, 0) or 0) - dmg)
         # 消耗
@@ -1394,6 +1445,8 @@ class ChatCore:
                     key = str(k)
                     if key in status:
                         status[key] = max(0, int(status[key] or 0) + int(v))
+                        if key == "hp":
+                            status[key] = min(status[key], self.BATTLE_HP_CAP)
             turns = int(b.get("turns", 1) or 1) - 1
             if turns > 0:
                 b["turns"] = turns
@@ -1985,6 +2038,10 @@ class ChatCore:
                     speaker_name = self._roster_names()[0] if self._roster_names() else None
                 clean_reply = ai_reply
             self.last_speaker = speaker_name
+
+            # 世界线切换：GM 回复带【世界线：xxx】标记 → 自动穿越 + 剔除标记
+            clean_reply, switched_world = self.apply_world_marker(clean_reply)
+            self.last_world_switch = switched_world
 
             node_id = self.tree.add_node(
                 'assistant',

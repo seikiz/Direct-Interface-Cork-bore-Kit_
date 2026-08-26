@@ -1,0 +1,6 @@
+tunnel: 36fbf6d4-c127-48c8-9751-08278094307a
+credentials-file: C:\Users\seiki\.cloudflared\36fbf6d4-c127-48c8-9751-08278094307a.json
+ingress:
+  - hostname: workshop.dick_02.com
+    service: http://127.0.0.1:5000
+  - service: http_status:404

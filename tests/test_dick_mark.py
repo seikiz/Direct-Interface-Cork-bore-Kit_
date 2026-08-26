@@ -67,6 +67,17 @@ check("CODEX engine" in core_src or "Direct-Interface" in core_src, "DICK_core �
 mark_src = open(os.path.join(ROOT, "dick_mark.py"), encoding="utf-8").read()
 check("反抄袭" in mark_src and "不可剥离" in mark_src, "dick_mark 模块声明")
 
+print("== ⑥ 零宽水印（隐写） ==")
+m = dick_mark.zero_width_mark()
+zw = set("\u200b\u200c\u200d\u200e")
+clean = "".join(ch for ch in m if ch not in zw)
+check(clean == "<seiki><seikiz>", "去零宽后视觉为 <seiki><seikiz>")
+check(dick_mark.decode_zero_width(m) == dick_mark.MARK_JS, "零宽解码还原架构标识")
+check(dick_mark.decode_zero_width("<seiki><seikiz>") == "", "无零宽则解码为空")
+# 源码头部带零宽印
+check("<seiki>" in core_src and "<seikiz>" in core_src, "DICK_core 源码含零宽印")
+check("<seiki>" in mark_src and "<seikiz>" in mark_src, "dick_mark 源码含零宽印")
+
 shutil.rmtree(tmp)
 print("结果：%d 通过, %d 失败" % (ok, bad))
 sys.exit(1 if bad else 0)

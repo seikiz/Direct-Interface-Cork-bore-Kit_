@@ -302,13 +302,13 @@ class Workshop(CTkToplevel):
 
         CTkButton(search_frame, text="🔄 刷新列表", command=self.refresh_online, width=100).pack(side="right", padx=5)
 
-        # 资源列表（带滚动）
+        # 资源列表（卡片式，带滚动）
         list_frame = CTkFrame(tab)
         list_frame.pack(fill="both", expand=True, padx=5, pady=5)
-        self.online_tree = tk.Listbox(list_frame, bg="#2b2b2b", fg="white", selectbackground="#1f6aa5", font=uf.f("small"))
-        self.online_tree.pack(fill="both", expand=True, side="left")
-        self.online_tree.bind("<<ListboxSelect>>", self.on_online_select)
-        self.online_tree.bind("<Double-Button-1>", lambda e: self.download_selected())
+        self.online_scroll = CTkScrollableFrame(list_frame)
+        self.online_scroll.pack(fill="both", expand=True, side="left")
+        self.online_cards = []
+        self.online_display_idx = -1
 
         # 右侧详情/下载
         detail_frame = CTkFrame(tab, width=300)
@@ -369,9 +369,14 @@ class Workshop(CTkToplevel):
             self.server_online = False
             self.online_resources = []
             self.online_display = []
-            self.online_tree.delete(0, tk.END)
-            self.online_tree.insert(tk.END, f"⚠️ 无法连接服务器 {self.server_url}")
-            self.online_tree.insert(tk.END, "   请先运行: python net.py  (或检查上方服务器地址)")
+            self.online_cards = []
+            self.online_display_idx = -1
+            for w in self.online_scroll.winfo_children():
+                w.destroy()
+            CTkLabel(self.online_scroll, text=f"⚠️ 无法连接服务器 {self.server_url}",
+                     text_color="#f87171").pack(anchor="w", padx=10, pady=10)
+            CTkLabel(self.online_scroll, text="请先运行: python net.py  (或检查上方服务器地址)",
+                     text_color="gray").pack(anchor="w", padx=10)
             self.conn_status_var.set("● 离线")
             self.status_var.set("⚠️ 无法连接服务器，请确认 net.py 已启动")
 
@@ -410,45 +415,74 @@ class Workshop(CTkToplevel):
         self._run_async(worker, on_success, on_error)
 
     def _apply_filter(self):
-        """按当前筛选条件重建显示列表（保证显示项与数据一一对应）"""
-        self.online_tree.delete(0, tk.END)
-        filter_type = self.filter_var.get()
+        """按当前筛选条件重建卡片列表（保证显示项与数据一一对应）"""
+        for w in self.online_scroll.winfo_children():
+            w.destroy()
+        self.online_cards = []
         self.online_display = []
+        self.online_display_idx = -1
+        filter_type = self.filter_var.get()
         for r in self.online_resources:
             rtype = r.get('type', '未知')
             if filter_type != "全部" and rtype != filter_type:
                 continue
             self.online_display.append(r)
-            name = r.get('name', '未知')
-            author = r.get('author', '匿名')
-            downloads = r.get('downloads', 0)
-            likes = r.get('likes', 0)
-            tags = ','.join(r.get('tags', [])[:3])
-            display = f"{name[:20]} | {author[:10]} | ↓{downloads} ❤{likes} | {tags[:15]} | {rtype}"
-            self.online_tree.insert(tk.END, display)
+            self._make_online_card(r, len(self.online_display) - 1)
         if not self.online_display and self.server_online:
-            self.online_tree.insert(tk.END, "（暂无符合条件的资源）")
+            CTkLabel(self.online_scroll, text="（暂无符合条件的资源）", text_color="gray").pack(anchor="w", padx=10, pady=10)
+
+    def _make_online_card(self, r, idx):
+        """在可滚动区生成一张资源卡片，点击选中并联动右侧详情。"""
+        name = r.get('name', '未知')
+        author = r.get('author', '匿名')
+        dl = r.get('downloads', 0)
+        lk = r.get('likes', 0)
+        tags = ','.join(r.get('tags', [])[:3])
+        rtype = r.get('type', '未知')
+
+        card = CTkFrame(self.online_scroll, corner_radius=8, fg_color="#1a2230")
+        card.pack(fill="x", padx=6, pady=3)
+
+        head = CTkFrame(card, fg_color="transparent")
+        head.pack(fill="x", padx=10, pady=(8, 0))
+        CTkLabel(head, text=f"{'🎭' if rtype == '角色卡' else '🌍'} {name}", font=uf.f("normal"),
+                 anchor="w").pack(side="left", fill="x", expand=True)
+        CTkLabel(head, text=f"↓{dl}  ❤{lk}", font=uf.f("small"), text_color="gray").pack(side="right")
+
+        CTkLabel(card, text=author, font=uf.f("small"), text_color="gray", anchor="w").pack(fill="x", padx=10)
+        if tags:
+            CTkLabel(card, text="🏷 " + tags, font=uf.f("small"), text_color="#6b7280", anchor="w").pack(fill="x", padx=10, pady=(0, 8))
+
+        def on_click(_e, _idx=idx):
+            self.on_online_select(None, _idx)
+        # 让整张卡片（含子控件）都能点击
+        def bind_recursive(w):
+            w.bind("<Button-1>", on_click)
+            for c in w.winfo_children():
+                bind_recursive(c)
+        bind_recursive(card)
+        self.online_cards.append(card)
 
     def _selected_resource(self):
-        """返回当前选中的在线资源（按显示列表索引）"""
-        selection = self.online_tree.curselection()
-        if not selection:
+        """返回当前选中的在线资源（按卡片索引）"""
+        if self.online_display_idx < 0 or self.online_display_idx >= len(self.online_display):
             messagebox.showwarning("警告", "请先选中一个在线资源")
             return None
-        idx = selection[0]
-        if idx >= len(self.online_display):
-            return None
-        return self.online_display[idx]
+        return self.online_display[self.online_display_idx]
 
-    def on_online_select(self, event):
-        """在线资源选择事件"""
-        selection = self.online_tree.curselection()
-        if not selection:
+    def on_online_select(self, event, idx=None):
+        """在线资源选择事件（点击卡片 → 高亮 + 右侧详情）"""
+        if idx is None:
             return
-        idx = selection[0]
-        if idx >= len(self.online_display):
+        if idx < 0 or idx >= len(self.online_display):
             return
+        self.online_display_idx = idx
         resource = self.online_display[idx]
+        for i, c in enumerate(self.online_cards):
+            try:
+                c.configure(fg_color="#2a3a4d" if i == idx else "#1a2230")
+            except Exception:
+                pass
         self.online_detail.configure(state="normal")
         self.online_detail.delete("1.0", "end")
         detail = f"""名称: {resource.get('name', '未知')}
@@ -700,36 +734,70 @@ class Workshop(CTkToplevel):
     def import_file(self):
         file_paths = filedialog.askopenfilenames(
             title="选择要导入的角色卡/世界卡",
-            filetypes=[("JSON 文件", "*.json"), ("所有文件", "*.*")]
+            filetypes=[("角色卡/图片", "*.png;*.webp;*.json"), ("所有文件", "*.*")]
         )
         if not file_paths:
             return
-        # 简单判断：如果文件包含 'world' 关键词或世界卡结构，导入到 world_dir
-        target_dir = self.save_dir
+        import card_compat
         imported = 0
         for src in file_paths:
             try:
-                with open(src, 'r', encoding='utf-8') as f:
-                    data = json.load(f)
-                # 判断类型：包含 'rules' 或 'entries' 视为世界卡
-                if isinstance(data, dict) and ('rules' in data or 'entries' in data):
-                    target_dir = self.world_dir
+                low = src.lower()
+                with open(src, 'rb') as f:
+                    raw = f.read()
+                is_img = low.endswith(('.png', '.webp'))
+                if is_img:
+                    data = card_compat.png_extract_card(raw)
+                    if data is None:
+                        messagebox.showerror("错误", f"「{os.path.basename(src)}」里没有找到角色卡（chara/ccv3 块）")
+                        continue
                 else:
-                    target_dir = self.save_dir
-                dst = os.path.join(target_dir, os.path.basename(src))
-                if os.path.exists(dst):
-                    base_name, ext = os.path.splitext(dst)
-                    i = 1
-                    while os.path.exists(f"{base_name}_{i}{ext}"):
-                        i += 1
-                    dst = f"{base_name}_{i}{ext}"
-                shutil.copy2(src, dst)
+                    try:
+                        data = json.loads(raw.decode('utf-8-sig'))
+                    except Exception:
+                        messagebox.showerror("错误", f"「{os.path.basename(src)}」JSON 解析失败")
+                        continue
+                # 世界卡（JSON 且带 rules/entries 结构）→ 世界目录
+                if (not is_img) and isinstance(data, dict) and ('rules' in data or 'entries' in data):
+                    dst = os.path.join(self.world_dir, os.path.basename(src))
+                    dst = self._unique_path(dst)
+                    shutil.copy2(src, dst)
+                else:
+                    conv = card_compat.to_dick(data)
+                    if not conv:
+                        messagebox.showerror("错误", f"「{os.path.basename(src)}」无法识别的角色卡格式")
+                        continue
+                    name = conv['name']
+                    base_name = name; i = 2
+                    while os.path.exists(os.path.join(self.save_dir, name + '.json')):
+                        name = base_name + '_' + str(i); i += 1
+                    saved = {"kind": "dick_card", "name": name, "system_prompt": conv['system_prompt']}
+                    if isinstance(conv.get('card_data'), dict):
+                        saved['card_data'] = conv['card_data']
+                    with open(os.path.join(self.save_dir, name + '.json'), 'w', encoding='utf-8') as f:
+                        json.dump(saved, f, ensure_ascii=False)
+                    if is_img:
+                        avdir = os.path.join(self.save_dir, 'avatars')
+                        os.makedirs(avdir, exist_ok=True)
+                        ext = 'webp' if low.endswith('.webp') else 'png'
+                        with open(os.path.join(avdir, name + '.' + ext), 'wb') as f:
+                            f.write(raw)
                 imported += 1
             except Exception as e:
                 messagebox.showerror("错误", f"导入 {src} 失败：{e}")
         self.refresh_local()
         self.status_var.set(f"成功导入 {imported} 个文件")
         messagebox.showinfo("完成", f"已导入 {imported} 个文件")
+
+    def _unique_path(self, dst):
+        """重名时返回带序号的新路径"""
+        if not os.path.exists(dst):
+            return dst
+        base_name, ext = os.path.splitext(dst)
+        i = 1
+        while os.path.exists(f"{base_name}_{i}{ext}"):
+            i += 1
+        return f"{base_name}_{i}{ext}"
 
     def delete_selected(self):
         if not self.selected_file:
