@@ -7,6 +7,8 @@ datas = [('web', 'web'), ('plugins', 'plugins'), ('saves', 'saves'), ('worlds', 
          ('i18n.py', '.'), ('app_paths.py', '.'), ('card_compat.py', '.'),
          ('PLUGIN_DEV.md', '.'), ('状态变量说明.md', '.'), ('声库安装说明.txt', '.'),
          ('financial_history.json', '.'),
+         # 侧车脚本（独立 python 运行：创工坊/跑团主机），随包分发
+         ('net.py', '.'), ('trpg_server.py', '.'), ('trpg_session.py', '.'),
          # 酒馆安装器（第一级目录，只带脚本，酒馆本体由 install.js 下载）
          ('tavern-installer/install.js', 'tavern-installer'), ('tavern-installer/install.bat', 'tavern-installer'),
          ('tavern-installer/start.bat.template', 'tavern-installer'), ('tavern-installer/package.json', 'tavern-installer'),
