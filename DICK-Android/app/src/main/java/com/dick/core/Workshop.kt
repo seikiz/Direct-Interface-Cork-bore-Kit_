@@ -148,6 +148,11 @@ object Workshop {
         val (c, _) = httpAt(base, "/api/join", "POST", body, "application/json")
         return c < 400
     }
+    fun trpgLeave(base: String, pc: String): Boolean {
+        val body = JsonS.stringify(J.Obj().apply { fields["name"] = J.Str(pc) }).toByteArray(Charsets.UTF_8)
+        val (c, _) = httpAt(base, "/api/leave", "POST", body, "application/json")
+        return c < 400
+    }
     fun trpgAct(base: String, actor: String, action: String): J.Obj? {
         val body = JsonS.stringify(J.Obj().apply { fields["actor"] = J.Str(actor); fields["action"] = J.Str(action) }).toByteArray(Charsets.UTF_8)
         val (c, b) = httpAt(base, "/api/act", "POST", body, "application/json", 120000)
@@ -403,10 +408,10 @@ object Workshop {
     }
 
     fun localRoles(): List<String> =
-        AppEnv.savesDir().listFiles()?.filter { it.name.endsWith(".json") }?.map { it.name }?.sorted() ?: emptyList()
+        AppEnv.savesDir().listFiles()?.filter { it.isFile && it.name.endsWith(".json") && !it.name.startsWith("_tree_") && !it.name.startsWith(".") }?.map { it.name }?.sorted() ?: emptyList()
 
     fun localWorlds(): List<String> =
-        AppEnv.worldsDir().listFiles()?.filter { it.name.endsWith(".json") }?.map { it.name }?.sorted() ?: emptyList()
+        AppEnv.worldsDir().listFiles()?.filter { it.isFile && it.name.endsWith(".json") && !it.name.startsWith("_tree_") && !it.name.startsWith(".") }?.map { it.name }?.sorted() ?: emptyList()
 
     fun preview(type: String, filename: String): String {
         val targetDir = if (type == "角色卡") AppEnv.savesDir() else AppEnv.worldsDir()

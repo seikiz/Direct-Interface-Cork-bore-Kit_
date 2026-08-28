@@ -397,28 +397,18 @@ class MechanicsEngine {
         val cfg = config ?: return null
         val st = state ?: return null
         val evs = cfg.fields["events"] as? J.Arr ?: return null
-        val flags = st.fields["flags"] as? J.Obj ?: J.Obj()
-        val lower = (lastUserText ?: "").lowercase()
-        for (item in evs.items) {
-            val ev = item as? J.Obj ?: continue
-            val id = ev.fields["id"]?.str() ?: continue
-            if (flags.fields[id]?.bool() == true) continue
-            var ok = true
-            val affGe = ev.fields["aff_ge"]?.int()
-            if (affGe != null && (st.fields["affection"]?.int() ?: 0) < affGe) ok = false
-            val affLe = ev.fields["aff_le"]?.int()
-            if (ok && affLe != null && (st.fields["affection"]?.int() ?: 0) > affLe) ok = false
-            val kws = ev.fields["keywords"] as? J.Arr
-            if (ok && kws != null) {
-                if (!kws.items.any { k -> k.str()?.let { lower.contains(it.lowercase()) } == true }) ok = false
-            }
-            if (ok) {
-                flags.fields[id] = J.Bool(true)
-                lastEvent = ev  // 保留最近事件，供 GAL 选项生成结合剧情
-                return ev
-            }
+        // 判定抽到独立模块 EventJudge（纯函数、只读状态），引擎只负责状态变更
+        val ev = EventJudge.judge(evs, st, lastUserText) ?: return null
+        val id = ev.fields["id"]?.str()
+        if (id != null) {
+            val flags = (st.fields["flags"] as? J.Obj) ?: J.Obj().also { st.fields["flags"] = it }
+            flags.fields[id] = J.Bool(true)  // 一次性事件标记
+            // 事件触发顺序记录（供 EndingJudge 的 events_chain 判定"部分影响结局"）
+            val log = (st.fields["event_log"] as? J.Arr) ?: J.Arr().also { st.fields["event_log"] = it }
+            if (log.items.none { it.str() == id }) log.items.add(J.Str(id))
         }
-        return null
+        lastEvent = ev  // 保留最近事件，供 GAL 选项生成结合剧情
+        return ev
     }
 
     // ---------- GAL 选项效果 ----------

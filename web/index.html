@@ -8,7 +8,7 @@
 :root{
   --bg:#0f1115; --panel:#14161c; --bubble:#1a1e26; --text:#e5e7eb;
   --sub:#94a3b8; --line:#262b34; --accent:#60a5fa; --user:#4ade80;
-  --radius:12px;
+  --radius:12px; --chat-wallpaper:none;
 }
 body.light{ --bg:#f5f6f8; --panel:#ffffff; --bubble:#ffffff; --text:#1f2937; --sub:#6b7280; --line:#e5e7eb; }
 body.oled{ --bg:#000000; --panel:#0a0a0c; --bubble:#101014; --text:#e5e7eb; --sub:#71717a; --line:#1c1c22; }
@@ -69,6 +69,7 @@ body{ background:var(--bg); color:var(--text); font-family:"Segoe UI","Microsoft
 .topbar button{ background:none; border:none; color:var(--text); font-size:18px; cursor:pointer; }
 .topbar .preset-name{ font-size:13px; color:var(--sub); }
 #chat{ flex:1; overflow-y:auto; padding:12px 16px; scroll-behavior:smooth; }
+#chat.has-wallpaper{ background-image:linear-gradient(rgba(0,0,0,.30),rgba(0,0,0,.30)), var(--chat-wallpaper); background-size:cover; background-position:center; }
 .msg{ display:flex; gap:8px; margin:6px 0; animation:pop .18s ease-out; }
 .msg.user{ flex-direction:row-reverse; }
 .msg .av{ width:34px; height:34px; border-radius:50%; object-fit:cover; flex:none; background:var(--line); }
@@ -146,6 +147,7 @@ body{ background:var(--bg); color:var(--text); font-family:"Segoe UI","Microsoft
 .ic{ display:inline-flex; align-items:center; justify-content:center;
   width:1.25em; height:1.25em; margin-right:2px; vertical-align:-0.2em; }
 .ic svg{ width:100%; height:100%; display:block; }
+.ic .ic-img{ width:100%; height:100%; object-fit:contain; display:block; }
 button .ic{ margin-right:2px; }
 .rc-unlock .ic{ margin:0; }
 .iconbtn .ic{ width:1.1em; height:1.1em; margin:0; }
@@ -175,27 +177,41 @@ button .ic{ margin-right:2px; }
 .msg .mctl button:hover{ border-color:var(--accent); color:var(--text); }
 .msg .mctl .swipe-n{ min-width:40px; text-align:center; }
 
-/* ---------- 分支面板 ---------- */
+/* ---------- 分支面板 · 灰白成就（MC progress 风） ---------- */
 #branchWrap{ position:relative; }
 #branchPanel{ display:none; position:absolute; top:38px; right:0; width:340px; max-height:400px; overflow-y:auto;
-  background:var(--panel); border:1px solid var(--line); border-radius:12px; z-index:40;
-  box-shadow:0 10px 30px rgba(0,0,0,.45); }
+  background:#f4f5f7; border:2px solid #c9ccd2; border-radius:10px; z-index:40;
+  box-shadow:0 12px 34px rgba(0,0,0,.4), inset 0 0 0 1px #ffffff; }
 #branchPanel.open{ display:block; animation:fadein .14s ease-out; }
-#branchPanel .b-item{ padding:7px 10px; font-size:12px; color:var(--text); cursor:pointer;
-  border-bottom:1px solid var(--line); display:flex; align-items:center; gap:6px; }
-#branchPanel .b-item:hover{ background:var(--bubble); }
-#branchPanel .b-item .b-who{ flex:none; color:var(--sub); }
-#branchPanel .b-item .b-prev{ color:var(--sub); font-size:11px; white-space:nowrap;
-  overflow:hidden; text-overflow:ellipsis; flex:1; min-width:0; }
-#branchPanel .b-item .b-cur{ flex:none; color:var(--accent); font-weight:600; font-size:11px; }
+/* 像素硬边（MC 物品格内描边）：outer 2px 灰 + inner 1px 白，像成就框 */
+#branchPanel .b-item{ padding:9px 12px; font-size:12px; color:#3a3f46; cursor:pointer;
+  border-bottom:1px solid #e2e4e8; display:flex; align-items:flex-start; gap:10px;
+  background:#fbfbfc; }
+#branchPanel .b-item:hover{ background:#eef0f3; }
+#branchPanel .b-item.cur{ background:#ffffff; box-shadow:inset 0 0 0 2px #a7adb6, inset 0 0 0 3px #ffffff;
+  position:relative; }
+#branchPanel .b-item.cur::after{ content:""; position:absolute; top:0; right:0; bottom:0; width:4px; background:#9aa1ab; }
+/* 成就图标框（左侧灰色像素方块） */
+#branchPanel .b-item .b-who{ flex:none; width:30px; height:30px; border-radius:5px;
+  background:#e7e9ec; border:2px solid #cfd3d8; box-shadow:inset 0 0 0 1px #ffffff;
+  display:flex; align-items:center; justify-content:center; font-size:14px; color:#7b828b; }
+#branchPanel .b-item.cur .b-who{ background:#ffffff; border-color:#9aa1ab; color:#3a3f46; }
+/* 成就名 + 灰描述（两行结构） */
+#branchPanel .b-item .b-main{ flex:1; min-width:0; display:flex; flex-direction:column; gap:1px; }
+#branchPanel .b-item .b-prev{ color:#3a3f46; font-size:12px; white-space:nowrap;
+  overflow:hidden; text-overflow:ellipsis; flex:none; line-height:1.3; }
+#branchPanel .b-item:not(.cur) .b-prev{ color:#6b7078; }
+#branchPanel .b-item .b-desc{ color:#9aa1ab; font-size:11px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+#branchPanel .b-item .b-cur{ flex:none; color:#3a3f46; font-weight:600; font-size:10px;
+  background:#e7e9ec; border:1px solid #cfd3d8; border-radius:4px; padding:1px 5px; }
 #branchPanel .b-item.on-path{ opacity:1; }
-#branchPanel .b-item:not(.on-path){ opacity:.5; }
-#branchPanel .b-item.cur{ background:var(--bubble); }
-#branchPanel .b-head{ padding:7px 12px; font-size:11px; color:var(--sub); border-bottom:1px solid var(--line); }
-#branchPanel .b-hint{ padding:7px 12px; font-size:11px; color:var(--sub); }
-#branchPanel .b-item.seg{ padding:5px 10px; font-size:11px; color:var(--sub); font-style:italic; }
-#branchPanel .b-item.seg:hover{ background:transparent; color:var(--accent); }
+#branchPanel .b-item:not(.on-path){ opacity:.55; }
+#branchPanel .b-item.seg{ padding:6px 12px; font-size:11px; color:#7b828b; font-style:italic; background:#f4f5f7; display:block; }
+#branchPanel .b-item.seg:hover{ background:#eef0f3; color:#3a3f46; }
 #branchPanel .b-item .b-prev.seg-label{ white-space:nowrap; }
+#branchPanel .b-head{ padding:8px 12px; font-size:11px; color:#7b828b; font-weight:600;
+  border-bottom:2px solid #c9ccd2; background:#eef0f3; letter-spacing:.5px; text-transform:uppercase; }
+#branchPanel .b-hint{ padding:8px 12px; font-size:11px; color:#9aa1ab; }
 
 /* ---------- 首次启动引导框 ---------- */
 #onboard{ position:fixed; inset:0; z-index:200; }
@@ -285,6 +301,36 @@ button .ic{ margin-right:2px; }
 .ws-card .btn2{ font-size:11px; padding:3px 8px; }
 .ws-empty{ font-size:12px; color:var(--sub); padding:10px; text-align:center; }
 .ws-tabbtn.active{ border-color:var(--accent); background:var(--bubble); color:var(--text); }
+
+/* ---- 箭头引导式教程（spotGuide）：高亮目标 + 说明气泡 + 箭头 ---- */
+.sg-mask{ position:fixed; inset:0; z-index:9000; pointer-events:none; }
+.sg-highlight{ position:fixed; z-index:9001; pointer-events:none; border:3px solid var(--accent);
+  border-radius:10px; box-shadow:0 0 0 2000px rgba(6,7,16,.72), 0 0 26px rgba(201,162,39,.6);
+  transition:all .28s cubic-bezier(.2,.7,.3,1); }
+.sg-bubble{ position:fixed; z-index:9002; max-width:300px; background:var(--panel);
+  border:1px solid var(--accent); border-radius:12px; padding:12px 14px; color:var(--text);
+  box-shadow:0 8px 40px rgba(0,0,0,.5); font-size:13px; line-height:1.55; }
+.sg-bubble b{ color:var(--gold2,#e9cf7a); }
+.sg-bubble .sg-arrow{ position:absolute; width:0; height:0; border:9px solid transparent; }
+.sg-bubble .sg-step{ font-size:11px; color:var(--sub); letter-spacing:.5px; margin-bottom:4px; }
+.sg-bubble .sg-btns{ display:flex; gap:8px; margin-top:10px; }
+.sg-bubble .sg-btns button{ border:1px solid var(--line); background:var(--bubble); color:var(--text);
+  border-radius:8px; padding:5px 12px; font-size:12px; cursor:pointer; }
+.sg-bubble .sg-btns .sg-next{ background:var(--accent); color:#0b1220; border:none; font-weight:600; }
+.sg-bubble .sg-btns .sg-skip{ margin-left:auto; opacity:.8; }
+
+/* ---- 回档成就横幅（灰白 MC progress 风） ---- */
+.ach-toast{ position:fixed; top:16px; left:50%; transform:translate(-50%,-140%); z-index:9500;
+  display:flex; align-items:center; gap:10px; background:#fbfbfc; border:2px solid #c9ccd2;
+  border-radius:12px; padding:10px 16px; box-shadow:0 10px 30px rgba(0,0,0,.45), inset 0 0 0 1px #ffffff;
+  transition:transform .32s cubic-bezier(.2,.7,.3,1); max-width:440px; }
+.ach-toast.show{ transform:translate(-50%,0); }
+.ach-toast .a-ic{ width:36px; height:36px; border-radius:6px; background:#e7e9ec;
+  border:2px solid #cfd3d8; box-shadow:inset 0 0 0 1px #ffffff; display:flex;
+  align-items:center; justify-content:center; font-size:16px; color:#7b828b; }
+.ach-toast .a-txt{ font-size:13px; color:#3a3f46; line-height:1.3; }
+.ach-toast .a-txt b{ display:block; font-size:14px; color:#3a3f46; }
+.ach-toast .a-txt span{ font-size:11px; color:#9aa1ab; }
 </style>
 </head>
 <body class="dark">
@@ -307,6 +353,7 @@ button .ic{ margin-right:2px; }
       <button class="btn" id="btnNewRole">➕ 新建角色</button>
       <button class="btn" id="btnImportCard">📥 导入角色卡</button>
       <button class="btn" id="btnWorkshop">🧰 创意工坊</button>
+      <button class="btn" id="btnPlugins">🔌 插件</button>
       <div class="section-label" id="lblWorlds">🌍 世界卡（多选 = 平行世界）</div>
       <div id="worldList"></div>
       <button class="btn" id="btnNewWorld">➕ 新建世界</button>
@@ -331,6 +378,7 @@ button .ic{ margin-right:2px; }
     </div>
     <div id="mechbar"></div>
     <div id="battlebar"></div>
+    <div id="trpgBar" style="display:none;padding:4px 16px;background:rgba(8,47,73,.45);border-left:3px solid #38bdf8;color:var(--text);font-size:12px;align-items:center;gap:10px;flex-wrap:wrap"></div>
     <div id="chat"></div>
     <div id="imgprev" style="display:none">
       <img id="imgprevImg"><span id="imgprevText"></span>
@@ -377,6 +425,7 @@ button .ic{ margin-right:2px; }
     <div id="inputbar">
       <button class="plus" id="plusBtn">➕</button>
       <textarea id="input" placeholder="输入消息... (使用 @角色名 指定说话者)"></textarea>
+      <button id="cardFaceBtn" title="🎴 卡面" onclick="cardFaceShow()" style="background:none;border:none;color:var(--text);font-size:18px;cursor:pointer;padding:0 8px">🎴</button>
       <button id="genImgBtn" title="🎨 生图" style="background:none;border:none;color:var(--text);font-size:18px;cursor:pointer;padding:0 8px">🎨</button>
       <button id="send">发送</button>
       <input type="file" id="fileInput" accept="image/*" style="display:none">
@@ -499,6 +548,7 @@ button .ic{ margin-right:2px; }
       <button class="btn2" id="codexNewBtn">➕ 新建</button>
       <button class="btn2" id="codexSampleBtn">🎬 一键示例包</button>
       <button class="btn2" id="codexDraftBtn">🤖 AI 起草</button>
+      <button class="btn2 ghost" id="codexPasteBtn">📝 粘贴剧本</button>
       <button class="btn2 ghost" id="codexImportBtn">📁 导入文件夹</button>
       <button class="btn2 ghost" id="codexImportZipBtn">📦 导入 zip</button>
       <button class="btn2 ghost" id="codexImportCodexBtn">📥 导入 .codex</button>
@@ -519,6 +569,8 @@ button .ic{ margin-right:2px; }
         <button class="btn2 ghost" id="codexPackSaveBtn">📄 另存为…</button>
         <button class="btn2 ghost" id="codexEditBtn">✏️ 编辑剧本</button>
         <button class="btn2 ghost" id="codexVoiceBtn">🎙️ 一键配音</button>
+        <button class="btn2 ghost" id="codexSpriteBtn">🎴 导入立绘</button>
+        <button class="btn2 ghost" id="codexAdvancedBtn">⚙️ 高级</button>
         <button class="btn2 ghost" id="codexExportBtn">📤 导出 zip</button>
         <button class="btn2 ghost" id="codexExportCodexBtn">📦 导出 .codex</button>
         <button class="btn2 ghost" id="codexFilesBtn">🗂️ 资源</button>
@@ -541,6 +593,52 @@ button .ic{ margin-right:2px; }
       <div id="codexFiles" style="display:none;margin-top:8px;max-height:200px;overflow:auto"></div>
     </div>
     <div class="row" style="margin-top:10px"><button class="btn2 ghost" id="codexCloseBtn">关闭</button></div>
+  </div>
+</div>
+
+<!-- CODEX 粘贴剧本 → 自动转化 -->
+<div class="modal" id="codexPasteModal">
+  <div class="modal-box" style="width:min(92vw,620px)">
+    <h3>📝 粘贴剧本 → 自动转化</h3>
+    <div style="font-size:11px;color:var(--sub);margin-bottom:8px">
+      直接粘贴 <b>codex.json</b>，或按约定写纯文本剧本自动转成可播格式：<br>
+      【场景】标题 · 【背景】xxx / 【音乐】xxx · &gt; 旁白 · 角色名：台词 · 【选项】后跟 “- 文字 → s2” · 【跳转】s2 · 【结局】标题
+    </div>
+    <textarea id="codexPasteInput" rows="12" style="width:100%;font-family:monospace;font-size:12px;background:var(--bg,#111);color:var(--text,#ddd);border:1px solid var(--border,#333);border-radius:6px;padding:8px" placeholder="粘贴 JSON 或纯文本剧本…"></textarea>
+    <div class="row" style="margin-top:8px">
+      <button class="btn2" id="codexPasteConvertBtn">🪄 自动转化</button>
+      <button class="btn2 ghost" onclick="document.getElementById('codexPasteModal').classList.remove('open')">取消</button>
+      <span id="codexPasteStatus" style="font-size:12px;color:var(--sub);margin-left:8px"></span>
+    </div>
+  </div>
+</div>
+
+<!-- CODEX 高级模式：直接改 GALGAME 播放器代码 -->
+<div class="modal" id="codexAdvancedModal">
+  <div class="modal-box" style="width:min(96vw,900px);height:88vh;display:flex;flex-direction:column">
+    <div style="padding:8px 12px;display:flex;justify-content:space-between;align-items:center">
+      <strong>⚙️ CODEX 高级 · 直接改播放器代码</strong>
+      <button class="btn2 ghost" onclick="codexAdvancedModal.classList.remove('open')">✕ 关闭</button>
+    </div>
+    <div style="font-size:11px;color:var(--sub);padding:0 12px 6px">
+      这是完整播放器 HTML/JS/CSS 源（系统内置模板）。改任何地方，<b>只需保留 <code>__CODEX_PAYLOAD__</code></b> 数据注入点；
+      点「▶️ 试玩」用当前包实时渲染预览，点「💾 保存模板」写入本包，之后打包 HTML/EXE 都沿用这份自定义模板。
+    </div>
+    <div style="display:flex;flex:1;min-height:0;gap:8px;padding:0 12px 12px">
+      <div style="flex:1;display:flex;flex-direction:column;min-width:0">
+        <textarea id="codexTplInput" spellcheck="false" style="flex:1;min-height:0;width:100%;font-family:monospace;font-size:12px;background:var(--bg,#111);color:var(--text,#ddd);border:1px solid var(--border,#333);border-radius:6px;padding:8px;white-space:pre"></textarea>
+        <div class="row" style="margin-top:6px">
+          <button class="btn2" id="codexTplPlayBtn">▶️ 试玩</button>
+          <button class="btn2 ghost" id="codexTplSaveBtn">💾 保存模板</button>
+          <button class="btn2 ghost" id="codexTplResetBtn">↺ 恢复默认</button>
+          <span id="codexTplStatus" style="font-size:12px;color:var(--sub);margin-left:6px"></span>
+        </div>
+      </div>
+      <div style="flex:1;display:flex;flex-direction:column;min-width:0;border:1px solid var(--border,#333);border-radius:6px;background:#000">
+        <div style="padding:4px 8px;font-size:11px;color:var(--sub)">📺 试玩预览</div>
+        <iframe id="codexTplPreview" sandbox="allow-scripts" style="flex:1;border:0;background:#000"></iframe>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -624,6 +722,31 @@ button .ic{ margin-right:2px; }
       <button class="btn" style="width:auto" id="stThemeBtn">深色</button>
       <button class="btn" style="width:auto" id="stAccentBtn">强调色：蓝</button>
     </div>
+    <div class="field"><label id="stWallpaper">🖼 聊天壁纸（核心·可换）</label>
+      <div style="display:flex;gap:6px;align-items:center">
+        <button class="btn" style="width:auto" id="stWallpaperSet">上传图片</button>
+        <button class="btn ghost" style="width:auto" id="stWallpaperClear">恢复默认</button>
+        <span id="stWallpaperState" style="font-size:11px;color:var(--sub)"></span>
+      </div>
+    </div>
+    <div class="mech-fold" id="foldL2d">
+      <div class="fold-head" onclick="toggleFold('foldL2d')"><span>🎎 看板娘（核心·Live2D）</span><span class="fold-arrow">▾</span></div>
+      <div class="fold-body">
+        <div class="field"><label>模型（web/live2d/models/ 下）</label>
+          <button class="btn" style="width:auto" id="stL2dModel">选择模型</button><span id="stL2dModelName" style="font-size:11px;color:var(--sub);margin-left:6px"></span>
+        </div>
+        <div class="field"><label>缩放（%）</label>
+          <input id="stL2dScale" type="number" min="30" max="300" step="5" style="width:90px"></div>
+        <div class="field"><label>位置</label>
+          <select id="stL2dPos"><option>右下</option><option>左下</option><option>右上</option><option>左上</option></select></div>
+        <div class="field"><label>不透明度（%）</label>
+          <input id="stL2dOpacity" type="number" min="20" max="100" step="5" style="width:90px"></div>
+        <div class="field"><label>可拖拽 / 呼吸动画</label>
+          <label class="chkline" style="display:inline-flex;gap:10px"><input type="checkbox" id="stL2dDrag"> 可拖拽 <input type="checkbox" id="stL2dBreath"> 呼吸动画</label>
+        </div>
+        <div style="font-size:11px;color:var(--sub)">把 .model3.json 放入 web/live2d/models/ 即生效；渲染库放 web/live2d/vendor/。</div>
+      </div>
+    </div>
     <div class="field"><label id="stLang">语言 / Language</label>
       <button class="btn" style="width:auto" id="stLangBtn">切换语言</button>
     </div>
@@ -639,13 +762,20 @@ button .ic{ margin-right:2px; }
     <div class="field"><label id="stHumanize">🧍 去 AI 味</label>
       <label class="chkline"><input type="checkbox" id="stHumanizeInput"> <span id="stHumanizeHint">注入人性化对话规则（具体细节 / 生活有变化 / 口语不完美 / 引用共同记忆）</span></label>
     </div>
+    <div class="field"><label id="stStyleGuard">🎛 风格闸（防文学化漂移）</label>
+      <label class="chkline"><input type="checkbox" id="stStyleGuardInput"> <span id="stStyleGuardHint">确定性洗文学腔表达（拆长句/收堆叠副词），不改内容；配合角色锚点从架构外掐断自增强</span></label>
+      <label class="chkline"><input type="checkbox" id="stStyleGuardLongInput"> <span id="stStyleGuardLongHint">🌊 长句模式：不拆长句，允许更流畅/文学化的表达（默认关，短句口语更"活人"）</span></label>
+    </div>
     <div class="field"><label id="stFont">🔤 字体大小</label>
       <button class="btn" style="width:auto" id="stFontBtn">字体：中</button>
     </div>
     <div class="field"><label id="stPlugins">🔌 插件管理</label>
       <div id="stPluginList"></div>
     </div>
-    <div style="margin-top:8px;font-size:11px;color:var(--sub)">📦 手机端仅 ~9MB，电脑端 ~50MB —— 咋看都像脚本，但它真不是 😏</div>
+    <div style="margin-top:8px;font-size:11px;color:var(--sub)">📦 手机端 ~9MB、电脑端便携版 ~110MB</div>
+    <div class="row" style="justify-content:flex-start">
+      <button class="btn2 ghost" style="margin-right:auto" id="stKeyGuideBtn">📖 配置教程</button>
+    </div>
     <div class="row">
       <button class="btn2 ghost" id="stCancel">取消</button>
       <button class="btn2" id="stSave">保存</button>
@@ -749,6 +879,21 @@ button .ic{ margin-right:2px; }
         </div>
       </div>
     </div>
+    <div class="mech-fold" id="foldEndings">
+      <div class="fold-head" onclick="toggleFold('foldEndings')"><span>🏁 结局预设（达成事件链）</span><span class="fold-arrow">▾</span></div>
+      <div class="fold-body">
+        <div class="row" style="justify-content:flex-start;margin-bottom:6px">
+          <span style="font-size:11px;color:var(--sub)">⚡ 模板：</span>
+          <button class="btn" style="width:auto;margin:0" onclick="applyMechTemplate('endings_love')">💘 恋爱线</button>
+          <button class="btn" style="width:auto;margin:0" onclick="applyMechTemplate('endings_hidden')">🎁 隐藏结局</button>
+          <button class="btn2 ghost" style="width:auto;margin:0" onclick="applyMechTemplate('endings_clear')">🗑️ 清空结局</button>
+        </div>
+        <div class="field"><label id="nrEndingsLabel">🏁 结局（每行：ID|结局名|事件链,逗号|好感≥|隐藏|描述）</label>
+          <textarea id="nrEndings" rows="3" placeholder="good|告白成功|初见,约会,告白|90||她终于说出了那句喜欢&#10;hidden|雨夜告白|初见,雨夜,告白|1|藏|只有走完整条线才会亮起…"></textarea>
+          <div style="font-size:11px;color:var(--sub)">按序触发全部事件链(id)即解锁结局；藏=隐藏结局；可与好感叠加</div>
+        </div>
+      </div>
+    </div>
     <div class="mech-fold" id="foldBattle">
       <div class="fold-head" onclick="toggleFold('foldBattle')"><span>⚔️ 战斗系统（可选）</span><span class="fold-arrow">▾</span></div>
       <div class="fold-body">
@@ -780,6 +925,14 @@ button .ic{ margin-right:2px; }
       <div class="field"><label id="nrGameRules">游戏规则（注入系统提示）</label><textarea id="nrGameRulesInput" rows="4"></textarea></div>
       <div class="field"><label id="nrGameState">初始状态（注入）</label><textarea id="nrGameStateInput" rows="2"></textarea></div>
       <div class="field"><label id="nrExtraPrompt">额外系统提示</label><textarea id="nrExtraPromptInput" rows="2"></textarea></div>
+      <div class="field"><label id="nrCardFace">🎴 卡面 HTML（可选，非强制；聊天顶栏 🎴 查看）</label>
+        <textarea id="nrCardFaceInput" rows="4"></textarea>
+        <div class="row" style="justify-content:flex-start;gap:6px">
+          <button class="btn2 ghost" onclick="cardFaceImport()">📥 导入HTML文件</button>
+          <button class="btn2 ghost" onclick="cardFacePreview()">👁 预览</button>
+          <button class="btn2 ghost" onclick="document.getElementById('nrCardFaceInput').value=''">🧹 清空</button>
+        </div>
+      </div>
       <div class="field"><label id="nrCardQr">卡片快捷回复（每行「按钮名|内容」，支持 {player}/{char} 宏）</label><textarea id="nrCardQrInput" rows="3"></textarea></div>
       <div class="field"><label id="nrRegex">🔤 角色专属正则（每行 id|名称|正则|替换|作用域；叠加在全局规则上，优先级更高）</label><textarea id="nrRegexInput" rows="3" placeholder="rm_star|动作去星号|\*([^*]+)\*|（$1）|both"></textarea></div>
       <div class="field"><label id="nrDevNotes">开发者备注（不注入，仅此处可见）</label><textarea id="nrDevNotesInput" rows="2"></textarea></div>
@@ -842,7 +995,10 @@ button .ic{ margin-right:2px; }
         <p>装好即聊的角色扮演聊天室：<b>电脑 / 手机进度互通</b>，支持角色卡、世界书、树状回溯、内置游戏。</p></div>
       <div class="onb-step" data-onb="1"><h3>⚙️ 第一步：配置模型</h3>
         <p>点右上角「⚙️ 设置」→ 填 <b>API Key</b>、选模型商（DeepSeek 官方 / 免费链 / Ollama 本地等）。<br>
-        免费链可留空 Key 直接聊；直连不通会自动走内置代理。</p></div>
+        免费链可留空 Key 直接聊；直连不通会自动走内置代理。</p>
+        <p style="margin-top:8px"><b id="onbKeyStatus">⚠️ 尚未配置</b></p>
+        <button class="btn" style="width:auto;margin-top:10px" id="onbKeyGuide">▶ 跟我一步步配置（箭头引导）</button>
+      </div>
       <div class="onb-step" data-onb="2"><h3>🎭 第二步：选角色</h3>
         <p>左侧<b>勾选角色卡</b>即可开聊（多选 = 群聊，@角色名 指定发言）。<br>
         「➕ 新建角色」结构化填写，或「📥 导入角色卡」（酒馆 v1/v2/v3 / PNG）。</p></div>
@@ -854,9 +1010,6 @@ button .ic{ margin-right:2px; }
         <b>🎮 GAL 选项</b>：AI 出选项点选即演。<br>
         <b>🌍 世界书</b>：平行世界 + 关键词/正则条目。<br>
         存档自动守护：写不坏、坏了自动修复/备份。</p></div>
-      <div class="onb-step" data-onb="5"><h3>🤝 友军：去试试酒馆</h3>
-        <p>DICK 和 <b>SillyTavern（酒馆）</b>是同一个沙盒的两种玩法——它硬核，我轻量，<b>角色卡生态互通</b>（酒馆的卡 DICK 直接导入就能用）。<br>
-        用 DICK 觉得不够折腾？<b>去试试酒馆</b>，那里有整个插件宇宙。我们共同的对手，是"云端租客经济"。</p></div>
     </div>
     <div class="onb-nav">
       <button class="btn2 ghost" id="onbSkip">跳过</button>
@@ -865,6 +1018,23 @@ button .ic{ margin-right:2px; }
       <button class="btn2" id="onbNext">下一步</button>
     </div>
   </div>
+</div>
+
+<!-- 箭头引导式教程：高亮层 + 说明气泡 + 箭头 -->
+<div class="sg-mask" id="sgMask" style="display:none"></div>
+<div class="sg-highlight" id="sgHighlight" style="display:none"></div>
+<div class="sg-bubble" id="sgBubble" style="display:none">
+  <div class="sg-step" id="sgStep"></div>
+  <div id="sgBody"></div>
+  <div class="sg-btns">
+    <button id="sgPrev" style="display:none">上一步</button>
+    <button class="sg-next" id="sgNext">下一步</button>
+    <button class="sg-skip" id="sgSkip">跳过 💨</button>
+  </div>
+</div>
+<div class="ach-toast" id="achToast">
+  <span class="a-ic" id="achToastIc">▣</span>
+  <div class="a-txt" id="achToastTxt"><b>已回到这段故事</b><span>回档</span></div>
 </div>
 
 <script>
@@ -949,6 +1119,17 @@ var ICONS = {
   '🧍': _ic('<circle cx="12" cy="5" r="2"/><path d="M12 8v5M10 13l-2 6 2 1 2-4 2 4 2-1-2-6z"/>'),
   '💘': _ic('<path d="M12 20s-7-4.6-9.5-9A5 5 0 0 1 12 6a5 5 0 0 1 9.5 5c-2.5 4.4-9.5 9-9.5 9z"/><path d="M12 8l1.5 2L15 8 16.5 10 18 8"/>')
 };
+var ICON_FILES = {
+  '📂':'ic_folder','🛰':'ic_radio','➕':'ic_plus','❌':'ic_close','⚙':'ic_settings','✅':'ic_check',
+  '🧰':'ic_toolbox','📤':'ic_upload','🗑':'ic_trash','🔑':'ic_key','⚠':'ic_warn','🌍':'ic_globe',
+  '🌐':'ic_globe','💾':'ic_save','🧮':'ic_calc','🔤':'ic_font','🔌':'ic_plug','🔍':'ic_search',
+  '⬇':'ic_download','📥':'ic_inbox','❤':'ic_heart','🤖':'ic_robot','✨':'ic_sparkle','🔥':'ic_flame',
+  '🎭':'ic_users','🧑':'ic_person','👤':'ic_person','📷':'ic_camera','🔗':'ic_link','📄':'ic_doc',
+  '🧹':'ic_clear','🎨':'ic_droplet','✏':'ic_edit','📚':'ic_book','🌿':'ic_branch','📊':'ic_chart',
+  '📈':'ic_trend','🎲':'ic_dice','🧠':'ic_chip','🎮':'ic_gamepad','✂':'ic_scissors','🔄':'ic_refresh',
+  '🖼':'ic_image','🚀':'ic_rocket','🔧':'ic_wrench','👋':'ic_wave','💬':'ic_chat','🎯':'ic_target',
+  '🎛':'ic_sliders','🎬':'ic_clapper','⚔':'ic_swords','⚡':'ic_bolt','🧍':'ic_person_stand','💘':'ic_heart_arrow'
+};
 var _EMOJI_RE = /^([\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{2B00}-\u{2BFF}\u{FE0F}\u{200D}\u{20E3}\u{1F1E6}-\u{1F1FF}]+)/u;
 function iconifyText(textNode) {
   var s = textNode.data;
@@ -956,10 +1137,22 @@ function iconifyText(textNode) {
   if (!m) return;
   var clean = m[1].replace(/[\uFE0F]/g, '');
   var svg = ICONS[clean];
-  if (!svg) return;
+  var fname = ICON_FILES[clean];
+  if (!svg && !fname) return;
   var span = document.createElement('span');
   span.className = 'ic';
-  span.innerHTML = svg;
+  if (svg) span.innerHTML = svg;
+  else span.textContent = clean;
+  // 图片覆盖：icons/<ic_name>.png 存在则用图片（与安卓槽位同名），否则回退 SVG/emoji
+  if (fname) {
+    (function(sp, fn) {
+      var img = new Image();
+      img.src = 'icons/' + fn + '.png';
+      img.alt = '';
+      img.className = 'ic-img';
+      img.onload = function() { sp.innerHTML = ''; sp.appendChild(img); };
+    })(span, fname);
+  }
   var rest = document.createTextNode(s.slice(m[0].length));
   var parent = textNode.parentNode;
   parent.insertBefore(span, textNode);
@@ -1523,10 +1716,10 @@ function renderQuickReplies() {
 
 // ---- 首次启动引导框 ----
 var onboardStep = 0;
-var ONB_TOTAL = 6;
-function showOnboard() {
+var ONB_TOTAL = 5;
+function showOnboard(startStep) {
   document.getElementById('onboard').style.display = 'block';
-  onboardStep = 0;
+  onboardStep = typeof startStep === 'number' ? Math.min(Math.max(startStep,0), ONB_TOTAL-1) : 0;
   renderOnboard();
 }
 function renderOnboard() {
@@ -1535,6 +1728,12 @@ function renderOnboard() {
   });
   document.getElementById('onbPrev').style.display = onboardStep > 0 ? '' : 'none';
   document.getElementById('onbNext').textContent = onboardStep >= ONB_TOTAL - 1 ? '开始使用 🚀' : '下一步';
+  // 配置模型一步：显示当前是否有 Key 的实时状态，引导用户行动
+  if (onboardStep === 1) {
+    var has = window._hasKey;
+    var el = document.getElementById('onbKeyStatus');
+    if (el) el.textContent = has ? '✅ 已配置' : '⚠️ 尚未配置 —— 这是开始聊天前的第一步';
+  }
 }
 function dismissOnboard() {
   document.getElementById('onboard').style.display = 'none';
@@ -1549,6 +1748,129 @@ document.getElementById('onbPrev').onclick = function () {
   if (onboardStep > 0) { onboardStep--; renderOnboard(); }
 };
 document.getElementById('onbSkip').onclick = dismissOnboard;
+
+// 回档成就横幅：灰白 MC progress 风，边缘滑入后自动滑出
+var _achTimer = null;
+function showAchToast(icon, title, desc) {
+  var t = document.getElementById('achToast');
+  if (!t) return;
+  document.getElementById('achToastIc').textContent = icon || '▣';
+  document.getElementById('achToastTxt').innerHTML = '<b>' + (title || '已回到这段故事') + '</b><span>' + (desc || '回档') + '</span>';
+  t.classList.add('show');
+  if (_achTimer) clearTimeout(_achTimer);
+  _achTimer = setTimeout(function () { t.classList.remove('show'); }, 2600);
+}
+
+// steps: [{ id, title, html, open?, select? }]. id=要高亮的元素id；open=引导前要打开的模态；
+// select=点击该元素（选模型商/模型）时触发的函数名（用于展开下拉）。上一步可回溯。
+var SG = null;
+function startKeyGuide() {
+  // KEY 配置箭头引导：自动打开设置，逐步指向 模型商/API Key/模型/保存
+  SG = {
+    idx: 0,
+    steps: [
+      { id: 'stProviderBtn', open: 'settingsModal', title: '第 1 步 · 选模型商',
+        html: '先选你用哪家模型。这里是「⚙️ 设置 → 模型商」。<br>建议：<b>DeepSeek 官方</b>（质量最稳）或 <b>OVH 免费链</b>（免填 Key 练手）。' },
+      { id: 'stBuyBtn', title: '第 2 步 · 去领 Key',
+        html: '点「<b>🔑 去官网注册 / 充值</b>」会打开模型商官网。<br>注册后到官网控制台创建 <b>API Key</b>（sk-… 开头）复制下来。' },
+      { id: 'stKeyInput', title: '第 3 步 · 粘贴 API Key',
+        html: '把刚复制的 <b>API Key</b> 粘到这里（就是 sk-… 那一长串）。<br>选免费链/本地模型可留空。Base URL 选商后会自动填好。' },
+      { id: 'stModelInput', select: 'stModelBtn', title: '第 4 步 · 选模型',
+        html: '选一个具体<b>模型</b>（每家提供的列表不同）。点这里展开，或直接输入模型 ID。' },
+      { id: 'stSave', title: '第 5 步 · 保存',
+        html: '一切填好，点「<b>保存设置</b>」。<br>保存后就能去左侧勾选角色卡开始聊天了。' },
+    ],
+  };
+  SG.steps[0].open = 'settingsModal';
+  runGuideStep();
+  dismissOnboard();  // 关掉旧文字浮窗，避免重叠
+}
+
+function runGuideStep() {
+  var st = SG.steps[SG.idx];
+  // 先打开需要的模态（设置），并确保元素可见
+  if (st.open) {
+    var m = document.getElementById(st.open);
+    if (m && !m.classList.contains('open')) m.classList.add('open');
+  }
+  var el = document.getElementById(st.id);
+  var sgH = document.getElementById('sgHighlight');
+  var sgB = document.getElementById('sgBubble');
+  var sgM = document.getElementById('sgMask');
+  if (!el) { nextGuideStep(); return; }  // 元素不存在则跳过
+  // 若该步需要点击某个下拉选择器
+  if (st.select) {
+    try { document.getElementById(st.select).click(); } catch (e) {}
+  }
+  // 让目标元素滚动到可视区（设置模态内部可能滚动），滚动结束后再定位气泡
+  try { el.scrollIntoView({ block: 'center', behavior: 'smooth' }); } catch (e) {}
+  setTimeout(function () { repositionGuide(el, sgH, sgB); }, 60);
+  sgM.style.display = 'block';
+  sgH.style.display = 'block';
+  sgB.style.display = 'block';
+  document.getElementById('sgPrev').style.display = SG.idx > 0 ? '' : 'none';
+  document.getElementById('sgNext').textContent = SG.idx >= SG.steps.length - 1 ? '完成 ✅' : '下一步 →';
+  document.getElementById('sgStep').textContent = st.title || '';
+  document.getElementById('sgBody').innerHTML = st.html || '';
+  repositionGuide(el, sgH, sgB);
+}
+
+function repositionGuide(el, sgH, sgB) {
+  var r = el.getBoundingClientRect();
+  var cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+  sgH.style.left = (r.left - 6) + 'px';
+  sgH.style.top = (r.top - 6) + 'px';
+  sgH.style.width = (r.width + 12) + 'px';
+  sgH.style.height = (r.height + 12) + 'px';
+  // 气泡放在目标下方或上方（取决于空间）；箭头朝目标
+  var bw = 300, bh = 120;
+  var vw = window.innerWidth, vh = window.innerHeight;
+  var bx = Math.max(10, Math.min(cx - bw / 2, vw - bw - 10));
+  var by, arrowSide = 'top';
+  if (r.bottom + bh + 16 < vh) { by = r.bottom + 16; }
+  else { by = Math.max(10, r.top - bh - 16); arrowSide = 'bottom'; }
+  sgB.style.left = bx + 'px';
+  sgB.style.top = by + 'px';
+  var ar = sgB.querySelector('.sg-arrow') || document.createElement('div');
+  if (!ar.parentNode) { ar.className = 'sg-arrow'; sgB.appendChild(ar); }
+  ar.style.border = '9px solid transparent';
+  if (arrowSide === 'top') {
+    ar.style.borderBottomColor = 'var(--accent)';
+    ar.style.top = '-18px'; ar.style.left = Math.max(0, Math.min(cx - bx - 9, bw - 18)) + 'px';
+  } else {
+    ar.style.borderTopColor = 'var(--accent)';
+    ar.style.bottom = '-18px'; ar.style.left = Math.max(0, Math.min(cx - bx - 9, bw - 18)) + 'px';
+  }
+}
+
+function nextGuideStep() {
+  SG.idx++;
+  if (SG.idx >= SG.steps.length) { endGuide(); return; }
+  runGuideStep();
+}
+function prevGuideStep() {
+  if (SG.idx > 0) { SG.idx--; runGuideStep(); }
+}
+function endGuide() {
+  var sgM = document.getElementById('sgMask'), sgH = document.getElementById('sgHighlight'), sgB = document.getElementById('sgBubble');
+  sgM.style.display = 'none'; sgH.style.display = 'none'; sgB.style.display = 'none';
+  SG = null;
+}
+document.getElementById('sgNext').onclick = nextGuideStep;
+document.getElementById('sgPrev').onclick = prevGuideStep;
+document.getElementById('sgSkip').onclick = endGuide;
+// 首启"配置模型"步的箭头引导按钮
+var _onbKeyGuideBtn = document.getElementById('onbKeyGuide');
+if (_onbKeyGuideBtn) _onbKeyGuideBtn.onclick = function () { startKeyGuide(); };
+// 设置面板里的"配置教程"按钮（老用户 / 已过首启也能随时重看）
+var _stKeyGuideBtn = document.getElementById('stKeyGuideBtn');
+if (_stKeyGuideBtn) _stKeyGuideBtn.onclick = function () { startKeyGuide(); };
+// 窗口缩放时重定位当前高亮
+window.addEventListener('resize', function () {
+  if (!SG) return;
+  var el = document.getElementById(SG.steps[SG.idx].id);
+  if (el) repositionGuide(el, document.getElementById('sgHighlight'), document.getElementById('sgBubble'));
+});
 
 function loadState() {
   pywebview.api.state().then(function (s) {
@@ -1565,6 +1887,9 @@ function loadStateFill(s) {
     accentIdx = s.accent || 0;
     setT(lang);
     applyTheme();
+    loadChatWallpaper();
+    try { if (typeof renderL2DSettings === 'function') renderL2DSettings(s.l2d); } catch (e) {}
+    try { if (typeof renderTrpgBar === 'function') renderTrpgBar(s.trpg); } catch (e) {}
     lastSeq = (s.messages || []).length ? s.messages[s.messages.length - 1].seq : 0;
     lastEpoch = s.epoch || 0;
     (s.messages || []).forEach(appendMessage);
@@ -1610,7 +1935,18 @@ function loadStateFill(s) {
     window.devMode = !!s.dev_mode;
     document.getElementById('stDevModeInput').checked = window.devMode;
     document.getElementById('stHumanizeInput').checked = !!s.humanize;
-    if (!s.welcome_shown) showOnboard();
+    document.getElementById('stStyleGuardInput').checked = s.style_guard !== false;
+    document.getElementById('stStyleGuardLongInput').checked = s.style_guard_long === true;
+    if (!s.welcome_shown) {
+      window._hasKey = !!s.has_key;
+      showOnboard(s.has_key ? 0 : 1);
+      // 首启且未配 Key：自动触发箭头引导，把新手直接带上配置之路（可跳过）
+      if (!s.has_key) {
+        setTimeout(function () {
+          try { startKeyGuide(); } catch (e) {}
+        }, 400);
+      }
+    }
     applyFont(s.font || 1);
     currentSpeaker = (s.selected_roles || []).length === 1 ? s.selected_roles[0] : 'AI';
     renderPlugins(s.plugins || []);
@@ -1688,6 +2024,55 @@ function applyTheme() {
   document.documentElement.style.setProperty('--accent', ACCENTS[accentIdx]);
   document.getElementById('stThemeBtn').textContent = T.theme + '：' + (THEMES[themeIdx] === 'dark' ? '深色' : (THEMES[themeIdx] === 'light' ? '浅色' : 'OLED'));
   document.getElementById('stAccentBtn').textContent = T.accent + (['蓝','绿','紫','粉'][accentIdx]);
+}
+
+function applyChatWallpaper(dataUrl) {
+  var chat = document.getElementById('chat');
+  if (!chat) return;
+  if (dataUrl && String(dataUrl).indexOf('data:') === 0) {
+    chat.style.setProperty('--chat-wallpaper', 'url("' + dataUrl + '")');
+    chat.classList.add('has-wallpaper');
+  } else {
+    chat.style.removeProperty('--chat-wallpaper');
+    chat.classList.remove('has-wallpaper');
+  }
+  // 设置面板状态
+  var st = document.getElementById('stWallpaperState');
+  if (st) st.textContent = dataUrl && String(dataUrl).indexOf('data:') === 0 ? '已设置' : '未设置（默认主题背景）';
+}
+function loadChatWallpaper() {
+  try {
+    pywebview.api.get_chat_wallpaper().then(function (r) {
+      if (r && r.ok) applyChatWallpaper(r.data || '');
+    }).catch(function () {});
+  } catch (e) {}
+}
+
+// ---------- 跑团会话条（主动提示 + 一键退出） ----------
+function renderTrpgBar(trpg) {
+  var bar = document.getElementById('trpgBar');
+  if (!bar) return;
+  if (!trpg) { bar.style.display = 'none'; bar.innerHTML = ''; return; }
+  var head = '';
+  if (trpg.active) {
+    var pc = trpg.turn || (trpg.pcs && trpg.pcs[0]) || '';
+    head = '🎭 跑团中 · GM「' + (trpg.gm || '?') + '」 · PC ' + (trpg.pcs || []).length + ' · 第' + (trpg.round || 0) + '轮' +
+           (pc ? ' · 行动者：' + pc : '') +
+           (trpg.locked && trpg.locked.length ? ' · 🔒已锁定 ' + trpg.locked.length + ' 卡' : '');
+  } else if (trpg.locked && trpg.locked.length) {
+    head = '⚠️ 有未结束的跑团锁定：' + trpg.locked.join('、') + '（会期未正常退出）';
+  } else {
+    bar.style.display = 'none'; bar.innerHTML = ''; return;
+  }
+  bar.style.display = 'flex';
+  bar.innerHTML = '<span style="flex:1;min-width:0">' + escapeHtml(head) + '</span>' +
+    '<button class="btn" style="width:auto;margin:0;padding:2px 10px;font-size:12px" id="trpgExitBtn">🏁 退出跑团</button>';
+  var b = document.getElementById('trpgExitBtn');
+  if (b) b.onclick = function () {
+    pywebview.api.trpg_end().then(function (r) {
+      loadState();
+    }).catch(function (e) {});
+  };
 }
 
 function updatePresetName() {
@@ -1891,6 +2276,7 @@ function collectRoleFields() {
       extra_prompt: extra,
       dev_notes: devNotes,
       card_quick_replies: qrList,
+      card_face: document.getElementById('nrCardFaceInput').value.trim(),
     };
     if (regexList.length) advanced.regex_rules = regexList;
     if (mech) advanced.mechanics = mech;
@@ -1913,6 +2299,43 @@ function collectRoleFields() {
     unlocked: document.getElementById('nrUnlockInput').checked,
     advanced: advanced,
   };
+}
+
+function cardFaceImport() {
+  var inp = document.createElement('input');
+  inp.type = 'file';
+  inp.accept = '.html,.htm,text/html,.txt';
+  inp.onchange = function () {
+    var f = inp.files[0];
+    if (!f) return;
+    var r = new FileReader();
+    r.onload = function () { document.getElementById('nrCardFaceInput').value = r.result; };
+    r.readAsText(f);
+  };
+  inp.click();
+}
+
+function openCardFace(html) {
+  var m = document.getElementById('cardFaceModal');
+  if (!m) return;
+  var fr = m.querySelector('iframe');
+  if (fr) fr.srcdoc = html || '<div style="color:#888;padding:30px">（暂无卡面。在角色→编辑→开发者模式→卡面 导入或编写 HTML。）</div>';
+  m.classList.add('open');
+}
+function cardFacePreview() {
+  openCardFace(document.getElementById('nrCardFaceInput').value || '');
+}
+function cardFaceClose() { var m = document.getElementById('cardFaceModal'); if (m) m.classList.remove('open'); }
+function cardFaceShow() {
+  var rs = selectedRoles();
+  var name = rs[0];
+  if (!name) { openCardFace(''); return; }
+  try {
+    pywebview.api.get_role(name).then(function (r) {
+      var o = (typeof r === 'string') ? JSON.parse(r) : r;
+      openCardFace((o && o.advanced && (o.advanced.card_face || '')) || '');
+    }).catch(function () { openCardFace(''); });
+  } catch (e) { openCardFace(''); }
 }
 
 // ---------- 机制/状态/战斗折叠区 ----------
@@ -1956,6 +2379,14 @@ function applyMechTemplate(t) {
     document.getElementById('nrBattleFormulas').value = '';
     document.getElementById('nrBattleMoves').value = '';
     document.getElementById('nrBattleBuffs').value = '';
+  } else if (t === 'endings_love') {
+    document.getElementById('nrEndings').value = 'good|告白成功|初见,约会,告白|90||她终于说出了那句喜欢\nbad|形同陌路|争吵,决裂|20||你们最终还是走散了\nhidden|雨夜告白|初见,雨夜,告白|1|藏|只有走完整条线才会亮起的结局……';
+    setFold('foldEndings', true);
+  } else if (t === 'endings_hidden') {
+    document.getElementById('nrEndings').value = 'hidden|雨夜告白|初见,雨夜,告白|1|藏|只有走完整条线才会亮起…\nhidden|真相大白|秘密,线索,摊牌|1|藏|你终于问出了那句藏在心底很久的话。\nhidden|时间线|重来,循环,抉择|1|藏|这一次，你没有选择离开。\nhidden|幻梦|沉睡,迷梦,醒来|1|藏|你睁开眼，分不清刚才是不是一场梦。\nhidden|失控|占有,出格,失控|1|藏|她笑着看着你，眼里却没了光。';
+    setFold('foldEndings', true);
+  } else if (t === 'endings_clear') {
+    document.getElementById('nrEndings').value = '';
   }
 }
 
@@ -2027,6 +2458,27 @@ function collectMechanics() {
     evs.push(e);
   });
   if (evs.length) mech.events = evs;
+  var ends = [];
+  document.getElementById('nrEndings').value.split('\n').forEach(function (line) {
+    line = line.trim();
+    if (!line) return;
+    var p = line.split('|');
+    if (p.length < 2) return;
+    var e = { id: p[0].trim(), name: (p[1] || '').trim() || p[0].trim() };
+    var w = {};
+    var chain = (p[2] || '').trim();
+    if (chain) w.events_chain = chain.split(',').map(function (x) { return x.trim(); }).filter(Boolean);
+    var ag = (p[3] || '').trim();
+    if (ag !== '') { var n = parseInt(ag, 10); if (!isNaN(n)) w.aff_ge = n; }
+    var hid = (p[4] || '').trim();
+    if (['1', 'yes', 'hidden', '隐藏', '藏', 'true'].indexOf(hid) >= 0) e.hidden = true;
+    if (Object.keys(w).length) e.when = w;
+    var desc = p.slice(5).join('|').trim();
+    if (desc) e.desc = desc;
+    if (!e.id) return;
+    ends.push(e);
+  });
+  if (ends.length) mech.endings = ends;
   return Object.keys(mech).length ? mech : null;
 }
 
@@ -2186,6 +2638,7 @@ function fillRoleFields(f) {
   document.getElementById('nrGameRulesInput').value = (game.rules || '');
   document.getElementById('nrGameStateInput').value = (game.state || '');
   document.getElementById('nrExtraPromptInput').value = (adv && adv.extra_prompt) || '';
+  document.getElementById('nrCardFaceInput').value = (adv && adv.card_face) || '';
   document.getElementById('nrDevNotesInput').value = (adv && adv.dev_notes) || '';
   var qrLines = (adv && adv.card_quick_replies || []).map(function (q) {
     return (q.label || '') + '|' + (q.text || '');
@@ -2217,6 +2670,13 @@ function fillRoleFields(f) {
     return [e.id, e.name || '', e.aff_ge !== undefined ? e.aff_ge : '', (e.keywords || []).join(','), e.prompt || ''].join('|');
   }).join('\n');
   document.getElementById('nrEvents').value = evLines;
+  var endLines = (mech && mech.endings || []).map(function (e) {
+    var w = e.when || {};
+    var chain = (w.events_chain || []).join(',');
+    var ag = w.aff_ge !== undefined ? w.aff_ge : '';
+    return [e.id, e.name || '', chain, ag, e.hidden ? '藏' : '', e.desc || ''].join('|');
+  }).join('\n');
+  document.getElementById('nrEndings').value = endLines;
   // 战斗系统回填
   fillBattle(adv);
   // 折叠区按内容自动展开（恋爱卡默认全收起）
@@ -2224,6 +2684,7 @@ function fillRoleFields(f) {
   setFold('foldMech', !!(mech2 && (mech2.affection || (mech2.events && mech2.events.length))));
   setFold('foldSt', !!(mech2 && mech2.status && mech2.status.fields && mech2.status.fields.length));
   setFold('foldBattle', !!(adv && adv.battle && adv.battle.enabled));
+  setFold('foldEndings', !!(mech2 && mech2.endings && mech2.endings.length));
 }
 
 function renderWmParams() {
@@ -2554,12 +3015,16 @@ function renderTreePanel(p) {
     var it = document.createElement('div');
     it.className = 'b-item' + (n.on_path ? ' on-path' : '') + (n.is_current ? ' cur' : '') + (branchHeader ? ' brh' : '');
     it.style.paddingLeft = (10 + indent * 14) + 'px';
-    var who = n.role === 'user' ? '👤' : (n.role === 'system' ? '⚙' : '🤖');
-    var badge = n.is_current ? '<span class="b-cur">◆ 当前</span>' : '';
+    // 成就图标（灰白系）：角色/分支/选项 各配一个灰度图标
+    var icon = n.role === 'user' ? '〔你〕' : (n.role === 'system' ? '⚙' : '〔AI〕');
+    if (n.is_choice) icon = '▣';
+    var badge = n.is_current ? '<span class="b-cur">当前</span>' : '';
+    var who = '<span class="b-who">' + icon + '</span>';
     if (branchHeader) {
       var open = !!expandedBranches[n.id];
-      it.innerHTML = '<span class="b-who">' + (open ? '▾' : '▸') + '</span><span class="b-prev">🌿 分支 ×' +
-        n.branch_size + '：' + escapeHtml(n.content || '') + '</span>' + badge;
+      // 分支 = 灰白成就"变体"：标题「分支 ×n」+ 灰描述
+      it.innerHTML = who + '<span class="b-main"><span class="b-prev">' + (open ? '▾ ' : '▸ ') +
+        '分支 ×' + n.branch_size + '</span><span class="b-desc">' + escapeHtml(n.content || '') + '</span></span>' + badge;
       it.onclick = function () {
         if (expandedBranches[n.id]) delete expandedBranches[n.id];
         else expandedBranches[n.id] = true;
@@ -2567,12 +3032,15 @@ function renderTreePanel(p) {
         renderTreePanel(p);
       };
     } else {
-      it.innerHTML = '<span class="b-who">' + who + '</span><span class="b-prev">' +
-        (n.is_choice ? '🔖 ' : '') + escapeHtml(n.content || '') + '</span>' + badge;
+      it.innerHTML = who + '<span class="b-main"><span class="b-prev">' +
+        escapeHtml(n.content || '') + '</span><span class="b-desc">' +
+        (n.is_choice ? '选项节点' : (n.role === 'user' ? '你' : 'AI') + ' · ' +
+         (n.on_path ? '当前剧情线' : '分支剧情')) + '</span></span>' + badge;
       it.onclick = function () {
         pywebview.api.backtrack(n.id).then(function (r) {
           if (r && r.ok) {
             p.classList.remove('open');
+            try { showAchToast(n.is_choice ? '▣' : (n.role === 'user' ? '〔你〕' : '〔AI〕'), '已回到这段故事', '回档 · ' + (n.content || '').slice(0, 24)); } catch (e) {}
             lastSeq = 0;
             lastEpoch = -1;
             document.getElementById('chat').innerHTML = '';
@@ -2798,6 +3266,10 @@ document.getElementById('nrDraft').onclick = function () {
 document.getElementById('btnSettings').onclick = function () {
   document.getElementById('settingsModal').classList.add('open');
 };
+// 侧边栏「🔌 插件」：直接打开设置（插件管理所在），作为插件抽屉的便捷入口
+document.getElementById('btnPlugins').onclick = function () {
+  document.getElementById('settingsModal').classList.add('open');
+};
 document.getElementById('stCancel').onclick = function () { document.getElementById('settingsModal').classList.remove('open'); };
 document.getElementById('stImgSave').onclick = function () {
   var key = document.getElementById('stImgKey').value.trim();
@@ -2882,6 +3354,7 @@ document.getElementById('stSave').onclick = function () {
     });
     pywebview.api.set_regex_rules(JSON.stringify(rrList)).then(function () {});
     pywebview.api.set_humanize(document.getElementById('stHumanizeInput').checked).then(function () {});
+    pywebview.api.set_style_guard(document.getElementById('stStyleGuardInput').checked, document.getElementById('stStyleGuardLongInput').checked).then(function () {});
     pywebview.api.set_sampling(document.getElementById('stTempInput').value, document.getElementById('stTopPInput').value).then(function () {
       document.getElementById('settingsModal').classList.remove('open');
     });
@@ -2897,6 +3370,50 @@ document.getElementById('stAccentBtn').onclick = function () {
   applyTheme();
   pywebview.api.set_theme(themeIdx, accentIdx);
 };
+// ---- 聊天壁纸（核心） ----
+document.getElementById('stWallpaperSet').onclick = function () {
+  pywebview.api.set_chat_wallpaper().then(function (r) {
+    if (r && r.ok) applyChatWallpaper(r.data || '');
+    else if (r && r.err !== 'cancelled') alert(r.err || '设置失败');
+  });
+};
+document.getElementById('stWallpaperClear').onclick = function () {
+  pywebview.api.clear_chat_wallpaper().then(function (r) {
+    if (r && r.ok) applyChatWallpaper('');
+  });
+};
+// ---- 看板娘（核心·Live2D）设置 ----
+var l2dModels = [];
+function renderL2DSettings(l2d) {
+  l2dModels = (l2d && l2d.models) || [];
+  document.getElementById('stL2dScale').value = (l2d && l2d.scale) || 100;
+  document.getElementById('stL2dPos').value = (l2d && l2d.pos) || '右下';
+  document.getElementById('stL2dOpacity').value = (l2d && l2d.opacity) || 95;
+  document.getElementById('stL2dDrag').checked = (l2d && l2d.draggable) !== false;
+  document.getElementById('stL2dBreath').checked = (l2d && l2d.breath) !== false;
+  document.getElementById('stL2dModelName').textContent = (l2d && l2d.model) ? l2d.model : '（未选择）';
+}
+function setL2dSetting(key, value) {
+  pywebview.api.set_l2d(key, value).then(function (r) {
+    if (r && r.ok) {
+      try { if (L2D && L2D.applySettings) L2D.applySettings(); } catch (e) {}
+      loadState();
+    }
+  });
+}
+document.getElementById('stL2dModel').onclick = function () {
+  if (!l2dModels.length) { alert('未找到模型：请把 .model3.json 放入 web/live2d/models/'); return; }
+  var cur = document.getElementById('stL2dModelName').textContent;
+  var idx = l2dModels.indexOf(cur);
+  var next = l2dModels[(idx + 1) % l2dModels.length];
+  document.getElementById('stL2dModelName').textContent = next;
+  setL2dSetting('model', next);
+};
+document.getElementById('stL2dScale').addEventListener('change', function () { setL2dSetting('scale', parseInt(this.value, 10) || 100); });
+document.getElementById('stL2dPos').addEventListener('change', function () { setL2dSetting('pos', this.value); });
+document.getElementById('stL2dOpacity').addEventListener('change', function () { setL2dSetting('opacity', parseInt(this.value, 10) || 95); });
+document.getElementById('stL2dDrag').addEventListener('change', function () { setL2dSetting('draggable', this.checked); });
+document.getElementById('stL2dBreath').addEventListener('change', function () { setL2dSetting('breath', this.checked); });
 document.getElementById('stLangBtn').onclick = function () {
   pywebview.api.toggle_language().then(function (r) {
     if (r && r.ok) setT(r.lang);
@@ -3470,6 +3987,92 @@ function codexImportCodex() {
     if (!r) return;
     if (r.ok) { codexSetStatus('✅ ' + (r.msg || '导入成功')); codexLoadList(); if (r.name) codexSelect(r.name); }
     else if (r.err !== 'cancelled') alert(r.err || '导入失败');
+  });
+}
+function codexPasteOpen() {
+  document.getElementById('codexPasteInput').value = '';
+  codexPasteStatus('');
+  document.getElementById('codexPasteModal').classList.add('open');
+}
+function codexPasteStatus(s) { var el = document.getElementById('codexPasteStatus'); if (el) el.textContent = s || ''; }
+function codexPasteConvert() {
+  var text = document.getElementById('codexPasteInput').value.trim();
+  if (!text) { codexPasteStatus('请先粘贴剧本'); return; }
+  codexPasteStatus('⏳ 转化中…');
+  pywebview.api.codex_import_script(text).then(function (r) {
+    if (!r || !r.ok) { codexPasteStatus('❌ ' + ((r && r.err) || '转化失败')); return; }
+    codexPasteStatus('✅ 已识别为 ' + (r.kind === 'json' ? 'JSON' : '纯文本') + ' 剧本' + (r.valid ? '' : '，有结构提示，可修正后保存'));
+    var doSave = function (pkgName) {
+      pywebview.api.codex_save(pkgName, JSON.stringify(r.script)).then(function (sr) {
+        codexPasteStatus('✅ 已保存到「' + pkgName + '」' + (sr && sr.valid ? '' : '（有结构提示）'));
+        document.getElementById('codexPasteModal').classList.remove('open');
+        codexCur = pkgName;
+        codexSelect(pkgName);
+        codexEdit();
+      });
+    };
+    if (codexCur) { doSave(codexCur); }
+    else {
+      pywebview.api.codex_create(r.autoName || '我的剧本').then(function (cr) {
+        if (cr && cr.ok) doSave(cr.name);
+        else codexPasteStatus('❌ 建包失败：' + ((cr && cr.err) || ''));
+      });
+    }
+  }).catch(function (e) { codexPasteStatus('❌ ' + (e && e.message ? e.message : '转化失败')); });
+}
+function codexImportSprites() {
+  if (!codexCur) return;
+  codexSetStatus('⏳ 导入立绘…');
+  pywebview.api.codex_import_sprites(codexCur).then(function (r) {
+    codexSetStatus('');
+    if (r && r.ok) {
+      codexSetStatus('✅ ' + (r.msg || ('导入 ' + r.added.length + ' 张立绘')));
+      codexLoadList();
+    } else if (r && r.err !== 'cancelled') {
+      alert(r.err || '导入失败');
+      codexLoadList();
+    }
+  });
+}
+function codexTplStatus(s) { var el = document.getElementById('codexTplStatus'); if (el) el.textContent = s || ''; }
+function codexAdvancedOpen() {
+  if (!codexCur) return;
+  codexTplStatus('');
+  document.getElementById('codexAdvancedModal').classList.add('open');
+  document.getElementById('codexTplPreview').srcdoc = '';
+  codexTplStatus('⏳ 加载播放器模板…');
+  pywebview.api.codex_get_player_template(codexCur).then(function (r) {
+    if (!r || !r.ok) { codexTplStatus('❌ ' + ((r && r.err) || '加载失败')); return; }
+    document.getElementById('codexTplInput').value = r.html || '';
+    codexTplStatus(r.is_custom ? '✏️ 自定义模板（来自本包 player.html）' : '✅ 系统内置模板');
+  });
+}
+function codexAdvancedPlay() {
+  if (!codexCur) return;
+  var tpl = document.getElementById('codexTplInput').value;
+  codexTplStatus('⏳ 渲染中…');
+  pywebview.api.codex_render(codexCur, tpl).then(function (r) {
+    if (!r || !r.ok) { codexTplStatus('❌ ' + ((r && r.err) || '渲染失败')); return; }
+    document.getElementById('codexTplPreview').srcdoc = r.html || '';
+    codexTplStatus('▶️ 已渲染（试玩预览）');
+  });
+}
+function codexAdvancedSave() {
+  if (!codexCur) return;
+  var tpl = document.getElementById('codexTplInput').value;
+  codexTplStatus('⏳ 保存中…');
+  pywebview.api.codex_save_player_template(codexCur, tpl).then(function (r) {
+    if (r && r.ok) codexTplStatus('✅ ' + (r.msg || '模板已保存'));
+    else codexTplStatus('❌ ' + ((r && r.err) || '保存失败'));
+  });
+}
+function codexAdvancedReset() {
+  if (!codexCur) return;
+  codexTplStatus('⏳ 恢复默认…');
+  pywebview.api.codex_get_player_template('').then(function (r) {
+    if (!r || !r.ok) { codexTplStatus('❌ ' + ((r && r.err) || '失败')); return; }
+    document.getElementById('codexTplInput').value = r.html || '';
+    codexTplStatus('↺ 已载入系统内置模板，点「💾 保存模板」才会写入本包');
   });
 }
 function codexExportCodex() {
@@ -4068,11 +4671,18 @@ document.getElementById('codexCloseBtn').onclick = function () { document.getEle
 document.getElementById('codexNewBtn').onclick = codexNew;
 document.getElementById('codexSampleBtn').onclick = codexSample;
 document.getElementById('codexDraftBtn').onclick = codexDraft;
+document.getElementById('codexPasteBtn').onclick = codexPasteOpen;
+document.getElementById('codexPasteConvertBtn').onclick = codexPasteConvert;
 document.getElementById('codexImportBtn').onclick = codexImport;
 document.getElementById('codexImportZipBtn').onclick = codexImportZip;
 document.getElementById('codexImportCodexBtn').onclick = codexImportCodex;
 document.getElementById('codexAssocBtn').onclick = codexAssoc;
 document.getElementById('codexVoiceBtn').onclick = codexVoice;
+document.getElementById('codexSpriteBtn').onclick = codexImportSprites;
+document.getElementById('codexAdvancedBtn').onclick = codexAdvancedOpen;
+document.getElementById('codexTplPlayBtn').onclick = codexAdvancedPlay;
+document.getElementById('codexTplSaveBtn').onclick = codexAdvancedSave;
+document.getElementById('codexTplResetBtn').onclick = codexAdvancedReset;
 document.getElementById('codexExportCodexBtn').onclick = codexExportCodex;
 document.getElementById('codexDelBtn').onclick = codexDelete;
 document.getElementById('codexEditBtn').onclick = codexEdit;
@@ -4396,25 +5006,24 @@ var L2D = {
     this.hintTimer = setTimeout(function () { el.style.display = 'none'; }, ms || 4000);
   },
 
-  // 从 state.plugins 读取插件状态与设置
+  // 从核心态 state.l2d 读取看板娘设置（已并入底层，不再依赖插件开关）
   syncFromState: function (st) {
     var self = this;
-    if (!st || !st.plugins) return;
-    var p = null;
-    (st.plugins || []).forEach(function (x) {
-      if (x.name === 'Live2D 看板娘') p = x;
-    });
+    if (!st) return;
+    var p = (st && st.l2d) || null;
     var was = self.enabled;
+    // 核心化：恒启用，但无模型时不真正加载
     self.enabled = !!(p && p.enabled);
-    if (p && p.settings) {
-      self.modelFile = p.settings.model || '';
-      self.scale = parseInt(p.settings.scale, 10) || 100;
-      self.pos = p.settings.pos || '右下';
-      self.opacity = parseInt(p.settings.opacity, 10) || 95;
-      self.draggable = p.settings.draggable !== false;
-      self.breath = p.settings.breath !== false;
+    if (p) {
+      self.modelFile = p.model || '';
+      self.scale = parseInt(p.scale, 10) || 100;
+      self.pos = p.pos || '右下';
+      self.opacity = parseInt(p.opacity, 10) || 95;
+      self.draggable = p.draggable !== false;
+      self.breath = p.breath !== false;
+      self.models = p.models || [];
     }
-    if (self.enabled && !was) {
+    if (self.enabled && !was && self.modelFile) {
       this.activate();
     } else if (!self.enabled && was) {
       this.deactivate();
@@ -4548,5 +5157,14 @@ var L2D = {
   } catch (e) {}
 })();
 </script>
+<div class="modal" id="cardFaceModal">
+  <div class="modal-box" style="width:min(90vw,760px);height:70vh;display:flex;flex-direction:column">
+    <div style="padding:8px 12px;display:flex;justify-content:space-between;align-items:center">
+      <strong>🎴 卡面</strong>
+      <button class="btn2 ghost" onclick="cardFaceClose()">✕ 关闭</button>
+    </div>
+    <iframe id="cardFaceFrame" style="flex:1;border:0;background:#fff" sandbox="allow-same-origin"></iframe>
+  </div>
+</div>
 </body>
 </html>

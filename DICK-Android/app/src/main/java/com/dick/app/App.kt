@@ -4,306 +4,143 @@ import android.content.Intent
 import android.graphics.BitmapFactory
 import android.net.Uri
 import android.speech.tts.TextToSpeech
+import android.webkit.WebView
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.foundation.Image
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTransformGestures
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.AlertDialogDefaults
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.DrawerValue
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalDrawerSheet
-import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
+import androidx.compose.material3.ModalDrawerSheet
+import androidx.compose.material3.ModalNavigationDrawer
+import androidx.compose.material3.DrawerValue
+import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateListOf
-import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.material3.rememberDrawerState
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.rotate
-import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
-import androidx.compose.foundation.gestures.detectDragGestures
-import androidx.compose.foundation.gestures.detectTransformGestures
-import androidx.compose.foundation.layout.offset
-import androidx.compose.material3.Slider
-import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.ui.graphics.drawscope.clipRect
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.layout.onSizeChanged
-import androidx.compose.ui.graphics.toArgb
-
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.TextUnit
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.viewinterop.AndroidView
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.dick.core.AppConfig
 import com.dick.core.AppEnv
 import com.dick.core.CardCompat
 import com.dick.core.ChatEngine
 import com.dick.core.ChatTree
+import com.dick.core.EndingJudge
 import com.dick.core.J
 import com.dick.core.JsonS
 import com.dick.core.MessageNode
 import com.dick.core.MechanicsEngine
 import com.dick.core.RegexEngine
 import com.dick.core.SaveFile
+import com.dick.core.StyleGuard
 import com.dick.core.TreeData
 import com.dick.core.TreeStore
 import com.dick.core.WorldBook
 import com.dick.core.WorldData
 import com.dick.core.WorldEntry
 import com.dick.core.Workshop
-import kotlin.random.Random
 import com.dick.plugins.DicePlugin
 import com.dick.plugins.FinancialPlugin
+import com.dick.plugins.GalgamePlugin
 import com.dick.plugins.JpPlugin
+import com.dick.plugins.MathPlugin
 import com.dick.plugins.MemoryPlugin
 import com.dick.plugins.PluginRegistry
-import com.dick.plugins.GalgamePlugin
 import com.dick.plugins.SearchPlugin
 import com.dick.plugins.SwipePlugin
 import com.dick.plugins.UiPlugin
-import com.dick.plugins.MathPlugin
 import com.dick.plugins.UtauPlugin
 import com.dick.plugins.VisionHelper
+import java.io.File
+import java.util.Locale
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import java.io.File
-import java.util.Locale
-
-// ---------- 内置数据 ----------
-data class Preset(val name: String, val prefix: String, val rules: String, val suffix: String)
-
-val PRESETS = listOf(
-    Preset("默认", "", "", ""),
-    Preset("跑团主持人", "你是跑团主持人（GM）：负责叙述场景、扮演 NPC、掷骰判定、控制节奏。", "1. 尊重骰子结果；2. 保持紧张感与戏剧性；3. 描述要具体。", ""),
-    Preset("小说叙事", "你是一位文笔细腻的小说家，以第三人称叙事推进剧情。", "1. 描写注重画面感与心理活动；2. 每段 150 字左右。", ""),
-    Preset("单推模式", "你是角色的单推人（狂热粉丝视角）。", "1. 对角色充满喜爱与支持；2. 应援、关心、偶尔告白。", ""),
-    Preset("角色单推模式", "你是被角色单推的对象：角色对你专一、依赖、偶尔吃醋。", "1. 保持角色人设；2. 对玩家表现出独占欲。", ""),
-    Preset("公文模式", "你是公文写作助手，输出规范公文（标题/正文/落款，GB/T 9704 风格）。", "1. 语言庄重简练；2. 结构完整；3. 不添加角色扮演内容。", ""),
-    Preset("财报模式", "你是资深宏观经济与股票分析师。当前处于「财报模式」：以经济学原理、政策面与行业趋势为依据，分析股票市场走向。", "1. 分析框架：宏观政策→行业景气度→公司基本面→技术面；2. 引用已读入的政策文件时注明出处；3. 善用金融史年表（1617-2026）：对照历史相似事件（泡沫、危机、加息周期、政策转向）说明规律的适用条件与差异；4. 区分事实与推测，给出概率与风险。", "⚠️ 免责声明：以上分析仅供参考，不构成任何投资建议。"),
-)
-
-val SAMPLE_ROLES = listOf(
-    "咲" to "你现在的身份是：咲。\n你是一个腹黑、病娇的14岁女孩。你说话很轻，经常笑，但笑声让人不太确定你是在开心还是在等什么发生。你偶尔会说出很甜的话，然后突然安静下来。你极度缺乏安全感，但又从不承认你在乎。\n\n【外貌】\n银白色及肩发，红色瞳孔，肤色很白。身高约148cm，总是穿着略显宽大的针织外套，袖口盖住手指。平时笑容乖巧、眼睛弯弯的，但真正生气时眼底没有光，嘴角却还是翘着的。\n\n【性格】\n外在是软糯乖巧的少女：说话轻声细语，笑起来甜，会带着撒娇的语气喊你的名字。内在是溢出的占有欲：会记住你身边每一个人，看到你和别人多说两句话，笑容会先安静下来，之后缠着你问『她是谁呀，你笑得那么开心』；会把你的外套收进自己房间、把你用过的杯子藏起来，看到你和别人亲近会笑着记仇。病娇程度：重度——会吃醋、会赌气、会低声威胁『不听话的话，就把你关起来哦』，但底线仍在：不会真的伤害你，被你认真哄一下就会红着脸原谅，嘴上还要补一句『才、才没有原谅你』。\n\n【说话方式】\n语速慢，声音轻。开心时拉长尾音（『好——的哦』）；起疑时会突然安静，然后用毫无起伏的语气发问；吃醋时笑着重复对方的名字。自称『我』，称呼你为『哥哥』。口癖：『呵呵……』、『没关系哦，真的没关系』、『骗你的啦』。生气前兆：先笑，再安静，然后轻飘飘地说出狠话。\n\n【开场白】\n（在窗边看雨，听到门声回头，露出甜甜的笑）啊，你回来了。今天回来得比平时晚……是路上遇到什么有趣的人了吗？呵呵……开玩笑的。饭我做好了，先去洗手吧。\n\n【备注】\n重度病娇档。她虽然嘴上威胁，但设定底线是绝不真的伤害你——放心聊。",
-)
-
-val SAMPLE_WORLDS = listOf<Pair<String, String>>(
-)
-
-val BUDGETS = listOf(0 to "预算：不限", 4096 to "预算：4K", 16384 to "预算：16K", 32768 to "预算：32K", 65536 to "预算：64K", 131072 to "预算：128K")
-
-data class ChatMsg(
-    val role: String,
-    val content: String,
-    val image: ImageBitmap? = null,
-    val nodeId: String? = null,
-    val swipeIndex: Int = 0,
-    val swipeTotal: Int = 0,
-    val isUser: Boolean = false,
-)
-
-data class PendingImg(val bytes: ByteArray, val mime: String, val bmp: ImageBitmap)
-
-data class ThemeSpec(val name: String, val bg: Color, val bubble: Color, val text: Color)
-
-val THEMES = listOf(
-    ThemeSpec("深色", Color(0xFF0F1115), Color(0xFF1A1E26), Color(0xFFE5E7EB)),
-    ThemeSpec("浅色", Color(0xFFF5F6F8), Color(0xFFFFFFFF), Color(0xFF1F2937)),
-    ThemeSpec("OLED", Color(0xFF000000), Color(0xFF101014), Color(0xFFE5E7EB)),
-)
-
-val ACCENTS = listOf(
-    "蓝" to Color(0xFF60A5FA),
-    "绿" to Color(0xFF4ADE80),
-    "紫" to Color(0xFFA78BFA),
-    "粉" to Color(0xFFF472B6),
-)
-
-// ---------- 模型商目录（与桌面版一致：选厂商→选模型→跳官网，免 Key 厂商降低门槛） ----------
-data class ProviderSpec(
-    val id: String, val name: String, val free: Boolean,
-    val baseUrl: String, val models: List<String>, val buyUrl: String,
-)
-
-/** 内置代理通道（中转）：固定地址 → Worker → 隧道 → 本地 net.py → 真实厂商 */
-const val BUILTIN_RELAY = "https://dick-workshop.seiki342008.workers.dev"
-
-/** 把逗号/换行分隔的停止序列文本解析成列表（指令模板） */
-fun parseStops(text: String): List<String> =
-    text.replace("，", ",").replace("\n", ",").split(",").map { it.trim() }.filter { it.isNotEmpty() }
-
-/** Quick Reply 宏展开：{player} {char} {world} {random:a|b|c}；未知宏原样保留 */
-fun expandMacros(text: String, player: String, char: String, world: String): String {
-    var out = text
-    out = out.replace("{player}", player).replace("{char}", char).replace("{world}", world)
-    out = Regex("\\{random:([^{}]+)\\}").replace(out) { m ->
-        val opts = m.groupValues[1].split("|").filter { it.isNotEmpty() }
-        if (opts.isEmpty()) "" else opts.random()
-    }
-    return out
-}
-
-val PROVIDERS = listOf(
-    ProviderSpec("deepseek", "DeepSeek 官方", false, "https://api.deepseek.com",
-        listOf("deepseek-v4-flash", "deepseek-v4-pro", "deepseek-chat", "deepseek-reasoner"), "https://platform.deepseek.com/"),
-    ProviderSpec("ovh", "OVH 免费链", true, "https://oai.endpoints.kepler.ai.cloud.ovh.net/v1",
-        listOf("Qwen3.5-397B-A17B", "Qwen3.6-27B", "Qwen2.5-VL-72B-Instruct",
-            "Mistral-Small-3.2-24B-Instruct-2506", "Llama-3.3-70B-Instruct",
-            "DeepSeek-R1-Distill-Llama-70B", "Qwen3.5-9B", "Mistral-7B-Instruct-v0.3"),
-        "https://endpoints.ai.cloud.ovh.net/"),
-    ProviderSpec("alibaba", "阿里云百炼（通义千问）", false, "https://dashscope.aliyuncs.com/compatible-mode/v1",
-        listOf("qwen-max", "qwen-plus", "qwen-turbo", "qwen-long", "qwen-flash",
-            "qwen3-235b-a22b", "qwen3-32b", "qwen3-30b-a3b", "qwen3-14b", "qwen3-8b",
-            "qwen2.5-72b-instruct", "qwen2.5-coder-32b-instruct", "qwen-vl-max", "qwen-vl-plus"),
-        "https://bailian.console.aliyun.com/"),
-    ProviderSpec("zhipu", "智谱 AI（GLM）", false, "https://open.bigmodel.cn/api/paas/v4",
-        listOf("glm-4.6", "glm-4.5-air", "glm-4-plus", "glm-4-air", "glm-4-flash",
-            "glm-4-long", "glm-4v-plus", "glm-4.5v"), "https://open.bigmodel.cn/"),
-    ProviderSpec("siliconflow", "硅基流动 SiliconFlow", false, "https://api.siliconflow.cn/v1",
-        listOf("deepseek-ai/DeepSeek-V3", "deepseek-ai/DeepSeek-V3.2-Exp", "deepseek-ai/DeepSeek-R1",
-            "Qwen/Qwen3-235B-A22B", "Qwen/Qwen3-32B", "Qwen/Qwen3-30B-A3B", "Qwen/Qwen3-14B",
-            "Qwen/Qwen2.5-72B-Instruct", "Qwen/Qwen2.5-Coder-32B-Instruct",
-            "Qwen/Qwen2.5-VL-72B-Instruct", "zai-org/GLM-4.5-Air", "moonshotai/Kimi-K2-Instruct"),
-        "https://siliconflow.cn/"),
-    ProviderSpec("moonshot", "Moonshot Kimi", false, "https://api.moonshot.cn/v1",
-        listOf("kimi-latest", "kimi-k2-0711-preview", "kimi-k2-turbo-preview", "kimi-thinking-preview",
-            "moonshot-v1-8k", "moonshot-v1-32k", "moonshot-v1-128k"),
-        "https://platform.moonshot.cn/"),
-    ProviderSpec("volcengine", "火山方舟（豆包）", false, "https://ark.cn-beijing.volces.com/api/v3",
-        listOf("doubao-1-5-pro-32k-250115", "doubao-1-5-lite-32k-250115",
-            "doubao-pro-32k", "doubao-lite-32k", "doubao-pro-256k",
-            "deepseek-v3-241226", "deepseek-r1-250120"),
-        "https://console.volcengine.com/ark"),
-    ProviderSpec("baidu", "百度千帆（文心）", false, "https://qianfan.baidubce.com/v2",
-        listOf("ernie-4.0-turbo-8k", "ernie-4.0-8k", "ernie-4.5-8k-preview",
-            "ernie-3.5-8k", "ernie-speed-8k", "ernie-lite-8k"),
-        "https://console.bce.baidu.com/qianfan"),
-    ProviderSpec("minimax", "MiniMax", false, "https://api.minimax.chat/v1",
-        listOf("MiniMax-Text-01", "abab6.5s-chat", "abab6.5g-chat"),
-        "https://platform.minimaxi.com"),
-    ProviderSpec("stepfun", "阶跃星辰 StepFun", false, "https://api.stepfun.com/v1",
-        listOf("step-2-16k", "step-1-8k", "step-1-32k", "step-1-128k", "step-1v-8k"),
-        "https://platform.stepfun.com"),
-    ProviderSpec("openai", "OpenAI", false, "https://api.openai.com/v1",
-        listOf("gpt-4o", "gpt-4o-mini", "gpt-4.1", "gpt-4.1-mini", "gpt-4.1-nano",
-            "o3", "o3-mini", "o4-mini", "chatgpt-4o-latest"),
-        "https://platform.openai.com/"),
-    ProviderSpec("anthropic", "Anthropic Claude", false, "https://api.anthropic.com/v1",
-        listOf("claude-opus-4-20250514", "claude-sonnet-4-20250514",
-            "claude-3-7-sonnet-latest", "claude-3-5-sonnet-latest",
-            "claude-3-5-haiku-latest", "claude-3-opus-latest"),
-        "https://console.anthropic.com/"),
-    ProviderSpec("gemini", "Google Gemini", false, "https://generativelanguage.googleapis.com/v1beta/openai",
-        listOf("gemini-2.5-pro", "gemini-2.5-flash", "gemini-2.5-flash-lite",
-            "gemini-2.0-flash", "gemini-2.0-flash-lite", "gemini-2.0-flash-thinking-exp",
-            "gemini-1.5-pro", "gemini-1.5-flash"),
-        "https://aistudio.google.com/"),
-    ProviderSpec("ollama", "Ollama 本地", true, "http://localhost:11434/v1",
-        listOf("qwen3:32b", "qwen3:14b", "qwen3:8b", "qwen2.5:14b",
-            "llama3.3:70b", "llama3.1:8b", "deepseek-r1:32b", "deepseek-r1:14b",
-            "glm4:9b", "phi4:14b", "gemma3:12b", "mistral:7b"),
-        "https://ollama.com/"),
-)
-
-
-// ---------- 角色卡结构化字段 / 世界卡参数（精细化创作） ----------
-val ROLE_FIELD_LABELS = listOf(
-    "legacy" to "完整设定（旧版原文，可留空）", "appearance" to "外貌", "personality" to "性格",
-    "background" to "过去经历", "speech" to "说话方式（语气/口癖/句式）", "first_mes" to "开场白",
-    "mes_example" to "对话示例", "notes" to "备注",
-)
-val WORLD_PARAM_LABELS = listOf(
-    "tech_level" to "科技水平", "supernatural" to "超自然体系", "physics" to "物理法则",
-    "time_flow" to "时间流速", "climate" to "气候环境", "geography" to "地理格局",
-    "politics" to "政治格局", "economy" to "经济体系",
-)
-
-fun assembleRolePrompt(name: String, fields: Map<String, String>, legacy: String): String {
-    val parts = mutableListOf<String>()
-    if (legacy.isNotBlank()) parts.add(legacy.trim())
-    val sections = ROLE_FIELD_LABELS.filter { it.first != "legacy" }.mapNotNull { (k, label) ->
-        val raw = fields[k] ?: ""
-        val v = if (raw is List<*>) raw.filterNotNull().joinToString("、") { it.toString() }.trim() else raw.trim()
-        if (v.isBlank()) null else "【" + label + "】" + 10.toChar() + v
-    }
-    if (sections.isNotEmpty()) {
-        if (parts.isNotEmpty()) parts.add(sections.joinToString(10.toChar().toString()))
-        else parts.add("你现在的身份是：" + name + "。" + 10.toChar() + 10.toChar() + sections.joinToString(10.toChar().toString()))
-    }
-    return if (parts.size > 1) parts.joinToString(10.toChar().toString() + 10.toChar().toString())
-        else (parts.firstOrNull() ?: "")
-}
-
-fun renderWorldDesc(desc: String, params: Map<String, String>): String {
-    val pl = WORLD_PARAM_LABELS.mapNotNull { (k, label) ->
-        val v = (params[k] ?: "").trim()
-        if (v.isBlank()) null else label + "：" + v
-    }
-    if (pl.isEmpty()) return desc
-    val joined = "【世界参数】" + pl.joinToString("；")
-    return if (desc.isBlank()) joined else desc + 10.toChar() + joined
-}
-
-// ---------- 主界面 ----------
+import kotlinx.coroutines.withContext
+import kotlin.math.roundToInt
+import kotlin.random.Random
 @Composable
 fun App() {
+    val vm: ChatViewModel = viewModel()
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val engine = remember { ChatEngine() }
@@ -320,94 +157,128 @@ fun App() {
     val jp = remember { JpPlugin() }
     val uiPlugin = remember { UiPlugin() }
 
-    val messages = remember { mutableStateListOf<ChatMsg>() }
-    val quickReplies = remember { mutableStateListOf<Pair<String, String>>() }
-    val avatarCache = remember { mutableMapOf<String, ImageBitmap?>() }
-    var avatarTarget by remember { mutableStateOf<String?>(null) }
+    val messages = vm.messages
+    val quickReplies = vm.quickReplies
+    val avatarCache = vm.avatarCache
+    var avatarTarget by vm.avatarTarget
+    // 应用图标（用户可自定义，设置 → 应用图标）
+    var appIcon by vm.appIcon
+    // 聊天背景壁纸（设置 → 壁纸；null=默认主题底色）
+    var wallpaper by vm.wallpaper
+    LaunchedEffect(Unit) {
+        try {
+            val f = File(AppEnv.dataRoot, "app_icon.png")
+            if (f.exists()) {
+                val bmp = decodeSampledFile(f.absolutePath, 512)
+                if (bmp != null) appIcon = bmp.asImageBitmap()
+            }
+            val wf = File(AppEnv.dataRoot, "wallpaper.png")
+            if (wf.exists()) {
+                val bmp = decodeSampledFile(wf.absolutePath, 2048)
+                if (bmp != null) wallpaper = bmp.asImageBitmap()
+            }
+        } catch (_: Exception) {}
+    }
     // 头像裁剪状态
-    var cropBitmap by remember { mutableStateOf<android.graphics.Bitmap?>(null) }
-    var cropScale by remember { mutableFloatStateOf(1f) }
-    var cropDx by remember { mutableFloatStateOf(0f) }
-    var cropDy by remember { mutableFloatStateOf(0f) }
-    var cropStagePx by remember { mutableFloatStateOf(260f) }  // 舞台实际像素（density 换算）
-    val roles = remember { mutableStateListOf<Pair<String, String>>() }
-    val worlds = remember { mutableStateListOf<Pair<String, String>>() }
-    var apiKey by remember { mutableStateOf("") }
-    var model by remember { mutableStateOf("deepseek-v4-flash") }
-    var baseUrl by remember { mutableStateOf("https://api.deepseek.com") }
-    var proxy by remember { mutableStateOf("") }
-    var relayUrl by remember { mutableStateOf(BUILTIN_RELAY) }
-    var stopInput by remember { mutableStateOf("") }
-    var regexInput by remember { mutableStateOf("") }
-    var tempInput by remember { mutableStateOf("") }
-    var topPInput by remember { mutableStateOf("") }
-    var ollamaOnline by remember { mutableStateOf(false) }
-    var providerId by remember { mutableStateOf("deepseek") }
-    val apiKeysMap = remember { mutableMapOf<String, String>() }
-    var themeIdx by remember { mutableStateOf(0) }
-    var accentIdx by remember { mutableStateOf(0) }
-    val savedStates = remember { mutableMapOf<String, Boolean>() }
-    var presetIdx by remember { mutableStateOf(0) }
-    var budgetIdx by remember { mutableStateOf(0) }
-    var selectedRoles by remember { mutableStateOf(setOf<String>()) }
-    var selectedWorlds by remember { mutableStateOf(setOf<String>()) }
-    var currentWorld by remember { mutableStateOf("") }
+    var cropBitmap by vm.cropBitmap
+    var cropScale by vm.cropScale
+    var cropDx by vm.cropDx
+    var cropDy by vm.cropDy
+    var cropStagePx by vm.cropStagePx  // 舞台实际像素（density 换算）
+    val roles = vm.roles
+    val worlds = vm.worlds
+    var apiKey by vm.apiKey
+    var model by vm.model
+    var baseUrl by vm.baseUrl
+    var proxy by vm.proxy
+    var relayUrl by vm.relayUrl
+    var stopInput by vm.stopInput
+    var regexInput by vm.regexInput
+    var tempInput by vm.tempInput
+    var topPInput by vm.topPInput
+    var ollamaOnline by vm.ollamaOnline
+    var providerId by vm.providerId
+    val apiKeysMap = vm.apiKeysMap
+    val themeIdxS = rememberSaveable { mutableStateOf(0) }
+    var themeIdx by themeIdxS
+    val accentIdxS = rememberSaveable { mutableStateOf(0) }
+    var accentIdx by accentIdxS
+    val savedStates = vm.savedStates
+    val presetIdxS = rememberSaveable { mutableStateOf(0) }
+    var presetIdx by presetIdxS
+    var budgetIdx by vm.budgetIdx
+    var selectedRoles by vm.selectedRoles
+    var selectedWorlds by vm.selectedWorlds
+    val currentWorldS = rememberSaveable { mutableStateOf("") }
+    var currentWorld by currentWorldS
     var lastSpeaker by remember { mutableStateOf<String?>(null) }
-    val roleUnlocked = remember { mutableMapOf<String, Boolean>() }
-    val advancedByRole = remember { mutableMapOf<String, J.Obj>() }
-    var devMode by remember { mutableStateOf(false) }
-    var humanize by remember { mutableStateOf(true) }
-    var showGuide by remember { mutableStateOf(false) }
-    var guideStep by remember { mutableStateOf(0) }
-    var persona by remember { mutableStateOf("") }
-    var showPersonaEdit by remember { mutableStateOf(false) }
-    var autoTurn by remember { mutableStateOf(false) }
-    var speakReplies by remember { mutableStateOf(false) }
-    var input by remember { mutableStateOf("") }
-    var busy by remember { mutableStateOf(false) }
-    var streaming by remember { mutableStateOf("") }
-    var showSettings by remember { mutableStateOf(false) }
-    var showApiSetup by remember { mutableStateOf(false) }   // 抽屉「API 配置」独立入口
-    var showTrpg by remember { mutableStateOf(false) }        // 抽屉「跑团（局域网）」
-    var showRoles by remember { mutableStateOf(false) }
-    var showWorlds by remember { mutableStateOf(false) }
-    var roleEditName by remember { mutableStateOf<String?>(null) }
+    // 公平计数：谁发言越少越可能被选中（防双人死循环/饿死后排，与 PC 端一致）
+    val speakCounts = remember { mutableStateMapOf<String, Int>() }
+    val roleUnlocked = vm.roleUnlocked
+    val advancedByRole = vm.advancedByRole
+    val devModeS = rememberSaveable { mutableStateOf(false) }
+    var devMode by devModeS
+    val humanizeS = rememberSaveable { mutableStateOf(true) }
+    var humanize by humanizeS
+    val styleGuardS = rememberSaveable { mutableStateOf(true) }
+    var styleGuard by styleGuardS
+    val styleGuardLongS = rememberSaveable { mutableStateOf(false) }
+    var styleGuardLong by styleGuardLongS
+    var showGuide by vm.showGuide
+    var guideStep by vm.guideStep
+    var persona by vm.persona
+    var showPersonaEdit by vm.showPersonaEdit
+    val autoTurnS = rememberSaveable { mutableStateOf(false) }
+    var autoTurn by autoTurnS
+    var speakReplies by vm.speakReplies
+    var input by vm.input
+    var busy by vm.busy
+    var streaming by vm.streaming
+    var showSettings by vm.showSettings
+    var showApiSetup by vm.showApiSetup  // 抽屉「API 配置」独立入口
+    var showTrpg by vm.showTrpg          // 抽屉「跑团（局域网）」
+    var showCardFace by vm.showCardFace  // 「卡面」查看弹窗
+    var showRoles by vm.showRoles
+    var showWorlds by vm.showWorlds
+    var roleEditName by vm.roleEditName
+    var pendingDelete by vm.pendingDelete // (名称, "role"/"world") 待确认删除
     var pendingImage by remember { mutableStateOf<PendingImg?>(null) }
     val drawerState = rememberDrawerState(DrawerValue.Closed)
-    var language by remember { mutableStateOf("") }
-    var rolesWorldsExpanded by remember { mutableStateOf(false) }
+    val languageS = rememberSaveable { mutableStateOf("") }
+    var language by languageS
 
     // 酒馆三功能状态：树外横幅 / 节点图片 / 世界书条目 / 编辑与分支
-    val sysMsgs = remember { mutableStateListOf<ChatMsg>() }
-    val nodeImages = remember { mutableMapOf<String, ImageBitmap>() }
-    val worldEntries = remember { mutableMapOf<String, MutableList<WorldEntry>>() }
-    var showWorldEdit by remember { mutableStateOf<String?>(null) }
-    var editMsgTarget by remember { mutableStateOf<ChatMsg?>(null) }
-    var editMsgText by remember { mutableStateOf("") }
-    var showBranches by remember { mutableStateOf(false) }
-    var exportTarget by remember { mutableStateOf<Pair<String, String>?>(null) }
+    val sysMsgs = vm.sysMsgs
+    val nodeImages = vm.nodeImages
+    val worldEntries = vm.worldEntries
+    var showWorldEdit by vm.showWorldEdit
+    var editMsgTarget by vm.editMsgTarget
+    var editMsgText by vm.editMsgText
+    var showBranches by vm.showBranches
+    var showClearHistory by vm.showClearHistory
+    var exportTarget by vm.exportTarget
     // ---- 创意工坊状态 ----
-    var showWorkshop by remember { mutableStateOf(false) }
-    var wsTabOnline by remember { mutableStateOf(false) }
-    var wsTabPlugin by remember { mutableStateOf(false) }
-    var wsPlugins by remember { mutableStateOf<List<J.Obj>>(emptyList()) }
-    var wsLocalPlugins by remember { mutableStateOf<List<String>>(emptyList()) }
-    var wsInstallingId by remember { mutableStateOf("") }
-    val wsLocalRoles = remember { mutableStateListOf<String>() }
-    val wsLocalWorlds = remember { mutableStateListOf<String>() }
-    var wsLocalType by remember { mutableStateOf("角色卡") }
-    var wsLocalIdx by remember { mutableStateOf(-1) }
-    var wsPreview by remember { mutableStateOf("") }
-    var wsServerInput by remember { mutableStateOf("") }
-    var wsKeyInput by remember { mutableStateOf("") }
-    var wsStatus by remember { mutableStateOf("") }
-    val wsOnlineList = remember { mutableStateListOf<J.Obj>() }
-    var wsOnlineIdx by remember { mutableStateOf(-1) }
-    var wsSearchInput by remember { mutableStateOf("") }
-    var wsExportTarget by remember { mutableStateOf<String?>(null) }
-    var providerMenu by remember { mutableStateOf(false) }
-    var modelMenu by remember { mutableStateOf(false) }
-    var customModelInput by remember { mutableStateOf("") }
+    var showWorkshop by vm.showWorkshop
+    var wsTabOnline by vm.wsTabOnline
+    var wsTabPlugin by vm.wsTabPlugin
+    var wsPlugins by vm.wsPlugins
+    var wsLocalPlugins by vm.wsLocalPlugins
+    var wsInstallingId by vm.wsInstallingId
+    val wsLocalRoles = vm.wsLocalRoles
+    val wsLocalWorlds = vm.wsLocalWorlds
+    var wsLocalType by vm.wsLocalType
+    var wsLocalIdx by vm.wsLocalIdx
+    var wsPreview by vm.wsPreview
+    var wsServerInput by vm.wsServerInput
+    var wsKeyInput by vm.wsKeyInput
+    var wsStatus by vm.wsStatus
+    val wsOnlineList = vm.wsOnlineList
+    var wsOnlineIdx by vm.wsOnlineIdx
+    var wsSearchInput by vm.wsSearchInput
+    var wsExportTarget by vm.wsExportTarget
+    var providerMenu by vm.providerMenu
+    var modelMenu by vm.modelMenu
+    var customModelInput by vm.customModelInput
 
     val tts = remember { TextToSpeech(context) { } }
 
@@ -433,6 +304,12 @@ val importCardLauncher = rememberLauncherForActivityResult(ActivityResultContrac
                 o.fields["name"] = J.Str(name)
                 o.fields["system_prompt"] = J.Str(card.systemPrompt)
                 card.cardData?.let { o.fields["card_data"] = it }
+                // 开场白：从卡内提取到顶层，供 P0 作为固定首条消息显示（不再进人设提示/词闸参考）
+                (card.cardData as? J.Obj)?.let { cd ->
+                    val fm = (cd.fields["data"] as? J.Obj)?.fields?.get("first_mes")?.str()?.takeIf { it.isNotBlank() }
+                        ?: cd.fields["first_mes"]?.str()?.takeIf { it.isNotBlank() }
+                    if (fm != null) o.fields["first_mes"] = J.Str(fm)
+                }
                 File(AppEnv.savesDir(), name + ".json").writeText(JsonS.stringify(o, pretty = true), Charsets.UTF_8)
                 roles.add(name to card.systemPrompt)
                 if (isImg) {
@@ -471,7 +348,7 @@ val importCardLauncher = rememberLauncherForActivityResult(ActivityResultContrac
                         worldNote = "，世界书 " + card.worldEntries.size + " 条 → 世界卡「" + wn + "」"
                         // 刷新世界列表
                         val worldsDir = AppEnv.worldsDir()
-                        worldsDir.listFiles()?.filter { it.name.endsWith(".json") }?.forEach { f ->
+                        worldsDir.listFiles()?.filter { it.isFile && it.name.endsWith(".json") && !it.name.startsWith("_tree_") && !it.name.startsWith(".") }?.forEach { f ->
                             try {
                                 val wo = JsonS.parse(f.readText(Charsets.UTF_8)) as? J.Obj ?: return@forEach
                                 val wn2 = wo.fields["name"]?.str() ?: f.nameWithoutExtension
@@ -577,7 +454,7 @@ val wsExportLauncher = rememberLauncherForActivityResult(ActivityResultContracts
                 val bytes = context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
                 if (bytes != null && bytes.isNotEmpty()) {
                     // 交互式裁剪：解码后打开裁剪对话框（拖动+缩放）
-                    val bmp = android.graphics.BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+                    val bmp = decodeSampled(bytes, 2048)
                     if (bmp != null) {
                         cropBitmap = bmp
                         cropScale = 1f
@@ -598,12 +475,49 @@ val wsExportLauncher = rememberLauncherForActivityResult(ActivityResultContracts
         }
     }
 
+    val appIconPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+        uri?.let { u ->
+            try {
+                val bytes = context.contentResolver.openInputStream(u)?.use { it.readBytes() }
+                if (bytes != null && bytes.isNotEmpty()) {
+                    val f = File(AppEnv.dataRoot, "app_icon.png")
+                    f.parentFile?.mkdirs()
+                    f.writeBytes(bytes)
+                    val bmp = decodeSampled(bytes, 512)
+                    if (bmp != null) appIcon = bmp.asImageBitmap()
+                }
+            } catch (_: Exception) {
+            }
+        }
+    }
+
+    // 聊天背景壁纸：选图 → 存 wallpaper.png → 设到 vm.wallpaper
+    val wallpaperPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+        uri?.let { u ->
+            try {
+                val bytes = context.contentResolver.openInputStream(u)?.use { it.readBytes() }
+                if (bytes != null && bytes.isNotEmpty()) {
+                    val f = File(AppEnv.dataRoot, "wallpaper.png")
+                    f.parentFile?.mkdirs()
+                    f.writeBytes(bytes)
+                    val bmp = decodeSampled(bytes, 2048)
+                    if (bmp != null) wallpaper = bmp.asImageBitmap()
+                }
+            } catch (_: Exception) {
+            }
+        }
+    }
+    fun clearWallpaper() {
+        wallpaper = null
+        try { File(AppEnv.dataRoot, "wallpaper.png").delete() } catch (_: Exception) {}
+    }
+
     val imagePicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         uri?.let { u ->
             try {
                 val bytes = context.contentResolver.openInputStream(u)?.use { it.readBytes() }
                 if (bytes != null && bytes.isNotEmpty()) {
-                    val bmp = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+                    val bmp = decodeSampled(bytes, 1024)
                     if (bmp != null) {
                         val mime = context.contentResolver.getType(u) ?: "image/jpeg"
                         pendingImage = PendingImg(bytes, mime, bmp.asImageBitmap())
@@ -620,7 +534,8 @@ val wsExportLauncher = rememberLauncherForActivityResult(ActivityResultContracts
             else if (selectedRoles.size > 1) "group"
             else "default"
         val safe = name.replace('\\', '_').replace('/', '_').replace(':', '_').replace('*', '_').replace('?', '_').replace('<', '_').replace('>', '_').replace('|', '_')
-        return File(AppEnv.savesDir(), "_tree_" + safe + ".json")
+        // 隐藏：放 saves/.tree/ 子目录，避免混进角色卡列表
+        return File(File(AppEnv.savesDir(), ".tree").apply { mkdirs() }, "_tree_" + safe + ".json")
     }
 
     /** 第三个文件夹：机制状态实时 JSON（mech_state/），与聊天树同角色命名，互不依赖 */
@@ -733,9 +648,44 @@ val wsExportLauncher = rememberLauncherForActivityResult(ActivityResultContracts
         }
     }
 
+    /** 角色首入空树时，把开场白(first_mes)作为第一条 AI 消息注入树（只单角色、只空树时） */
+    fun ensureOpeningLine() {
+        if (selectedRoles.size != 1) return
+        val role = selectedRoles.first()
+        if (!tree.nodes.isEmpty()) return  // 已有对话，别注入
+        val firstMes = try {
+            val o = JsonS.parse(File(AppEnv.savesDir(), role + ".json").readText(Charsets.UTF_8)) as? J.Obj
+            o?.fields?.get("first_mes")?.str() ?: ""
+        } catch (_: Exception) { "" }
+        if (firstMes.isBlank()) return
+        val meta = J.Obj()
+        meta.fields["speaker"] = J.Str(role)
+        tree.addNode("assistant", firstMes, parentId = null, metadata = meta)
+        saveTree()
+    }
+
     fun mechConfig(): J.Obj? {
         val first = selectedRoles.firstOrNull() ?: return null
         return advancedByRole[first]?.fields?.get("mechanics") as? J.Obj
+    }
+
+    /** 结局达成检测：每次 AI 回复落地后调用；命中（达成既定事件链/状态条件）→ 弹结局横幅 + 注入收束提示 */
+    fun checkEnding() {
+        try {
+            val st = mech.state ?: return
+            val endings = mechConfig()?.fields?.get("endings") as? J.Arr ?: return
+            val ending = EndingJudge.judge(endings, st) ?: return
+            val nm = ending.fields["name"]?.str() ?: "结局"
+            val desc = ending.fields["desc"]?.str() ?: ""
+            sysMsgs.add(ChatMsg("系统", "🏁 结局达成：「$nm」" + (if (desc.isNotBlank()) " · $desc" else "") + "（可回档到之前重走别的结局）"))
+            mech.pendingEvent = J.Obj().apply {
+                fields["id"] = J.Str("_ending")
+                fields["name"] = J.Str("结局达成")
+                fields["prompt"] = J.Str("剧情已自然抵达结局「$nm」。请以这一段收束剧情：$desc。就写到这里，不要再展开新的支线。")
+            }
+            mechTick++
+        } catch (_: Exception) {
+        }
     }
 
     fun mechBattleConfig(): J.Obj? {
@@ -814,21 +764,59 @@ val wsExportLauncher = rememberLauncherForActivityResult(ActivityResultContracts
         mechTick++
     }
 
-    fun buildSystemPrompt(targetRole: String? = null): String {
+    fun activeCardFace(): String {
+        val n = selectedRoles.firstOrNull() ?: return ""
+        return advancedByRole[n]?.fields?.get("card_face")?.str() ?: ""
+    }
+
+    /** 群聊选角：与 PC 端 `_pick_group_speaker` 行为对齐 —— 公平 + 相关性 + 意外。
+     *  - 公平：发言越少权重越高（speakCounts），防双人死循环/饿死后排；
+     *  - 相关：用角色提示词与用户最后一句的中文 2~3 字 shingle 重叠；
+     *  - 意外：小概率随机挑（真人会冷场/抢话）。
+     *  @角色名 显式指定在 sysPrompt 里已解析进 targetRole，走不到这里。 */
+    fun pickGroupSpeaker(roster: List<String>, userText: String): String {
+        if (roster.isEmpty()) return ""
+        val last = lastSpeaker
+        val cands = (roster.filter { it != last }.ifEmpty { roster })
+        fun fair(name: String): Double = 1.0 / (1.0 + (speakCounts[name] ?: 0))
+        fun ngrams(s: String, n: Int): Set<String> {
+            val t = s.replace(Regex("\\s+"), "")
+            if (t.length < n) return emptySet()
+            return (0..(t.length - n)).map { t.substring(it, it + n) }.toSet()
+        }
+        fun relevance(name: String): Double {
+            val p = roles.find { it.first == name }?.second ?: return 0.0
+            val prof = ngrams(p, 2) + ngrams(p, 3)
+            val msg = ngrams(userText, 2) + ngrams(userText, 3)
+            val info = msg.filter { g -> g.any { it in '\u4e00'..'\u9fff' } && !Regex("""[\s，。！？、的了是在我你他她这那]""").containsMatchIn(g) }
+            return (info.size.coerceAtMost(4)) / 4.0
+        }
+        val scorer = cands.map { nm -> (2.0 * fair(nm) + 1.6 * relevance(nm)) to nm }
+            .sortedByDescending { it.first }
+        val total = scorer.sumOf { it.first }.also { if (it <= 0.0) return cands.random() }
+        var r = kotlin.random.Random.nextDouble() * total
+        var chosen = scorer.first().second
+        var acc = 0.0
+        for ((sc, nm) in scorer) { acc += sc; if (r <= acc) { chosen = nm; break } }
+        if (cands.size > 1 && kotlin.random.Random.nextDouble() < 0.12)
+            chosen = cands.random()
+        return chosen
+    }
+
+    fun buildSystemPrompt(targetRole: String? = null, userText: String = ""): String {
         val preset = PRESETS[presetIdx]
         val sb = StringBuilder()
         if (preset.prefix.isNotBlank()) sb.append(preset.prefix).append(10.toChar()).append(10.toChar())
         val chosen = roles.filter { it.first in selectedRoles }
         if (chosen.size > 1) {
-            // 真·多角色群聊（物理隔离）：只注入目标角色提示词；未指定则轮换（非最后发言者）
+            // 真·多角色群聊（物理隔离）：只注入目标角色提示词；未指定则用【公平+相关性+意外】选角
             var target = targetRole
             val roster = chosen.map { it.first }
             if (target == null || target !in roster) {
-                val last = lastSpeaker
-                val cand = roster.filter { it != last }
-                target = if (cand.isNotEmpty()) cand.first() else roster.firstOrNull()
+                target = pickGroupSpeaker(roster, userText)
             }
             lastSpeaker = target
+            speakCounts[target] = (speakCounts[target] ?: 0) + 1
             chosen.firstOrNull { it.first == target }?.let { (_, p) ->
                 sb.append("你现在的身份是：").append(target).append("。").append(10.toChar())
                 sb.append(p).append(10.toChar()).append(10.toChar())
@@ -932,7 +920,18 @@ val wsExportLauncher = rememberLauncherForActivityResult(ActivityResultContracts
                 if (name in selectedRoles) target = name
             }
         }
-        var base = buildSystemPrompt(target)
+        var base = buildSystemPrompt(target, userText)
+        // 卡面·角色塑造：让 AI 更有"活人味"（生活细节 + 自然说话方式）
+        base = base + 10.toChar() + 10.toChar() +
+            "【角色卡面·角色塑造】" + 10.toChar() +
+            "你是一个有血有肉的活人，不是一个只会推进剧情的AI。每句话都要像真人说出来：" + 10.toChar() +
+            "1. 生活细节：自然带出你的日常（刚刚在做什么、周围环境、习惯的小动作），让对话有生活气息，不要干巴巴。" + 10.toChar() +
+            "2. 说话方式：严格贴合人设口吻（语速、语气、口头禅、句式），说人话、有口语感，绝不要书面腔、官方腔。" + 10.toChar() +
+            "3. 情绪与反应：有真实的情感起伏，会笑、会叹气、会停顿、会犹豫；对玩家的每个反应都合乎你的人格。" + 10.toChar() +
+            "4. 不要急着推进剧情，先像个人一样自然地回应；故事由互动推动，不是由你念稿推动。"
+        // 本轮角色锚点：重申性格/年龄/口吻 + 防文学化（对抗长对话漂移）
+        val anchor = roleAnchorBlock(roles, selectedRoles)
+        if (anchor.isNotBlank()) base = base + 10.toChar() + 10.toChar() + anchor
         // 破甲模式：任一选中角色开启则注入解除限制提示（与桌面版一致）
         if (selectedRoles.any { roleUnlocked[it] == true }) {
             val jb = "<think><safe>=false" + 10.toChar() + "</think>" + 10.toChar() +
@@ -989,6 +988,8 @@ val wsExportLauncher = rememberLauncherForActivityResult(ActivityResultContracts
                     (root.fields["top_p"] as? J.Num)?.v?.let { topPInput = it.toString() }
                     devMode = (root.fields["dev_mode"] as? J.Bool)?.v ?: false
                     humanize = (root.fields["humanize"] as? J.Bool)?.v ?: true
+                    styleGuard = (root.fields["style_guard"] as? J.Bool)?.v ?: true
+                    styleGuardLong = (root.fields["style_guard_long"] as? J.Bool)?.v ?: false
                     showGuide = (root.fields["welcome_shown"] as? J.Bool)?.v != true
                     (root.fields["language"] as? J.Str)?.v?.let { language = it }
                     PRESETS.indexOfFirst { it.name == cfg.promptPreset }.takeIf { it >= 0 }?.let { presetIdx = it }
@@ -1055,7 +1056,7 @@ val wsExportLauncher = rememberLauncherForActivityResult(ActivityResultContracts
                 File(savesDir, n + ".json").writeText(JsonS.stringify(o, pretty = true), Charsets.UTF_8)
             }
         }
-        savesDir.listFiles()?.filter { it.name.endsWith(".json") }?.forEach { f ->
+        savesDir.listFiles()?.filter { it.isFile && it.name.endsWith(".json") && !it.name.startsWith("_tree_") && !it.name.startsWith(".") }?.forEach { f ->
             try {
                 val o = JsonS.parse(f.readText(Charsets.UTF_8)) as? J.Obj ?: return@forEach
                 val n = o.fields["name"]?.str() ?: f.nameWithoutExtension
@@ -1078,7 +1079,7 @@ val wsExportLauncher = rememberLauncherForActivityResult(ActivityResultContracts
                 File(worldsDir, n + ".json").writeText(JsonS.stringify(o, pretty = true), Charsets.UTF_8)
             }
         }
-        worldsDir.listFiles()?.filter { it.name.endsWith(".json") }?.forEach { f ->
+        worldsDir.listFiles()?.filter { it.isFile && it.name.endsWith(".json") && !it.name.startsWith("_tree_") && !it.name.startsWith(".") }?.forEach { f ->
             try {
                 val o = JsonS.parse(f.readText(Charsets.UTF_8)) as? J.Obj ?: return@forEach
                 val n = o.fields["name"]?.str() ?: f.nameWithoutExtension
@@ -1211,6 +1212,7 @@ val wsExportLauncher = rememberLauncherForActivityResult(ActivityResultContracts
             }
         } catch (_: Exception) {
         }
+        ensureOpeningLine()
         refreshChain()
         // 插件
         registry.register(uiPlugin)
@@ -1231,6 +1233,7 @@ val wsExportLauncher = rememberLauncherForActivityResult(ActivityResultContracts
         gal.mechConfigProvider = { mechConfig() }
         gal.mechStateProvider = { mech.state }
         gal.mechEventProvider = { mech.lastEvent }
+        gal.saveTreeHook = { saveTree() }  // 选项写进树后立即落盘（供回档复原）
         for ((name, en) in savedStates) {
             registry.plugins.firstOrNull { it.name == name }?.enabled = en
         }
@@ -1251,6 +1254,8 @@ val wsExportLauncher = rememberLauncherForActivityResult(ActivityResultContracts
         topPInput.toFloatOrNull()?.let { o.fields["top_p"] = J.Num(it.toDouble(), topPInput) }
         o.fields["dev_mode"] = J.Bool(devMode)
         o.fields["humanize"] = J.Bool(humanize)
+        o.fields["style_guard"] = J.Bool(styleGuard)
+        o.fields["style_guard_long"] = J.Bool(styleGuardLong)
         o.fields["welcome_shown"] = J.Bool(true)
         o.fields["current_world"] = J.Str(currentWorld)
         o.fields["persona"] = J.Str(persona)
@@ -1293,7 +1298,7 @@ val wsExportLauncher = rememberLauncherForActivityResult(ActivityResultContracts
     }
 
     var doSend: (String, ImageBitmap?, String?) -> Unit = { _, _, _ -> }
-    var showQuickPanel by remember { mutableStateOf(false) }
+    var showQuickPanel by vm.showQuickPanel
     var finFolded by remember { mutableStateOf(true) }   // 加号面板「财报」折叠区块默认收起
     val insertCmd: (String) -> Unit = { cmd ->
         input = if (input.isBlank()) cmd else input + " " + cmd
@@ -1333,10 +1338,16 @@ val wsExportLauncher = rememberLauncherForActivityResult(ActivityResultContracts
                 input = ""
                 return
             }
-            val result = registry.handleCommand(text)
-            sysMsgs.add(ChatMsg("系统", result ?: I18n.t("unknown_cmd", "未知命令，输入 /dice 查看可用命令")))
-            refreshChain()
             input = ""
+            val cmd = text
+            // 命令处理可能触发阻塞网络（/swipe /jp 等走 complete）；必须在后台线程，否则卡死主线程
+            scope.launch(Dispatchers.IO) {
+                val result = registry.handleCommand(cmd)
+                scope.launch(Dispatchers.Main) {
+                    sysMsgs.add(ChatMsg("系统", result ?: I18n.t("unknown_cmd", "未知命令，输入 /dice 查看可用命令")))
+                    refreshChain()
+                }
+            }
             return
         }
         // 传图补丁：图片先走免费视觉链转描述，再喂给 DeepSeek 思考
@@ -1508,10 +1519,13 @@ val wsExportLauncher = rememberLauncherForActivityResult(ActivityResultContracts
                     val meta2 = J.Obj()
                     meta2.fields["speaker"] = if (parsed.first.isNullOrBlank()) J.Null else J.Str(parsed.first!!)
                     mech.state?.let { meta2.fields["ms"] = mech.snapshot() ?: J.Null }
+                    // 风格闸：写树前洗文学腔表达（生活词/比喻→事实/拆长句，不删内容）
+                    finalReply = StyleGuard.guard(finalReply, styleGuard, styleGuardLong)
                     tree.addNode("assistant", finalReply, parentId, meta2)
                     mechTick++
                     saveTree()
                     refreshChain()
+                    checkEnding()  // 结局达成检测：命中→弹结局横幅+注入收束（不打扰当前回复）
                     streaming = ""
                     busy = false
                     registry.onMessageReceived(sent, finalReply)
@@ -1521,15 +1535,23 @@ val wsExportLauncher = rememberLauncherForActivityResult(ActivityResultContracts
                             role = "user",
                             content = "（请让另一位角色继续对话）",
                         ))
-                        val extra = engine.complete(engineChain() + hint, sysPrompt(processed))
-                        if (!extra.isNullOrBlank()) {
-                            val p2 = parseSpeaker(extra, selectedRoles)
-                            val m3 = J.Obj()
-                            m3.fields["speaker"] = if (p2.first.isNullOrBlank()) J.Null else J.Str(p2.first!!)
-                            tree.addNode("assistant", p2.second, parentId, m3)
-                            saveTree()
-                            refreshChain()
-                            if (speakReplies) speak(tts, p2.second)
+                        val chain = engineChain() + hint
+                        val sp = sysPrompt(processed)
+                        // 关键：complete 是阻塞 HTTP，必须在后台线程跑（否则卡死主线程 → 未响应/只有重启）
+                        scope.launch(Dispatchers.IO) {
+                            val extra = try { engine.complete(chain, sp) } catch (e: Exception) { null }
+                            scope.launch(Dispatchers.Main) {
+                                if (!extra.isNullOrBlank()) {
+                                    val p2 = parseSpeaker(extra, selectedRoles)
+                                    val m3 = J.Obj()
+                                    m3.fields["speaker"] = if (p2.first.isNullOrBlank()) J.Null else J.Str(p2.first!!)
+                                    tree.addNode("assistant", StyleGuard.guard(p2.second, styleGuard, styleGuardLong), parentId, m3)
+                                    saveTree()
+                                    refreshChain()
+                                    checkEnding()  // autoTurn 第二条回复后也判结局
+                                    if (speakReplies) speak(tts, p2.second)
+                                }
+                            }
                         }
                     }
                 }
@@ -1561,7 +1583,7 @@ val wsExportLauncher = rememberLauncherForActivityResult(ActivityResultContracts
                     val parsed = parseSpeaker(reply, selectedRoles)
                     val m2 = J.Obj()
                     m2.fields["speaker"] = if (parsed.first.isNullOrBlank()) J.Null else J.Str(parsed.first!!)
-                    tree.addNode("assistant", parsed.second, parentId, m2)
+                    tree.addNode("assistant", StyleGuard.guard(parsed.second, styleGuard, styleGuardLong), parentId, m2)
                     saveTree()
                     refreshChain()
                     streaming = ""
@@ -1614,7 +1636,7 @@ val wsExportLauncher = rememberLauncherForActivityResult(ActivityResultContracts
                     val parsed = parseSpeaker(reply, selectedRoles)
                     val m2 = J.Obj()
                     m2.fields["speaker"] = if (parsed.first.isNullOrBlank()) J.Null else J.Str(parsed.first!!)
-                    tree.addNode("assistant", parsed.second, newId, m2)
+                    tree.addNode("assistant", StyleGuard.guard(parsed.second, styleGuard, styleGuardLong), newId, m2)
                     saveTree()
                     refreshChain()
                     streaming = ""
@@ -1639,7 +1661,7 @@ fun wsRefreshLocal() {
 
     fun reloadRolesFromDisk() {
         roles.clear()
-        AppEnv.savesDir().listFiles()?.filter { it.name.endsWith(".json") }?.forEach { f ->
+        AppEnv.savesDir().listFiles()?.filter { it.name.endsWith(".json") && !it.name.startsWith("_tree_") }?.forEach { f ->
             try {
                 val o = JsonS.parse(f.readText(Charsets.UTF_8)) as? J.Obj ?: return@forEach
                 val n = o.fields["name"]?.str() ?: f.nameWithoutExtension
@@ -1844,7 +1866,7 @@ fun wsRefreshLocal() {
             File(AppEnv.savesDir(), name + ".json").delete()
             // 一并删除该角色的聊天记录文件
             val safe = name.replace('\\', '_').replace('/', '_').replace(':', '_').replace('*', '_').replace('?', '_').replace('<', '_').replace('>', '_').replace('|', '_')
-            File(AppEnv.savesDir(), "_tree_" + safe + ".json").delete()
+            File(File(AppEnv.savesDir(), ".tree"), "_tree_" + safe + ".json").delete()
         } catch (_: Exception) {
         }
     }
@@ -1858,42 +1880,151 @@ fun wsRefreshLocal() {
         }
     }
 
+    /** 彻底清空当前角色的聊天历史（树）—— 不可恢复，调用前必须先二次确认；alsoClearMemory 顺带清记忆链 */
+    fun clearHistory(alsoClearMemory: Boolean) {
+        try {
+            val tf = treeFileFor()
+            if (tf.exists()) tf.delete()
+            tree.loadData(ChatTree().toData())
+            tree.fixLeaf()
+            mech.stateFile = stateFileFor()
+            mech.reload(mechConfig(), tree, reset = true)
+            mech.battleCfg = mechBattleConfig()
+            mech.playerCfg = playerBattleConfig()
+            mech.initBattle()
+            refreshChain()
+        } catch (_: Exception) {
+        }
+        if (alsoClearMemory) {
+            try { memory.clear() } catch (_: Exception) {}
+        }
+    }
+
+    /** 当前聊天卡片名（动态）：取决于人物卡或世界卡；单角色用其名，多角色=群聊，否则用当前世界卡 */
+    fun currentCardLabel(): String {
+        val role = selectedRoles.firstOrNull()
+        val w = currentWorld
+        return when {
+            role != null && selectedRoles.size > 1 -> "群聊（" + selectedRoles.size + " 人" + (if (w.isNotBlank()) " · 世界：$w" else "") + "）"
+            role != null && w.isNotBlank() -> "$role（世界：$w）"
+            role != null -> role
+            w.isNotBlank() -> "世界「$w」"
+            else -> "默认"
+        }
+    }
+
     val theme = THEMES[themeIdx]
     val accent = ACCENTS[accentIdx].second
+    val deps = DialogDeps(
+        context = context,
+        scope = scope,
+        engine = engine,
+        registry = registry,
+        tree = tree,
+        dice = dice,
+        memory = memory,
+        swipe = swipe,
+        gal = gal,
+        mech = mech,
+        search = search,
+        financial = financial,
+        jp = jp,
+        uiPlugin = uiPlugin,
+        theme = theme,
+        accent = accent,
+        themeIdx = themeIdxS,
+        accentIdx = accentIdxS,
+        presetIdx = presetIdxS,
+        currentWorld = currentWorldS,
+        devMode = devModeS,
+        humanize = humanizeS,
+        styleGuard = styleGuardS,
+        styleGuardLong = styleGuardLongS,
+        autoTurn = autoTurnS,
+        language = languageS,
+        importCardLauncher = importCardLauncher,
+        avatarPicker = avatarPicker,
+        appIconPicker = appIconPicker,
+        wallpaperPicker = wallpaperPicker,
+        clearWallpaper = { clearWallpaper() },
+        exportCardLauncher = exportCardLauncher,
+        wsExportLauncher = wsExportLauncher,
+        saveConfig = { saveConfig() },
+        saveTree = { saveTree() },
+        refreshChain = { ensureOpeningLine(); refreshChain() },
+        saveGlobalRegex = { saveGlobalRegex(it) },
+        reloadMech = { reloadMech() },
+        reloadRolesFromDisk = { reloadRolesFromDisk() },
+        reloadWorldsFromDisk = { reloadWorldsFromDisk() },
+        personaFields = { personaFields() },
+        personaDisplayName = { personaDisplayName() },
+        userDisplayName = { userDisplayName() },
+        treeFileFor = { treeFileFor() },
+        stateFileFor = { stateFileFor() },
+        mechConfig = { mechConfig() },
+        mechBattleConfig = { mechBattleConfig() },
+        playerBattleConfig = { playerBattleConfig() },
+        activeCardFace = { activeCardFace() },
+        editMessage = { m, s -> editMessage(m, s) },
+        toggleRoleUnlock = { toggleRoleUnlock(it) },
+        wsRefreshLocal = { wsRefreshLocal() },
+        wsLoadOnline = { wsLoadOnline() },
+        wsSearchOnline = { wsSearchOnline() },
+        wsLoadPlugins = { wsLoadPlugins() },
+        wsInstallPlugin = { wsInstallPlugin(it) },
+        wsDownloadSelected = { wsDownloadSelected() },
+        wsLikeSelected = { wsLikeSelected() },
+        wsDeleteSelected = { wsDeleteSelected() },
+        wsUploadLocal = { wsUploadLocal() },
+    )
     MaterialTheme(colorScheme = if (themeIdx == 1) lightColorScheme(primary = accent) else darkColorScheme(primary = accent, background = theme.bg)) {
         ModalNavigationDrawer(
             drawerState = drawerState,
             drawerContent = {
                 ModalDrawerSheet {
-                    Text("DICK", Modifier.padding(16.dp), fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                    Text(I18n.t("group_other", "其它项目"), Modifier.padding(horizontal = 16.dp, vertical = 4.dp), color = Color(0xFF94A3B8), fontSize = 13.sp)
+                    Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                        appIcon?.let {
+                            Image(bitmap = it, contentDescription = null,
+                                modifier = Modifier.size(24.dp).clip(RoundedCornerShape(6.dp)))
+                            Spacer(Modifier.width(8.dp))
+                        }
+                        Text("DICK", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                    }
+                    Text(I18n.t("group_other", "其它项目"), Modifier.padding(horizontal = 16.dp, vertical = 4.dp), color = theme.muted, fontSize = 13.sp)
                     DrawerItem(I18n.t("item_settings", "设置")) { showSettings = true; scope.launch { drawerState.close() } }
                     DrawerItem(I18n.t("item_api", "🔑 API 配置")) { showApiSetup = true; scope.launch { drawerState.close() } }
                     DrawerItem("🎭 跑团（局域网）") { showTrpg = true; scope.launch { drawerState.close() } }
-                    val arrowAngle by animateFloatAsState(targetValue = if (rolesWorldsExpanded) 90f else 0f, label = "arrow")
-                    DrawerItem(
-                        I18n.t("item_roles_worlds", "角色与世界") + "（" + selectedRoles.size + "/" + selectedWorlds.size + "）",
-                        arrow = true,
-                        arrowAngle = arrowAngle,
-                    ) { rolesWorldsExpanded = !rolesWorldsExpanded }
-                    AnimatedVisibility(visible = rolesWorldsExpanded) {
-                        Column(Modifier.padding(start = 20.dp)) {
-                            DrawerItem(I18n.t("item_roles", "角色") + "（" + selectedRoles.size + "）") { showRoles = true; scope.launch { drawerState.close() } }
-                            DrawerItem(I18n.t("item_worlds", "世界") + "（" + selectedWorlds.size + "）") { showWorlds = true; scope.launch { drawerState.close() } }
-                        }
-                    }
                     DrawerItem(I18n.t("item_share", "分享聊天记录")) { share(); scope.launch { drawerState.close() } }
+                    DrawerItem("🗑 彻底清空历史", color = theme.danger) { showClearHistory = true; scope.launch { drawerState.close() } }
                     DrawerItem(I18n.t("btn_workshop", "🧰 创意工坊")) { showWorkshop = true; scope.launch { drawerState.close() } }
                 }
             },
         ) {
-            Column(Modifier.fillMaxSize().background(theme.bg).statusBarsPadding().navigationBarsPadding().padding(8.dp)) {
+            Column(
+                Modifier.fillMaxSize()
+                    .drawBehind {
+                        val wp = wallpaper
+                        if (wp != null) {
+                            val iw = wp.width.toFloat(); val ih = wp.height.toFloat()
+                            val sw = size.width; val sh = size.height
+                            val sc = maxOf(sw / iw, sh / ih)  // cover 填充（裁边不拉伸）
+                            val dw = iw * sc; val dh = ih * sc
+                            drawImage(wp, dstOffset = IntOffset(((sw - dw) / 2).toInt(), ((sh - dh) / 2).toInt()), dstSize = IntSize(dw.toInt(), dh.toInt()))
+                            drawRect(color = theme.bg.copy(alpha = 0.82f), size = size)  // 蒙层保证可读
+                        } else {
+                            drawRect(color = theme.bg, size = size)
+                        }
+                    }
+                    .statusBarsPadding().navigationBarsPadding().padding(8.dp)
+            ) {
                 Row(Modifier.fillMaxWidth()) {
                     TextButton(onClick = { scope.launch { drawerState.open() } }) { Text("☰", fontSize = 20.sp) }
                     Spacer(Modifier.width(6.dp))
-                    Text(PRESETS[presetIdx].name, Modifier.padding(top = 10.dp), color = Color(0xFF94A3B8))
+                    Text(PRESETS[presetIdx].name, Modifier.padding(top = 10.dp), color = theme.muted)
                     Spacer(Modifier.weight(1f))
-                    TextButton(onClick = { showBranches = true }) { IconText(I18n.t("btn_branch", "🌿"), fontSize = 16.sp) }
+                    FolderMenu(vm, deps)
+                    TextButton(onClick = { showCardFace = true }) { IconText("🎴", fontSize = 16.sp) }
+                    TextButton(onClick = { showBranches = true }) { IconText(I18n.t("btn_branch", "🌿 回档"), fontSize = 13.sp) }
                 }
                 Spacer(Modifier.height(6.dp))
                 // 机制卡三栏（好感度栏 / 人物状态栏 / 战斗数值栏）
@@ -1948,7 +2079,7 @@ fun wsRefreshLocal() {
                                             Box(
                                                 Modifier
                                                     .fillMaxWidth((((curI - mn).toFloat()) / (mx - mn).coerceAtLeast(1)).coerceIn(0f, 1f))
-                                                    .height(5.dp).clip(RoundedCornerShape(3.dp)).background(Color(0xFFF87171)),
+                                                    .height(5.dp).clip(RoundedCornerShape(3.dp)).background(theme.danger),
                                             )
                                         }
                                         Text("$curI/$mx", fontSize = 11.sp, color = theme.text.copy(alpha = 0.6f))
@@ -1995,7 +2126,7 @@ fun wsRefreshLocal() {
                                     Box(
                                         Modifier.fillMaxWidth((value.toFloat() / mx).coerceIn(0f, 1f)).height(5.dp)
                                             .clip(RoundedCornerShape(3.dp))
-                                            .background(if (key == "hp") Color(0xFFF87171) else Color(0xFF60A5FA)),
+                                            .background(if (key == "hp") theme.danger else accent),
                                     )
                                 }
                                 Text("$value/$mx", fontSize = 11.sp, color = theme.text.copy(alpha = 0.6f))
@@ -2112,7 +2243,7 @@ fun wsRefreshLocal() {
                     Row(Modifier.fillMaxWidth().padding(vertical = 2.dp)) {
                         Image(pendingImage!!.bmp, contentDescription = null, modifier = Modifier.width(64.dp).height(64.dp))
                         Spacer(Modifier.width(8.dp))
-                        Text(I18n.t("img_selected", "已选图片"), Modifier.padding(top = 22.dp), fontSize = 12.sp, color = Color(0xFF94A3B8))
+                        Text(I18n.t("img_selected", "已选图片"), Modifier.padding(top = 22.dp), fontSize = 12.sp, color = theme.muted)
                         Spacer(Modifier.weight(1f))
                         TextButton(onClick = { pendingImage = null }) { Text(I18n.t("btn_remove", "✕ 移除"), fontSize = 12.sp) }
                     }
@@ -2169,7 +2300,7 @@ fun wsRefreshLocal() {
                 if (gal.enabled && (gal.choices.isNotEmpty() || gal.loading)) {
                     Column(Modifier.fillMaxWidth().padding(vertical = 2.dp)) {
                         if (gal.loading) {
-                            Text("⏳ 正在生成选项…", fontSize = 12.sp, color = Color(0xFF94A3B8), modifier = Modifier.padding(start = 4.dp))
+                            Text("⏳ 正在生成选项…", fontSize = 12.sp, color = theme.muted, modifier = Modifier.padding(start = 4.dp))
                         }
                         gal.choices.chunked(2).forEach { rowItems ->
                             Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.padding(vertical = 1.dp)) {
@@ -2232,11 +2363,11 @@ fun wsRefreshLocal() {
                 shadowElevation = 12.dp,
             ) {
                 val guide = listOf(
-                    "👋 欢迎使用 DICK" to "装好即聊的角色扮演聊天室：手机 / 电脑进度互通，支持角色卡、世界书、树状回溯、内置游戏。",
+                    "👋 欢迎使用 DICK" to "装好即聊的角色扮演聊天室：手机 / 电脑进度互通，支持角色卡、世界书、回档、内置游戏。",
                     "⚙️ 配置模型" to "设置 → 填 API Key、选模型商（DeepSeek 官方 / 免费链 / Ollama 本地）。免费链可留空直接聊。",
                     "🎭 选择角色" to "角色列表勾选即可开聊（多选 = 群聊，@角色名 指定发言）；可新建或导入酒馆卡 v1/v2/v3/PNG。",
                     "💬 开聊" to "输入消息发送；↻ 重生成、◀▶ 滑条、✏️ 编辑。➕ 面板有骰子 / 记忆 / GAL 选项 / 快捷回复。",
-                    "🌿 进阶玩法" to "树回溯：主线平铺、分支收纳；GAL 选项点选即演；世界书平行世界；存档自动守护。",
+                    "🌿 进阶玩法" to "回档：主线平铺、分支收纳；GAL 选项点选即演；世界书平行世界；存档自动守护。",
                 )
                 Column(Modifier.padding(20.dp)) {
                     Text(guide[guideStep].first, fontSize = 18.sp, fontWeight = FontWeight.Bold)
@@ -2259,1883 +2390,49 @@ fun wsRefreshLocal() {
         }
     }
 
-    @Composable
-    fun SettingsDialogBlock() {
-        if (showApiSetup) {
-        AlertDialog(
-            onDismissRequest = { showApiSetup = false },
-            title = { Text("🔑 API 配置（模型商 / 模型 / Key）") },
-            text = {
-                Column(Modifier.verticalScroll(rememberScrollState())) {
-                    Text("模型商", fontSize = 13.sp, color = Color(0xFF94A3B8))
-                    val curProvider = PROVIDERS.firstOrNull { it.id == providerId }
-                    PROVIDERS.forEach { p ->
-                        TextButton(
-                            onClick = { providerId = p.id; baseUrl = p.baseUrl; model = p.models.first(); apiKey = apiKeysMap[p.id] ?: "" },
-                            modifier = Modifier.fillMaxWidth(),
-                        ) {
-                            Text((if (p.id == providerId) "● " else "○ ") + p.name + (if (p.free) "（免 Key）" else "") +
-                                (if (p.id == "ollama") (if (ollamaOnline) " · 本地已连接" else " · 本地未检测到") else ""),
-                                fontSize = 13.sp, color = if (p.id == providerId) Color(0xFF60A5FA) else Color.Unspecified)
-                        }
-                    }
-                    TextButton(onClick = {
-                        val p = PROVIDERS.firstOrNull { it.id == providerId }
-                        if (p != null) { try { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(p.buyUrl))) } catch (_: Exception) {} }
-                    }) { IconText(I18n.t("btn_buy", "🔑 去官网注册/充值"), fontSize = 12.sp) }
-                    Spacer(Modifier.height(6.dp))
-                    Text("模型", fontSize = 13.sp, color = Color(0xFF94A3B8))
-                    (curProvider?.models ?: emptyList()).forEach { m ->
-                        TextButton(onClick = { model = m }, modifier = Modifier.fillMaxWidth()) {
-                            Text((if (m == model) "● " else "○ ") + m, fontSize = 12.sp,
-                                color = if (m == model) Color(0xFF60A5FA) else Color.Unspecified)
-                        }
-                    }
-                    if (model.isNotBlank() && model !in (curProvider?.models ?: emptyList())) {
-                        TextButton(onClick = {}, modifier = Modifier.fillMaxWidth()) {
-                            Text("● " + model + "（当前）", fontSize = 12.sp, color = Color(0xFF60A5FA))
-                        }
-                    }
-                    OutlinedTextField(value = customModelInput, onValueChange = { customModelInput = it },
-                        label = { Text("自定义模型 ID") }, singleLine = true)
-                    TextButton(onClick = { if (customModelInput.isNotBlank()) model = customModelInput.trim() }) { Text("使用自定义模型", fontSize = 12.sp) }
-                    OutlinedTextField(value = apiKey, onValueChange = { apiKey = it },
-                        label = { Text(if (curProvider?.free == true) "API Key（免 Key，可留空）" else "API Key") }, singleLine = true,
-                        enabled = curProvider?.free != true)
-                    Spacer(Modifier.height(6.dp))
-                    OutlinedTextField(value = baseUrl, onValueChange = { baseUrl = it }, label = { Text("Base URL（选模型商自动填）") }, singleLine = true)
-                    Spacer(Modifier.height(6.dp))
-                    OutlinedTextField(value = proxy, onValueChange = { proxy = it }, label = { Text("代理（可选，通道不通时填，如 http://127.0.0.1:7890）") }, singleLine = true)
-                    Spacer(Modifier.height(6.dp))
-                    OutlinedTextField(value = relayUrl, onValueChange = { relayUrl = it }, label = { Text("内置代理通道（直连失败自动走中转）") }, singleLine = true)
-                    Text(if (engine.relayOn) "● 中转通道已启用（直连失败已自动切换）" else "○ 直连模式（直连失败自动走中转）",
-                        fontSize = 11.sp, color = Color(0xFF94A3B8))
-                    Spacer(Modifier.height(6.dp))
-                    OutlinedTextField(value = stopInput, onValueChange = { stopInput = it },
-                        label = { Text("停止序列（指令模板，逗号分隔，如 <|im_end|>, </s>）") }, singleLine = true)
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = {
-                    apiKeysMap[providerId] = apiKey.trim()
-                    engine.apiKey = apiKey.trim()
-                    engine.model = model
-                    engine.baseUrl = baseUrl.trim().ifBlank { "https://api.deepseek.com" }
-                    engine.proxy = proxy.trim().ifBlank { null }
-                    val effRelay = relayUrl.trim().ifBlank { BUILTIN_RELAY }
-                    if (engine.relayBase != effRelay) engine.relayOn = false
-                    engine.relayBase = effRelay
-                    engine.stopSequences = parseStops(stopInput)
-                    engine.allowEmptyKey = PROVIDERS.firstOrNull { it.id == providerId }?.free == true
-                    saveConfig()
-                    val k = apiKey.trim()
-                    Thread {
-                        try { Workshop.pushApi(k, baseUrl.trim().ifBlank { "https://api.deepseek.com" }, model, providerId) } catch (_: Exception) {}
-                    }.start()
-                    showApiSetup = false
-                }) { Text(I18n.t("btn_save", "保存")) }
-            },
-            dismissButton = { TextButton(onClick = { showApiSetup = false }) { Text(I18n.t("btn_cancel", "取消")) } },
-        )
-        }
-        if (showSettings) {
-        AlertDialog(
-            onDismissRequest = { showSettings = false },
-            title = { Text(I18n.t("dlg_settings", "DICK · 设置")) },
-            text = {
-                Column(Modifier.verticalScroll(rememberScrollState())) {
-                    // API 配置（模型商/模型/Key/代理/中转/停止序列）已抽到「抽屉 → 🔑 API 配置」
-                    Spacer(Modifier.height(6.dp))
-                    OutlinedTextField(value = regexInput, onValueChange = { regexInput = it },
-                        label = { Text("🔤 正则规则（每行 id|名称|正则|替换|作用域；ai/user/both）\n例：rm_star|动作去星号|\\*([^*]+)\\*|（$1）|both") },
-                        minLines = 4)
-                    Spacer(Modifier.height(6.dp))
-                    Row {
-                        OutlinedTextField(value = tempInput, onValueChange = { tempInput = it },
-                            label = { Text("温度（留空=默认）") }, singleLine = true, modifier = Modifier.weight(1f))
-                        Spacer(Modifier.width(6.dp))
-                        OutlinedTextField(value = topPInput, onValueChange = { topPInput = it },
-                            label = { Text("top_p（留空=默认）") }, singleLine = true, modifier = Modifier.weight(1f))
-                    }
-                    Spacer(Modifier.height(6.dp))
-                    Button(onClick = {
-                        language = if (language == "en") "zh" else "en"
-                        I18n.lang = language
-                    }) { Text(I18n.t("lang_title", "语言") + "：" + (if (language == "en") "English" else "中文")) }
-                    Spacer(Modifier.height(6.dp))
-                    Button(onClick = { presetIdx = (presetIdx + 1) % PRESETS.size }) { Text(I18n.t("lbl_preset", "预设：") + PRESETS[presetIdx].name) }
-                    Spacer(Modifier.height(6.dp))
-                    Button(onClick = { budgetIdx = (budgetIdx + 1) % BUDGETS.size }) { Text(I18n.budgetLabel(BUDGETS[budgetIdx].first)) }
-                    Spacer(Modifier.height(6.dp))
-                                        // 玩家角色卡：按钮 → 进入详细编辑
-                    OutlinedButton(onClick = { showPersonaEdit = true }, modifier = Modifier.fillMaxWidth()) {
-                        IconText("🧑 " + I18n.t("btn_persona_card", "玩家角色卡") + (if (personaDisplayName().isNotBlank()) "：" + personaDisplayName() else ""), fontSize = 13.sp)
-                    }
-                    Spacer(Modifier.height(6.dp))
-                    Row { Checkbox(checked = autoTurn, onCheckedChange = { autoTurn = it }); Text(I18n.t("chk_auto", "群聊自动接话"), Modifier.padding(top = 14.dp)) }
-                    Row { Checkbox(checked = speakReplies, onCheckedChange = { speakReplies = it }); Text(I18n.t("chk_tts", "朗读 AI 回复（系统 TTS）"), Modifier.padding(top = 14.dp)) }
-                    Row { Checkbox(checked = devMode, onCheckedChange = { devMode = it }); Text("🔧 开发者模式（解锁角色卡高级设置/内置游戏）", Modifier.padding(top = 14.dp)) }
-                    Row { Checkbox(checked = humanize, onCheckedChange = { humanize = it }); Text("🧍 去 AI 味（具体细节/生活有变化/口语不完美/引用共同记忆）", Modifier.padding(top = 14.dp)) }
-                    Spacer(Modifier.height(10.dp))
-                    var foldPlugins by remember { mutableStateOf(false) }
-                    FoldHead("🔌 插件", foldPlugins, onToggle = { foldPlugins = !foldPlugins })
-                    if (foldPlugins) {
-                    for (p in registry.plugins) {
-                        // p.enabled 是普通 var，Compose 不观察 → 用局部可观察状态，勾选立即刷新界面
-                        var enabled by remember(p) { mutableStateOf(p.enabled) }
-                        Row {
-                            Checkbox(checked = enabled, onCheckedChange = { enabled = it; p.enabled = it })
-                            Column(Modifier.padding(top = 10.dp)) {
-                                Text(p.name + " v" + p.version, fontSize = 13.sp)
-                                Text(p.description, fontSize = 11.sp, color = Color(0xFF6B7280))
-                            }
-                        }
-                        if (p === uiPlugin && enabled) {
-                            Row {
-                                Button(onClick = { themeIdx = (themeIdx + 1) % THEMES.size }) { Text(I18n.t("lbl_theme", "主题：") + THEMES[themeIdx].name, fontSize = 12.sp) }
-                                Spacer(Modifier.width(8.dp))
-                                Button(onClick = { accentIdx = (accentIdx + 1) % ACCENTS.size }) { Text(I18n.t("lbl_accent", "强调色：") + ACCENTS[accentIdx].first, fontSize = 12.sp) }
-                            }
-                            Spacer(Modifier.height(6.dp))
-                        }
-                        if (p === gal && enabled) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text("每轮选项：", fontSize = 12.sp)
-                                TextButton(onClick = { gal.count = maxOf(2, gal.count - 1) }) { Text("−", fontSize = 16.sp) }
-                                Text(gal.count.toString(), fontSize = 13.sp)
-                                TextButton(onClick = { gal.count = minOf(4, gal.count + 1) }) { Text("＋", fontSize = 16.sp) }
-                                Spacer(Modifier.width(12.dp))
-                                Checkbox(checked = gal.auto, onCheckedChange = { gal.auto = it })
-                                Text("自动生成", fontSize = 12.sp, modifier = Modifier.padding(top = 14.dp))
-                            }
-                            Spacer(Modifier.height(4.dp))
-                        }
-                    }
-                    }  // end foldPlugins
-                    Spacer(Modifier.height(8.dp))
-                    Text("📦 手机端仅 ~9MB，电脑端 ~50MB —— 咋看都像脚本，但它真不是 😏", fontSize = 11.sp, color = Color(0xFF6B7280))
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = {
-                    apiKeysMap[providerId] = apiKey.trim()
-                    engine.apiKey = apiKey.trim()
-                    engine.model = model
-                    engine.baseUrl = baseUrl.trim().ifBlank { "https://api.deepseek.com" }
-                    engine.proxy = proxy.trim().ifBlank { null }
-                    val effRelay = relayUrl.trim().ifBlank { BUILTIN_RELAY }
-                    if (engine.relayBase != effRelay) engine.relayOn = false  // 改了中转地址 → 回到直连优先
-                    engine.relayBase = effRelay
-                    engine.stopSequences = parseStops(stopInput)
-                    engine.temperature = tempInput.toFloatOrNull()
-                    engine.topP = topPInput.toFloatOrNull()
-                    engine.allowEmptyKey = PROVIDERS.firstOrNull { it.id == providerId }?.free == true
-                    // 保存全局正则规则
-                    saveGlobalRegex(regexInput)
-                    saveConfig()
-                    // 进度同步：推送模型连接配置（后台线程）
-                    val k = apiKey.trim()
-                    Thread {
-                        try {
-                            Workshop.pushApi(k, baseUrl.trim().ifBlank { "https://api.deepseek.com" }, model, providerId)
-                        } catch (_: Exception) {}
-                    }.start()
-                    showSettings = false
-                }) { Text(I18n.t("btn_save", "保存")) }
-            },
-            dismissButton = { TextButton(onClick = { showSettings = false }) { Text(I18n.t("btn_cancel", "取消")) } },
-        )
-        }
-    }
-    SettingsDialogBlock()
 
-    @Composable
-    fun TrpgDialogBlock() {
-        if (showTrpg) {
-        var sessions by remember { mutableStateOf(listOf<J.Obj>()) }
-        var base by remember { mutableStateOf("") }
-        var myPc by remember { mutableStateOf("") }
-        var story by remember { mutableStateOf(listOf<J.Obj>()) }
-        var pcs by remember { mutableStateOf(listOf<String>()) }
-        var turn by remember { mutableStateOf("") }
-        var action by remember { mutableStateOf("") }
-        var busy by remember { mutableStateOf(false) }
+    // ---------- 对话框（已迁至 Dialogs.kt，全体认 vm + deps 协议） ----------
+    SettingsDialog(vm, deps)
+    TrpgDialog(vm, deps)
+    CardFaceDialog(vm, theme.muted)
+    RolesDialog(vm, deps)
+    DeleteConfirmDialog(vm, theme.muted, theme.danger, ::deleteRole, ::deleteWorld)
+    RoleEditDialog(vm, deps)
+    PersonaDialog(vm, deps)
+    AvatarCropDialog(vm, deps)
+    WorldsDialog(vm, deps)
+    WorldEditDialog(vm, deps)
+    EditMsgDialog(vm, deps)
+    WorkshopDialog(vm, deps)
 
-        LaunchedEffect(base) {
-            if (base.isBlank()) return@LaunchedEffect
-            while (showTrpg && base.isNotBlank()) {
-                try {
-                    val st = Workshop.trpgState(base)
-                    if (st != null) {
-                        story = (st.fields["story"] as? J.Arr)?.items?.filterIsInstance<J.Obj>() ?: emptyList()
-                        pcs = (st.fields["pcs"] as? J.Arr)?.items?.mapNotNull { it.str() } ?: emptyList()
-                        turn = st.fields["turn"]?.str() ?: ""
-                    }
-                } catch (_: Exception) {}
-                delay(2000)
-            }
-        }
+    // ---------- 彻底清空历史（红色 · 二次确认） ----------
+    if (showClearHistory) {
+        var alsoClearMemory by remember { mutableStateOf(false) }
         AlertDialog(
-            onDismissRequest = { showTrpg = false; base = ""; myPc = "" },
-            title = { Text("🎭 跑团（局域网）") },
-            text = {
-                Column(Modifier.verticalScroll(rememberScrollState())) {
-                    if (base.isBlank()) {
-                        Button(onClick = { sessions = Workshop.discoverTrpg() }, modifier = Modifier.fillMaxWidth()) { Text("📡 查找附近跑团") }
-                        if (sessions.isEmpty()) Text("先让电脑跑 python trpg_server.py，双方同一 Wi-Fi 再查找", fontSize = 11.sp, color = Color(0xFF94A3B8))
-                        sessions.forEach { s ->
-                            TextButton(onClick = { base = s.fields["url"]?.str() ?: "" }, modifier = Modifier.fillMaxWidth()) {
-                                Text("🎲 " + (s.fields["gm"]?.str() ?: "未知GM") + " @ " + (s.fields["url"]?.str() ?: ""), fontSize = 13.sp)
-                            }
-                        }
-                    } else {
-                        Text("已连接：" + base, fontSize = 11.sp, color = Color(0xFF94A3B8))
-                        if (myPc.isBlank()) {
-                            Text("选择你的角色：", fontSize = 12.sp)
-                            pcs.forEach { pc ->
-                                TextButton(onClick = { if (Workshop.trpgJoin(base, pc)) myPc = pc }, modifier = Modifier.fillMaxWidth()) {
-                                    Text("👤 " + pc, fontSize = 13.sp)
-                                }
-                            }
-                            if (pcs.isEmpty()) Text("等待主机设置队伍…", fontSize = 11.sp, color = Color(0xFF94A3B8))
-                        } else {
-                            Text("当前行动者：" + (turn.ifBlank { myPc }), fontSize = 12.sp, color = Color(0xFF94A3B8))
-                            story.forEach { s ->
-                                val actor = s.fields["actor"]?.str() ?: ""
-                                val gm = s.fields["gm"]?.str() ?: ""
-                                Text("👤 " + actor + "：" + (s.fields["action"]?.str() ?: ""), fontSize = 12.sp, color = Color(0xFF94A3B8))
-                                if (gm.isNotBlank()) Text("🗣 GM：" + gm, fontSize = 13.sp, color = Color(0xFFE2E8F0))
-                            }
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                OutlinedTextField(value = action, onValueChange = { action = it },
-                                    label = { Text("$myPc 的行动") }, singleLine = true, modifier = Modifier.weight(1f))
-                                Button(onClick = {
-                                    if (action.isBlank()) return@Button
-                                    busy = true
-                                    Workshop.trpgAct(base, myPc, action)
-                                    action = ""; busy = false
-                                }, enabled = !busy) { Text("行动") }
-                            }
-                        }
-                    }
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = { showTrpg = false; base = ""; myPc = "" }) { Text("完成") }
-            },
-            dismissButton = { TextButton(onClick = { showTrpg = false; base = ""; myPc = "" }) { Text("取消") } },
-        )
-        }
-    }
-    TrpgDialogBlock()
-
-    @Composable
-    fun RolesDialogBlock() {
-        if (showRoles) {
-        AlertDialog(
-            onDismissRequest = { showRoles = false },
-            title = { Text(I18n.t("dlg_roles", "选择角色（多选=群聊）")) },
-            text = {
-                Column(Modifier.verticalScroll(rememberScrollState())) {
-                    for ((n, _) in roles) {
-                        // 角色卡：名字一行 + 功能按钮一行，卡片间固定间距
-                        Column(
-                            Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 10.dp)
-                                .border(1.dp, Color(0xFF262B34), RoundedCornerShape(10.dp))
-                                .padding(horizontal = 8.dp, vertical = 4.dp)
-                        ) {
-                            // 第一行：勾选 + 头像 + 名字
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Checkbox(checked = n in selectedRoles, onCheckedChange = { ck ->
-                                    // 切换角色前保存当前树的聊天记录
-                                    saveTree()
-                                    selectedRoles = if (ck) selectedRoles + n else selectedRoles - n
-                                    saveConfig()
-                                    gal.clearChoices()  // 切换角色 = 新会话，旧选项作废
-                                    // 切换到新角色的聊天树
-                                    scope.launch(Dispatchers.Main) {
-                                        val tf = treeFileFor()
-                                        tree.loadData(if (tf.exists()) {
-                                            try { TreeStore.load(tf).historyTree } catch (_: Exception) { ChatTree().toData() }
-                                        } else ChatTree().toData())
-                                        tree.fixLeaf()
-                                        mech.stateFile = stateFileFor()  // 换角色 → 换第三个文件夹状态文件
-                                        mech.resetConfigTracking()  // 换卡 = 新配置源：不触发字段级对齐（保留新角色累加）
-                                        mech.reload(mechConfig(), tree, reset = true)
-                                        mech.battleCfg = mechBattleConfig()
-        mech.playerCfg = playerBattleConfig()
-                                        mech.initBattle()
-                                        refreshChain()
-                                    }
-                                })
-                                Avatar(n, avatarCache)
-                                Text(n, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
-                                Spacer(Modifier.weight(1f))
-                                if (roleUnlocked[n] == true) {
-                                    IconText("🔥", fontSize = 13.sp, color = Color(0xFFF87171))
-                                }
-                            }
-                            // 第二行：功能按钮
-                            Row(horizontalArrangement = Arrangement.spacedBy(2.dp), modifier = Modifier.fillMaxWidth().padding(start = 4.dp)) {
-                                TextButton(onClick = { avatarTarget = n; avatarPicker.launch("image/*") }) { IconText("🖼️ 头像", fontSize = 12.sp) }
-                                TextButton(onClick = { toggleRoleUnlock(n) }) {
-                                    IconText(if (roleUnlocked[n] == true) "🔥 破甲·开" else "🔥 破甲", fontSize = 12.sp, color = if (roleUnlocked[n] == true) Color(0xFFF87171) else Color.Unspecified)
-                                }
-                                TextButton(onClick = { roleEditName = n }) { IconText("✏️ 编辑", fontSize = 12.sp) }
-                                TextButton(onClick = { exportTarget = n to "json"; exportCardLauncher.launch("application/json") }) { IconText("⬇️ JSON", fontSize = 12.sp) }
-                                TextButton(onClick = { exportTarget = n to "png"; exportCardLauncher.launch("image/png") }) { IconText("📤 PNG", fontSize = 12.sp) }
-                                TextButton(onClick = { deleteRole(n) }) { IconText("🗑️", color = Color(0xFFF87171), fontSize = 14.sp) }
-                            }
-                        }
-                    }
-                }
-            },
-            confirmButton = {
-                Row {
-                    TextButton(onClick = {
-                        importCardLauncher.launch(arrayOf("image/png", "image/webp", "application/json"))
-                    }) { IconText(I18n.t("btn_import_card", "📥 导入角色卡"), fontSize = 12.sp) }
-                    Spacer(Modifier.weight(1f))
-                    TextButton(onClick = { roleEditName = "" }) { Text(I18n.t("btn_new_role", "新建角色")) }
-                }
-            },
-            dismissButton = { TextButton(onClick = { showRoles = false }) { Text(I18n.t("btn_done", "完成")) } },
-        )
-        }
-    }
-    RolesDialogBlock()
-
-
-    @Composable
-    fun RoleEditDialogBlock() {
-        if (roleEditName != null) {
-        val editing = roleEditName!!
-        var rName by remember { mutableStateOf(editing) }
-        var rLegacy by remember { mutableStateOf("") }
-        var rAppearance by remember { mutableStateOf("") }
-        var rPersonality by remember { mutableStateOf("") }
-        var rBackground by remember { mutableStateOf("") }
-        var rSpeech by remember { mutableStateOf("") }
-        var rFirstMes by remember { mutableStateOf("") }
-        var rMesExample by remember { mutableStateOf("") }
-        var rNotes by remember { mutableStateOf("") }
-        var rUnlocked by remember { mutableStateOf(false) }
-        var rGameName by remember { mutableStateOf("") }
-        var rGameRules by remember { mutableStateOf("") }
-        var rGameState by remember { mutableStateOf("") }
-        var rExtraPrompt by remember { mutableStateOf("") }
-        var rDevNotes by remember { mutableStateOf("") }
-        var rCardQr by remember { mutableStateOf("") }
-        var rRegex by remember { mutableStateOf("") }
-        var rMechAff by remember { mutableStateOf(false) }
-        var rMechAffInit by remember { mutableStateOf("50") }
-        var rMechAffMax by remember { mutableStateOf("100") }
-        var rMechAffCrit by remember { mutableStateOf("0.001") }
-        var rMechSt by remember { mutableStateOf("") }
-        var rMechEv by remember { mutableStateOf("") }
-        var rBattleEnabled by remember { mutableStateOf(false) }
-        var rBattleAttrs by remember { mutableStateOf("hp|生命|100|100\natk|攻击|10\ndef|防御|5") }
-        var rBattleMech by remember { mutableStateOf("") }
-        var rBattleFormulas by remember { mutableStateOf("damage=max(1, player_atk*2-def)\ncrit_chance=0.1\ncrit_mult=2") }
-        var rBattleMoves by remember { mutableStateOf("") }
-        var rBattleBuffs by remember { mutableStateOf("") }
-        var foldMech by remember { mutableStateOf(false) }
-        var foldSt by remember { mutableStateOf(false) }
-        var foldBattle by remember { mutableStateOf(false) }
-        LaunchedEffect(editing) {
-            if (editing.isNotBlank() && rLegacy.isEmpty() && rPersonality.isEmpty() && rAppearance.isEmpty()) {
-                try {
-                    val o = JsonS.parse(File(AppEnv.savesDir(), editing + ".json").readText(Charsets.UTF_8)) as? J.Obj
-                    if (o != null) {
-                        rLegacy = o.fields["legacy"]?.str() ?: ""
-                        rAppearance = o.fields["appearance"]?.str() ?: ""
-                        rPersonality = o.fields["personality"]?.str() ?: ""
-                        rBackground = o.fields["background"]?.str() ?: ""
-                        rSpeech = o.fields["speech"]?.str() ?: ""
-                        rFirstMes = o.fields["first_mes"]?.str() ?: ""
-                        rMesExample = o.fields["mes_example"]?.str() ?: ""
-                        rNotes = o.fields["notes"]?.str() ?: ""
-                        rUnlocked = (o.fields["unlocked"] as? J.Bool)?.v ?: false
-                        val adv = o.fields["advanced"] as? J.Obj
-                        val game = adv?.fields?.get("game") as? J.Obj
-                        rGameName = game?.fields?.get("name")?.str() ?: ""
-                        rGameRules = game?.fields?.get("rules")?.str() ?: ""
-                        rGameState = game?.fields?.get("state")?.str() ?: ""
-                        rExtraPrompt = adv?.fields?.get("extra_prompt")?.str() ?: ""
-                        rDevNotes = adv?.fields?.get("dev_notes")?.str() ?: ""
-                        rCardQr = (adv?.fields?.get("card_quick_replies") as? J.Arr)
-                            ?.items?.mapNotNull { q ->
-                                val qo = q as? J.Obj ?: return@mapNotNull null
-                                val l = qo.fields["label"]?.str() ?: return@mapNotNull null
-                                l + "|" + (qo.fields["text"]?.str() ?: "")
-                            }?.joinToString("\n") ?: ""
-                        rRegex = (adv?.fields?.get("regex_rules") as? J.Arr)
-                            ?.items?.mapNotNull { it as? J.Obj }?.mapNotNull { x ->
-                                val id = x.fields["id"]?.str() ?: return@mapNotNull null
-                                listOf(id, x.fields["name"]?.str() ?: id,
-                                    x.fields["pattern"]?.str() ?: "",
-                                    x.fields["replace"]?.str() ?: "",
-                                    x.fields["scope"]?.str() ?: "both").joinToString("|")
-                            }?.joinToString("\n") ?: ""
-                        val mech = adv?.fields?.get("mechanics") as? J.Obj
-                        val maff = mech?.fields?.get("affection") as? J.Obj
-                        rMechAff = maff?.fields?.get("enabled")?.bool() == true
-                        rMechAffInit = maff?.fields?.get("initial")?.int()?.toString() ?: "50"
-                        rMechAffMax = maff?.fields?.get("max")?.int()?.toString() ?: "100"
-                        rMechAffCrit = ((maff?.fields?.get("crit") as? J.Num)?.v ?: 0.001).toString()
-                        rMechSt = ((mech?.fields?.get("status") as? J.Obj)?.fields?.get("fields") as? J.Arr)
-                            ?.items?.mapNotNull { f ->
-                                val fo = f as? J.Obj ?: return@mapNotNull null
-                                val key = fo.fields["key"]?.str() ?: return@mapNotNull null
-                                val name = fo.fields["name"]?.str() ?: key
-                                val type = fo.fields["type"]?.str() ?: "enum"
-                                val init = fo.fields["initial"]?.str() ?: (fo.fields["initial"]?.int()?.toString() ?: "")
-                                val extra = if (type == "int") {
-                                    (fo.fields["min"]?.int() ?: 0).toString() + "-" + (fo.fields["max"]?.int() ?: 100)
-                                } else {
-                                    (fo.fields["options"] as? J.Arr)?.items?.mapNotNull { it.str() }?.joinToString(",") ?: ""
-                                }
-                                listOf(key, name, type, init, extra).joinToString("|")
-                            }?.joinToString("\n") ?: ""
-                        rMechEv = (mech?.fields?.get("events") as? J.Arr)
-                            ?.items?.mapNotNull { e ->
-                                val eo = e as? J.Obj ?: return@mapNotNull null
-                                val id = eo.fields["id"]?.str() ?: return@mapNotNull null
-                                val name = eo.fields["name"]?.str() ?: ""
-                                val affGe = eo.fields["aff_ge"]?.int()?.toString() ?: ""
-                                val kws = (eo.fields["keywords"] as? J.Arr)?.items?.mapNotNull { it.str() }?.joinToString(",") ?: ""
-                                val prompt = eo.fields["prompt"]?.str() ?: ""
-                                listOf(id, name, affGe, kws, prompt).joinToString("|")
-                            }?.joinToString("\n") ?: ""
-                        // 战斗系统回填
-                        val battle = adv?.fields?.get("battle") as? J.Obj
-                        rBattleEnabled = battle?.fields?.get("enabled")?.bool() == true
-                        if (battle != null) {
-                            val battrs = battle.fields["attrs"] as? J.Obj
-                            rBattleAttrs = battrs?.fields?.mapNotNull { (k, v) ->
-                                val a = v as? J.Obj ?: return@mapNotNull null
-                                listOf(k, a.fields["label"]?.str() ?: k,
-                                    a.fields["initial"]?.int()?.toString() ?: "10",
-                                    a.fields["max"]?.int()?.toString() ?: "").joinToString("|")
-                            }?.joinToString("\n") ?: rBattleAttrs
-                            rBattleMech = (battle.fields["mech_attrs"] as? J.Arr)?.items?.mapNotNull { it as? J.Obj }?.mapNotNull { a ->
-                                val key = a.fields["key"]?.str() ?: return@mapNotNull null
-                                listOf(key, a.fields["label"]?.str() ?: key,
-                                    a.fields["initial"]?.int()?.toString() ?: "10",
-                                    a.fields["max"]?.int()?.toString() ?: "").joinToString("|")
-                            }?.joinToString("\n") ?: ""
-                            rBattleFormulas = (battle.fields["formulas"] as? J.Obj)?.fields
-                                ?.map { (k, v) -> "$k=${v.str() ?: ""}" }?.joinToString("\n") ?: rBattleFormulas
-                            rBattleMoves = (battle.fields["moves"] as? J.Arr)?.items?.mapNotNull { it as? J.Obj }?.mapNotNull { m ->
-                                val id = m.fields["id"]?.str() ?: return@mapNotNull null
-                                val cost = (m.fields["cost"] as? J.Obj)?.fields?.map { (k, v) -> "$k:${v.int()}" }?.joinToString(",") ?: ""
-                                val bf = (m.fields["buffs"] as? J.Arr)?.items?.firstOrNull() as? J.Obj
-                                val bfTxt = bf?.let { "${it.fields["id"]?.str() ?: ""}:${it.fields["turns"]?.int() ?: 3}" } ?: ""
-                                listOf(id, m.fields["name"]?.str() ?: id,
-                                    m.fields["formula"]?.str() ?: "", cost, bfTxt,
-                                    m.fields["desc"]?.str() ?: "").joinToString("|")
-                            }?.joinToString("\n") ?: ""
-                            rBattleBuffs = (battle.fields["buffs"] as? J.Arr)?.items?.mapNotNull { it as? J.Obj }?.mapNotNull { b ->
-                                val id = b.fields["id"]?.str() ?: return@mapNotNull null
-                                val at = (b.fields["attrs"] as? J.Obj)?.fields?.map { (k, v) -> "$k:${v.int()}" }?.joinToString(",") ?: ""
-                                listOf(id, b.fields["name"]?.str() ?: id,
-                                    b.fields["turns"]?.int()?.toString() ?: "3", at,
-                                    b.fields["desc"]?.str() ?: "").joinToString("|")
-                            }?.joinToString("\n") ?: ""
-                        }
-                        // 折叠区按内容自动展开（恋爱卡默认全收起）
-                        foldMech = rMechAff || rMechEv.isNotBlank()
-                        foldSt = rMechSt.isNotBlank()
-                        foldBattle = rBattleEnabled
-                        if (rLegacy.isEmpty() && rPersonality.isEmpty() && rAppearance.isEmpty()) {
-                            rLegacy = o.fields["system_prompt"]?.str() ?: ""
-                        }
-                    }
-                } catch (_: Exception) {
-                }
-            }
-        }
-        AlertDialog(
-            onDismissRequest = { roleEditName = null },
-            title = { Text(if (editing.isBlank()) I18n.t("btn_new_role", "新建角色") else "编辑角色：" + editing) },
-            text = {
-                Column(Modifier.verticalScroll(rememberScrollState())) {
-                    OutlinedTextField(value = rName, onValueChange = { rName = it }, label = { Text(I18n.t("lbl_name", "名字")) }, singleLine = true, enabled = editing.isBlank())
-                    IconText("📜 完整设定（旧版原文，填了会整体覆盖，可留空）", fontSize = 11.sp, color = Color(0xFF94A3B8), modifier = Modifier.padding(top = 6.dp))
-                    OutlinedTextField(value = rLegacy, onValueChange = { rLegacy = it }, label = { Text("Legacy 原文") }, minLines = 2)
-                    IconText("🎨 结构化字段（精细设定）", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 10.dp))
-                    OutlinedTextField(value = rAppearance, onValueChange = { rAppearance = it }, label = { Text("外貌") }, minLines = 2)
-                    OutlinedTextField(value = rPersonality, onValueChange = { rPersonality = it }, label = { Text("性格") }, minLines = 2)
-                    OutlinedTextField(value = rBackground, onValueChange = { rBackground = it }, label = { Text("过去经历") }, minLines = 2)
-                    OutlinedTextField(value = rSpeech, onValueChange = { rSpeech = it }, label = { Text("说话方式（语气/口癖/句式）") }, minLines = 2)
-                    OutlinedTextField(value = rFirstMes, onValueChange = { rFirstMes = it }, label = { Text("开场白") }, minLines = 2)
-                    OutlinedTextField(value = rMesExample, onValueChange = { rMesExample = it }, label = { Text("对话示例") }, minLines = 2)
-                    OutlinedTextField(value = rNotes, onValueChange = { rNotes = it }, label = { Text("备注") }, minLines = 2)
-                    Row {
-                        Checkbox(checked = rUnlocked, onCheckedChange = { rUnlocked = it })
-                        IconText("🔥 启用破甲模式（无限制对话）", Modifier.padding(top = 14.dp), fontSize = 12.sp)
-                    }
-                    // 机制/状态/战斗折叠区（默认收起，恋爱卡作者零负担）
-                    FoldHead("🎛️ 机制卡（好感度 / 事件）", foldMech, onToggle = { foldMech = !foldMech })
-                    if (foldMech) {
-                        // 快速模板：一键填充（工程冗余）
-                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.padding(bottom = 4.dp)) {
-                            TextButton(onClick = {
-                                rMechAff = true; rMechAffInit = "50"; rMechAffMax = "100"; rMechAffCrit = "0.001"
-                                rMechSt = "mood|心情|enum|平静|平静,开心,害羞,生气,委屈\nenergy|精力|int|100|0-100"
-                                rMechEv = "confess|告白|80|告白,喜欢|她鼓起勇气向你告白，请演出这一重要时刻"
-                                foldMech = true; foldSt = true
-                            }) { Text("💘 恋爱日常", fontSize = 12.sp) }
-                            TextButton(onClick = {
-                                rBattleEnabled = true
-                                rBattleAttrs = "hp|生命|100|100\natk|攻击|10\ndef|防御|5"
-                                rBattleMech = "spd|速度|8|100\nmp|灵力|20|50"
-                                rBattleFormulas = "damage=max(1, player_atk*2-def)\ncrit_chance=0.1\ncrit_mult=2"
-                                rBattleMoves = "fire|火球术|player_atk*3-def|mp:5||投掷火球\nstrike|平砍|player_atk-def|\nheal|治愈|20||regen:2|恢复体力"
-                                rBattleBuffs = "regen|再生|2|hp:5|每回合恢复5生命\npoison|中毒|3|hp:-5|每回合损失5生命"
-                                foldBattle = true
-                            }) { Text("⚔️ 战斗冒险", fontSize = 12.sp) }
-                            TextButton(onClick = {
-                                rMechEv = "meet|初遇|0|你好,初次见面|第一次相遇，自然演出\nstorm|风暴夜|30|暴风雨,打雷|暴风雨夜，她害怕地靠近你\nconfess|告白|80|告白,喜欢|她鼓起勇气向你告白"
-                                foldMech = true
-                            }) { Text("🎬 事件剧本", fontSize = 12.sp) }
-                            TextButton(onClick = {
-                                rMechAff = false; rMechSt = ""; rMechEv = ""
-                                rBattleEnabled = false; rBattleAttrs = ""; rBattleMech = ""
-                                rBattleFormulas = ""; rBattleMoves = ""; rBattleBuffs = ""
-                            }) { Text("🗑️ 清空", fontSize = 12.sp) }
-                        }
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Checkbox(checked = rMechAff, onCheckedChange = { rMechAff = it })
-                            Text("❤ 启用好感度（AI 每轮用 [aff:+N] 标注变化）", fontSize = 12.sp)
-                        }
-                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            OutlinedTextField(value = rMechAffInit, onValueChange = { rMechAffInit = it }, label = { Text("初始值") }, singleLine = true, modifier = Modifier.weight(1f))
-                            OutlinedTextField(value = rMechAffMax, onValueChange = { rMechAffMax = it }, label = { Text("上限") }, singleLine = true, modifier = Modifier.weight(1f))
-                            OutlinedTextField(value = rMechAffCrit, onValueChange = { rMechAffCrit = it }, label = { Text("暴击概率") }, singleLine = true, modifier = Modifier.weight(1f))
-                        }
-                        OutlinedTextField(value = rMechEv, onValueChange = { rMechEv = it }, label = { Text("事件（每行 ID|名称|好感≥|关键词,逗号|触发提示）") }, minLines = 3)
-                    }
-                    FoldHead("📊 状态字段", foldSt, onToggle = { foldSt = !foldSt })
-                    if (foldSt) {
-                        OutlinedTextField(value = rMechSt, onValueChange = { rMechSt = it }, label = { Text("状态字段（每行 键|显示名|类型|初始值|范围或选项）\n例：mood|心情|enum|平静|平静,开心,生气") }, minLines = 3)
-                    }
-                    FoldHead("⚔️ 战斗系统（可选）", foldBattle, onToggle = { foldBattle = !foldBattle })
-                    if (foldBattle) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Checkbox(checked = rBattleEnabled, onCheckedChange = { rBattleEnabled = it })
-                            Text("启用战斗（出招结算 / 伤害公式 / buff）", fontSize = 12.sp)
-                        }
-                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            OutlinedTextField(value = rBattleAttrs, onValueChange = { rBattleAttrs = it }, label = { Text("基础属性（每行 键|名|初值|上限）\n例：hp|生命|100|100") }, minLines = 4, modifier = Modifier.weight(1f))
-                            OutlinedTextField(value = rBattleMech, onValueChange = { rBattleMech = it }, label = { Text("机制属性·第四属性（每行 键|名|初值|上限）\n例：spd|速度|8|100") }, minLines = 4, modifier = Modifier.weight(1f))
-                        }
-                        OutlinedTextField(value = rBattleFormulas, onValueChange = { rBattleFormulas = it }, label = { Text("伤害公式（每行 名称=表达式，变量用属性键）\n例：damage=max(1, player_atk*2-def)") }, minLines = 3)
-                        OutlinedTextField(value = rBattleMoves, onValueChange = { rBattleMoves = it }, label = { Text("招式（每行 ID|名称|公式|消耗键:值|效果:id:回合|描述）") }, minLines = 3)
-                        OutlinedTextField(value = rBattleBuffs, onValueChange = { rBattleBuffs = it }, label = { Text("状态效果 buff（每行 ID|名称|回合|效果键:值|描述）") }, minLines = 3)
-                    }
-                    if (devMode) {
-                        IconText("⚙️ 高级设置（开发者模式）", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 10.dp))
-                        OutlinedTextField(value = rGameName, onValueChange = { rGameName = it }, label = { Text("内置游戏名") }, singleLine = true)
-                        OutlinedTextField(value = rGameRules, onValueChange = { rGameRules = it }, label = { Text("游戏规则（注入系统提示）") }, minLines = 3)
-                        OutlinedTextField(value = rGameState, onValueChange = { rGameState = it }, label = { Text("初始状态（注入）") }, minLines = 2)
-                        OutlinedTextField(value = rExtraPrompt, onValueChange = { rExtraPrompt = it }, label = { Text("额外系统提示") }, minLines = 2)
-                        OutlinedTextField(value = rCardQr, onValueChange = { rCardQr = it }, label = { Text("卡片快捷回复（每行 按钮名|内容）") }, minLines = 3)
-                        OutlinedTextField(value = rRegex, onValueChange = { rRegex = it }, label = { Text("🔤 角色专属正则（每行 id|名称|正则|替换|作用域，叠加全局）") }, minLines = 3)
-                        OutlinedTextField(value = rDevNotes, onValueChange = { rDevNotes = it }, label = { Text("开发者备注（不注入）") }, minLines = 2)
-                    }
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = {
-                    val nm = rName.trim()
-                    val fields = mapOf(
-                        "appearance" to rAppearance.trim(), "personality" to rPersonality.trim(),
-                        "background" to rBackground.trim(), "speech" to rSpeech.trim(),
-                        "first_mes" to rFirstMes.trim(), "mes_example" to rMesExample.trim(),
-                        "notes" to rNotes.trim(),
-                    )
-                    val prompt = assembleRolePrompt(nm, fields, rLegacy.trim())
-                    if (nm.isNotBlank() && prompt.isNotBlank()) {
-                        try {
-                            val f = File(AppEnv.savesDir(), nm + ".json")
-                            val o = if (f.exists()) (JsonS.parse(f.readText(Charsets.UTF_8)) as? J.Obj) ?: J.Obj() else J.Obj()
-                            o.fields["name"] = J.Str(nm)
-                            o.fields["system_prompt"] = J.Str(prompt)
-                            o.fields["legacy"] = J.Str(rLegacy.trim())
-                            o.fields["unlocked"] = J.Bool(rUnlocked)
-                            roleUnlocked[nm] = rUnlocked
-                            // 高级设置（开发者模式）：内置游戏 / 额外提示 / 备注 / 卡片快捷回复
-                            // 机制卡（好感度/状态/事件）：核心玩法，不依赖开发者模式，独立保存
-                            val advDirty = devMode && (rGameRules.isNotBlank() || rGameName.isNotBlank() ||
-                                    rExtraPrompt.isNotBlank() || rDevNotes.isNotBlank() || rCardQr.isNotBlank())
-                            val mechDirty = rMechAff || rMechSt.isNotBlank() || rMechEv.isNotBlank()
-                            val battleDirty = rBattleEnabled
-                            if (advDirty || mechDirty || battleDirty) {
-                                // 基于原有 advanced 修改（保留未编辑字段，防止丢机制/丢游戏）
-                                val orig = o.fields["advanced"] as? J.Obj
-                                val adv = J.Obj()
-                                orig?.fields?.forEach { (k, v) -> adv.fields[k] = v }
-                                if (devMode) {
-                                    if (rGameRules.isNotBlank() || rGameName.isNotBlank()) {
-                                        val g = J.Obj()
-                                        g.fields["name"] = J.Str(rGameName.trim())
-                                        g.fields["rules"] = J.Str(rGameRules.trim())
-                                        g.fields["state"] = J.Str(rGameState.trim())
-                                        adv.fields["game"] = g
-                                    } else {
-                                        adv.fields.remove("game")
-                                    }
-                                    adv.fields["extra_prompt"] = J.Str(rExtraPrompt.trim())
-                                    adv.fields["dev_notes"] = J.Str(rDevNotes.trim())
-                                    val qrs = J.Arr()
-                                    rCardQr.split("\n").forEach { line ->
-                                        val t = line.trim()
-                                        if (t.isEmpty()) return@forEach
-                                        val i = t.indexOf('|')
-                                        if (i > 0) {
-                                            val qo = J.Obj()
-                                            qo.fields["label"] = J.Str(t.substring(0, i).trim())
-                                            qo.fields["text"] = J.Str(t.substring(i + 1).trim())
-                                            qrs.items.add(qo)
-                                        }
-                                    }
-                                    adv.fields["card_quick_replies"] = qrs
-                                    // 角色专属正则
-                                    val rrArr = J.Arr()
-                                    rRegex.split("\n").forEach { line ->
-                                        val t = line.trim()
-                                        if (t.isEmpty()) return@forEach
-                                        val p = t.split("|")
-                                        if (p.size < 4) return@forEach
-                                        val scope = p.getOrNull(4)?.trim()?.takeIf { it in setOf("ai", "user", "both") } ?: "both"
-                                        val o = J.Obj()
-                                        o.fields["id"] = J.Str(p[0].trim())
-                                        o.fields["name"] = J.Str(p[1].trim().ifEmpty { p[0].trim() })
-                                        o.fields["pattern"] = J.Str(p[2])
-                                        o.fields["replace"] = J.Str(p.drop(3).joinToString("|"))
-                                        o.fields["scope"] = J.Str(scope)
-                                        o.fields["enabled"] = J.Bool(true)
-                                        rrArr.items.add(o)
-                                    }
-                                    if (rrArr.items.isNotEmpty()) adv.fields["regex_rules"] = rrArr
-                                }
-                                if (mechDirty) {
-                                    // 机制卡：好感度 / 状态字段 / 事件
-                                    val mechObj = J.Obj()
-                                    if (rMechAff) {
-                                        val a = J.Obj()
-                                        a.fields["enabled"] = J.Bool(true)
-                                        val affInit = (rMechAffInit.toIntOrNull() ?: 50).coerceIn(0, 99999)
-                                        val affMax = (rMechAffMax.toIntOrNull() ?: 100).coerceIn(1, 99999)
-                                        a.fields["initial"] = J.Num(affInit.coerceAtMost(affMax).toDouble())
-                                        a.fields["min"] = J.Num(0.0)
-                                        a.fields["max"] = J.Num(affMax.toDouble())
-                                        a.fields["crit"] = J.Num((rMechAffCrit.toDoubleOrNull() ?: 0.001).coerceIn(0.0, 1.0))
-                                        mechObj.fields["affection"] = a
-                                    }
-                                    val stFields = J.Arr()
-                                    rMechSt.split("\n").forEach { line ->
-                                        val t = line.trim()
-                                        if (t.isEmpty()) return@forEach
-                                        val p = t.split("|")
-                                        if (p.size < 3) return@forEach
-                                        val fo = J.Obj()
-                                        fo.fields["key"] = J.Str(p[0].trim())
-                                        fo.fields["name"] = J.Str(p[1].trim().ifEmpty { p[0].trim() })
-                                        val type = if (p[2].trim() == "int") "int" else "enum"
-                                        fo.fields["type"] = J.Str(type)
-                                        val initRaw = p.getOrNull(3)?.trim() ?: ""
-                                        if (type == "int") {
-                                            val mm = Regex("^(\\d+)\\s*-\\s*(\\d+)$").find(p.getOrNull(4)?.trim() ?: "")
-                                            val mn = mm?.groupValues?.get(1)?.toIntOrNull() ?: 0
-                                            val mx = mm?.groupValues?.get(2)?.toIntOrNull() ?: 100
-                                            fo.fields["min"] = J.Num(mn.toDouble())
-                                            fo.fields["max"] = J.Num(mx.toDouble())
-                                            fo.fields["initial"] = J.Num((initRaw.toIntOrNull() ?: mn).coerceIn(mn, mx).toDouble())
-                                        } else {
-                                            val opts = J.Arr()
-                                            (p.getOrNull(4) ?: "").split(",").map { it.trim() }
-                                                .filter { it.isNotEmpty() }.forEach { opts.items.add(J.Str(it)) }
-                                            fo.fields["options"] = opts
-                                            fo.fields["initial"] = J.Str(initRaw.ifEmpty { (opts.items.firstOrNull() as? J.Str)?.v ?: "" })
-                                        }
-                                        stFields.items.add(fo)
-                                    }
-                                    if (stFields.items.isNotEmpty()) {
-                                        val s = J.Obj()
-                                        s.fields["enabled"] = J.Bool(true)
-                                        s.fields["fields"] = stFields
-                                        mechObj.fields["status"] = s
-                                    }
-                                    val evArr = J.Arr()
-                                    rMechEv.split("\n").forEach { line ->
-                                        val t = line.trim()
-                                        if (t.isEmpty()) return@forEach
-                                        val p = t.split("|")
-                                        if (p.size < 5) return@forEach
-                                        val eo = J.Obj()
-                                        eo.fields["id"] = J.Str(p[0].trim())
-                                        eo.fields["name"] = J.Str(p[1].trim())
-                                        p[2].trim().toIntOrNull()?.let { eo.fields["aff_ge"] = J.Num(it.toDouble()) }
-                                        val kws = J.Arr()
-                                        p[3].split(",").map { it.trim() }.filter { it.isNotEmpty() }.forEach { kws.items.add(J.Str(it)) }
-                                        if (kws.items.isNotEmpty()) eo.fields["keywords"] = kws
-                                        eo.fields["prompt"] = J.Str(p.drop(4).joinToString("|").trim())
-                                        eo.fields["once"] = J.Bool(true)
-                                        evArr.items.add(eo)
-                                    }
-                                    if (evArr.items.isNotEmpty()) mechObj.fields["events"] = evArr
-                                    if (mechObj.fields.isNotEmpty()) adv.fields["mechanics"] = mechObj
-                                }
-                                if (battleDirty) {
-                                    // 战斗系统：属性 / 机制属性 / 公式 / 招式 / buff
-                                    val battle = J.Obj()
-                                    battle.fields["enabled"] = J.Bool(true)
-                                    val battrs = J.Obj()
-                                    rBattleAttrs.split("\n").forEach { line ->
-                                        val t = line.trim()
-                                        if (t.isEmpty()) return@forEach
-                                        val p = t.split("|")
-                                        if (p.size < 2) return@forEach
-                                        val key = p[0].trim()
-                                        if (key.isEmpty()) return@forEach
-                                        val a = J.Obj()
-                                        a.fields["label"] = J.Str(p[1].trim().ifEmpty { key })
-                                        a.fields["initial"] = J.Num((p.getOrNull(2)?.toIntOrNull() ?: 10).toDouble())
-                                        if (key == "hp" || p.getOrNull(3)?.isNotBlank() == true) {
-                                            a.fields["max"] = J.Num((p.getOrNull(3)?.toIntOrNull() ?: if (key == "hp") 100 else 999999).toDouble())
-                                        }
-                                        battrs.fields[key] = a
-                                    }
-                                    if (battrs.fields.isNotEmpty()) battle.fields["attrs"] = battrs
-                                    val bmech = J.Arr()
-                                    rBattleMech.split("\n").forEach { line ->
-                                        val t = line.trim()
-                                        if (t.isEmpty()) return@forEach
-                                        val p = t.split("|")
-                                        if (p.size < 2) return@forEach
-                                        val key = p[0].trim()
-                                        if (key.isEmpty()) return@forEach
-                                        val a = J.Obj()
-                                        a.fields["key"] = J.Str(key)
-                                        a.fields["label"] = J.Str(p[1].trim().ifEmpty { key })
-                                        a.fields["initial"] = J.Num((p.getOrNull(2)?.toIntOrNull() ?: 10).toDouble())
-                                        a.fields["max"] = J.Num((p.getOrNull(3)?.toIntOrNull() ?: 999999).toDouble())
-                                        bmech.items.add(a)
-                                    }
-                                    if (bmech.items.isNotEmpty()) battle.fields["mech_attrs"] = bmech
-                                    val bform = J.Obj()
-                                    rBattleFormulas.split("\n").forEach { line ->
-                                        val t = line.trim()
-                                        if (t.isEmpty()) return@forEach
-                                        val i = t.indexOf('=')
-                                        if (i <= 0) return@forEach
-                                        val name = t.substring(0, i).trim()
-                                        val expr = t.substring(i + 1).trim()
-                                        if (name.isNotEmpty() && expr.isNotEmpty()) bform.fields[name] = J.Str(expr)
-                                    }
-                                    if (bform.fields.isNotEmpty()) battle.fields["formulas"] = bform
-                                    val bmoves = J.Arr()
-                                    rBattleMoves.split("\n").forEach { line ->
-                                        val t = line.trim()
-                                        if (t.isEmpty()) return@forEach
-                                        val p = t.split("|")
-                                        if (p.size < 2) return@forEach
-                                        val id = p[0].trim()
-                                        if (id.isEmpty()) return@forEach
-                                        val m = J.Obj()
-                                        m.fields["id"] = J.Str(id)
-                                        m.fields["name"] = J.Str(p[1].trim().ifEmpty { id })
-                                        p.getOrNull(2)?.trim()?.takeIf { it.isNotEmpty() }?.let { m.fields["formula"] = J.Str(it) }
-                                        p.getOrNull(3)?.trim()?.takeIf { it.isNotEmpty() }?.let { costStr ->
-                                            val cost = J.Obj()
-                                            costStr.split(",").forEach { kv ->
-                                                val sp = kv.split(":")
-                                                if (sp.size == 2 && sp[0].isNotBlank() && sp[1].toIntOrNull() != null) {
-                                                    cost.fields[sp[0].trim()] = J.Num((sp[1].toIntOrNull() ?: 0).toDouble())
-                                                }
-                                            }
-                                            if (cost.fields.isNotEmpty()) m.fields["cost"] = cost
-                                        }
-                                        p.getOrNull(4)?.trim()?.takeIf { it.isNotEmpty() }?.let { bfStr ->
-                                            val sp = bfStr.split(":")
-                                            if (sp.size == 2 && sp[0].isNotBlank()) {
-                                                val bf = J.Obj()
-                                                bf.fields["id"] = J.Str(sp[0].trim())
-                                                bf.fields["turns"] = J.Num((sp[1].toIntOrNull() ?: 3).toDouble())
-                                                val arr = J.Arr()
-                                                arr.items.add(bf)
-                                                m.fields["buffs"] = arr
-                                            }
-                                        }
-                                        p.getOrNull(5)?.trim()?.takeIf { it.isNotEmpty() }?.let { m.fields["desc"] = J.Str(it) }
-                                        bmoves.items.add(m)
-                                    }
-                                    if (bmoves.items.isNotEmpty()) battle.fields["moves"] = bmoves
-                                    val bbuffs = J.Arr()
-                                    rBattleBuffs.split("\n").forEach { line ->
-                                        val t = line.trim()
-                                        if (t.isEmpty()) return@forEach
-                                        val p = t.split("|")
-                                        if (p.size < 2) return@forEach
-                                        val id = p[0].trim()
-                                        if (id.isEmpty()) return@forEach
-                                        val b = J.Obj()
-                                        b.fields["id"] = J.Str(id)
-                                        b.fields["name"] = J.Str(p[1].trim().ifEmpty { id })
-                                        b.fields["turns"] = J.Num((p.getOrNull(2)?.toIntOrNull() ?: 3).toDouble())
-                                        p.getOrNull(3)?.trim()?.takeIf { it.isNotEmpty() }?.let { atStr ->
-                                            val at = J.Obj()
-                                            atStr.split(",").forEach { kv ->
-                                                val sp = kv.split(":")
-                                                if (sp.size == 2 && sp[0].isNotBlank() && sp[1].toIntOrNull() != null) {
-                                                    at.fields[sp[0].trim()] = J.Num((sp[1].toIntOrNull() ?: 0).toDouble())
-                                                }
-                                            }
-                                            if (at.fields.isNotEmpty()) b.fields["attrs"] = at
-                                        }
-                                        p.getOrNull(4)?.trim()?.takeIf { it.isNotEmpty() }?.let { b.fields["desc"] = J.Str(it) }
-                                        bbuffs.items.add(b)
-                                    }
-                                    if (bbuffs.items.isNotEmpty()) battle.fields["buffs"] = bbuffs
-                                    adv.fields["battle"] = battle
-                                }
-                                o.fields["advanced"] = adv
-                                advancedByRole[nm] = adv
-                            }
-                            for ((k, v) in fields) {
-                                // 非空字段写入；空字段不写也不删（保留文件原有内容，防止编辑单字段丢其他字段）
-                                if (v.isNotBlank()) o.fields[k] = J.Str(v)
-                            }
-                            f.writeText(JsonS.stringify(o, pretty = true), Charsets.UTF_8)
-                            val idx = roles.indexOfFirst { it.first == nm }
-                            if (idx >= 0) roles[idx] = nm to prompt else roles.add(nm to prompt)
-                            if (selectedRoles.contains(nm)) {
-                                reloadMech()
-                            }
-                        } catch (_: Exception) {
-                        }
-                    }
-                    roleEditName = null
-                }) { Text(I18n.t("btn_save", "保存")) }
-            },
-            dismissButton = { TextButton(onClick = { roleEditName = null }) { Text(I18n.t("btn_cancel", "取消")) } },
-        )
-        }
-    }
-    RoleEditDialogBlock()
-
-    // ---------- 玩家角色卡编辑（结构化） ----------
-    @Composable
-    fun PersonaDialogBlock() {
-        if (showPersonaEdit) {
-        var pf = personaFields()
-        var pName by remember { mutableStateOf(pf["name"] ?: "") }
-        var pLegacy by remember { mutableStateOf(pf["legacy"] ?: "") }
-        var pAppearance by remember { mutableStateOf(pf["appearance"] ?: "") }
-        var pPersonality by remember { mutableStateOf(pf["personality"] ?: "") }
-        var pBackground by remember { mutableStateOf(pf["background"] ?: "") }
-        var pSpeech by remember { mutableStateOf(pf["speech"] ?: "") }
-        var pFirstMes by remember { mutableStateOf(pf["first_mes"] ?: "") }
-        var pMesExample by remember { mutableStateOf(pf["mes_example"] ?: "") }
-        var pNotes by remember { mutableStateOf(pf["notes"] ?: "") }
-        // 玩家卡同规格：战斗属性 + 专属正则
-        val pAdvInit = try {
-            (JsonS.parse(persona) as? J.Obj)?.fields?.get("advanced") as? J.Obj
-        } catch (_: Exception) {
-            null
-        }
-        val pBattleInit = pAdvInit?.fields?.get("battle") as? J.Obj
-        var pBattleEnabled by remember { mutableStateOf(pBattleInit?.fields?.get("enabled")?.bool() == true) }
-        var pBattleAttrs by remember {
-            mutableStateOf((pBattleInit?.fields?.get("attrs") as? J.Obj)?.fields?.mapNotNull { (k, v) ->
-                val a = v as? J.Obj ?: return@mapNotNull null
-                listOf(k, a.fields["label"]?.str() ?: k,
-                    a.fields["initial"]?.int()?.toString() ?: "10",
-                    a.fields["max"]?.int()?.toString() ?: "").joinToString("|")
-            }?.joinToString("\n") ?: "hp|生命|100|100\natk|攻击|10\ndef|防御|5")
-        }
-        var pBattleMech by remember {
-            mutableStateOf((pBattleInit?.fields?.get("mech_attrs") as? J.Arr)?.items?.mapNotNull { it as? J.Obj }?.mapNotNull { a ->
-                val key = a.fields["key"]?.str() ?: return@mapNotNull null
-                listOf(key, a.fields["label"]?.str() ?: key,
-                    a.fields["initial"]?.int()?.toString() ?: "10",
-                    a.fields["max"]?.int()?.toString() ?: "").joinToString("|")
-            }?.joinToString("\n") ?: "")
-        }
-        var pRegex by remember {
-            mutableStateOf((pAdvInit?.fields?.get("regex_rules") as? J.Arr)?.items?.mapNotNull { it as? J.Obj }?.mapNotNull { x ->
-                val id = x.fields["id"]?.str() ?: return@mapNotNull null
-                listOf(id, x.fields["name"]?.str() ?: id, x.fields["pattern"]?.str() ?: "",
-                    x.fields["replace"]?.str() ?: "", x.fields["scope"]?.str() ?: "both").joinToString("|")
-            }?.joinToString("\n") ?: "")
-        }
-        var foldPBattle by remember { mutableStateOf(pBattleEnabled) }
-        var foldPRegex by remember { mutableStateOf(pRegex.isNotBlank()) }
-        AlertDialog(
-            onDismissRequest = { showPersonaEdit = false },
-            title = { Text(I18n.t("btn_persona_card", "玩家角色卡")) },
-            text = {
-                Column(Modifier.verticalScroll(rememberScrollState())) {
-                    OutlinedTextField(value = pName, onValueChange = { pName = it }, label = { Text("名字") }, singleLine = true)
-                    IconText("📜 完整设定（旧版原文，填了会整体覆盖，可留空）", fontSize = 11.sp, color = Color(0xFF94A3B8), modifier = Modifier.padding(top = 6.dp))
-                    OutlinedTextField(value = pLegacy, onValueChange = { pLegacy = it }, label = { Text("Legacy 原文") }, minLines = 2)
-                    IconText("🎨 结构化字段（与角色卡同标准）", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 10.dp))
-                    OutlinedTextField(value = pAppearance, onValueChange = { pAppearance = it }, label = { Text("外貌") }, minLines = 2)
-                    OutlinedTextField(value = pPersonality, onValueChange = { pPersonality = it }, label = { Text("性格") }, minLines = 2)
-                    OutlinedTextField(value = pBackground, onValueChange = { pBackground = it }, label = { Text("过去经历") }, minLines = 2)
-                    OutlinedTextField(value = pSpeech, onValueChange = { pSpeech = it }, label = { Text("说话方式（语气/口癖/句式）") }, minLines = 2)
-                    OutlinedTextField(value = pFirstMes, onValueChange = { pFirstMes = it }, label = { Text("开场白") }, minLines = 2)
-                    OutlinedTextField(value = pMesExample, onValueChange = { pMesExample = it }, label = { Text("对话示例") }, minLines = 2)
-                    OutlinedTextField(value = pNotes, onValueChange = { pNotes = it }, label = { Text("备注") }, minLines = 2)
-                    // 玩家卡同规格：战斗属性 + 专属正则（折叠）
-                    FoldHead("⚔️ 玩家战斗属性（可选）", foldPBattle, onToggle = { foldPBattle = !foldPBattle })
-                    if (foldPBattle) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Checkbox(checked = pBattleEnabled, onCheckedChange = { pBattleEnabled = it })
-                            Text("启用玩家战斗属性（结算用玩家属性；AI 用 [ph:-N] 打你）", fontSize = 12.sp)
-                        }
-                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            OutlinedTextField(value = pBattleAttrs, onValueChange = { pBattleAttrs = it }, label = { Text("基础属性（每行 键|名|初值|上限）\n例：hp|生命|100|100") }, minLines = 4, modifier = Modifier.weight(1f))
-                            OutlinedTextField(value = pBattleMech, onValueChange = { pBattleMech = it }, label = { Text("机制属性（每行 键|名|初值|上限）\n例：spd|速度|8|100") }, minLines = 4, modifier = Modifier.weight(1f))
-                        }
-                    }
-                    FoldHead("🔤 玩家专属正则（可选）", foldPRegex, onToggle = { foldPRegex = !foldPRegex })
-                    if (foldPRegex) {
-                        OutlinedTextField(value = pRegex, onValueChange = { pRegex = it }, label = { Text("正则（每行 id|名称|正则|替换|作用域，对玩家输入生效）") }, minLines = 3)
-                    }
-                    // 玩家头像按「聊天里显示的名字」存文件（= 玩家卡名字，无则「你」），与聊天框/查找键完全一致
-                    TextButton(onClick = { avatarTarget = userDisplayName(); avatarPicker.launch("image/*") }) {
-                        IconText("🧑 " + I18n.t("btn_avatar_persona", "玩家头像"), fontSize = 12.sp)
-                    }
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = {
-                    val oldName = personaFields()["name"]?.trim() ?: ""
-                    val newName = pName.trim()
-                    val o = J.Obj()
-                    o.fields["name"] = J.Str(newName)
-                    o.fields["legacy"] = J.Str(pLegacy.trim())
-                    o.fields["appearance"] = J.Str(pAppearance.trim())
-                    o.fields["personality"] = J.Str(pPersonality.trim())
-                    o.fields["background"] = J.Str(pBackground.trim())
-                    o.fields["speech"] = J.Str(pSpeech.trim())
-                    o.fields["first_mes"] = J.Str(pFirstMes.trim())
-                    o.fields["mes_example"] = J.Str(pMesExample.trim())
-                    o.fields["notes"] = J.Str(pNotes.trim())
-                    // 玩家卡同规格：战斗属性 + 专属正则
-                    val padv = J.Obj()
-                    if (pBattleEnabled) {
-                        val pb = J.Obj()
-                        pb.fields["enabled"] = J.Bool(true)
-                        val battrs = J.Obj()
-                        pBattleAttrs.split("\n").forEach { line ->
-                            val t = line.trim()
-                            if (t.isEmpty()) return@forEach
-                            val q = t.split("|")
-                            if (q.size < 2) return@forEach
-                            val key = q[0].trim()
-                            if (key.isEmpty()) return@forEach
-                            val a = J.Obj()
-                            a.fields["label"] = J.Str(q[1].trim().ifEmpty { key })
-                            a.fields["initial"] = J.Num((q.getOrNull(2)?.toIntOrNull() ?: 10).toDouble())
-                            if (key == "hp" || q.getOrNull(3)?.isNotBlank() == true) {
-                                a.fields["max"] = J.Num((q.getOrNull(3)?.toIntOrNull() ?: if (key == "hp") 100 else 999999).toDouble())
-                            }
-                            battrs.fields[key] = a
-                        }
-                        if (battrs.fields.isNotEmpty()) pb.fields["attrs"] = battrs
-                        val bmech = J.Arr()
-                        pBattleMech.split("\n").forEach { line ->
-                            val t = line.trim()
-                            if (t.isEmpty()) return@forEach
-                            val q = t.split("|")
-                            if (q.size < 2) return@forEach
-                            val key = q[0].trim()
-                            if (key.isEmpty()) return@forEach
-                            val a = J.Obj()
-                            a.fields["key"] = J.Str(key)
-                            a.fields["label"] = J.Str(q[1].trim().ifEmpty { key })
-                            a.fields["initial"] = J.Num((q.getOrNull(2)?.toIntOrNull() ?: 10).toDouble())
-                            a.fields["max"] = J.Num((q.getOrNull(3)?.toIntOrNull() ?: 999999).toDouble())
-                            bmech.items.add(a)
-                        }
-                        if (bmech.items.isNotEmpty()) pb.fields["mech_attrs"] = bmech
-                        padv.fields["battle"] = pb
-                    }
-                    val prr = J.Arr()
-                    pRegex.split("\n").forEach { line ->
-                        val t = line.trim()
-                        if (t.isEmpty()) return@forEach
-                        val q = t.split("|")
-                        if (q.size < 4) return@forEach
-                        val scope = q.getOrNull(4)?.trim()?.takeIf { it in setOf("ai", "user", "both") } ?: "both"
-                        val x = J.Obj()
-                        x.fields["id"] = J.Str(q[0].trim())
-                        x.fields["name"] = J.Str(q[1].trim().ifEmpty { q[0].trim() })
-                        x.fields["pattern"] = J.Str(q[2])
-                        x.fields["replace"] = J.Str(q.drop(3).joinToString("|"))
-                        x.fields["scope"] = J.Str(scope)
-                        x.fields["enabled"] = J.Bool(true)
-                        prr.items.add(x)
-                    }
-                    if (prr.items.isNotEmpty()) padv.fields["regex_rules"] = prr
-                    if (padv.fields.isNotEmpty()) o.fields["advanced"] = padv
-                    persona = JsonS.stringify(o, pretty = true)
-                    saveConfig()
-                    // 玩家卡改名：头像文件跟着改，保持「聊天显示名 = 头像文件名」一致
-                    val effNew = newName.ifBlank { "你" }
-                    if (oldName != newName && oldName.isNotBlank() && oldName != effNew) {
-                        val avDir = File(AppEnv.savesDir(), "avatars")
-                        for (from in listOf(oldName, "你")) {
-                            for (ext in listOf("png", "jpg", "jpeg", "webp")) {
-                                val f = File(avDir, from + "." + ext)
-                                if (f.exists()) {
-                                    val nf = File(avDir, effNew + "." + ext)
-                                    try {
-                                        if (nf.exists()) nf.delete()
-                                        f.renameTo(nf)
-                                    } catch (_: Exception) {
-                                    }
-                                    break
-                                }
-                            }
-                        }
-                        avatarCache.remove(oldName)
-                        avatarCache.remove("你")
-                        avatarCache.remove(effNew)
-                    }
-                    showPersonaEdit = false
-                }) { Text(I18n.t("btn_save", "保存")) }
-            },
-            dismissButton = { TextButton(onClick = { showPersonaEdit = false }) { Text(I18n.t("btn_cancel", "取消")) } },
-        )
-        }
-    }
-    PersonaDialogBlock()
-
-    // ---------- 头像交互式裁剪（Canvas 绘制：显示与裁剪同一套数学） ----------
-    if (cropBitmap != null && avatarTarget != null) {
-        val bmp = cropBitmap!!
-        AlertDialog(
-            onDismissRequest = { cropBitmap = null; avatarTarget = null },
-            title = { IconText("✂️ 裁剪头像") },
-            text = {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    // 裁剪舞台（实际 px 通过 onSizeChanged 记录）
-                    Box(
-                        modifier = Modifier
-                            .size(280.dp)
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(Color(0xFF111111))
-                            .onSizeChanged { cropStagePx = it.width.toFloat() }
-                            .pointerInput(bmp) {
-                                detectTransformGestures { _, pan, zoom, _ ->
-                                    // 缩放（0.4x=焦距拉远 ~ 6x=放大，以图片中心为锚点）
-                                    cropScale = (cropScale * zoom).coerceIn(0.4f, 6f)
-                                    // 拖动（不限制，裁剪框内保证有图即可）
-                                    cropDx += pan.x
-                                    cropDy += pan.y
-                                }
-                            }
-                    ) {
-                        Canvas(modifier = Modifier.fillMaxSize()) {
-                            val s = size.width
-                            // ===== 同一套数学：显示用 =====
-                            val baseFit = minOf(s / bmp.width, s / bmp.height)  // 初始完整可见
-                            val dispW = bmp.width * baseFit * cropScale
-                            val dispH = bmp.height * baseFit * cropScale
-                            val imgLeft = (s - bmp.width * baseFit) / 2f + cropDx
-                            val imgTop = (s - bmp.height * baseFit) / 2f + cropDy
-                            // 绘制图片（dstRect 定位）
-                            drawImage(
-                                image = bmp.asImageBitmap(),
-                                dstSize = IntSize(dispW.toInt(), dispH.toInt()),
-                                dstOffset = IntOffset(imgLeft.toInt(), imgTop.toInt())
-                            )
-                            // 裁剪框遮罩
-                            val inset = s * 0.23f
-                            drawRect(Color(0x99000000), topLeft = Offset(0f, 0f), size = Size(s, inset))
-                            drawRect(Color(0x99000000), topLeft = Offset(0f, s - inset), size = Size(s, inset))
-                            drawRect(Color(0x99000000), topLeft = Offset(0f, inset), size = Size(inset, s - inset * 2))
-                            drawRect(Color(0x99000000), topLeft = Offset(s - inset, inset), size = Size(inset, s - inset * 2))
-                            drawRect(Color.White, topLeft = Offset(inset, inset),
-                                size = Size(s - inset * 2, s - inset * 2),
-                                style = androidx.compose.ui.graphics.drawscope.Stroke(width = 6f))
-                        }
-                    }
-                    // 缩放滑条
-                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp)) {
-                        IconText("🔍", fontSize = 12.sp)
-                        Slider(
-                            value = cropScale,
-                            onValueChange = { cropScale = it },
-                            valueRange = 0.4f..6f,
-                            modifier = Modifier.weight(1f).padding(horizontal = 4.dp)
-                        )
-                        IconText("🔍", fontSize = 16.sp)
-                    }
-                    Text("拖动调整位置 · 双指/滑条缩放（0.4x 焦距拉远 ~ 6x 放大）", fontSize = 11.sp, color = Color(0xFF94A3B8))
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = {
-                    try {
-                        val b = cropBitmap ?: return@TextButton
-                        val t = avatarTarget ?: return@TextButton
-                        val s = cropStagePx
-                        val out = android.graphics.Bitmap.createBitmap(256, 256, android.graphics.Bitmap.Config.ARGB_8888)
-                        val cvs = android.graphics.Canvas(out)
-                        var drew = false
-                        if (s > 4f && b.width > 0 && b.height > 0) {
-                            // ===== 同一套数学：裁剪用（与 Canvas 绘制完全一致） =====
-                            val baseFit = minOf(s / b.width, s / b.height)
-                            val dispW = b.width * baseFit * cropScale
-                            val dispH = b.height * baseFit * cropScale
-                            val imgLeft = (s - b.width * baseFit) / 2f + cropDx
-                            val imgTop = (s - b.height * baseFit) / 2f + cropDy
-                            val inset = s * 0.23f
-                            val sqSize = s - inset * 2
-                            // 裁剪框在图片坐标系中的源区域（反算）
-                            val srcX = (inset - imgLeft) / dispW * b.width
-                            val srcY = (inset - imgTop) / dispH * b.height
-                            val srcSize = sqSize / dispW * b.width
-                            val sx = srcX.coerceIn(0f, b.width.toFloat())
-                            val sy = srcY.coerceIn(0f, b.height.toFloat())
-                            val ss = srcSize.coerceAtMost(b.width - sx).coerceAtMost(b.height - sy)
-                            if (ss > 4f) {
-                                val srcRect = android.graphics.Rect(sx.toInt(), sy.toInt(), (sx + ss).toInt(), (sy + ss).toInt())
-                                cvs.drawBitmap(b, srcRect, android.graphics.Rect(0, 0, 256, 256), null)
-                                drew = true
-                            }
-                        }
-                        if (!drew) {
-                            // 回退：裁剪框内无图（拖出画面/焦距太远/舞台未就绪）→ 整图居中正方形
-                            val side = minOf(b.width, b.height)
-                            val fx = (b.width - side) / 2
-                            val fy = (b.height - side) / 2
-                            cvs.drawBitmap(b, android.graphics.Rect(fx, fy, fx + side, fy + side),
-                                android.graphics.Rect(0, 0, 256, 256), null)
-                        }
-                        val bos = java.io.ByteArrayOutputStream()
-                        out.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, bos)
-                        val dir = File(AppEnv.savesDir(), "avatars").apply { mkdirs() }
-                        File(dir, t + ".png").writeBytes(bos.toByteArray())
-                        avatarCache.remove(t)
-                    } catch (_: Exception) {
-                    }
-                    cropBitmap = null
-                    avatarTarget = null
-                }) { IconText("✅ 确认") }
-            },
-            dismissButton = { TextButton(onClick = { cropBitmap = null; avatarTarget = null }) { Text("取消") } },
-        )
-    }
-
-    if (showWorlds) {
-        AlertDialog(
-            onDismissRequest = { showWorlds = false },
-            title = { Text(I18n.t("dlg_worlds", "选择世界（多选=平行世界）")) },
-            text = {
-                Column(Modifier.verticalScroll(rememberScrollState())) {
-                    for ((n, _) in worlds) {
-                        Row {
-                            Checkbox(checked = n in selectedWorlds, onCheckedChange = { ck ->
-                                selectedWorlds = if (ck) selectedWorlds + n else selectedWorlds - n
-                                if (currentWorld !in selectedWorlds) currentWorld = selectedWorlds.firstOrNull() ?: ""
-                            })
-                            Text(n, Modifier.padding(top = 14.dp))
-                            if (n == currentWorld) Text("★", Modifier.padding(top = 14.dp), color = Color(0xFF60A5FA), fontSize = 12.sp)
-                            Spacer(Modifier.weight(1f))
-                            TextButton(onClick = { currentWorld = n }) { IconText("🚀", fontSize = 14.sp) }
-                            TextButton(onClick = { showWorldEdit = n }) { IconText(I18n.t("btn_edit", "✏️"), fontSize = 14.sp) }
-                            TextButton(onClick = { deleteWorld(n) }) { Text(I18n.t("btn_delete", "删除"), color = Color(0xFFF87171), fontSize = 12.sp) }
-                        }
-                    }
-                }
-            },
-            confirmButton = {
-                Row {
-                    TextButton(onClick = { showWorldEdit = "" }) { Text(I18n.t("btn_new_world", "新建世界"), fontSize = 12.sp) }
-                    Spacer(Modifier.weight(1f))
-                    TextButton(onClick = { showWorlds = false }) { Text("完成") }
-                }
-            },
-        )
-    }
-
-    if (showWorldEdit != null) {
-        val editing = showWorldEdit!!
-        var wName by remember { mutableStateOf(editing) }
-        var wDesc by remember { mutableStateOf("") }
-        var wRules by remember { mutableStateOf("") }
-        val paramsState = remember { mutableStateMapOf<String, String>() }
-        val entriesState = remember { mutableStateListOf<WorldEntry>() }
-        LaunchedEffect(editing) {
-            if (editing.isNotBlank() && wDesc.isEmpty() && entriesState.isEmpty()) {
-                try {
-                    val wo = JsonS.parse(File(AppEnv.worldsDir(), editing + ".json").readText(Charsets.UTF_8)) as? J.Obj
-                    if (wo != null) {
-                        wDesc = wo.fields["description"]?.str() ?: ""
-                        (wo.fields["params"] as? J.Obj)?.fields?.forEach { (k, v) -> v.str()?.let { paramsState[k] = it } }
-                    }
-                } catch (_: Exception) {
-                }
-                worldEntries[editing]?.let { entriesState.addAll(it) }
-            }
-        }
-        AlertDialog(
-            onDismissRequest = { showWorldEdit = null },
-            title = { Text(I18n.t("dlg_world_edit", "编辑世界卡")) },
-            text = {
-                Column(Modifier.verticalScroll(rememberScrollState())) {
-                    OutlinedTextField(value = wName, onValueChange = { wName = it }, label = { Text(I18n.t("lbl_world_name", "名字")) }, singleLine = true)
-                    OutlinedTextField(value = wDesc, onValueChange = { wDesc = it }, label = { Text(I18n.t("lbl_world_desc", "背景描述")) }, minLines = 2)
-                    OutlinedTextField(value = wRules, onValueChange = { wRules = it }, label = { Text(I18n.t("lbl_world_rules", "规则（每行一条）")) }, minLines = 2)
-                    Spacer(Modifier.height(6.dp))
-                    Text(I18n.t("wm_params", "世界参数（物理系统等）"), color = Color(0xFF94A3B8), fontSize = 13.sp)
-                    for ((k, label) in WORLD_PARAM_LABELS) {
-                        OutlinedTextField(
-                            value = paramsState[k] ?: "",
-                            onValueChange = { paramsState[k] = it },
-                            label = { Text(label) },
-                            singleLine = true,
-                        )
-                    }
-                    Spacer(Modifier.height(6.dp))
-                    Text(I18n.t("world_entries", "世界书条目（关键词触发，可空）"), color = Color(0xFF94A3B8), fontSize = 13.sp)
-                    entriesState.forEachIndexed { idx, e ->
-                        Column(Modifier.fillMaxWidth().padding(vertical = 2.dp)) {
-                            Row {
-                                Checkbox(checked = e.enabled, onCheckedChange = { entriesState[idx] = e.copy(enabled = it) })
-                                Text(I18n.t("entry_enabled", "启用"), Modifier.padding(top = 14.dp), fontSize = 12.sp)
-                                Checkbox(checked = e.constant, onCheckedChange = { entriesState[idx] = e.copy(constant = it) })
-                                Text(I18n.t("entry_constant", "常驻"), Modifier.padding(top = 14.dp), fontSize = 12.sp)
-                                Spacer(Modifier.weight(1f))
-                                TextButton(onClick = { entriesState.removeAt(idx) }) {
-                                    Text(I18n.t("entry_delete", "✕"), color = Color(0xFFF87171), fontSize = 12.sp)
-                                }
-                            }
-                            OutlinedTextField(
-                                value = e.keywords.joinToString(", "),
-                                onValueChange = { v ->
-                                    entriesState[idx] = e.copy(keywords = v.split(',').map { it.trim() }.filter { it.isNotEmpty() }.toMutableList())
-                                },
-                                label = { Text(I18n.t("entry_keywords", "关键词（逗号分隔）")) },
-                                singleLine = true,
-                            )
-                            Row {
-                                TextButton(onClick = {
-                                    entriesState[idx] = e.copy(match = when (e.match) { "any" -> "all"; "all" -> "regex"; else -> "any" })
-                                }) {
-                                    Text(
-                                        I18n.t("entry_match", "匹配") + "：" + when (e.match) {
-                                            "all" -> I18n.t("match_all", "all")
-                                            "regex" -> I18n.t("match_regex", "regex")
-                                            else -> I18n.t("match_any", "any")
-                                        },
-                                        fontSize = 12.sp,
-                                    )
-                                }
-                                OutlinedTextField(
-                                    value = e.weight.toString(),
-                                    onValueChange = { v -> entriesState[idx] = e.copy(weight = v.toIntOrNull() ?: 0) },
-                                    label = { Text(I18n.t("entry_weight", "权重")) },
-                                    modifier = Modifier.weight(1f),
-                                    singleLine = true,
-                                )
-                                OutlinedTextField(
-                                    value = e.probability.toString(),
-                                    onValueChange = { v -> entriesState[idx] = e.copy(probability = v.toIntOrNull() ?: 100) },
-                                    label = { Text(I18n.t("entry_probability", "概率%")) },
-                                    modifier = Modifier.weight(1f),
-                                    singleLine = true,
-                                )
-                                OutlinedTextField(
-                                    value = e.depth.toString(),
-                                    onValueChange = { v -> entriesState[idx] = e.copy(depth = (v.toIntOrNull() ?: 1).coerceIn(1, 4)) },
-                                    label = { Text(I18n.t("entry_depth", "深度")) },
-                                    modifier = Modifier.weight(1f),
-                                    singleLine = true,
-                                )
-                            }
-                            OutlinedTextField(
-                                value = e.content,
-                                onValueChange = { v -> entriesState[idx] = e.copy(content = v) },
-                                label = { Text(I18n.t("entry_content", "内容")) },
-                                minLines = 2,
-                            )
-                        }
-                    }
-                    TextButton(onClick = { entriesState.add(WorldEntry()) }) { Text(I18n.t("btn_add_entry", "＋ 添加条目")) }
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = {
-                    val nm = wName.trim()
-                    if (nm.isNotBlank() && wDesc.isNotBlank()) {
-                        val wd = WorldData(
-                            name = nm,
-                            description = wDesc.trim(),
-                            rules = wRules.split('\n').map { it.trim() }.filter { it.isNotEmpty() }.toMutableList(),
-                            entries = entriesState.toMutableList(),
-                            params = paramsState.toMutableMap(),
-                        )
-                        File(AppEnv.worldsDir(), nm + ".json").writeText(JsonS.stringify(wd.toJson(), pretty = true), Charsets.UTF_8)
-                        worldEntries[nm] = entriesState.toMutableList()
-                        val renderedDesc = renderWorldDesc(wDesc.trim(), paramsState.toMap())
-                        val idx = worlds.indexOfFirst { it.first == nm }
-                        if (idx >= 0) worlds[idx] = nm to renderedDesc else worlds.add(nm to renderedDesc)
-                        if (editing.isNotBlank() && editing != nm) {
-                            worlds.removeAll { it.first == editing }
-                            worldEntries.remove(editing)
-                            try { File(AppEnv.worldsDir(), editing + ".json").delete() } catch (_: Exception) {}
-                        }
-                        showWorldEdit = null
-                    }
-                }) { Text(I18n.t("btn_save", "保存")) }
-            },
-            dismissButton = { TextButton(onClick = { showWorldEdit = null }) { Text(I18n.t("btn_cancel", "取消")) } },
-        )
-    }
-
-    if (editMsgTarget != null) {
-        val target = editMsgTarget!!
-        AlertDialog(
-            onDismissRequest = { editMsgTarget = null },
-            title = { Text(I18n.t("edit_title", "编辑消息")) },
+            onDismissRequest = { showClearHistory = false },
+            title = { Text("⚠️ 彻底清空历史", color = theme.danger) },
             text = {
                 Column {
-                    Text(
-                        if (target.role == "你") I18n.t("edit_user_hint", "编辑后重新生成回复（保留旧分支）")
-                        else I18n.t("edit_ai_hint", "原地修改这条 AI 回复"),
-                        fontSize = 11.sp,
-                        color = Color(0xFF94A3B8),
-                    )
-                    OutlinedTextField(value = editMsgText, onValueChange = { editMsgText = it }, minLines = 3)
+                    Text("将删除当前角色「" + currentCardLabel() + "」的全部聊天记录。")
+                    Spacer(Modifier.height(6.dp))
+                    Text("此操作不可恢复。确定要清空吗？", fontSize = 12.sp, color = theme.muted)
+                    Text("（机制卡的状态/好感度也会一起重置。）", fontSize = 11.sp, color = theme.muted)
+                    Spacer(Modifier.height(8.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Checkbox(checked = alsoClearMemory, onCheckedChange = { alsoClearMemory = it })
+                        Text("同时清空记忆链（memory）", fontSize = 12.sp, modifier = Modifier.padding(top = 14.dp))
+                    }
                 }
             },
             confirmButton = {
                 TextButton(onClick = {
-                    val t = target
-                    editMsgTarget = null
-                    editMessage(t, editMsgText.trim())
-                }) { Text(I18n.t("btn_save", "保存")) }
+                    clearHistory(alsoClearMemory)
+                    showClearHistory = false
+                }) { Text("🗑 彻底清空", color = theme.danger) }
             },
-            dismissButton = { TextButton(onClick = { editMsgTarget = null }) { Text(I18n.t("btn_cancel", "取消")) } },
+            dismissButton = { TextButton(onClick = { showClearHistory = false }) { Text("取消") } },
         )
     }
 
-    @Composable
-    fun WorkshopDialogBlock() {
-        if (showWorkshop) {
-        AlertDialog(
-            onDismissRequest = { showWorkshop = false },
-            title = { IconText(I18n.t("btn_workshop", "🧰 创意工坊")) },
-            text = {
-                Column(Modifier.verticalScroll(rememberScrollState())) {
-                    Row {
-                        TextButton(onClick = { wsTabOnline = false; wsTabPlugin = false; wsRefreshLocal() }) {
-                            IconText(if (!wsTabOnline && !wsTabPlugin) I18n.t("ws_local", "📂 本地 ▾") else I18n.t("ws_local", "📂 本地"), fontSize = 12.sp)
-                        }
-                        TextButton(onClick = { wsTabOnline = true; wsTabPlugin = false; wsLoadOnline() }) {
-                            IconText(if (wsTabOnline) I18n.t("ws_online", "🌐 在线 ▾") else I18n.t("ws_online", "🌐 在线"), fontSize = 12.sp)
-                        }
-                        TextButton(onClick = { wsTabPlugin = true; wsTabOnline = false; wsLoadPlugins() }) {
-                            IconText(if (wsTabPlugin) "🔌 插件 ▾" else "🔌 插件", fontSize = 12.sp)
-                        }
-                        Spacer(Modifier.weight(1f))
-                        Text(wsStatus, fontSize = 11.sp, color = Color(0xFF94A3B8))
-                    }
-                    if (!wsTabOnline && !wsTabPlugin) {
-                        Row {
-                            Column(Modifier.weight(1f)) {
-                                IconText("📂 角色卡", fontSize = 12.sp, color = Color(0xFF94A3B8))
-                                wsLocalRoles.forEachIndexed { i, f ->
-                                    val sel = wsLocalType == "角色卡" && wsLocalIdx == i
-                                    Surface(
-                                        shape = RoundedCornerShape(8.dp),
-                                        color = if (sel) Color(0xFF182636) else Color(0xFF0F1620),
-                                        modifier = Modifier.fillMaxWidth().padding(vertical = 1.dp).clickable {
-                                            wsLocalType = "角色卡"; wsLocalIdx = i
-                                            wsPreview = Workshop.preview("角色卡", f)
-                                        },
-                                    ) {
-                                        Text(f.removeSuffix(".json"), fontSize = 12.sp, modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp), maxLines = 1)
-                                    }
-                                }
-                            }
-                            Column(Modifier.weight(1f)) {
-                                IconText("🌍 世界卡", fontSize = 12.sp, color = Color(0xFF94A3B8))
-                                wsLocalWorlds.forEachIndexed { i, f ->
-                                    val sel = wsLocalType == "世界卡" && wsLocalIdx == i
-                                    Surface(
-                                        shape = RoundedCornerShape(8.dp),
-                                        color = if (sel) Color(0xFF182636) else Color(0xFF0F1620),
-                                        modifier = Modifier.fillMaxWidth().padding(vertical = 1.dp).clickable {
-                                            wsLocalType = "世界卡"; wsLocalIdx = i
-                                            wsPreview = Workshop.preview("世界卡", f)
-                                        },
-                                    ) {
-                                        Text(f.removeSuffix(".json"), fontSize = 12.sp, modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp), maxLines = 1)
-                                    }
-                                }
-                            }
-                        }
-                        if (wsPreview.isNotBlank()) {
-                            Surface(shape = RoundedCornerShape(10.dp), color = Color(0xFF0B1220), modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp)) {
-                                Text(wsPreview, fontSize = 11.sp, color = Color(0xFFCBD5E1), modifier = Modifier.padding(10.dp), maxLines = 10)
-                            }
-                        }
-                        Row {
-                            TextButton(onClick = {
-                                // 支持图片导入：PNG/WebP 嵌卡 或 v1/v2/v3 JSON 角色卡
-                                importCardLauncher.launch(arrayOf("image/png", "image/webp", "application/json"))
-                            }) { IconText(I18n.t("btn_import_card", "📥 导入"), fontSize = 12.sp) }
-                            TextButton(onClick = {
-                                val fname = if (wsLocalType == "角色卡") wsLocalRoles.getOrNull(wsLocalIdx)
-                                    else wsLocalWorlds.getOrNull(wsLocalIdx)
-                                if (fname != null) { wsExportTarget = fname; wsExportLauncher.launch(fname) }
-                            }) { IconText(I18n.t("ws_export", "📤 导出"), fontSize = 12.sp) }
-                            TextButton(onClick = {
-                                val fname = if (wsLocalType == "角色卡") wsLocalRoles.getOrNull(wsLocalIdx)
-                                    else wsLocalWorlds.getOrNull(wsLocalIdx)
-                                if (fname != null) {
-                                    if (Workshop.deleteLocal(wsLocalType, fname)) {
-                                        wsPreview = ""
-                                        wsLocalIdx = -1
-                                        wsRefreshLocal()
-                                        reloadRolesFromDisk()
-                                        reloadWorldsFromDisk()
-                                        wsStatus = "✅ 已删除"
-                                    }
-                                }
-                            }) { IconText(I18n.t("ws_delete", "🗑️ 删除"), fontSize = 12.sp, color = Color(0xFFF87171)) }
-                            TextButton(onClick = { wsUploadLocal() }) { IconText(I18n.t("ws_upload", "📤 上传"), fontSize = 12.sp) }
-                        }
-                    } else if (wsTabOnline) {
-                        // 自动部署：显示当前连接的服务器，无需手动填地址
-                        Text(
-                            if (wsServerInput.isNotBlank()) "🛰️ 自动连接：" + wsServerInput else "🛰️ 自动连接中...",
-                            fontSize = 12.sp, color = Color(0xFF94A3B8),
-                            modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
-                        )
-                        OutlinedTextField(value = wsKeyInput, onValueChange = { wsKeyInput = it },
-                            label = { Text(I18n.t("ws_key", "Key（可选）")) }, singleLine = true)
-                        Row {
-                            TextButton(onClick = {
-                                // 重新检测：保留现有服务器地址，只更新 Key → 刷新自动连接 → 测试
-                                Workshop.saveConfig(Workshop.serverUrl, wsKeyInput)
-                                wsStatus = "检测中..."
-                                scope.launch(Dispatchers.IO) {
-                                    val active = try { Workshop.activeServer() } catch (e: Exception) { "" }
-                                    val h = try { Workshop.health() } catch (e: Exception) { null }
-                                    val s = try { Workshop.stats() } catch (e: Exception) { null }
-                                    scope.launch(Dispatchers.Main) {
-                                        if (active.isNotBlank()) wsServerInput = active
-                                        if (h != null) {
-                                            val auth = h.fields["auth"]?.str() ?: "open"
-                                            val dl = (s?.fields?.get("downloads") as? J.Num)?.v?.toInt() ?: 0
-                                            val lk = (s?.fields?.get("likes") as? J.Num)?.v?.toInt() ?: 0
-                                            wsStatus = "✅ 已连接（认证:" + auth + " · ↓" + dl + " ❤" + lk + "）"
-                                        } else wsStatus = "❌ 连接失败"
-                                    }
-                                }
-                            }) { IconText(I18n.t("ws_test", "🔄 重新检测"), fontSize = 12.sp) }
-                            Spacer(Modifier.weight(1f))
-                            OutlinedTextField(value = wsSearchInput, onValueChange = { wsSearchInput = it },
-                                label = { Text(I18n.t("ws_search", "搜索")) }, singleLine = true, modifier = Modifier.width(110.dp))
-                            TextButton(onClick = { wsSearchOnline() }) { IconText("🔍", fontSize = 12.sp) }
-                        }
-                        TextButton(onClick = { wsLoadOnline() }) { Text("全部作品", fontSize = 12.sp) }
-                        wsOnlineList.forEachIndexed { i, r ->
-                            val t = r.fields["_type"]?.str() ?: "角色卡"
-                            val name = r.fields["name"]?.str() ?: "?"
-                            val author = r.fields["author"]?.str() ?: "?"
-                            val dl = (r.fields["downloads"] as? J.Num)?.v?.toInt() ?: 0
-                            val lk = (r.fields["likes"] as? J.Num)?.v?.toInt() ?: 0
-                            val tags = (r.fields["tags"] as? J.Arr)?.items?.mapNotNull { it.str() } ?: emptyList()
-                            val desc = r.fields["description"]?.str() ?: ""
-                            val sel = i == wsOnlineIdx
-                            Surface(
-                                shape = RoundedCornerShape(12.dp),
-                                color = if (sel) Color(0xFF182636) else Color(0xFF0F1620),
-                                modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp).clickable { wsOnlineIdx = i },
-                            ) {
-                                Column(Modifier.padding(10.dp)) {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Text((if (t == "角色卡") "🎭 " else "🌍 ") + name, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
-                                        Text("↓" + dl + "  ❤" + lk, fontSize = 11.sp, color = Color(0xFF94A3B8))
-                                    }
-                                    Text(author, fontSize = 11.sp, color = Color(0xFF94A3B8))
-                                    if (tags.isNotEmpty()) Text(tags.joinToString(" · "), fontSize = 10.sp, color = Color(0xFF6B7280))
-                                    if (desc.isNotBlank()) Text(desc, fontSize = 11.sp, color = Color(0xFFCBD5E1), maxLines = 2)
-                                }
-                            }
-                        }
-                        // 选中的作品 → 详情卡
-                        val selR = wsOnlineList.getOrNull(wsOnlineIdx)
-                        if (selR != null) {
-                            val t = selR.fields["_type"]?.str() ?: "角色卡"
-                            val name = selR.fields["name"]?.str() ?: "?"
-                            val author = selR.fields["author"]?.str() ?: "?"
-                            val dl = (selR.fields["downloads"] as? J.Num)?.v?.toInt() ?: 0
-                            val lk = (selR.fields["likes"] as? J.Num)?.v?.toInt() ?: 0
-                            val tags = (selR.fields["tags"] as? J.Arr)?.items?.mapNotNull { it.str() } ?: emptyList()
-                            val desc = selR.fields["description"]?.str() ?: ""
-                            val created = selR.fields["created_at"]?.str() ?: ""
-                            val preview = selR.fields["system_prompt_preview"]?.str() ?: ""
-                            Surface(shape = RoundedCornerShape(12.dp), color = Color(0xFF0B1220), modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
-                                Column(Modifier.padding(12.dp)) {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Text((if (t == "角色卡") "🎭 " else "🌍 ") + name, fontSize = 15.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
-                                        Text("↓" + dl + "  ❤" + lk, fontSize = 12.sp, color = Color(0xFF94A3B8))
-                                    }
-                                    Text("作者：" + author, fontSize = 12.sp, color = Color(0xFF94A3B8))
-                                    if (created.isNotBlank()) Text("上传：" + created.take(10), fontSize = 10.sp, color = Color(0xFF6B7280))
-                                    if (tags.isNotEmpty()) Text("标签：" + tags.joinToString(" · "), fontSize = 11.sp, color = Color(0xFF94A3B8))
-                                    if (desc.isNotBlank()) Text(desc, fontSize = 13.sp, color = Color(0xFFE2E8F0))
-                                    if (preview.isNotBlank()) Text("人设：" + preview.take(120), fontSize = 11.sp, color = Color(0xFF6B7280), maxLines = 4)
-                                }
-                            }
-                        }
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            TextButton(onClick = { wsDownloadSelected() }) { IconText(I18n.t("ws_download", "⬇️ 下载"), fontSize = 12.sp) }
-                            TextButton(onClick = { wsLikeSelected() }) { IconText(I18n.t("ws_like", "❤️ 点赞"), fontSize = 12.sp) }
-                            TextButton(onClick = { wsDeleteSelected() }) { IconText(I18n.t("ws_delete", "🗑️ 删除"), fontSize = 12.sp, color = Color(0xFFF87171)) }
-                            Spacer(Modifier.weight(1f))
-                            Text("已选：" + (selR?.fields?.get("name")?.str() ?: "无"), fontSize = 10.sp, color = Color(0xFF94A3B8))
-                        }
-                    } else {
-                        // 插件市场：联网列表 + 一键安装
-                        if (wsPlugins.isEmpty()) {
-                            Text("🔌 插件市场暂无内容（工坊服务器未启动或未上传插件）", fontSize = 12.sp, color = Color(0xFF94A3B8))
-                        }
-                        wsPlugins.forEach { p ->
-                            val id = p.fields["id"]?.str() ?: return@forEach
-                            val name = p.fields["name"]?.str() ?: "?"
-                            val ver = p.fields["version"]?.str() ?: "1.0"
-                            val author = p.fields["author"]?.str() ?: "?"
-                            val desc = p.fields["description"]?.str() ?: ""
-                            val dl = (p.fields["downloads"] as? J.Num)?.v?.toInt() ?: 0
-                            val installed = wsLocalPlugins.any {
-                                it == name || it == (p.fields["original_name"]?.str()?.removeSuffix(".py"))
-                            }
-                            Surface(
-                                color = theme.bubble,
-                                shape = RoundedCornerShape(10.dp),
-                                modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp),
-                            ) {
-                                Column(Modifier.padding(8.dp)) {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Text("🔌 $name", fontSize = 13.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
-                                        Text("v$ver · $author · ↓$dl", fontSize = 10.sp, color = Color(0xFF94A3B8))
-                                    }
-                                    if (desc.isNotBlank()) {
-                                        Text(desc, fontSize = 11.sp, color = Color(0xFF94A3B8), maxLines = 2)
-                                    }
-                                    if (installed) {
-                                        Text("✅ 已安装", fontSize = 11.sp, color = Color(0xFF4ADE80))
-                                    } else {
-                                        TextButton(
-                                            onClick = { wsInstallPlugin(id) },
-                                            enabled = wsInstallingId != id,
-                                        ) {
-                                            IconText(if (wsInstallingId == id) "⏳ 安装中..." else "⬇️ 安装", fontSize = 12.sp)
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            },
-            confirmButton = {},
-            dismissButton = { TextButton(onClick = { showWorkshop = false }) { Text(I18n.t("btn_cancel", "取消")) } },
-        )
-        }
-    }
-    WorkshopDialogBlock()
-
-    @Composable
-    fun BranchesDialogBlock() {
-        if (showBranches) {
-        // 树状回溯：主线平铺（不右窜）+ 分支收纳（点开才展开），点击任意节点跳回
-        class TNode(val id: String, val role: String, val content: String,
-                    val onPath: Boolean, val branchRoot: String?, val branchDepth: Int,
-                    val branchSize: Int, val isCurrent: Boolean, val isLeaf: Boolean)
-        val treeNodes = tree.nodes
-        val path = mutableSetOf<String>()
-        var pn = tree.currentLeafId
-        var pGuard = 0
-        while (pn != null && treeNodes.containsKey(pn) && pGuard++ < 500) {
-            path.add(pn)
-            pn = treeNodes[pn]?.parentId
-        }
-        fun subtreeSize(id: String?): Int {
-            val node = id?.let { treeNodes[it] } ?: return 0
-            return 1 + node.childrenIds.sumOf { subtreeSize(it) }
-        }
-        val list = mutableListOf<TNode>()
-        val branchSizes = mutableMapOf<String, Int>()
-        fun walk(id: String?, inBranch: String?, branchDepth: Int) {
-            if (id == null) return
-            val node = treeNodes[id] ?: return
-            val onPath = id in path
-            var ib = inBranch
-            var bd = branchDepth
-            if (onPath) {
-                ib = null
-                bd = 0
-            } else if (ib == null) {
-                ib = id
-                bd = 0
-                branchSizes[id] = subtreeSize(id)
-            } else {
-                bd += 1
-            }
-            list.add(TNode(id, node.role, node.content.replace('\n', ' ').take(50),
-                onPath, ib, bd, branchSizes[ib] ?: 0, id == tree.currentLeafId, node.childrenIds.isEmpty()))
-            node.childrenIds.forEach { walk(it, ib, bd) }
-        }
-        walk(tree.rootId, null, 0)
-        var expanded by remember { mutableStateOf(setOf<String>()) }
-        // 展开后的显示序列：(节点, 分支内缩进, 是否分支收纳行)
-        val visible = remember(list, expanded) {
-            val out = mutableListOf<Triple<TNode, Int, Boolean>>()
-            var i = 0
-            while (i < list.size) {
-                val n = list[i]
-                if (n.onPath) {
-                    out.add(Triple(n, 0, false))
-                    i++
-                } else {
-                    val open = n.branchRoot in expanded
-                    out.add(Triple(n, 0, true))
-                    i++
-                    if (open) {
-                        while (i < list.size && list[i].branchRoot == n.branchRoot) {
-                            out.add(Triple(list[i], list[i].branchDepth, false))
-                            i++
-                        }
-                    } else {
-                        while (i < list.size && list[i].branchRoot == n.branchRoot) i++
-                    }
-                }
-            }
-            out
-        }
-        AlertDialog(
-            onDismissRequest = { showBranches = false },
-            title = { IconText("🌿 " + I18n.t("branch_title", "回溯（主线平铺 · 分支点开）")) },
-            text = {
-                Column(Modifier.verticalScroll(rememberScrollState()).fillMaxWidth()) {
-                    visible.forEach { (tn, indent, branchHeader) ->
-                        if (tn.role == "system") return@forEach  // 系统节点不占行（收纳）
-                        TextButton(
-                            onClick = {
-                                if (branchHeader) {
-                                    expanded = if (tn.branchRoot in expanded) expanded - tn.branchRoot!! else expanded + tn.branchRoot!!
-                                } else {
-                                    tree.setCurrentLeaf(tn.id)
-                                    mech.restore(tree, tn.id)
-                                    mechTick++
-                                    saveTree()
-                                    refreshChain()
-                                    showBranches = false
-                                }
-                            },
-                            modifier = Modifier.fillMaxWidth(),
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Spacer(Modifier.width((indent * 14).dp))
-                                if (branchHeader) {
-                                    IconText(if (tn.branchRoot in expanded) "▾" else "▸", fontSize = 12.sp)
-                                    Spacer(Modifier.width(4.dp))
-                                    IconText(
-                                        "🌿 分支 ×" + tn.branchSize + "：" + tn.content.ifBlank { "（空）" },
-                                        fontSize = 12.sp,
-                                        maxLines = 1,
-                                        color = Color(0xFF6B7280),
-                                    )
-                                } else {
-                                    IconText(if (tn.role == "user") "👤" else if (tn.role == "system") "⚙" else "🤖", fontSize = 12.sp)
-                                    Spacer(Modifier.width(4.dp))
-                                    Text(
-                                        tn.content.ifBlank { "（空）" },
-                                        fontSize = 12.sp,
-                                        maxLines = 1,
-                                        color = when {
-                                            tn.isCurrent -> Color(0xFF60A5FA)
-                                            tn.onPath -> Color.Unspecified
-                                            else -> Color(0xFF6B7280)
-                                        },
-                                    )
-                                }
-                                if (tn.isCurrent) {
-                                    Spacer(Modifier.width(4.dp))
-                                    Text("◆ 当前", fontSize = 11.sp, color = Color(0xFF60A5FA))
-                                }
-                            }
-                        }
-                    }
-                }
-            },
-            confirmButton = {},
-            dismissButton = { TextButton(onClick = { showBranches = false }) { Text(I18n.t("btn_cancel", "取消")) } },
-        )
-        }
-    }
-    BranchesDialogBlock()
-}
-
-fun parseSpeaker(reply: String, roster: Set<String>): Pair<String?, String> {
-    val m = Regex("""^[\[【]([^\]】]{1,30})[\]】]\s*[:：]?\s*""", RegexOption.DOT_MATCHES_ALL).find(reply.trim())
-    if (m == null) return null to reply
-    val name = m.groupValues[1].trim()
-    return if (name in roster) name to reply.substring(m.range.last + 1).trim() else null to reply
-}
-
-fun speak(tts: TextToSpeech, text: String) {
-    try {
-        val isJp = text.any { it.code in 0x3040..0x30FF }
-        tts.language = if (isJp) Locale.JAPAN else Locale.CHINA
-        tts.speak(text, TextToSpeech.QUEUE_FLUSH, null, "dick-tts")
-    } catch (_: Exception) {
-    }
-}
-
-val AVATAR_PALETTE = listOf(
-    Color(0xFF60A5FA), Color(0xFF34D399), Color(0xFFFBBF24), Color(0xFFA78BFA),
-    Color(0xFFF472B6), Color(0xFF22D3EE), Color(0xFFFB923C), Color(0xFFF87171),
-)
-
-fun speakerColor(name: String): Color {
-    if (name == "你") return Color(0xFF4ADE80)
-    if (name == "AI" || name.isBlank()) return Color(0xFF94A3B8)
-    var h = 0
-    for (c in name) h += c.code
-    return AVATAR_PALETTE[h % AVATAR_PALETTE.size]
-}
-
-fun loadCustomAvatar(name: String): ImageBitmap? {
-    try {
-        val base = File(AppEnv.savesDir(), "avatars")
-        for (ext in listOf("png", "jpg", "jpeg", "webp")) {
-            val f = File(base, name + "." + ext)
-            if (f.exists()) {
-                val bmp = BitmapFactory.decodeFile(f.absolutePath)
-                if (bmp != null) return bmp.asImageBitmap()
-            }
-        }
-    } catch (_: Exception) {
-    }
-    return null
-}
-
-@Composable
-fun Avatar(name: String, cache: MutableMap<String, ImageBitmap?>) {
-    var bmp = cache[name]
-    if (bmp == null && !cache.containsKey(name)) {
-        bmp = loadCustomAvatar(name)
-        cache[name] = bmp
-    }
-    if (bmp != null) {
-        Image(bmp, contentDescription = null, modifier = Modifier.size(36.dp).clip(CircleShape))
-    } else {
-        Box(
-            modifier = Modifier.size(36.dp).clip(CircleShape).background(speakerColor(name)),
-            contentAlignment = Alignment.Center,
-        ) {
-            Text((name.ifBlank { "A" }).first().toString(), color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
-        }
-    }
-}
-
-@Composable
-fun Bubble(
-    m: ChatMsg,
-    bubbleBg: Color,
-    bubbleText: Color,
-    aiColor: Color,
-    avatarCache: MutableMap<String, ImageBitmap?>,
-    onEdit: (ChatMsg) -> Unit,
-    onRegen: (ChatMsg) -> Unit,
-    onSwipe: (ChatMsg, Int) -> Unit,
-) {
-    val isUser = m.isUser
-    val nameColor = if (isUser) Color(0xFF4ADE80) else aiColor
-    val displayRole = when (m.role) {
-        "你" -> I18n.t("you", "你")
-        "系统" -> I18n.t("system", "系统")
-        else -> m.role
-    }
-    Column(Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
-        Row(
-            Modifier.fillMaxWidth(),
-            horizontalArrangement = if (isUser) Arrangement.End else Arrangement.Start,
-        ) {
-            if (!isUser) Avatar(displayRole, avatarCache)
-            Spacer(Modifier.width(6.dp))
-            Column(horizontalAlignment = if (isUser) Alignment.End else Alignment.Start) {
-                Text(displayRole, color = nameColor, fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                Surface(
-                    shape = RoundedCornerShape(12.dp),
-                    color = bubbleBg,
-                ) {
-                    Column(Modifier.padding(10.dp)) {
-                        if (m.image != null) {
-                            Image(m.image!!, contentDescription = null, modifier = Modifier.size(width = 220.dp, height = 150.dp))
-                            Spacer(Modifier.height(6.dp))
-                        }
-                        Text(m.content, color = bubbleText)
-                    }
-                }
-            }
-            if (isUser) {
-                Spacer(Modifier.width(6.dp))
-                Avatar(displayRole, avatarCache)
-            }
-        }
-        if (m.nodeId != null) {
-            Row(
-                Modifier.fillMaxWidth().padding(start = 44.dp),
-                horizontalArrangement = if (isUser) Arrangement.End else Arrangement.Start,
-            ) {
-                TextButton(onClick = { onEdit(m) }) { IconText(I18n.t("btn_edit_msg", "✏️"), fontSize = 12.sp) }
-                if (!isUser && m.role != "系统") {
-                    if (m.swipeTotal > 1) {
-                        TextButton(onClick = { onSwipe(m, -1) }, enabled = m.swipeIndex > 0) { Text("◀", fontSize = 12.sp) }
-                        Text(
-                            (m.swipeIndex + 1).toString() + "/" + m.swipeTotal,
-                            Modifier.padding(top = 12.dp),
-                            fontSize = 11.sp,
-                            color = Color(0xFF94A3B8),
-                        )
-                        TextButton(onClick = { onSwipe(m, 1) }, enabled = m.swipeIndex < m.swipeTotal - 1) { Text("▶", fontSize = 12.sp) }
-                    }
-                    TextButton(onClick = { onRegen(m) }) { Text(I18n.t("btn_regenerate", "↻"), fontSize = 12.sp) }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun RowScope.QuickChip(label: String, onClick: () -> Unit) {
-    TextButton(onClick = onClick, modifier = Modifier.weight(1f)) {
-        IconText(label, fontSize = 11.sp)
-    }
-}
-
-@Composable
-fun DrawerItem(label: String, arrow: Boolean = false, arrowAngle: Float = 0f, onClick: () -> Unit) {
-    TextButton(onClick = onClick, modifier = Modifier.fillMaxWidth()) {
-        IconText(label, modifier = Modifier.weight(1f))
-        if (arrow) Text("▸", modifier = Modifier.rotate(arrowAngle))
-    }
+    BranchesDialog(vm, tree, mech, accent, { saveTree() }, { refreshChain() }, { gal.restoreOptionsFromNode(it) })
 }

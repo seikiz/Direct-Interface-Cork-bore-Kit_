@@ -1,0 +1,47 @@
+# GitHub Actions —— DICK 全量测试矩阵（商业化质量的测试纪律）
+# 每次 push / PR 跑一遍全套测试，防回归；失败即红。
+name: test
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: [ "3.11", "3.12" ]
+    steps:
+      - name: 检出
+        uses: actions/checkout@v4
+
+      - name: 配置 Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: 安装测试依赖
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-test.txt
+
+      - name: 运行全量测试
+        env:
+          PYTHONIOENCODING: utf-8
+          PYTHONPATH: ${{ github.workspace }}
+        run: |
+          set -o pipefail
+          FAIL=0
+          for t in tests/test_*.py; do
+            echo "== $t =="
+            python "$t" || FAIL=1
+          done
+          exit $FAIL
+
+      - name: 汇总
+        if: always()
+        run: echo "测试结束（检查上方是否有 FAIL）"

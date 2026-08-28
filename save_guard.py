@@ -34,17 +34,22 @@ BACKUP_THROTTLE_S = 300   # 覆盖前备份的节流秒数（同一存档 5 分�
 #  原子写入 / 备份
 # ============================================================
 def atomic_write_json(path, data):
-    """临时文件 + os.replace：写一半崩溃也不会留下截断的存档"""
+    """临时文件（唯一名）+ os.replace：写一半崩溃也不会留下截断的存档。
+    唯一临时名避免并发写同一文件时互相覆盖（自动存档 + 用户操作可能同时写同一档）。"""
     d = os.path.dirname(os.path.abspath(path))
     os.makedirs(d, exist_ok=True)
-    tmp = path + ".tmp"
-    with open(tmp, "w", encoding="utf-8") as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)
+    # 唯一临时名：pid + 线程随机短串 + 时间戳，防止并发写 clash
+    tmp = f"{path}.tmp.{os.getpid()}_{int(time.time() * 1000)}_{threading.get_ident()}"
     try:
+        with open(tmp, "w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
         os.replace(tmp, path)
     except Exception:
         if os.path.exists(tmp):
-            os.remove(tmp)
+            try:
+                os.remove(tmp)
+            except Exception:
+                pass
         raise
 
 
@@ -437,10 +442,21 @@ def sweep(data_dir, include_worlds=True, include_memory=True, do_repair=True, do
             # 它们不是角色卡/世界卡/记忆树，绝不能当作存档来校验、修复或备份。
             if fn.startswith("."):
                 continue
+            # 崩溃/并发残留的唯一临时文件（*.json.tmp.<pid>_<ms>_<tid>）：
+            # 先于 .json 过滤处理（它们不以 .json 结尾）。
+            if ".tmp." in fn:
+                p = os.path.join(d, fn)
+                try:
+                    os.remove(p)
+                    summary["skipped"] += 1
+                except Exception as e:
+                    summary["failed"] += 1
+                    summary["logs"].append(f"[failed] {os.path.relpath(p, data_dir)}: {e}")
+                continue
             if not fn.endswith(".json"):
                 continue
             if fn.endswith(".tmp"):
-                continue  # 原子写入残留
+                continue  # 原子写入残留（旧命名，直接跳过不当作存档）
             p = os.path.join(d, fn)
             key = os.path.normcase(os.path.abspath(p))
             if key in seen:

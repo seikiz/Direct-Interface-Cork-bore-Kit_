@@ -251,6 +251,25 @@ class MemoryChainPlugin(PluginBase):
     # ============================================================
     # 消息注入：自动携带历史记忆
     # ============================================================
+    # 强制权重方案：记忆最多占本轮上下文预算的 30%（确定性上限，不靠模型自觉）
+    MEMORY_WEIGHT = 0.30
+    _MEM_HEADER = ("【共同记忆 · 次要背景（约 30% 权重）】\n"
+                   "这些都是过去的事实，只作背景参考，不要让它盖过当前人设与最近的对话；"
+                   "不要模仿其中的文风或词藻，你仍用当前人设说话。")
+
+    def _mem_frame(self, text):
+        """把记忆文本框成"次要背景(30%)"并截断到预算上限。"""
+        mem = (text or "").strip()
+        if not mem:
+            return ""
+        budget = getattr(getattr(self, "core", None), "context_budget", None) or 0
+        # 1 中文 ≈ 1 token；无预算时用保守默认
+        max_chars = int(budget * self.MEMORY_WEIGHT) if budget and budget > 0 else 1600
+        max_chars = max(200, min(max_chars, 4000))
+        if len(mem) > max_chars:
+            mem = mem[:max_chars] + "…"
+        return self._MEM_HEADER + "\n" + mem + "\n---\n"
+
     def on_message_send(self, user_input):
         if not user_input:
             return user_input
@@ -259,9 +278,9 @@ class MemoryChainPlugin(PluginBase):
         if self.pending_recall:
             recall_text = "\n".join(f"{r}：{c[:300]}" for r, c in self.pending_recall)
             self.pending_recall = []
-            return f"[回溯记忆：更早的对话]\n{recall_text}\n---\n{user_input}"
+            return self._mem_frame(recall_text) + user_input
 
-        # 常规：注入压缩记忆
+        # 常规：注入压缩记忆（低文风权重：只当背景事实，别学记忆里的文学腔）
         if "[历史记忆]" in user_input:
             return user_input
         path = self._active_save()
@@ -269,7 +288,7 @@ class MemoryChainPlugin(PluginBase):
             return user_input
         summary = self._latest_summary(self._safe_stem(self._stem(path)))
         if summary and summary.get("summary"):
-            return f"[历史记忆]\n{summary['summary']}\n---\n{user_input}"
+            return self._mem_frame(summary['summary']) + user_input
         return user_input
 
     # ============================================================

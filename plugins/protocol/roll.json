@@ -1,0 +1,5 @@
+{
+    "name": "骰子(协议)",
+    "command": "python",
+    "args": ["plugins/protocol/roll_plugin.py"]
+}

@@ -101,7 +101,6 @@ object CardCompat {
         add("【角色简介】", data.fields["description"])
         add("【性格】", data.fields["personality"])
         add("【背景设定】", data.fields["scenario"])
-        add("【开场白】", data.fields["first_mes"])
         add("【对话示例】", data.fields["mes_example"])
         add("【备注】", data.fields["creator_notes"])
         val sp = clean(data.fields["system_prompt"])

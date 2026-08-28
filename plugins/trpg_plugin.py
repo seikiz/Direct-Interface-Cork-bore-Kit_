@@ -157,11 +157,19 @@ class TrpgPlugin(PluginBase):
             return self._status(), False
 
         if head == "end":
-            self.active = False
-            self._clear_lock()
-            return ("🏁 已退出跑团模式（已解除角色卡锁定）", False)
+            return self.end_session(), False
 
         return self._status(), False
+
+    def end_session(self):
+        """退出跑团（核心）：停用会话、解除角色卡锁定、复位轮次与行动者。
+        保留 GM/PC 配置便于重新开始。返回提示字符串。"""
+        self.active = False
+        self.turn = ""
+        self.turn_idx = 0
+        self.round = 0
+        self._clear_lock()
+        return "🏁 已退出跑团模式（已解除角色卡锁定）"
 
     # ---------- 工具 ----------
     def _lockfile(self):

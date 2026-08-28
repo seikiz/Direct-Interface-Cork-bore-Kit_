@@ -27,6 +27,11 @@ try:
 except Exception:
     httpx = None
 
+try:
+    from style_guard import style_guard as _style_guard
+except Exception:
+    _style_guard = None
+
 
 # ---------- 战斗公式安全求值（白名单 AST，绝不 exec/eval 任意代码） ----------
 _BATTLE_OPS = {
@@ -375,6 +380,7 @@ class ChatCore:
 
         self.tree = TreeManager()
         self.last_speaker = None  # 群聊：最近一次发言的角色名
+        self._speak_counts = {}   # 群聊：各角色累计发言次数（公平选角用，防饿死）
         self.player_persona = None  # 玩家角色卡（用户自己扮演的角色）
         self.prompt_preset = None   # 提示词预设（模板）
         self.stop_sequences = []    # 停止序列（指令模板，逐请求透传）
@@ -393,6 +399,8 @@ class ChatCore:
         self.current_world_name = ""           # 当前所在世界名
         self.system_prompt_base = ""
         self.humanize = True                   # 去 AI 味：默认注入人性化对话规则（config 可关）
+        self.style_guard = True                # 确定性风格闸：写树前洗文学腔表达（架构外，不靠权重）
+        self.style_guard_long = False          # 长句模式：打开时不拆长句，允许更流畅/文学化的表达
 
         self.is_processing = False
         self._proc_lock = threading.Lock()  # 并发保护：检查+置位原子化
@@ -639,29 +647,50 @@ class ChatCore:
 
     def _fit_budget(self, messages: List[Dict]) -> List[Dict]:
         """按预算裁剪消息：保留全部 system + 最近的历史消息（越旧越先丢弃）。
-        当前最后一条用户消息永远保留。"""
+        当前最后一条用户消息永远保留。
+        健壮性：reserve 按预算比例取，滚动摘要计入开销，最终硬性保证总 token ≤ 预算。"""
         budget = self.context_budget
         if not budget:
             return messages
-        reserve = 512  # 给回复留出的余量
+        # 给回复留的余量：预算越大留越多，但保底 256、封顶 1024（避免小预算被 reserve 卡死）
+        reserve = max(256, min(1024, int(budget * 0.12)))
         system_msgs = [m for m in messages if m.get('role') == 'system']
         rest = [m for m in messages if m.get('role') != 'system']
         if not rest:
             return messages
+
+        # 滚动摘要本身也占 token（常被漏算，导致实际超预算）
+        sum_tokens = 0
+        with self._summary_lock:
+            if self.rolling_summary:
+                sum_tokens = self._est_tokens(self.rolling_summary)
+
         used = sum(self._est_tokens(m.get('content', '')) for m in system_msgs)
-        remaining = budget - used - reserve
+        remaining = budget - used - reserve - sum_tokens
         if remaining <= 0:
-            # 预算连 system 都不够：只保留最后一条用户消息（截断）
+            # 预算连 system+摘要 都不够：只保留最后一条用户消息，并把 system 也截断到可容纳
             last = rest[-1]
-            cap = max(200, budget // 2)
+            # 给 system 留出的字符预算：塞满剩余预算后，用户消息至少 80 字
+            user_cap = max(80, int(budget * 0.4))
+            sys_slot = max(0, budget - self._est_tokens(last.get('content', '')) - reserve)
+            sys_slot = max(80, sys_slot)  # 保底，防止 system 被压成 0
+            kept_sys = []
+            for idxm, m in enumerate(list(system_msgs[:1])):
+                mc = m.get('content', '')
+                if self._est_tokens(mc) > sys_slot:
+                    m = dict(m)
+                    m['content'] = mc[:sys_slot] + "…"
+                kept_sys.append(m)
             content = last.get('content', '')
-            if len(content) > cap:
+            if self._est_tokens(content) > user_cap:
                 last = dict(last)
-                last['content'] = content[:cap] + "…"
+                last['content'] = content[:user_cap] + "…"
+            # 最后兜底：若仍超预算（极端），只剩一条 system+一条 user，最多 budget 字符
             print("[上下文预算] ⚠️ system 提示超出预算，仅保留最后一条用户消息")
             dropped = rest[:-1]
             self._queue_rolling_summary(dropped)
-            return self._with_rolling_summary(system_msgs[:1]) + [last]
+            return self._with_rolling_summary(kept_sys) + [last]
+
         kept = []
         used_rest = 0
         for m in reversed(rest):
@@ -1136,7 +1165,78 @@ class ChatCore:
                     ok = False
             if ok:
                 st.setdefault("flags", {})[eid] = True
+                # 事件触发顺序记录（供结局的 events_chain 判定"达成事件链"）
+                log = st.setdefault("event_log", [])
+                if eid not in log:
+                    log.append(eid)
                 return ev
+        return None
+
+    def check_endings(self):
+        """结局达成检测：读取 mechanics.endings，判定是否达成（事件链/状态/好感 组合）。命中返回结局 dict。
+        when 支持：aff_ge/aff_le/flag/status/events(全部)/events_any/events_count/events_chain(顺序)。"""
+        cfg = self._mech_config
+        st = self.mechanism_state
+        if not cfg or not st:
+            return None
+        endings = cfg.get("endings")
+        if not isinstance(endings, list):
+            return None
+
+        def when_match(w):
+            if not isinstance(w, dict):
+                return False
+            try:
+                aff = int(st.get("affection", 0) or 0)
+            except (TypeError, ValueError):
+                aff = 0
+            if w.get("aff_ge") is not None and aff < int(w["aff_ge"]):
+                return False
+            if w.get("aff_le") is not None and aff > int(w["aff_le"]):
+                return False
+            flags = st.get("flags", {}) or {}
+            if w.get("flag") and not flags.get(str(w["flag"])):
+                return False
+            status_w = w.get("status")
+            if isinstance(status_w, dict):
+                status = st.get("status") or {}
+                for k, want in status_w.items():
+                    cur = status.get(str(k))
+                    cur_s = "" if cur is None else str(cur)
+                    if str(cur_s) != str(want):
+                        return False
+            events = w.get("events")
+            if isinstance(events, list) and any(not flags.get(str(ev)) for ev in events):
+                return False
+            any_ = w.get("events_any")
+            if isinstance(any_, list) and not any(flags.get(str(ev)) for ev in any_):
+                return False
+            cnt = w.get("events_count")
+            if isinstance(cnt, dict):
+                of = cnt.get("of") or []
+                mn = int(cnt.get("min", 1) or 1)
+                if sum(1 for ev in of if flags.get(str(ev))) < mn:
+                    return False
+            chain = w.get("events_chain")
+            if isinstance(chain, list):
+                log = st.get("event_log") or []
+                li = 0
+                for s in chain:
+                    found = False
+                    while li < len(log):
+                        if str(log[li]) == str(s):
+                            found = True
+                            li += 1
+                            break
+                        li += 1
+                    if not found:
+                        return False
+            return True
+
+        ordered = sorted(endings, key=lambda e: (e.get("priority") if isinstance(e.get("priority"), (int, float)) else float("inf")))
+        for e in ordered:
+            if isinstance(e, dict) and when_match(e.get("when")):
+                return e
         return None
 
     def apply_mechanism_effect(self, effect):
@@ -1803,6 +1903,75 @@ class ChatCore:
         """群成员名单（按激活顺序）"""
         return [r.get('name', f'角色{i+1}') for i, r in enumerate(self.active_roles)]
 
+    def _pick_group_speaker(self, user_input: str, roster: Optional[List[str]] = None) -> str:
+        """群聊选角（公平 + 相关性 + 意外）。主对话与自动接话共用，保证选角一致。
+        - 尊重 @角色名 显式指定；
+        - 公平：发言越少权重越高（用 _speak_counts，防双人死循环/饿死后排）；
+        - 相关：用成员 system_prompt 的中文 2~4 字 shingle 与最后一句的用户输入匹配；
+        - 意外：小概率随机挑一个（真人会冷场/抢话）。
+        返回最终确定的角色名（绝不返回 None，回退到花名册第一个）。"""
+        if not roster:
+            roster = self._roster_names()
+        if not roster:
+            return ""
+        roster = list(roster)
+        last = getattr(self, 'last_speaker', None)
+        ui = str(user_input or "")
+
+        # 0) 显式 @角色名 优先
+        for nm in roster:
+            if nm and ("@" + nm) in ui:
+                return nm
+
+        # 1) 公平权重：发言越少 → fair 越高
+        def fair_boost(nm):
+            return 1.0 / (1.0 + self._speak_counts.get(nm, 0))
+        # 2) 相关性：角色提示词与最后一句的中文 shingle 重叠
+        def _ngrams(s, n):
+            s = re.sub(r"\s+", "", str(s))
+            return {s[i:i + n] for i in range(max(0, len(s) - n + 1))}
+        def relevance(nm):
+            r = next((x for x in self.active_roles if x.get('name') == nm), None)
+            if not r:
+                return 0.0
+            sp = str(r.get('system_prompt') or "")
+            adv = r.get('advanced') or {}
+            extra = str(adv.get('extra_prompt') or "") if isinstance(adv, dict) else ""
+            profile = _ngrams(sp + " " + extra, 2) | _ngrams(sp + " " + extra, 3) | _ngrams(sp + " " + extra, 4)
+            msg = _ngrams(ui, 2) | _ngrams(ui, 3)
+            overlap = msg & profile
+            info = [g for g in overlap if any('\u4e00' <= c <= '\u9fff' for c in g)
+                    and not re.search(r"[\s，。！？、的了是在我你他她这那]", g)]
+            return min(len(info), 4) / 4.0
+
+        # 候选：排除上一个发言者（若还有别人）
+        cands = [n for n in roster if n != last] or roster[:]
+        scorer = []
+        for nm in cands:
+            sc = 2.0 * fair_boost(nm) + 1.6 * relevance(nm)
+            scorer.append((sc, nm))
+        scorer.sort(key=lambda pair: -pair[0])
+
+        # 3) 加权随机（给低分一点机会，更像真人）
+        total = sum(p[0] for p in scorer) or 1.0
+        rr = random.random() * total
+        acc = 0.0
+        chosen = scorer[0][1]
+        for sc, nm in scorer:
+            acc += sc
+            if rr <= acc:
+                chosen = nm
+                break
+        # 4) 小概率意外
+        if random.random() < 0.12 and len(cands) > 1:
+            chosen = random.choice(cands)
+        return chosen
+
+    def _bump_speaker(self, name):
+        """记录一位角色发言（公平计数用）"""
+        if name:
+            self._speak_counts[name] = self._speak_counts.get(name, 0) + 1
+
     def _parse_speaker(self, reply: str):
         """解析回复开头的 [角色名]: 前缀，返回 (角色名, 内容) 或 (None, 原文)"""
         if not reply:
@@ -1871,30 +2040,48 @@ class ChatCore:
 
     def _stream_create(self, messages, on_stream):
         """流式调用 API：逐块回调 on_stream(累计全文)，返回 (全文, usage)。
-        直连网络失败时自动切内置中转通道重试一次。"""
+        - 直连网络失败时自动切内置中转通道重试一次；
+        - 中途断流（长对话最常见）：若尚无可交付文本则重试，否则回传已收文本（不丢弃半截）。"""
         full = ""
         usage = None
-        try:
+
+        def _open_and_read(start_over):
+            nonlocal full, usage
             stream = self._mk_stream(messages)
+            if start_over:
+                full = ""
+            for chunk in stream:
+                if getattr(chunk, "usage", None):
+                    usage = chunk.usage
+                choices = getattr(chunk, "choices", None)
+                if choices:
+                    delta = getattr(choices[0], "delta", None)
+                    text = getattr(delta, "content", None) if delta else None
+                    if text:
+                        full += text
+                        if on_stream:
+                            try:
+                                on_stream(full)
+                            except Exception:
+                                pass
+
+        try:
+            _open_and_read(False)
         except (APIConnectionError, APITimeoutError):
-            if self._maybe_switch_relay():
-                stream = self._mk_stream(messages)
-            else:
+            # 打开即失败，尚未收到文本 → 切中转重试一次
+            if self._maybe_switch_relay() and not full:
+                try:
+                    _open_and_read(True)
+                except (APIConnectionError, APITimeoutError):
+                    # 重试仍失败：保留已收文本（若有），交给上层处理
+                    if not full:
+                        raise
+            elif not full:
+                # 无法切中转（无备用通道），且没收到任何文本 → 抛给上层
                 raise
-        for chunk in stream:
-            if getattr(chunk, "usage", None):
-                usage = chunk.usage
-            choices = getattr(chunk, "choices", None)
-            if choices:
-                delta = getattr(choices[0], "delta", None)
-                text = getattr(delta, "content", None) if delta else None
-                if text:
-                    full += text
-                    if on_stream:
-                        try:
-                            on_stream(full)
-                        except Exception:
-                            pass
+        except Exception:
+            # 非网络类异常（如序列化/参数）：不吞，原样抛
+            raise
         return full, usage
 
     def _fetch_response(self, user_input: str, speaker: Optional[str], on_response, on_error, parent_node_id: str, on_stream=None, _locked=False):
@@ -1921,10 +2108,8 @@ class ChatCore:
                 _addressed = self._resolve_addressed(user_input)
                 if _addressed in _roster:
                     speaker = _addressed
-                elif speaker not in _roster:
-                    _last = getattr(self, 'last_speaker', None)
-                    _cand = [n for n in _roster if n != _last] or _roster[1:] or _roster
-                    speaker = _cand[0]
+                else:
+                    speaker = self._pick_group_speaker(user_input, _roster)
                 _group_speaker = speaker
             else:
                 _group_speaker = None
@@ -2038,10 +2223,15 @@ class ChatCore:
                     speaker_name = self._roster_names()[0] if self._roster_names() else None
                 clean_reply = ai_reply
             self.last_speaker = speaker_name
+            self._bump_speaker(speaker_name)
 
             # 世界线切换：GM 回复带【世界线：xxx】标记 → 自动穿越 + 剔除标记
             clean_reply, switched_world = self.apply_world_marker(clean_reply)
             self.last_world_switch = switched_world
+
+            # 确定性风格闸：写入上下文前洗掉文学腔表达（不删内容，断自增强）
+            if self.style_guard and _style_guard is not None:
+                clean_reply = _style_guard(clean_reply, long_sentence=self.style_guard_long)
 
             node_id = self.tree.add_node(
                 'assistant',
@@ -2121,6 +2311,7 @@ class ChatCore:
             if final_reply.strip() in ("沉默", "（沉默）", "(沉默)"):
                 final_reply = "（沉默）"
             self.last_speaker = final_speaker
+            self._bump_speaker(final_speaker)
 
             if usage:
                 self.total_tokens += usage.total_tokens

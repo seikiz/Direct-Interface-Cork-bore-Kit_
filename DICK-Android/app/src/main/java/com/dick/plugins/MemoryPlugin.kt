@@ -48,6 +48,12 @@ class MemoryPlugin : Plugin {
         }
     }
 
+    /** 彻底清空记忆链（清空 turns 并落盘）；调用前须二次确认 */
+    fun clear() {
+        turns.clear()
+        save()
+    }
+
     override fun onMessageReceived(userInput: String, aiReply: String) {
         if (userInput.isBlank() || aiReply.isBlank()) return
         turns.add(userInput to aiReply)
@@ -80,6 +86,14 @@ class MemoryPlugin : Plugin {
         return null
     }
 
-    override fun contextInjection(): String =
-        if (recalled.isBlank()) "" else "【记忆回溯】" + 10.toChar() + recalled
+    override fun contextInjection(): String {
+        if (recalled.isBlank()) return ""
+        // 强制权重方案：记忆最多占本轮上下文预算的 30%（确定性上限，不靠模型自觉）
+        val maxChars = 2400   // 30% 的 8000-token 默认上下文（1 中文 ≈ 1 token）
+        var mem = recalled
+        if (mem.length > maxChars) mem = mem.take(maxChars) + "…"
+        return "【共同记忆 · 次要背景（约 30% 权重）】" + 10.toChar() +
+            "这些都是过去的事实，只作背景参考，不要让它盖过当前人设与最近的对话；" +
+            "不要模仿其中的文风或词藻，你仍用当前人设说话。" + 10.toChar() + mem
+    }
 }

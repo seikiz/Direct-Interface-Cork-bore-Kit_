@@ -88,3 +88,6 @@ server_build/
 DICK-HTML.zip
 *.bak
 aoqi_crawler.py
+
+# DSH 环境目录
+/dsh-companion/

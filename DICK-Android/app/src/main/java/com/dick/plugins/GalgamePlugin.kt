@@ -31,6 +31,8 @@ class GalgamePlugin : Plugin {
     var mechConfigProvider: (() -> J.Obj?)? = null
     var mechStateProvider: (() -> J.Obj?)? = null
     var mechEventProvider: (() -> J.Obj?)? = null
+    /** 选项写进树后触发（宿主在 App 里接到 saveTree） */
+    var saveTreeHook: (() -> Unit)? = null
 
     var count: Int by mutableStateOf(3)
     var auto: Boolean by mutableStateOf(true)
@@ -47,6 +49,49 @@ class GalgamePlugin : Plugin {
             loading = false
             error = ""
             genUserNode = null
+        }
+    }
+
+    /** 把当前选项序列化写进指定 AI 回复节点的 metadata（gal_options），供回档复原 */
+    private fun saveOptionsToTree(targetNodeId: String?) {
+        val t = tree ?: return
+        val node = targetNodeId?.let { t.getNode(it) } ?: return
+        if (node.role != "assistant") return
+        val arr = J.Arr()
+        for (c in choices) {
+            val o = J.Obj()
+            o.fields["text"] = J.Str(c.text)
+            c.result?.let { r -> o.fields["result"] = J.Str(r) }
+            c.aff?.let { a -> o.fields["aff"] = J.Num(a.toDouble()) }
+            c.st?.let { st ->
+                val sto = J.Obj()
+                st.forEach { (k, v) -> sto.fields[k] = J.Str(v) }
+                o.fields["st"] = sto
+            }
+            arr.items.add(o)
+        }
+        if (arr.items.isEmpty()) return
+        val meta = (node.metadata as? J.Obj) ?: J.Obj().also { node.metadata = it }
+        meta.fields["gal_options"] = arr
+        saveTreeHook?.invoke()
+    }
+
+    /** 回档到某节点：若它存过选项则复原，否则清空（不残留旧选项） */
+    fun restoreOptionsFromNode(nodeId: String?) {
+        val t = tree ?: return
+        val node = nodeId?.let { t.getNode(it) } ?: return
+        val arr = (node.metadata as? J.Obj)?.fields?.get("gal_options") as? J.Arr
+        if (arr == null) { clearChoices(); return }
+        val restored = arr.items.mapNotNull { it as? J.Obj }.mapNotNull { o ->
+            val text = o.fields["text"]?.str() ?: return@mapNotNull null
+            val st = (o.fields["st"] as? J.Obj)?.fields?.mapNotNull { (k, v) -> k to (v.str() ?: "") }?.toMap()
+            ChoiceItem(text, o.fields["result"]?.str()?.takeIf { it.isNotBlank() }, (o.fields["aff"] as? J.Num)?.v?.toInt(), st)
+        }
+        synchronized(this) {
+            choices.clear()
+            choices.addAll(restored)
+            genUserNode = lastUserNodeId()
+            error = ""
         }
     }
 
@@ -102,6 +147,8 @@ class GalgamePlugin : Plugin {
             loading = true
             error = ""
         }
+        // 生成时定格叶子（该 AI 回复节点），选项生成后写到它上面，回档到它能复原
+        val targetNode = tree?.currentLeafId
         Thread {
             val e = engine
             if (e == null) {
@@ -131,6 +178,7 @@ class GalgamePlugin : Plugin {
             val system = buildString {
                 append("你是视觉小说（Galgame）的选项生成器。根据最近剧情，为玩家（用户）生成 $n 个简短、可行、有区分度的下一步行动选项。")
                 append("要求：每个选项不超过 18 个字，口语化，贴合当前角色性格与剧情走向；不要剧透后续剧情，不要输出编号或'选项一'这类前缀。")
+                append("每个选项 text 末尾请用一个贴合语气的句末标点：陈述用「。」、疑问用「？」、意味深长/悬而未决用「…」、感叹用「！」；不要用冒号、分号或括号做解释。")
                 append("每个选项必须带 \"result\"：一句事件结果提示（≤12 字，模糊、不剧透具体数值，如 \"她可能会心头一暖\" / \"气氛可能会尴尬\"）。")
                 // 结合当前触发事件：选项围绕事件展开
                 mechEventProvider?.invoke()?.let { ev ->
@@ -158,6 +206,7 @@ class GalgamePlugin : Plugin {
                     choices.addAll(items)
                     error = ""
                     genUserNode = lastUserNodeId()
+                    saveOptionsToTree(targetNode)
                 } else {
                     choices.clear()
                     error = "未能解析出选项（模型输出格式异常）"
@@ -279,6 +328,8 @@ class GalgamePlugin : Plugin {
             s = Regex("^[-*•·]\\s*").replaceFirst(s, "")
             s = Regex("[（(][^（）()]*[）)]\\s*$").replaceFirst(s, "")   // 末尾括号说明（模型常附加）
             s = s.trim().trim('"').trim('\'')
+            // 选项文本标点兜底：若模型末尾没给句末标点，补一个「。」（已带 ？/！/… 则保留）
+            if (s.isNotEmpty() && !Regex("[。！？…?!]$").containsMatchIn(s)) s += "。"
             if (s.isEmpty() || s.length > 50 || s in seen) continue
             seen.add(s)
             out.add(ChoiceItem(s, result, aff, st))

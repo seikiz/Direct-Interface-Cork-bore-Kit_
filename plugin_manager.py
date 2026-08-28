@@ -7,6 +7,7 @@ import traceback
 import json
 from typing import Dict, List, Optional
 from plugin_base import PluginBase
+from protocol_plugin import ProtocolPlugin
 import app_paths
 
 
@@ -108,7 +109,41 @@ class PluginManager:
                             print(f"[Plugin] {status} {plugin_instance.name} v{plugin_instance.version}")
                 except Exception as e:
                     print(f"[Plugin] Load failed {filename}: {e}")
-                
+
+        self._load_protocol_plugins()
+
+    def _load_protocol_plugins(self):
+        states = self._load_states()
+        for d in self.plugin_dirs:
+            pdir = os.path.join(d, "protocol")
+            if not os.path.isdir(pdir):
+                continue
+            for fn in sorted(os.listdir(pdir)):
+                if not fn.endswith(".json"):
+                    continue
+                path = os.path.join(pdir, fn)
+                try:
+                    with open(path, "r", encoding="utf-8") as f:
+                        spec = json.load(f)
+                    plugin = ProtocolPlugin(
+                        self.core,
+                        spec.get("name", fn[:-5]),
+                        spec.get("command", "python"),
+                        spec.get("args", []),
+                        base_dir=app_paths.get_base_dir(),
+                    )
+                    if plugin._spawn_err:
+                        print(f"[Plugin] 协议插件启动失败: {plugin._spawn_err}")
+                        continue
+                    if plugin.name in states:
+                        plugin.enabled = states[plugin.name]
+                    plugin.on_load()
+                    self.plugins[plugin.name] = plugin
+                    self.plugin_files[plugin.name] = path
+                    status = "Y" if plugin.enabled else "N"
+                    print(f"[Plugin] {status} {plugin.name} v{plugin.version} (协议)")
+                except Exception as e:
+                    print(f"[Plugin] 协议插件加载失败 {fn}: {e}")
     def unload_plugins(self):
         for plugin in self.plugins.values():
             try:
@@ -180,6 +215,20 @@ class PluginManager:
             except Exception as e:
                 print(f"[插件] {plugin.name} 命令处理出错: {e}")
         return None
+
+    def onMessageSend(self, user_input):
+        current = user_input
+        for p in self.plugins.values():
+            if not getattr(p, "enabled", False):
+                continue
+            try:
+                r = p.on_message_send(current)
+                if r is None:
+                    return None
+                current = r
+            except Exception:
+                continue
+        return current
 
     # ---------- 插件安装 / 卸载 ----------
     def install_plugin(self, src_path: str):

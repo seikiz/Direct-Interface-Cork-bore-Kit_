@@ -21,6 +21,12 @@ from functools import wraps
 
 from flask import Flask, request, jsonify, send_file
 
+# 敏感信息加密（与主程序共用）：sync_settings.json 里共享的 API 码不再明文落盘
+try:
+    import secret_store
+except Exception:
+    secret_store = None
+
 # Windows 中文控制台（GBK）无法打印 emoji，
 # 保留控制台编码不变，仅把不可编码字符替换为 ?，避免启动崩溃
 for _stream in (sys.stdout, sys.stderr):
@@ -90,19 +96,33 @@ def save_index(index):
 
 
 def _load_sync_settings() -> dict:
-    """读取跨设备共享的同步设置（API 码等），容错"""
+    """读取跨设备共享的同步设置（API 码等），容错 + 解密敏感字段"""
     try:
         with open(SYNC_SETTINGS_FILE, "r", encoding="utf-8") as f:
             data = json.load(f)
-        return data if isinstance(data, dict) else {}
+        if not isinstance(data, dict):
+            return {}
+        # 解密共享的 api 配置（含 api_key）
+        api = data.get("api")
+        if isinstance(api, dict) and secret_store is not None:
+            if api.get("api_key"):
+                d = secret_store.decrypt(str(api["api_key"]))
+                api["api_key"] = d if d is not None else ""
+        return data
     except Exception:
         return {}
 
 
 def _save_sync_settings(data: dict):
+    """原子写入 + 加密敏感字段（共享的 api_key 不落明文）"""
+    out = dict(data)
+    api = out.get("api")
+    if isinstance(api, dict) and secret_store is not None:
+        if api.get("api_key"):
+            api["api_key"] = secret_store.encrypt(str(api["api_key"]))
     tmp = SYNC_SETTINGS_FILE + ".tmp"
     with open(tmp, "w", encoding="utf-8") as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)
+        json.dump(out, f, ensure_ascii=False, indent=2)
     os.replace(tmp, SYNC_SETTINGS_FILE)
 
 
@@ -142,6 +162,21 @@ def require_auth(f):
     def decorated(*args, **kwargs):
         if request.method == "GET":
             return f(*args, **kwargs)
+        if not API_KEY:
+            return f(*args, **kwargs)
+        api_key = request.headers.get("X-API-Key", "")
+        if api_key != API_KEY:
+            return jsonify({"error": "API Key 无效或缺失"}), 401
+        return f(*args, **kwargs)
+    return decorated
+
+
+def require_auth_strict(f):
+    """含敏感数据的接口（返回/写入共享 API 码）：设置了 KEY 时，GET 也要认证。
+    客户端（手机/PC）同步时始终带 X-API-Key 头，因此不会破坏合法同步；
+    但无 KEY 的公网/局域网陌生人无法白拿共享的 API 码。"""
+    @wraps(f)
+    def decorated(*args, **kwargs):
         if not API_KEY:
             return f(*args, **kwargs)
         api_key = request.headers.get("X-API-Key", "")
@@ -240,6 +275,7 @@ def _save_path(card_id: str) -> str:
 
 
 @app.post("/api/save/<card_id>")
+@require_auth
 def save_upload(card_id):
     """上传某个角色的聊天树存档（后来者胜，服务器盖时间戳）。"""
     try:
@@ -278,12 +314,15 @@ def save_download(card_id):
 # ============ 同步设置（API 码等跨设备共享） ============
 
 @app.get("/api/sync/api")
+@require_auth_strict
 def sync_api_get():
-    """获取共享的模型连接配置（API 码等）；无则返回空对象。"""
+    """获取共享的模型连接配置（API 码等）；无则返回空对象。
+    设置了 WORKSHOP_API_KEY 时该接口也需要认证，避免共享的 API 码被公开读取。"""
     return jsonify(_load_sync_settings().get("api") or {})
 
 
 @app.post("/api/sync/api")
+@require_auth_strict
 def sync_api_post():
     """保存共享的模型连接配置（后来者胜）。"""
     try:
@@ -630,7 +669,7 @@ def _udp_discover_loop():
         if data and data.strip() == DISCOVER_MAGIC:
             try:
                 reply = json.dumps(
-                    {"service": "dick-sync", "port": PORT, "host": addr[0]}
+                    {"service": "dick-sync", "name": "DICK 创意工坊", "host": _lan_ip(), "port": PORT}
                 ).encode("utf-8")
                 s.sendto(reply, addr)
             except Exception:

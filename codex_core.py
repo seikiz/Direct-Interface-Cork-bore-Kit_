@@ -89,6 +89,251 @@ def classify_file(name):
     return _EXT_KIND.get(ext)
 
 
+# ---------- 纯文本剧本解析（傻瓜化：粘贴文本 → codex.json） ----------
+_SCENE_RE = re.compile(r"^\s*[【\[]\s*(?:场景|scene)\s*[】\]]\s*[:：]?\s*(.*)$", re.I)
+_BG_RE = re.compile(r"^\s*(?:【背景】|背景\s*[:：]|bg\s*[:：])\s*(.+)$", re.I)
+_BGM_RE = re.compile(r"^\s*(?:【音乐】|【bgm】|音乐\s*[:：]|bgm\s*[:：])\s*(.+)$", re.I)
+_NOTE_RE = re.compile(r"^\s*>\s*(.+)$")
+_CHOICE_HEAD_RE = re.compile(r"^\s*[【\[]\s*(?:选项|choice)\s*[】\]]\s*(.*)$", re.I)
+_CHOICE_ITEM_RE = re.compile(r"^\s*(?:[-*·•]|\d+[.、）)])\s*(.+?)\s*(?:→|->)\s*([A-Za-z]?\d+)\s*$")
+_JUMP_RE = re.compile(r"^\s*(?:【跳转】|跳转\s*[:：]|jump\s*[:：])\s*([A-Za-z]?\d+)\s*$", re.I)
+_END_RE = re.compile(r"^\s*(?:【结局】|结局\s*[:：]|end\s*[:：])\s*(.+)$", re.I)
+_SPEAKER_RE = re.compile(r"^\s*([^:：]{1,20}?)\s*[:：]\s*(.+)$")
+
+
+def _norm_goto(g):
+    """把 goto 目标规整成场景 id：'2' → 's2'，'s2' → 's2'，'S2' → 's2'"""
+    g = (g or "").strip()
+    if re.match(r"^[A-Za-z]", g):
+        return g
+    return "s" + g.lstrip("sS")
+
+
+def parse_script_text(text, name="我的故事"):
+    """把纯文本剧本解析成 codex.json 对象（傻瓜化：粘贴文本 → 可播剧本）。
+
+    约定格式（中英文标点均可）：
+      【场景】章节标题                 → 新建场景（id 依次 s1, s2, ...）
+      【背景】xxx.png / 背景: xxx.png   → 当前场景背景
+      【音乐】xxx.mp3 / bgm: xxx.mp3    → 当前场景音乐
+      > 旁白文字                       → 舞台说明（note）
+      角色名：台词                      → 台词
+      【选项】                          → 其后用 “- 文字 → s2” 的选项行
+         - 打招呼 → s2
+      【跳转】s2 / 跳转: s2             → 跳转
+      【结局】标题 / 结局: 标题          → 结局
+    空行跳过；未识别的行当作旁白（note）。
+    解析失败返回 None。"""
+    if not isinstance(text, str) or not text.strip():
+        return None
+    scenes = []
+    cur = None
+    choice_items = []
+
+    def new_scene(title):
+        nonlocal cur, choice_items
+        sid = "s" + str(len(scenes) + 1)
+        sc = {"id": sid, "title": (title or "").strip() or ("场景 " + str(len(scenes) + 1)),
+              "lines": []}
+        scenes.append(sc)
+        cur = sc
+        choice_items = []
+        return sc
+
+    def flush_choice():
+        nonlocal choice_items
+        if choice_items and cur is not None:
+            cur["lines"].append({"choice": choice_items})
+        choice_items = []
+
+    for raw in text.splitlines():
+        line = raw.strip()
+        if not line:
+            continue
+        fold = line[0:2]
+        if fold in ("//", "#!"):
+            continue
+        m = _SCENE_RE.match(line)
+        if m:
+            flush_choice()
+            new_scene(m.group(1))
+            continue
+        mb = _BG_RE.match(line)
+        if mb:
+            if cur is None:
+                new_scene("")
+            flush_choice()
+            cur["bg"] = mb.group(1).strip()
+            continue
+        mm = _BGM_RE.match(line)
+        if mm:
+            if cur is None:
+                new_scene("")
+            flush_choice()
+            cur["bgm"] = mm.group(1).strip()
+            continue
+        mn = _NOTE_RE.match(line)
+        if mn:
+            if cur is None:
+                new_scene("")
+            flush_choice()
+            cur["lines"].append({"note": mn.group(1).strip()})
+            continue
+        mc = _CHOICE_HEAD_RE.match(line)
+        if mc:
+            if cur is None:
+                new_scene("")
+            inline = mc.group(1).strip()
+            ci = _CHOICE_ITEM_RE.match(inline)
+            if inline and ci:
+                choice_items.append({"text": ci.group(1).strip(),
+                                     "goto": _norm_goto(ci.group(2))})
+            continue
+        mi = _CHOICE_ITEM_RE.match(line)
+        if mi:
+            if cur is None:
+                new_scene("")
+            choice_items.append({"text": mi.group(1).strip(),
+                                 "goto": _norm_goto(mi.group(2))})
+            continue
+        mj = _JUMP_RE.match(line)
+        if mj:
+            if cur is None:
+                new_scene("")
+            flush_choice()
+            cur["lines"].append({"jump": _norm_goto(mj.group(1))})
+            continue
+        me = _END_RE.match(line)
+        if me:
+            if cur is None:
+                new_scene("")
+            flush_choice()
+            cur["lines"].append({"end": me.group(1).strip()})
+            continue
+        ms = _SPEAKER_RE.match(line)
+        if ms:
+            sp = ms.group(1).strip()
+            t = ms.group(2).strip()
+            if t:
+                if cur is None:
+                    new_scene("")
+                flush_choice()
+                cur["lines"].append({"speaker": sp, "text": t})
+                continue
+        # 兜底：未识别行当作旁白
+        if cur is None:
+            new_scene("")
+        flush_choice()
+        cur["lines"].append({"note": line})
+    flush_choice()
+    if not scenes:
+        return None
+    return {"codex": CODEX_VERSION, "name": name, "author": "", "intro": "",
+            "scenes": scenes}
+
+
+# ---------- 剧本规整（粘贴 JSON / 解析文本后统一处理） ----------
+def _align_resources(data, pkg_dir):
+    """把剧本资源引用与包内实有文件对齐：缺省且包内唯一 → 自动回填；
+    已有引用但路径不匹配 → 按文件名修复。就地修改 data。"""
+    avail = {}
+    for kind in SUBDIRS:
+        kd = os.path.join(pkg_dir, kind)
+        files = []
+        if os.path.isdir(kd):
+            try:
+                files = sorted(f for f in os.listdir(kd) if os.path.isfile(os.path.join(kd, f)))
+            except Exception:
+                files = []
+        avail[kind] = files
+
+    def repair(kind, ref):
+        ref = (ref or "").strip().replace("\\", "/")
+        if not kind or not ref:
+            return None
+        base = os.path.basename(ref)
+        if base in avail.get(kind, []):
+            return f"{kind}/{base}"
+        return None
+
+    def only(kind):
+        fs = avail.get(kind, [])
+        return f"{kind}/{fs[0]}" if len(fs) == 1 else None
+
+    for sc in data.get("scenes") or []:
+        if not isinstance(sc, dict):
+            continue
+        for field, kind in (("bg", "bg"), ("bgm", "bgm")):
+            if field in sc and sc.get(field):
+                r = repair(kind, sc[field])
+                if r:
+                    sc[field] = r
+            elif field not in sc:
+                r = only(kind)
+                if r:
+                    sc[field] = r
+        for ln in sc.get("lines") or []:
+            if not isinstance(ln, dict):
+                continue
+            for field, kind in (("sprite", "sprites"), ("voice", "voice"),
+                                ("bg", "bg"), ("bgm", "bgm")):
+                if ln.get(field):
+                    r = repair(kind, ln[field])
+                    if r:
+                        ln[field] = r
+            if isinstance(ln.get("sprites"), list):
+                for s in ln["sprites"]:
+                    if isinstance(s, dict) and s.get("file"):
+                        r = repair("sprites", s["file"])
+                        if r:
+                            s["file"] = r
+    return data
+
+
+def normalize_script(data, pkg_dir=None):
+    """把（粘贴/解析的）剧本规整成可播 codex.json：补默认字段、保证场景 id 连续、
+    若有包目录则对位资源。返回规整后的 data（不校验）。"""
+    if not isinstance(data, dict):
+        return data
+    if not data.get("codex"):
+        data["codex"] = CODEX_VERSION
+    data.setdefault("author", "")
+    data.setdefault("intro", "")
+    scenes = data.get("scenes")
+    if isinstance(scenes, list):
+        n = 1
+        for sc in scenes:
+            if not isinstance(sc, dict):
+                continue
+            if not str(sc.get("id") or "").strip():
+                sc["id"] = "s" + str(n)
+            n += 1
+            if not isinstance(sc.get("lines"), list):
+                sc["lines"] = []
+        if pkg_dir:
+            _align_resources(data, pkg_dir)
+    return data
+
+
+# ---------- 基础网安：HTML 注入清洗（卡面/内嵌 HTML） ----------
+_SCRIPT_RE = re.compile(r"<\s*script\b[^>]*>[\s\S]*?<\s*/\s*script\s*>", re.I)
+_EMBED_TAG_RE = re.compile(r"<\s*/?\s*(iframe|object|embed|form|base|meta|link|style)\b[^>]*>", re.I)
+_HANDLER_RE = re.compile(r"\son[a-zA-Z]+\s*=\s*(?:\"[^\"]*\"|'[^']*'|[^\s>]+)", re.I)
+
+
+def sanitize_html(html):
+    """基础 HTML 注入防护：移除 <script> 块、可嵌入危险标签（iframe/object/embed/form/base），
+    移除所有事件处理属性（onclick/onload 等），并把 javascript:/vbscript: 协议中立化为 blocked:。
+    返回清洗后的字符串。"""
+    if not isinstance(html, str):
+        return ""
+    s = _SCRIPT_RE.sub("", html)
+    s = _EMBED_TAG_RE.sub("", s)
+    s = re.sub(r"(?i)(javascript|vbscript)\s*:", "blocked:", s)
+    s = _HANDLER_RE.sub("", s)
+    return s
+
+
 # ---------- 剧本校验 ----------
 def validate_codex(data):
     """校验剧本 dict。返回 (ok, issues)"""
@@ -681,28 +926,29 @@ document.getElementById('cxTextbox').onclick = function () {
 
 
 def build_standalone_file(pkg_dir, out_path=None):
-    """生成独立单文件 HTML（打包 GALGAME）。返回 (成功?, 输出路径或错误)"""
-    embed, counts = build_standalone_html(pkg_dir)
-    # 防 script 截断 + XSS：JSON 里的 < 转义为 \u003c（JS 解析自动还原）
-    embed_safe = embed.replace("<", "\\u003c")
-    # 播放器 JS：先放数据（JSON 序列化），再放播放器逻辑
-    script_body = "var __CODEX_DATA__ = " + embed_safe + ";\n" + STANDALONE_PLAYER_JS
-    html = STANDALONE_PLAYER_HTML.replace("__CODEX_EMBED__", script_body)
-    # 架构级水印（隐蔽，抄产物即带走）
-    try:
-        import dick_mark
-        html = html.replace("<!-- DICK-MARK -->",
-                            "<!-- " + dick_mark.SIGNATURE + " -->", 1)
-        html = html.replace("__DICK_MARK_JS__",
-                            "window.__DICK_MARK='" + dick_mark.MARK_JS + "';", 1)
-    except Exception:
-        pass
+    """生成独立单文件 HTML（打包 GALGAME）。返回 (成功?, 输出路径或错误)。
+    若包内有 player.html 自定义模板则用之，否则用系统内置模板。"""
+    pkg = os.path.abspath(pkg_dir)
+    tpl = _load_custom_template(pkg)
+    html, counts = render_standalone(pkg, tpl)
     if out_path is None:
-        out_path = os.path.join(os.path.dirname(os.path.abspath(pkg_dir)),
-                                _safe_name(os.path.basename(pkg_dir)) + ".html")
+        out_path = os.path.join(os.path.dirname(pkg),
+                                _safe_name(os.path.basename(pkg)) + ".html")
     with open(out_path, "w", encoding="utf-8") as f:
         f.write(html)
     return True, out_path, counts
+
+
+def _load_custom_template(pkg_dir):
+    """读包内 player.html（高级自定义模板）；无则返回 None（用系统默认）。"""
+    pt = os.path.join(os.path.abspath(pkg_dir), "player.html")
+    if os.path.isfile(pt):
+        try:
+            with open(pt, "r", encoding="utf-8") as f:
+                return f.read()
+        except Exception:
+            return None
+    return None
 
 
 STANDALONE_PLAYER_HTML = """<!DOCTYPE html>
@@ -769,6 +1015,41 @@ __CODEX_EMBED__
 """
 
 
+# ---------- 高级：可编辑播放器模板（现场改 GALGAME 代码） ----------
+# DEFAULT_EDITABLE_TEMPLATE = 系统内置的完整播放器源（HTML + 内联播放器 JS），
+# 其中数据注入点为 __CODEX_PAYLOAD__。高级用户可直接改这份模板，换掉任何 HTML/CSS/JS，
+# 只需保留 __CODEX_PAYLOAD__（打包/试玩时替换为真实剧本资源数据）。
+_EDITABLE_JS = "var __CODEX_DATA__ = __CODEX_PAYLOAD__;\n" + STANDALONE_PLAYER_JS
+DEFAULT_EDITABLE_TEMPLATE = STANDALONE_PLAYER_HTML.replace("__CODEX_EMBED__", _EDITABLE_JS)
+
+
+def render_standalone(pkg_dir, template_html=None):
+    """根据播放器模板渲染包为独立 HTML 字符串（现场试玩 / 打包共用）。
+    template_html 为空则用系统内置模板；模板内保留 __CODEX_PAYLOAD__（或 __CODEX_EMBED__）注入点。
+    返回 (html, counts)。"""
+    embed, counts = build_standalone_html(pkg_dir)
+    # 防 script 截断 + XSS：JSON 里的 < 转义为 \u003c（JS 解析自动还原）
+    embed_safe = embed.replace("<", "\\u003c")
+    tpl = template_html if (template_html and template_html.strip()) else DEFAULT_EDITABLE_TEMPLATE
+    if "__CODEX_PAYLOAD__" in tpl:
+        tpl = tpl.replace("__CODEX_PAYLOAD__", embed_safe)
+    elif "__CODEX_EMBED__" in tpl:
+        tpl = tpl.replace("__CODEX_EMBED__",
+                          "var __CODEX_DATA__ = " + embed_safe + ";\n" + STANDALONE_PLAYER_JS)
+    else:
+        raise ValueError("模板中需保留 __CODEX_PAYLOAD__（或 __CODEX_EMBED__）数据注入点")
+    # 架构级水印（隐蔽，抄产物即带走）
+    try:
+        import dick_mark
+        tpl = tpl.replace("<!-- DICK-MARK -->",
+                          "<!-- " + dick_mark.SIGNATURE + " -->", 1)
+        tpl = tpl.replace("__DICK_MARK_JS__",
+                          "window.__DICK_MARK='" + dick_mark.MARK_JS + "';", 1)
+    except Exception:
+        pass
+    return tpl, counts
+
+
 # ---------- 打包 EXE：pywebview 播放器壳 ----------
 # 壳脚本：内嵌打包好的单文件 HTML（base64），pywebview 窗口加载。
 # PyInstaller --onefile --noconsole 打成独立 EXE（无需浏览器，双击即玩）。
@@ -794,7 +1075,13 @@ _HTML_B64 = "__HTML_B64__"
 _HTML = base64.b64decode(_HTML_B64).decode("utf-8")
 _TITLE = "__TITLE__"
 
-import webview
+# webview 仅用于把生成脚本渲染成独立播放器窗口；测试/无头环境可能没有可用的
+# GTK 后端或根本没装。做成可缺失导入，避免 module import 阶段硬失败（商业化质量：
+# 测试服务器不该因为缺 GUI 工具链而整包红）。
+try:
+    import webview
+except Exception:
+    webview = None
 
 
 class _Api:
@@ -808,6 +1095,9 @@ class _Api:
 
 
 def main():
+    if webview is None:
+        print("无法启动播放器：未安装可用的 webview（pywebview）后端")
+        return
     api = _Api()
     window = webview.create_window(
         _TITLE, html=_HTML, js_api=api,
@@ -856,10 +1146,9 @@ def build_standalone_exe(pkg_dir, out_dir, name=None, py_cmd=None, log_cb=None):
     import sys as _sys
     import shutil
     pkg_dir = os.path.abspath(pkg_dir)
-    # 1) 生成单文件 HTML
-    embed, counts = build_standalone_html(pkg_dir)
-    html = STANDALONE_PLAYER_HTML.replace("__CODEX_EMBED__",
-                                          "var __CODEX_DATA__ = " + embed.replace("<", "\\u003c") + ";\n" + STANDALONE_PLAYER_JS)
+    # 1) 生成单文件 HTML（支持自定义播放器模板）
+    tpl = _load_custom_template(pkg_dir)
+    html, counts = render_standalone(pkg_dir, tpl)
     with open(os.path.join(pkg_dir, "codex.json"), "r", encoding="utf-8") as f:
         script = json.load(f)
     title = str(script.get("name") or (name or "CODEX GALGAME"))
@@ -944,6 +1233,7 @@ def import_zip(zip_path, dest_root):
                     pass
             dst = os.path.join(dest_root, _safe_name(name))
             os.makedirs(dst, exist_ok=True)
+            real_dst = os.path.realpath(dst)
             for n in names:
                 if n.endswith("/"):
                     continue
@@ -951,9 +1241,12 @@ def import_zip(zip_path, dest_root):
                     rel = os.path.relpath(n, top).replace("\\", "/")
                 else:
                     rel = n
-                if not rel or rel.startswith(".."):
+                # 防 zip 泄路径（zip-slip）：拒绝 .. 逃逸到目标目录之外
+                if not rel or rel.startswith("..") or ".." in rel.split("/"):
                     continue
                 out = os.path.join(dst, rel)
+                if os.path.commonpath([real_dst, os.path.realpath(out)]) != real_dst:
+                    continue
                 os.makedirs(os.path.dirname(out), exist_ok=True)
                 with z.open(n) as src, open(out, "wb") as f:
                     f.write(src.read())
@@ -965,4 +1258,6 @@ def import_zip(zip_path, dest_root):
 def _safe_name(name):
     for ch in ['/', '\\', ':', '*', '?', '"', '<', '>', '|', '\x00']:
         name = name.replace(ch, "_")
+    # 防目录穿越：'..' 与首尾 '.' 是危险路径段
+    name = name.replace("..", "_").strip(". ")
     return (name or "未命名").strip()[:60]

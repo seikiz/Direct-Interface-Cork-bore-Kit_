@@ -1,0 +1,1 @@
+把和桌面「DICK图标清单.txt」同名的图片放到这里（如 ic_settings.png），PC 界面就会用你的图片替换对应 emoji/SVG 图标。缺席则回退原图标。

@@ -145,7 +145,7 @@ def _udp_discover_loop():
             continue
         if data and data.strip() == DISCOVER_MAGIC:
             try:
-                reply = json.dumps({"service": "trpg", "url": f"http://{_lan_ip()}:{PORT}", "gm": _gm}).encode("utf-8")
+                reply = json.dumps({"service": "trpg", "name": "DICK 跑团", "url": f"http://{_lan_ip()}:{PORT}", "gm": _gm}).encode("utf-8")
                 s.sendto(reply, addr)
             except Exception:
                 pass
@@ -235,6 +235,17 @@ def join():
     with _lock:
         _joined[pc] = player
     return jsonify({"ok": True, "turn": _turn})
+
+
+@app.post("/api/leave")
+def leave():
+    """PC 退出跑团：从已加入名单移除（前端离开会话时调用）。"""
+    d = request.get_json(silent=True) or {}
+    pc = str(d.get("name") or "").strip()
+    with _lock:
+        if pc:
+            _joined.pop(pc, None)
+    return jsonify({"ok": True, "joined": list(_joined.keys())})
 
 
 @app.post("/api/act")

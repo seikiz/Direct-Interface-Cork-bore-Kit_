@@ -134,7 +134,7 @@ class ChatEngine(
                 conn.setRequestProperty("Authorization", "Bearer " + apiKey)
                 conn.doOutput = true
                 conn.connectTimeout = 15000
-                conn.readTimeout = 120000
+                conn.readTimeout = 300000  // 长思考/慢流式不易被 120s 掐断（配合 onError 兜底）
                 conn.outputStream.use { it.write(body.toByteArray(Charsets.UTF_8)) }
                 val code = conn.responseCode
                 val stream = if (code >= 400) (conn.errorStream ?: conn.inputStream) else conn.inputStream
