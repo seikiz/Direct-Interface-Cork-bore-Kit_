@@ -1,11 +1,13 @@
 # -*- coding: utf-8 -*-
-"""局域网剧情跑团主机测试：状态/设置/加入/行动→GM叙述→轮换（LLM 用 mock）。"""
+"""去中心化跑团主机测试：状态/设置/加入/行动→GM叙述→轮换（LLM 用 mock）。
+适配 TrpgSession 引擎：构造实例并作为 ts._session 注入。"""
 import sys, os, json
 sys.stdout.reconfigure(encoding="utf-8")
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
 sys.path.insert(0, ROOT)
 import trpg_server as ts
+from trpg_session import TrpgSession
 
 ok = bad = 0
 def check(c, m):
@@ -13,14 +15,10 @@ def check(c, m):
     if c: ok += 1; print("  OK " + m)
     else: bad += 1; print("  FAIL " + m)
 
-# 隔离状态 + mock LLM
-ts._conf = {"api_key": "test", "base_url": "http://x", "model": "m"}
-ts._gm = "菲悠"
-ts._pcs = ["凛", "咲"]
-ts._turn = "凛"
-ts._story = []
-ts._joined = {}
-ts._llm = lambda system, user: "（GM 叙述）夜色沉下来，凛推开了那扇门——里面仿佛有个世界在等待。你可以：① 走进去 ② 转身离开 ③ 敲门示警"
+# 用引擎实例（mock LLM），替代旧全局变量模型
+ts._session = TrpgSession(config={"api_key": "test", "base_url": "http://x", "model": "m"},
+                          gm="菲悠", pcs=["凛", "咲"], save_dir=os.path.join(ROOT, "saves"))
+ts._session._llm = lambda system, user: "（GM 叙述）夜色沉下来，凛推开了那扇门——里面仿佛有个世界在等待。你可以：① 走进去 ② 转身离开 ③ 敲门示警"
 
 c = ts.app.test_client()
 
@@ -41,7 +39,7 @@ r = c.post("/api/act", json={"actor": "凛", "action": "推门"}).get_json()
 check(r["ok"] is True, "act 成功")
 check("GM 叙述" in r["gm"], "返回 GM 叙述")
 check(r["turn"] == "咲", "行动者轮换到咲")
-check(len(ts._story) == 1 and ts._story[0]["actor"] == "凛", "剧情日志已记录")
+check(len(ts._session.state()["story"]) == 1 and ts._session.state()["story"][0]["actor"] == "凛", "剧情日志已记录")
 
 print("== 空行动被拒 ==")
 check(c.post("/api/act", json={"actor": "凛", "action": ""}).status_code == 400, "空行动 400")

@@ -1,11 +1,13 @@
 # -*- coding: utf-8 -*-
-"""局域网跑团发现测试：主机广播 + 客户端 discover() 一键扫到。"""
+"""局域网跑团发现测试：主机广播 + 客户端 discover() 一键扫到。
+适配 TrpgSession 引擎：构造实例并作为 ts._session + 传给发现线程。"""
 import sys, os, socket, threading, time, json
 sys.stdout.reconfigure(encoding="utf-8")
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
 sys.path.insert(0, ROOT)
 import trpg_server as ts
+from trpg_session import TrpgSession
 from plugins.trpg_plugin import TrpgPlugin
 
 ok = bad = 0
@@ -20,10 +22,10 @@ probe.bind(("127.0.0.1", 0))
 free_port = probe.getsockname()[1]
 probe.close()
 
-# 用该端口跑主机发现线程
+# 用引擎实例 + 该端口跑主机发现线程
 ts.DISCOVER_PORT = free_port
-ts._gm = "菲悠"
-threading.Thread(target=ts._udp_discover_loop, daemon=True).start()
+sess = TrpgSession(gm="菲悠", pcs=["凛","咲"])
+threading.Thread(target=ts._udp_discover_loop, args=(sess,), daemon=True).start()
 time.sleep(0.2)
 
 print("== 客户端 discover() 一键发现 ==")
