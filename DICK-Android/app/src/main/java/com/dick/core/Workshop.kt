@@ -160,6 +160,63 @@ object Workshop {
         return try { JsonS.parse(String(b, Charsets.UTF_8)) as? J.Obj } catch (_: Exception) { null }
     }
 
+    // ---------- 房间管理（去中心化跑团 · 多房间） ----------
+    /** 列出房间：返回 [{id,name,gm,pcs,turn,joined,story_len}] */
+    fun trpgRooms(base: String): List<J.Obj> {
+        val (c, b) = httpAt(base, "/api/rooms", "GET")
+        if (c >= 400) return emptyList()
+        return try {
+            val o = JsonS.parse(String(b, Charsets.UTF_8)) as? J.Obj ?: return emptyList()
+            (o.fields["rooms"] as? J.Arr)?.items?.filterIsInstance<J.Obj>() ?: emptyList()
+        } catch (_: Exception) { emptyList() }
+    }
+
+    /** 创建房间，返回 room id 或 null。 */
+    fun trpgCreateRoom(base: String, name: String, gm: String, pcs: List<String>): String? {
+        val body = JsonS.stringify(J.Obj().apply {
+            fields["name"] = J.Str(name)
+            fields["gm"] = J.Str(gm)
+            fields["pcs"] = J.Arr(pcs.map { J.Str(it) }.toMutableList())
+        }).toByteArray(Charsets.UTF_8)
+        val (c, b) = httpAt(base, "/api/rooms", "POST", body, "application/json")
+        if (c >= 400) return null
+        return try {
+            val o = JsonS.parse(String(b, Charsets.UTF_8)) as? J.Obj
+            (o?.fields?.get("id") as? J.Str)?.v
+        } catch (_: Exception) { null }
+    }
+
+    fun trpgDeleteRoom(base: String, roomId: String): Boolean {
+        val (c, _) = httpAt(base, "/api/rooms/$roomId", "DELETE")
+        return c < 400
+    }
+
+    /** 房间内状态（成员连该房间用）。 */
+    fun trpgRoomState(base: String, roomId: String): J.Obj? {
+        val (c, b) = httpAt(base, "/api/rooms/$roomId/state")
+        if (c >= 400) return null
+        return try { JsonS.parse(String(b, Charsets.UTF_8)) as? J.Obj } catch (_: Exception) { null }
+    }
+
+    fun trpgRoomJoin(base: String, roomId: String, pc: String): Boolean {
+        val body = JsonS.stringify(J.Obj().apply { fields["name"] = J.Str(pc) }).toByteArray(Charsets.UTF_8)
+        val (c, _) = httpAt(base, "/api/rooms/$roomId/join", "POST", body, "application/json")
+        return c < 400
+    }
+
+    fun trpgRoomLeave(base: String, roomId: String, pc: String): Boolean {
+        val body = JsonS.stringify(J.Obj().apply { fields["name"] = J.Str(pc) }).toByteArray(Charsets.UTF_8)
+        val (c, _) = httpAt(base, "/api/rooms/$roomId/leave", "POST", body, "application/json")
+        return c < 400
+    }
+
+    fun trpgRoomAct(base: String, roomId: String, actor: String, action: String): J.Obj? {
+        val body = JsonS.stringify(J.Obj().apply { fields["actor"] = J.Str(actor); fields["action"] = J.Str(action) }).toByteArray(Charsets.UTF_8)
+        val (c, b) = httpAt(base, "/api/rooms/$roomId/act", "POST", body, "application/json", 120000)
+        if (c >= 400) return null
+        return try { JsonS.parse(String(b, Charsets.UTF_8)) as? J.Obj } catch (_: Exception) { null }
+    }
+
     fun activeServer(): String {
         val now = System.currentTimeMillis()
         activeCache?.let { if (now - it.second < 30000) return it.first }

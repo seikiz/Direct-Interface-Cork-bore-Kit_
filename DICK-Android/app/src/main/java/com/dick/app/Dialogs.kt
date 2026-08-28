@@ -74,6 +74,7 @@ import com.dick.core.J
 import com.dick.core.JsonS
 import com.dick.core.MechanicsEngine
 import com.dick.core.TreeStore
+import com.dick.core.TrpgSession
 import com.dick.core.WorldData
 import com.dick.core.WorldEntry
 import com.dick.core.Workshop
@@ -726,58 +727,132 @@ fun SettingsDialog(vm: ChatViewModel, deps: DialogDeps) {
     }
 }
 
-/** 跑团（局域网） */
+/** 跑团（去中心化 · 房间管理） */
 @Composable
 fun TrpgDialog(vm: ChatViewModel, deps: DialogDeps) {
     val theme = deps.theme
     if (vm.showTrpg.value) {
-    var sessions by remember { mutableStateOf(listOf<J.Obj>()) }
-    var base by remember { mutableStateOf("") }
+    val context = deps.context
+    val engine = deps.engine
+    var sessions by remember { mutableStateOf(listOf<J.Obj>()) }   // 发现的房间
+    var base by remember { mutableStateOf("") }                    // 主机地址（连到某房间前）
+    var roomId by remember { mutableStateOf("") }                  // 当前房间 id
+    var roomInfo by remember { mutableStateOf<J.Obj?>(null) }      // 当前房间元数据
     var myPc by remember { mutableStateOf("") }
     var story by remember { mutableStateOf(listOf<J.Obj>()) }
     var pcs by remember { mutableStateOf(listOf<String>()) }
     var turn by remember { mutableStateOf("") }
     var action by remember { mutableStateOf("") }
     var busy by remember { mutableStateOf(false) }
+    var gmSession by remember { mutableStateOf<TrpgSession?>(null) }  // 手机当 GM 的本地会话
+    var gmStarted by remember { mutableStateOf(false) }               // 本机 GM 已开始（进入游玩）
+    var rooms by remember { mutableStateOf(listOf<J.Obj>()) }         // 当前主机的房间列表
 
-    LaunchedEffect(base) {
-        if (base.isBlank()) return@LaunchedEffect
-        while (vm.showTrpg.value && base.isNotBlank()) {
+    // 房间内状态轮询（成员连房间）
+    LaunchedEffect(base, roomId) {
+        if (base.isBlank() || roomId.isBlank()) return@LaunchedEffect
+        while (vm.showTrpg.value && base.isNotBlank() && roomId.isNotBlank()) {
             try {
-                val st = Workshop.trpgState(base)
+                val st = if (gmSession.value != null) {
+                    JsonS.parse((gmSession.value!!).stateJson()) as? J.Obj
+                } else Workshop.trpgRoomState(base, roomId)
                 if (st != null) {
                     story = (st.fields["story"] as? J.Arr)?.items?.filterIsInstance<J.Obj>() ?: emptyList()
                     pcs = (st.fields["pcs"] as? J.Arr)?.items?.mapNotNull { it.str() } ?: emptyList()
                     turn = st.fields["turn"]?.str() ?: ""
+                    if (gmSession.value != null) { roomInfo = null } // 本地当GM无需元数据
                 }
             } catch (_: Exception) {}
             delay(2000)
         }
     }
+
+    fun leaveAll() {
+        if (base.isNotBlank() && roomId.isNotBlank() && myPc.isNotBlank() && gmSession.value == null) {
+            try { Workshop.trpgRoomLeave(base, roomId, myPc) } catch (_: Exception) {}
+        }
+        gmSession.value = null; gmStarted = false
+        vm.showTrpg.value = false; base = ""; roomId = ""; myPc = ""; story = emptyList(); pcs = emptyList(); action = ""; roomInfo = null
+    }
+
     AlertDialog(
-        onDismissRequest = {
-            if (base.isNotBlank() && myPc.isNotBlank()) { try { Workshop.trpgLeave(base, myPc) } catch (_: Exception) {} }
-            vm.showTrpg.value = false; base = ""; myPc = ""; story = emptyList(); pcs = emptyList(); action = ""
-        },
-        title = { Text("🎭 跑团（局域网）") },
+        onDismissRequest = { leaveAll() },
+        title = { Text("🎭 跑团 · 房间") },
         text = {
             Column(Modifier.verticalScroll(rememberScrollState())) {
                 if (base.isBlank()) {
+                    // ---- 一：选主机 / 当 GM ----
+                    Button(onClick = {
+                        // 当 GM：本地建会话，直接用主机地址（本机）
+                        val cfg = J.Obj().apply {
+                            fields["api_key"] = J.Str(vm.apiKey.value)
+                            fields["base_url"] = J.Str(vm.baseUrl.value)
+                            fields["model"] = J.Str(vm.model.value)
+                        }
+                        // 用一个本地占位 base，但走本地 session 无需 HTTP
+                        gmSession.value = TrpgSession(engine, gm = "", pcs = emptyList(),
+                            cardPrompt = { "" })
+                        base = "local://gm"
+                        roomId = "gm"
+                        roomInfo = null
+                    }, modifier = Modifier.fillMaxWidth()) { Text("🎤 我当 GM（本机开房）") }
+                    Text("或连接局域网主机：", fontSize = 11.sp, color = theme.muted)
                     Button(onClick = { sessions = Workshop.discoverTrpg() }, modifier = Modifier.fillMaxWidth()) { Text("📡 查找附近跑团") }
-                    if (sessions.isEmpty()) Text("先让电脑跑 python trpg_server.py，双方同一 Wi-Fi 再查找", fontSize = 11.sp, color = theme.muted)
+                    if (sessions.isEmpty()) Text("同一 Wi-Fi 让任一设备开房（PC 或手机当 GM），再查找；也可直接输入地址", fontSize = 11.sp, color = theme.muted)
                     sessions.forEach { s ->
-                        TextButton(onClick = { base = s.fields["url"]?.str() ?: "" }, modifier = Modifier.fillMaxWidth()) {
-                            Text("🎲 " + (s.fields["gm"]?.str() ?: "未知GM") + " @ " + (s.fields["url"]?.str() ?: ""), fontSize = 13.sp)
+                        TextButton(onClick = { base = s.fields["url"]?.str() ?: ""; rooms = Workshop.trpgRooms(base) }, modifier = Modifier.fillMaxWidth()) {
+                            Text("🎲 " + (s.fields["gm"]?.str() ?: "房间") + " @ " + (s.fields["url"]?.str() ?: ""), fontSize = 13.sp)
                         }
                     }
+                } else if (gmSession.value != null && !gmStarted) {
+                    // ---- 二：本机当 GM 模式（未开始配置） ----
+                    Text("🎤 本机 GM · 设 GM/队伍", fontSize = 12.sp)
+                    OutlinedTextField(value = gmSession.value!!.gm, onValueChange = { gmSession.value!!.gm = it },
+                        label = { Text("GM 卡名") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                    Text("房间名：", fontSize = 11.sp)
+                    val roomNameS = remember { mutableStateOf("") }
+                    OutlinedTextField(value = roomNameS.value, onValueChange = { roomNameS.value = it },
+                        label = { Text("给房间起名") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                    if (pcs.isEmpty()) Text("点下方「开始」用默认队伍（凛、咲）", fontSize = 11.sp, color = theme.muted)
+                    Button(onClick = {
+                        val gm = gmSession.value!!.gm.ifBlank { "咲" }
+                        val pcList = if (pcs.isEmpty()) listOf("凛","咲") else pcs
+                        gmSession.value!!.let { s -> s.gm = gm; s.pcs.clear(); s.pcs.addAll(pcList); s.turn = pcList.firstOrNull() ?: "" }
+                        myPc = pcList.firstOrNull() ?: ""   // 本机 GM 默认操控第一名 PC
+                        gmStarted = true
+                        busy = false
+                    }, modifier = Modifier.fillMaxWidth()) { Text("▶ 开始跑团") }
+                } else if (roomId.isBlank()) {
+                    // ---- 三：选房间（连接主机后） ----
+                    Text("房间：${base}", fontSize = 11.sp, color = theme.muted)
+                    TextButton(onClick = { rooms = Workshop.trpgRooms(base) }, modifier = Modifier.fillMaxWidth()) { Text("↻ 刷新房间列表") }
+                    if (rooms.isEmpty()) Text("主机暂无房间，或点击下方创建", fontSize = 11.sp, color = theme.muted)
+                    rooms.forEach { r ->
+                        val n = r.fields["name"]?.str() ?: "未命名房间"
+                        val g = r.fields["gm"]?.str() ?: ""; val j = r.fields["joined"]?.str() ?: "0"
+                        TextButton(onClick = { roomId = r.fields["id"]?.str() ?: ""; roomInfo = r }, modifier = Modifier.fillMaxWidth()) {
+                            Text("🏠 $n · GM:$g · ${j}人", fontSize = 13.sp)
+                        }
+                    }
+                    // 创建房间（连到主机）
+                    val createName = remember { mutableStateOf("") }
+                    val createGm = remember { mutableStateOf("") }
+                    OutlinedTextField(value = createName.value, onValueChange = { createName.value = it }, label = { Text("新房间名") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                    OutlinedTextField(value = createGm.value, onValueChange = { createGm.value = it }, label = { Text("GM 卡名") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                    Button(onClick = {
+                        val id = Workshop.trpgCreateRoom(base, createName.value.ifBlank { "新房间" }, createGm.value.ifBlank { "咲" }, listOf("凛","咲"))
+                        if (id != null) { roomId = id; rooms = Workshop.trpgRooms(base) }
+                    }, modifier = Modifier.fillMaxWidth()) { Text("➕ 在此主机创建房间") }
                 } else {
-                    Text("已连接：" + base, fontSize = 11.sp, color = theme.muted)
+                    // ---- 四：房间内游玩（成员或本地GM） ----
+                    Text("已入房间：" + (roomInfo?.fields?.get("name")?.str() ?: roomId), fontSize = 11.sp, color = theme.muted)
                     if (myPc.isBlank()) {
                         Text("选择你的角色：", fontSize = 12.sp)
                         pcs.forEach { pc ->
-                            TextButton(onClick = { if (Workshop.trpgJoin(base, pc)) myPc = pc }, modifier = Modifier.fillMaxWidth()) {
-                                Text("👤 " + pc, fontSize = 13.sp)
-                            }
+                            TextButton(onClick = {
+                                val ok = gmSession.value != null || Workshop.trpgRoomJoin(base, roomId, pc)
+                                if (ok) myPc = pc
+                            }, modifier = Modifier.fillMaxWidth()) { Text("👤 " + pc, fontSize = 13.sp) }
                         }
                         if (pcs.isEmpty()) Text("等待主机设置队伍…", fontSize = 11.sp, color = theme.muted)
                     } else {
@@ -794,30 +869,21 @@ fun TrpgDialog(vm: ChatViewModel, deps: DialogDeps) {
                             Button(onClick = {
                                 if (action.isBlank()) return@Button
                                 busy = true
-                                Workshop.trpgAct(base, myPc, action)
+                                if (gmSession.value != null) {
+                                    gmSession.value!!.act(myPc, action)
+                                } else {
+                                    Workshop.trpgRoomAct(base, roomId, myPc, action)
+                                }
                                 action = ""; busy = false
                             }, enabled = !busy) { Text("行动") }
                         }
-                        TextButton(onClick = {
-                            if (base.isNotBlank() && myPc.isNotBlank()) { try { Workshop.trpgLeave(base, myPc) } catch (_: Exception) {} }
-                            vm.showTrpg.value = false; base = ""; myPc = ""; story = emptyList(); pcs = emptyList(); action = ""
-                        }, modifier = Modifier.fillMaxWidth()) {
-                            Text("🏁 退出跑团（离开本局）", fontSize = 13.sp, color = theme.danger)
-                        }
+                        TextButton(onClick = { leaveAll() }, modifier = Modifier.fillMaxWidth()) { Text("🏁 退出本局", fontSize = 13.sp, color = theme.danger) }
                     }
                 }
             }
         },
-        confirmButton = {
-            TextButton(onClick = {
-                if (base.isNotBlank() && myPc.isNotBlank()) { try { Workshop.trpgLeave(base, myPc) } catch (_: Exception) {} }
-                vm.showTrpg.value = false; base = ""; myPc = ""; story = emptyList(); pcs = emptyList(); action = ""
-            }) { Text("完成") }
-        },
-        dismissButton = { TextButton(onClick = {
-            if (base.isNotBlank() && myPc.isNotBlank()) { try { Workshop.trpgLeave(base, myPc) } catch (_: Exception) {} }
-            vm.showTrpg.value = false; base = ""; myPc = ""; story = emptyList(); pcs = emptyList(); action = ""
-        }) { Text("取消") } },
+        confirmButton = { TextButton(onClick = { leaveAll() }) { Text("完成") } },
+        dismissButton = { TextButton(onClick = { leaveAll() }) { Text("取消") } },
     )
     }
 }

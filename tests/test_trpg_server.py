@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
-"""去中心化跑团主机测试：状态/设置/加入/行动→GM叙述→轮换（LLM 用 mock）。
-适配 TrpgSession 引擎：构造实例并作为 ts._session 注入。"""
+"""去中心化跑团房间管理测试：列表/创建/加入/行动→GM叙述→轮换（LLM 用 mock）。"""
 import sys, os, json
 sys.stdout.reconfigure(encoding="utf-8")
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -15,10 +14,15 @@ def check(c, m):
     if c: ok += 1; print("  OK " + m)
     else: bad += 1; print("  FAIL " + m)
 
-# 用引擎实例（mock LLM），替代旧全局变量模型
-ts._session = TrpgSession(config={"api_key": "test", "base_url": "http://x", "model": "m"},
-                          gm="菲悠", pcs=["凛", "咲"], save_dir=os.path.join(ROOT, "saves"))
-ts._session._llm = lambda system, user: "（GM 叙述）夜色沉下来，凛推开了那扇门——里面仿佛有个世界在等待。你可以：① 走进去 ② 转身离开 ③ 敲门示警"
+# 用引擎实例（mock LLM），注册为默认房间，替代旧全局变量模型
+import uuid as _uuid
+ts._rooms.clear()
+_rid = _uuid.uuid4().hex[:8]
+ts._rooms[_rid] = {"session": TrpgSession(config={"api_key": "test", "base_url": "http://x", "model": "m"},
+                                          gm="菲悠", pcs=["凛", "咲"], save_dir=os.path.join(ROOT, "saves")),
+                   "name": "测试房间", "created_at": None}
+ts._active_room_id = _rid
+ts._rooms[_rid]["session"]._llm = lambda system, user: "（GM 叙述）夜色沉下来，凛推开了那扇门——里面仿佛有个世界在等待。你可以：① 走进去 ② 转身离开 ③ 敲门示警"
 
 c = ts.app.test_client()
 
@@ -39,7 +43,7 @@ r = c.post("/api/act", json={"actor": "凛", "action": "推门"}).get_json()
 check(r["ok"] is True, "act 成功")
 check("GM 叙述" in r["gm"], "返回 GM 叙述")
 check(r["turn"] == "咲", "行动者轮换到咲")
-check(len(ts._session.state()["story"]) == 1 and ts._session.state()["story"][0]["actor"] == "凛", "剧情日志已记录")
+check(len(ts._rooms[_rid]["session"].state()["story"]) == 1 and ts._rooms[_rid]["session"].state()["story"][0]["actor"] == "凛", "剧情日志已记录")
 
 print("== 空行动被拒 ==")
 check(c.post("/api/act", json={"actor": "凛", "action": ""}).status_code == 400, "空行动 400")
