@@ -83,12 +83,12 @@ app._ws_save_fetch = lambda cid: {"ts": "2999-01-01T00:00:00+00:00", "tree": app
 ok4 = app._ws_pull_tree("凛")
 check(ok4 is False, "_ws_pull_tree 对被锁卡返回 False（不覆盖）")
 
-# --- 5) trpg_server 写锁/清锁 ---
+# --- 5) trpg_server 写锁/清锁（去中心化：用引擎实例） ---
 import trpg_server as ts
+from trpg_session import TrpgSession
 ts.ROOT = tmp
-ts._gm = "咲"
-ts._pcs = ["凛"]
-ts._write_lock()
+_s = TrpgSession(gm="咲", pcs=["凛"])
+ts._write_lock(_s)
 check(os.path.exists(lock_path), "trpg_server 已写锁文件")
 with open(lock_path, "r", encoding="utf-8") as f:
     lk = json.load(f)

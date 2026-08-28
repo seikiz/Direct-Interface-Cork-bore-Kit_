@@ -753,14 +753,14 @@ fun TrpgDialog(vm: ChatViewModel, deps: DialogDeps) {
         if (base.isBlank() || roomId.isBlank()) return@LaunchedEffect
         while (vm.showTrpg.value && base.isNotBlank() && roomId.isNotBlank()) {
             try {
-                val st = if (gmSession.value != null) {
-                    JsonS.parse((gmSession.value!!).stateJson()) as? J.Obj
+                val st = if (gmSession != null) {
+                    JsonS.parse((gmSession!!).stateJson()) as? J.Obj
                 } else Workshop.trpgRoomState(base, roomId)
                 if (st != null) {
                     story = (st.fields["story"] as? J.Arr)?.items?.filterIsInstance<J.Obj>() ?: emptyList()
                     pcs = (st.fields["pcs"] as? J.Arr)?.items?.mapNotNull { it.str() } ?: emptyList()
                     turn = st.fields["turn"]?.str() ?: ""
-                    if (gmSession.value != null) { roomInfo = null } // 本地当GM无需元数据
+                    if (gmSession != null) { roomInfo = null } // 本地当GM无需元数据
                 }
             } catch (_: Exception) {}
             delay(2000)
@@ -768,10 +768,10 @@ fun TrpgDialog(vm: ChatViewModel, deps: DialogDeps) {
     }
 
     fun leaveAll() {
-        if (base.isNotBlank() && roomId.isNotBlank() && myPc.isNotBlank() && gmSession.value == null) {
+        if (base.isNotBlank() && roomId.isNotBlank() && myPc.isNotBlank() && gmSession == null) {
             try { Workshop.trpgRoomLeave(base, roomId, myPc) } catch (_: Exception) {}
         }
-        gmSession.value = null; gmStarted = false
+        gmSession = null; gmStarted = false
         vm.showTrpg.value = false; base = ""; roomId = ""; myPc = ""; story = emptyList(); pcs = emptyList(); action = ""; roomInfo = null
     }
 
@@ -790,7 +790,7 @@ fun TrpgDialog(vm: ChatViewModel, deps: DialogDeps) {
                             fields["model"] = J.Str(vm.model.value)
                         }
                         // 用一个本地占位 base，但走本地 session 无需 HTTP
-                        gmSession.value = TrpgSession(engine, gm = "", pcs = emptyList(),
+                        gmSession = TrpgSession(engine, gm = "", pcs = emptyList(),
                             cardPrompt = { "" })
                         base = "local://gm"
                         roomId = "gm"
@@ -804,10 +804,10 @@ fun TrpgDialog(vm: ChatViewModel, deps: DialogDeps) {
                             Text("🎲 " + (s.fields["gm"]?.str() ?: "房间") + " @ " + (s.fields["url"]?.str() ?: ""), fontSize = 13.sp)
                         }
                     }
-                } else if (gmSession.value != null && !gmStarted) {
+                } else if (gmSession != null && !gmStarted) {
                     // ---- 二：本机当 GM 模式（未开始配置） ----
                     Text("🎤 本机 GM · 设 GM/队伍", fontSize = 12.sp)
-                    OutlinedTextField(value = gmSession.value!!.gm, onValueChange = { gmSession.value!!.gm = it },
+                    OutlinedTextField(value = gmSession!!.gm, onValueChange = { gmSession!!.gm = it },
                         label = { Text("GM 卡名") }, singleLine = true, modifier = Modifier.fillMaxWidth())
                     Text("房间名：", fontSize = 11.sp)
                     val roomNameS = remember { mutableStateOf("") }
@@ -815,9 +815,9 @@ fun TrpgDialog(vm: ChatViewModel, deps: DialogDeps) {
                         label = { Text("给房间起名") }, singleLine = true, modifier = Modifier.fillMaxWidth())
                     if (pcs.isEmpty()) Text("点下方「开始」用默认队伍（凛、咲）", fontSize = 11.sp, color = theme.muted)
                     Button(onClick = {
-                        val gm = gmSession.value!!.gm.ifBlank { "咲" }
+                        val gm = gmSession!!.gm.ifBlank { "咲" }
                         val pcList = if (pcs.isEmpty()) listOf("凛","咲") else pcs
-                        gmSession.value!!.let { s -> s.gm = gm; s.pcs.clear(); s.pcs.addAll(pcList); s.turn = pcList.firstOrNull() ?: "" }
+                        gmSession!!.let { s -> s.gm = gm; s.pcs.clear(); s.pcs.addAll(pcList); s.turn = pcList.firstOrNull() ?: "" }
                         myPc = pcList.firstOrNull() ?: ""   // 本机 GM 默认操控第一名 PC
                         gmStarted = true
                         busy = false
@@ -850,7 +850,7 @@ fun TrpgDialog(vm: ChatViewModel, deps: DialogDeps) {
                         Text("选择你的角色：", fontSize = 12.sp)
                         pcs.forEach { pc ->
                             TextButton(onClick = {
-                                val ok = gmSession.value != null || Workshop.trpgRoomJoin(base, roomId, pc)
+                                val ok = gmSession != null || Workshop.trpgRoomJoin(base, roomId, pc)
                                 if (ok) myPc = pc
                             }, modifier = Modifier.fillMaxWidth()) { Text("👤 " + pc, fontSize = 13.sp) }
                         }
@@ -869,8 +869,8 @@ fun TrpgDialog(vm: ChatViewModel, deps: DialogDeps) {
                             Button(onClick = {
                                 if (action.isBlank()) return@Button
                                 busy = true
-                                if (gmSession.value != null) {
-                                    gmSession.value!!.act(myPc, action)
+                                if (gmSession != null) {
+                                    gmSession!!.act(myPc, action)
                                 } else {
                                     Workshop.trpgRoomAct(base, roomId, myPc, action)
                                 }
