@@ -75,6 +75,7 @@ import com.dick.core.JsonS
 import com.dick.core.MechanicsEngine
 import com.dick.core.TreeStore
 import com.dick.core.TrpgSession
+import com.dick.core.TrpgServer
 import com.dick.core.WorldData
 import com.dick.core.WorldEntry
 import com.dick.core.Workshop
@@ -746,6 +747,9 @@ fun TrpgDialog(vm: ChatViewModel, deps: DialogDeps) {
     var busy by remember { mutableStateOf(false) }
     var gmSession by remember { mutableStateOf<TrpgSession?>(null) }  // 手机当 GM 的本地会话
     var gmStarted by remember { mutableStateOf(false) }               // 本机 GM 已开始（进入游玩）
+    var gmRoomId by remember { mutableStateOf("") }                   // 本机 GM 开的房间 id
+    var gmServer by remember { mutableStateOf<TrpgServer?>(null) }    // 手机当 GM 的 HTTP 服务器
+    var lanAddr by remember { mutableStateOf("") }                    // 本机局域网地址（别人加入用）
     var rooms by remember { mutableStateOf(listOf<J.Obj>()) }         // 当前主机的房间列表
 
     // 房间内状态轮询（成员连房间）
@@ -771,7 +775,9 @@ fun TrpgDialog(vm: ChatViewModel, deps: DialogDeps) {
         if (base.isNotBlank() && roomId.isNotBlank() && myPc.isNotBlank() && gmSession == null) {
             try { Workshop.trpgRoomLeave(base, roomId, myPc) } catch (_: Exception) {}
         }
-        gmSession = null; gmStarted = false
+        gmSession = null; gmStarted = false; gmRoomId = ""
+        try { gmServer?.stop() } catch (_: Exception) {}
+        gmServer = null; lanAddr = ""
         vm.showTrpg.value = false; base = ""; roomId = ""; myPc = ""; story = emptyList(); pcs = emptyList(); action = ""; roomInfo = null
     }
 
@@ -783,17 +789,16 @@ fun TrpgDialog(vm: ChatViewModel, deps: DialogDeps) {
                 if (base.isBlank()) {
                     // ---- 一：选主机 / 当 GM ----
                     Button(onClick = {
-                        // 当 GM：本地建会话，直接用主机地址（本机）
-                        val cfg = J.Obj().apply {
-                            fields["api_key"] = J.Str(vm.apiKey.value)
-                            fields["base_url"] = J.Str(vm.baseUrl.value)
-                            fields["model"] = J.Str(vm.model.value)
-                        }
-                        // 用一个本地占位 base，但走本地 session 无需 HTTP
-                        gmSession = TrpgSession(engine, gm = "", pcs = emptyList(),
-                            cardPrompt = { "" })
+                        // 手机当 GM：起一个局域网 HTTP 服务器，本机开房，别人连本机 IP 加入
+                        val srv = TrpgServer(engine)
+                        val p = srv.start(5080)
+                        gmServer = srv
+                        val roomId0 = srv.createRoom("我的房间", "", listOf("凛","咲"))
+                        gmRoomId = roomId0
+                        gmSession = srv.roomSession(roomId0)
+                        lanAddr = srv.lanIp() + ":" + p
                         base = "local://gm"
-                        roomId = "gm"
+                        roomId = roomId0
                         roomInfo = null
                     }, modifier = Modifier.fillMaxWidth()) { Text("🎤 我当 GM（本机开房）") }
                     Text("或连接局域网主机：", fontSize = 11.sp, color = theme.muted)
@@ -807,6 +812,7 @@ fun TrpgDialog(vm: ChatViewModel, deps: DialogDeps) {
                 } else if (gmSession != null && !gmStarted) {
                     // ---- 二：本机当 GM 模式（未开始配置） ----
                     Text("🎤 本机 GM · 设 GM/队伍", fontSize = 12.sp)
+                    if (lanAddr.isNotBlank()) Text("🔗 别的设备连这里加入: http://$lanAddr", fontSize = 12.sp, color = deps.accent)
                     OutlinedTextField(value = gmSession!!.gm, onValueChange = { gmSession!!.gm = it },
                         label = { Text("GM 卡名") }, singleLine = true, modifier = Modifier.fillMaxWidth())
                     Text("房间名：", fontSize = 11.sp)
