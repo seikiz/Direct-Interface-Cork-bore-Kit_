@@ -1,85 +1,166 @@
 # Direct-Interface Cork-bore Kit（DICK）
 
-> 本地 AI 角色扮演聊天平台 · 树状记忆 · 机制养成 · 战斗系统 · CODEX 成作引擎
-> 电脑（Python/pywebview） + 手机（Kotlin/Compose）双端原生 · 免费 · 数据归你
+> 本地 AI 角色扮演 / 交互叙事平台 · 树状记忆 · 机制养成 · 战斗系统 · CODEX 成作引擎
+> **电脑**（Python + pywebview）· **手机**（Kotlin + Compose）· **原生播放器**（Compose Multiplatform）
+> 免费 · 离线优先 · 数据全在你自己机器上
 
 ---
 
 ## 这是什么
 
-**DICK**（全称 Direct-Interface Cork-bore Kit）是一个本地运行的 AI 角色扮演聊天平台，和 SillyTavern（酒馆）是同一个沙盒的两种玩法：
+**DICK**（全称 Direct-Interface Cork-bore Kit）是一个本地运行的 AI 角色扮演平台，和 SillyTavern（酒馆）是同一个沙盒的两种玩法：
 
-- **DICK**：轻量、开箱即用、傻瓜友好，一键把角色卡打包成独立 GALGAME
-- **酒馆（SillyTavern）**：硬核、插件生态深不见底、折腾友好
+- **DICK**：轻量、开箱即用，侧重"把角色卡变成能玩的东西"（GAL 选项 / 机制养成 / 一键成作）
+- **酒馆**：硬核、插件生态深、折腾友好
 
-两者角色卡互通（DICK 做了双向转换层）——酒馆的卡（v1/v2/v3/PNG）DICK 可直接导入，DICK 导出的卡（酒馆 v2 格式）酒馆可直接用；仓库里自带酒馆安装器 `tavern-installer/`，想用酒馆一键装好。
+两者角色卡互通：酒馆的卡（v1/v2/v3 / PNG 嵌卡）DICK 可直接导入，DICK 导出的卡（v2 JSON / PNG 嵌卡）酒馆可直接用。仓库自带酒馆安装器 `tavern-installer/`。
 
-> ⚠️ 互通边界：转换保留角色人设（描述/性格/台词/开场白等）与酒馆世界书；DICK 独有的树状记忆、机制卡（好感/状态/战斗）为 DICK 扩展，转入酒馆时会剥离（酒馆格式装不下），转回 DICK 后这些高级内容需重新配置。
+> ⚠️ 互通边界：转换保留人设（描述/性格/台词/开场白）与世界书；DICK 独有的树状记忆、机制卡（好感/状态/战斗）是扩展字段，转入酒馆时会被剥离，转回来需重新配置。
 
 ## 核心特性
 
 ### 聊天
-- 树状记忆：主线平铺、分支收纳，随时回溯任意节点
-- 多候选回复（滑条）、重生成、编辑消息
-- 群聊自动接话（每个角色物理隔离，绝不串戏）
-- 世界卡 / 世界书 / 平行世界穿越
+- **树状记忆**：主线平铺、分支收纳，随时回溯任意节点；分支可折叠成「选项骨架」只看选项
+- 多候选回复（滑条）、重生成、编辑消息（用户消息编辑开新分支，AI 消息原地改）
+- **群聊**：多选角色即开聊，每个角色独立请求、**物理隔离**（各自的 system 只含本人人设），@角色名指定发言 + 自动接话
+- 世界卡 / 世界书（关键词 / 正则 / 递归深度 / 权重 / 概率 / 常驻）/ **平行世界穿越**
+- 上下文预算 4K–128K + 滚动摘要 + 记忆链归档（大存档自动分片，历史不丢）
 
 ### 玩法
-- 机制卡：好感度（百分比制）/ 状态 / 事件触发
-- 战斗系统：公式白名单、招式、buff、玩家同规格
-- GAL 选项：AI 生成选项分支 + 隐藏 ROLL（坍缩/天选/暴击/稀有）
-- UTAU 语音：`[ja]` 日文配音（电脑完整版 / 手机系统 TTS）——UTAU 环境已内置，只需自备声库（`/voicebank` 一键导入，详见 `声库安装说明.txt`）
+- **机制卡**：好感度（百分比制）/ 状态字段（int、enum）/ 事件触发（含冷却、次数、结局链）
+- **战斗系统**：伤害公式走 AST 白名单求值（绝不 eval）、招式、buff，玩家与角色同规格
+- **GAL 选项**：AI 生成剧情选项 + 隐藏 ROLL（坍缩 / 天选 / 暴击 / 稀有 / 大失败）
+- **软件时间流速**：世界那边比现实快多少倍（对数表盘，10 ~ 1000 万倍），影响模型看到的时间上下文
+- **UTAU 语音**：`[ja]` 日文配音（电脑端完整版 / 手机端系统 TTS）；UTAU 环境已内置，声库自备（`/voicebank` 导入，见 `声库安装说明.txt`）
 
-### 成作（CODEX，仅电脑）
-- 傻瓜化导入素材（立绘/背景/音乐/配音）→ 剧本 JSON → 全屏播放器
-- 一键打包：独立 EXE / HTML / .codex（可分发、可卖）
-- AI 起草剧本、一键配音、系统权限（文件关联/调用程序/全屏）
+### 成作（CODEX）
+- 剧本 JSON（`codex/1.0` 开放格式）→ 一键打包**独立 HTML / EXE / `.codex` 包**（可分发、可卖）
+- 傻瓜化导入素材（立绘/背景/音乐/配音）、AI 起草剧本、一键配音
+- **`DICK-Narrative`**：Compose Multiplatform 写的**原生播放器**（EXE + APK 同源，不是网页套壳），与 GAL 制作器**零转换**互通
+
+### 界面
+- **120 个黑白线性图标，两端由同一份字典生成**：`web/index.html` 的 `ICONS` → `tools/gen_android_icons.py` → Android VectorDrawable。改一处两端都变，不存在"改了一边忘了另一边"
+- 深色 / 浅色 / OLED 三套主题 + 四色强调色；文字与图标颜色全部跟随主题
+- 手机端「彻底清空历史」= 机制状态回到初始值 **且重演一遍开场白**（状态如初，连第一句也在）
 
 ### 其他
-- 正则管道、去 AI 味、预设、插件系统（Python 后端，`.py` 即用）
-- 财报助手、联网搜索、股票分析、日文翻译、骰子
-- 双端数据互通（同一角色卡两边都能用）
+- **插件系统**：23 个内置插件（Python 后端），`.py` 丢进 `plugins/` 即用，无商店无审核；**声明式**设置与界面按钮（写 `settings_schema` / `ui_buttons` 就自动生成 UI）。标准见 `PLUGIN_DEV.md`；另有子进程 JSON-RPC 协议插件
+- 正则管道（ai/user 作用域）、去 AI 味、文本/风格闸门（零宽字符防线）
+- 财报助手（10 个官方政策源深爬 + 本地政策库 + 49 条金融史年表 1617–2026）、A 股技术面分析、联网搜索、日中互译、骰子、文档读写（Word/Excel）
+- **多厂商**：内置 **14 家 / 106 个模型**（DeepSeek、OVH 免 Key 免费链、阿里百炼、智谱、硅基流动、Moonshot、火山方舟、百度千帆、MiniMax、阶跃星辰、OpenAI、Anthropic、Gemini、Ollama 本地），可自定义 base_url 与模型名；支持代理与中转
+
+## 三端形态
+
+```
+             GAL 制作器（web/index.html 内嵌 · 线-点-分支编辑器）
+                              │ 产出 codex.json + 素材
+                              ▼
+                    叙事引擎（同一份 scenes[]/lines[] 规格）
+             ┌────────────────┼────────────────┐
+             ▼                ▼                ▼
+   DICK 主程序内嵌播放   DICK-Narrative    独立 HTML
+                        （EXE / APK）
+手机端 DICK-Android ⇄ 电脑端：角色卡/世界卡文件名即 ID，进度按时间戳后写胜同步
+```
 
 ## 快速开始
 
-### 电脑
-1. 下载 release 的 `DICK-Setup.exe`（安装包）或 `DICK.zip`（便携版）
-2. 双击运行 → 设置里填 API Key（DeepSeek/其他模型商）
-3. 左侧选角色 → 开始聊天
+### 电脑（release 包）
+1. 解压 `DICK-电脑版.zip` → 双击 **`DICK-HTML.exe`**
+   > ⚠️ 必须**整文件夹**使用：`DICK-HTML.exe` 与 `_internal/` 必须同级，不要只拷 exe
+2. 首次启动弹欢迎页 → 填 API Key（DeepSeek 等；界面内有「去官网注册/充值」直达）
+3. 左侧勾选角色 → 开始聊天（Ctrl/Shift 多选 = 群聊）
 
 ### 手机
-- 安装 `app-debug.apk` → 设置 API Key → 开聊
+- 安装 apk（debug 签名）→ 设置里填 API Key → 选角色开聊
+
+### 从源码跑（电脑）
+```bash
+python "Direct-Interface Cork-bore Kit.py"
+```
+
+> `html_app.py` **不是入口**，它是 49 行的兼容垫片（供历史测试 `from html_app import HtmlApp` 用），直接运行它什么都不会发生。
+> 源码运行**不会自带 API Key**：Key 存在 `config.json`，而它默认不进版本库（见「数据与隐私」）。
 
 ## 想玩酒馆？
 
-仓库里 `tavern-installer/` 是一键安装器：
-```
+```bash
 cd tavern-installer
 node install.js     # 或双击 install.bat
 ```
-装完酒馆，你的卡两边都能用。
+装完酒馆，你的角色卡两边都能用。
 
 ## 开发
 
+### 目录导航
+
+| 路径 | 干什么 |
+|---|---|
+| `Direct-Interface Cork-bore Kit.py` | **桌面入口**：单个类 `HtmlApp`（约 6000 行），对外暴露 152 个 `api_*` 供前端 js_api 调用 |
+| `web/index.html` | 前端单页（约 8000 行）：聊天、GAL 编辑器、CODEX 编辑器/播放器、插件坞、图标字典 |
+| `DICK_core.py` | 聊天核心：树状记忆、上下文裁剪、群聊隔离、机制/战斗结算的胶水层 |
+| `codex_core.py` | CODEX 成作引擎（剧本解析 → 校验 → 独立 HTML / EXE / `.codex` 包） |
+| `plugins/` | 23 个插件 + `protocol/` 协议插件 |
+| `DICK-Android/` | 安卓端（Compose）：`core` / `app` / `plugins` / `tools` 四层 |
+| `DICK-Narrative/` | Compose Multiplatform 原生 GALGAME 播放器（EXE + APK），故事格式见其 README |
+| `tests/` | 59 个 Python 测试脚本（逐个独立运行）+ JS 图标回归 |
+| `tools/` | `gen_android_icons.py`（图标 → VectorDrawable）、`gen_icon_preview.py`（图标总览页）、存档同步 |
+| `tree_weight.py` `salience.py` `lookahead.py` `ranker.py` `rubric.py` | 记忆权重与剪枝 / 有损遗忘曲线 / 前瞻展开 / 排序器 / 价值判据 |
+| `save_guard.py` `crypto_core.py` `dick_backup_tool.py` | 原子写+备份+校验自愈 / 加密备份容器 / 独立解密工具 |
+| `net.py` `trpg_server.py` | 创意工坊服务端 / 跑团房间服务端（Flask，独立启动） |
+
+### 命令
+
 ```bash
 # 电脑
-python html_app.py          # 源码运行
-python -m PyInstaller DICK_HTML.spec --noconfirm   # 打包 EXE
-python build_installer.py   # 生成安装包
+python "Direct-Interface Cork-bore Kit.py"           # 源码运行
+python -m PyInstaller DICK_HTML.spec --noconfirm    # 打包 onedir EXE
+python build_release.py --build                     # 清缓存 + 打包 + 自检 + 打 zip
+python build_release.py                             # 已打包过：只做后处理/自检/打 zip
 
 # 测试
-python tests/test_*.py      # 逐个运行（240+ 项）
+python tests/test_*.py                              # 逐个跑（59 个脚本）
+node tests/test_icons.js                            # 前端图标系统回归（需 Node）
+powershell -File DICK-Android/selftest/run.ps1      # 安卓自检（TextGuard + 机制状态重置）
 
-# 手机（Android）
-cd DICK-Android
-gradle :app:assembleDebug
+# 手机
+cd DICK-Android && gradle :app:assembleDebug        # → app/build/outputs/apk/debug/
+
+# 改过 web 的 ICONS 之后：重生成两端图标资源
+python tools/gen_android_icons.py
+python tools/gen_icon_preview.py                    # → _icons_preview.html，肉眼过一遍
 ```
+
+### 发布流水线
+
+`build_release.py` 做四件事：① 后处理（把 `tavern-installer` 从 `_internal/` 提到顶层 + 生成 `start.bat`）② **自检**：包内 `web/index.html` 必须与源码一致且含 12 个特征串（专治 PyInstaller 缓存旧前端）③ 打 zip 到 `../DICK-发布/DICK-电脑版.zip`（包内平铺，解压即用）④ 核对手机 apk 时间戳是否过期。
+
+> ⚠️ 打包前**必须关掉正在运行的 `DICK-HTML.exe`**，否则它会锁住 `debug.log` 导致打包失败。
+> ⚠️ 安装包：`build_installer.py` 需要 Inno Setup 与 `installer/DICK_Setup.iss`，**该目录未随仓库提供**，所以目前不产出 `DICK-Setup.exe`——直接用便携版 zip。
+
+### 测试与 CI
+
+`.github/workflows/test.yml`：push / PR 时在 **Python 3.11 与 3.12** 上逐个运行 `tests/test_*.py`，并跑一次 **Node 图标回归**；任一失败即红。安卓侧另有 `DICK-Android/selftest/`（kotlinc 直跑，不需要 Android SDK；路径写在该脚本顶部）。
+
+## 数据与隐私
+
+便携式设计：数据都在 exe 旁，不写注册表 —— `saves/`（角色卡与聊天树）、`worlds/`、`personas/`、`prompt_presets/`、`memory/`、`plugin_settings/`、`exports/`、`config.json`（全局设置与 API Key）。
+
+`.gitignore` 已排除**存档、世界卡、玩家卡、插件设置、`config.json`、导出与缓存**，所以克隆下来是干净的；反过来说，**源码克隆没有 Key，首次启动需要自己填**。
 
 ## 文档
 
-- `说明书.md` — 完整使用说明
-- `PLUGIN_DEV.md` — 插件编写标准
-- `状态变量说明.md` — 机制/战斗/好感度变量速查
+- `说明书.md` — 完整使用说明（安装 / 角色 / 世界 / 记忆 / 办公 / 财报 / 语音 / 命令大全 / FAQ）
+- `PLUGIN_DEV.md` — 插件编写标准（钩子 / 声明式设置 / UI 按钮 / 访问 core / 调试发布）
+- `状态变量说明.md` — 机制卡 / 战斗 / 好感度标签速查（给不写代码的人看）
+- `DICK-Narrative/README.md` — 播放器与 `codex/1.0` 故事格式规格
+- `声库安装说明.txt` — UTAU 声库怎么找、怎么装
+
+## 已知边界
+
+- **仅 Windows**（`secret_store.py` 用 DPAPI、打包用 PyInstaller、语音走 Windows 区域检测）；安卓端是独立实现
+- 软件是个人学习项目，AI 回复由第三方模型生成，不代表本项目立场；财报/股票分析仅供参考，不构成投资建议
+- 政策爬取只访问公开官方页面，请遵守目标站点条款
 
 ## 许可
 
