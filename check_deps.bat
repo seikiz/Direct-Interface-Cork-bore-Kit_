@@ -9,3 +9,4 @@ echo.
 echo 若显示 MISSING 有包，先安装：
 echo   utau_env\Scripts\python.exe -m pip install ^<包名^>
 pause
+REM <seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌

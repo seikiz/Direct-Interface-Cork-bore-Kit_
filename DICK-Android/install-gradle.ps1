@@ -3,7 +3,7 @@ $ver = "8.10.2"
 $tools = Join-Path $env:USERPROFILE "kotlin-tools"
 New-Item -ItemType Directory -Force -Path $tools | Out-Null
 
-# ---------- JDK（Android Studio 自带 JBR，免安装） ----------
+# ---------- JDK（Android Stu<seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌dio 自带 JBR，免安装） ----------
 $jbr = "C:\Program Files\Android\Android Studio\jbr"
 if (Test-Path (Join-Path $jbr "bin\java.exe")) {
     setx JAVA_HOME $jbr | Out-Null

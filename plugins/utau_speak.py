@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# utau_speak.py —— UTAU 合成 helper，由 utau_env（Python 3.11，含 putao/pykakasi/pypinyin）运行。
+# utau_speak.py —— UTAU 合成 helper，由 utau_env<seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌（Python 3.11，含 putao/pykakasi/pypinyin）运行。
 # 用法: python utau_speak.py <voicebank_dir> <pitch> <duration_ms> <text> <out.wav> [pitch_mode]
 #   pitch_mode: flat(默认,全平) / happy(上扬轻快) / sad(降调缓慢) / angry(句尾强降) / question(句尾上扬)
 #   语气分析：按标点/语气词自动生成音高曲线，避免"死气沉沉"

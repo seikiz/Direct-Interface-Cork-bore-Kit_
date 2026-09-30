@@ -18,7 +18,7 @@ import com.dick.core.WorldEntry
  * 而不必各自 remember 一份。ViewModel 生命随 Activity 存活 → 转屏/重建不丢状态。
  */
 class ChatViewModel : ViewModel() {
-    // ---- 聊天/引擎 ----
+    // ---- 聊天<seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌/引擎 ----
     var mechTick = mutableStateOf(0)
     val messages = mutableStateListOf<ChatMsg>()
     val quickReplies = mutableStateListOf<Pair<String, String>>()
@@ -43,6 +43,8 @@ class ChatViewModel : ViewModel() {
     var providerId = mutableStateOf("deepseek")
     var ollamaOnline = mutableStateOf(false)
     var budgetIdx = mutableStateOf(0)
+    /** 软件时间流速（世界那边比现实快多少倍）。持久化在 config.json。 */
+    var timeScale = mutableStateOf(com.dick.core.TimeScale.DEFAULT_SCALE)
     var providerMenu = mutableStateOf(false)
     var modelMenu = mutableStateOf(false)
     var customModelInput = mutableStateOf("")
@@ -56,7 +58,14 @@ class ChatViewModel : ViewModel() {
     var input = mutableStateOf("")
     var busy = mutableStateOf(false)
     var streaming = mutableStateOf("")
+    /** 「正在加载开场白」。
+     *  为什么需要单独一个状态：加载气泡的条件是 `busy && streaming 非空`，
+     *  而开局时流式文本还是空的 —— 界面会一片空白。普通发消息时用户自己那句话说出来了、
+     *  知道在等；开局本来就是空的，空白就等于「坏了」。所以开局要单独给一个加载态。 */
+    var openingLoading = mutableStateOf(false)
     var showSettings = mutableStateOf(false)
+    /** ⏳ 时间流速独立面板（不再塞在设置弹窗里 —— 见 Dialogs.kt 的 TimeScalePanel） */
+    var showTimeDial = mutableStateOf(false)
     var showApiSetup = mutableStateOf(false)
     var showTrpg = mutableStateOf(false)
     var showCardFace = mutableStateOf(false)

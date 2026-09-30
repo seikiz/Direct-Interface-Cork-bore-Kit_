@@ -40,6 +40,15 @@ DICK-Android/app/build/
 local.properties
 *.jks
 
+# Kotlin 叙事播放器（DICK-Narrative）
+DICK-Narrative/.gradle/
+DICK-Narrative/.kotlin/
+DICK-Narrative/app/build/
+DICK-Narrative/build/
+# 播放器打包产物（127MB，绝不进仓库）
+DICK-Narrative-播放器/
+DICK-Narrative/app/build/compose/binaries/
+
 # 插件设置（含用户配置）
 plugin_settings/
 
@@ -62,6 +71,7 @@ tavern-installer/start.bat
 _apk_inspect/
 _kt_test_data/
 _mock/
+_ui_evidence/
 
 # 开发临时脚本（下划线开头）
 /_*.py
@@ -69,6 +79,8 @@ _mock/
 /_*.kt
 /_*.ps1
 /_*.txt
+/_*.js
+/_*.html
 /_wf/.wrangler/
 
 # DSH 环境目录（不属于 DICK 项目）
@@ -91,3 +103,13 @@ aoqi_crawler.py
 
 # DSH 环境目录
 /dsh-companion/
+
+# 手机工具链素材（Termux rootfs / debs，约 42MB / 2700+ 文件）—— 是移植素材，不是源码
+_phone/
+
+# 开发临时数据：下划线开头的老规则只覆盖了 py/bat/kt/ps1/txt/js/html，漏了 json
+# （_turns.json、_selfscore_data*.json 这类实验输出会漏进来）
+/_*.json
+
+# 跑测试/脚本留下的临时目录
+/_tmp*/

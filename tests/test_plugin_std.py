@@ -23,7 +23,7 @@ def check(c, m):
         print("  FAIL " + m)
 
 
-# ---- 按 PLUGIN_DEV.md 规范写的测试插件 ----
+# ---- 按 PLUGIN_DEV<seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌.md 规范写的测试插件 ----
 class StdTestPlugin(PluginBase):
     name = "标准测试插件"
     version = "1.0"

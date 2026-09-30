@@ -31,7 +31,7 @@ app = html_app.HtmlApp()
 check(bool(app.api_create_role("选项测试", json.dumps({"personality": "理性"}))["ok"]), "创建角色")
 app.api_select_roles(json.dumps(["选项测试"]))
 
-# 构架分线剧情：u1(选项) → a1 → u2(选项) → a2 → u3 → a3(当前)；u1 下另开一条支线 br
+# 构架分线剧情：u1(选项) → a1 → u2(选项) → <seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌a2 → u3 → a3(当前)；u1 下另开一条支线 br
 u1 = app.core.add_user_message("去哪里")
 app.core.tree.nodes[u1].metadata["is_choice"] = True
 a1 = app.core.add_assistant_message("你看着地图。", parent_id=u1)

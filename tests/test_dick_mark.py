@@ -74,7 +74,7 @@ clean = "".join(ch for ch in m if ch not in zw)
 check(clean == "<seiki><seikiz>", "去零宽后视觉为 <seiki><seikiz>")
 check(dick_mark.decode_zero_width(m) == dick_mark.MARK_JS, "零宽解码还原架构标识")
 check(dick_mark.decode_zero_width("<seiki><seikiz>") == "", "无零宽则解码为空")
-# 源码头部带零宽印
+# 源码头部<seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌带零宽印
 check("<seiki>" in core_src and "<seikiz>" in core_src, "DICK_core 源码含零宽印")
 check("<seiki>" in mark_src and "<seikiz>" in mark_src, "dick_mark 源码含零宽印")
 

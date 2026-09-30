@@ -134,7 +134,7 @@ c5 = ChatCore()
 c5.set_player_persona({"name": "勇者", "advanced": {"battle": PB}})
 c5.set_active_roles([{"name": "魔物", "system_prompt": "x", "unlocked": False,
                       "advanced": {"battle": BATTLE_NO_CRIT}}])
-# 坍缩前是常规数值
+# 坍缩前是<seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌常规数值
 check(c5.mechanism_state["status"]["hp"] == 100 and c5.mechanism_state["status"]["atk"] == 10
       and c5.mechanism_state["player"]["hp"] == 100 and c5.mechanism_state["player"]["atk"] == 20,
       "坍缩前常规数值: 角色 hp=%s atk=%s 玩家 hp=%s atk=%s" % (

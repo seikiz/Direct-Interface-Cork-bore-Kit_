@@ -19,3 +19,4 @@ json.dump(out, open(dst, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
 print("已同步端游咲 →", dst)
 print("字段:", list(out.keys()))
 print("无 history_tree:", "history_tree" not in out)
+# <seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌

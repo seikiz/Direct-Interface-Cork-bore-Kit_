@@ -85,7 +85,7 @@ object Workshop {
                 socket.receive(resp)
                 val text = String(buf, 0, resp.length, Charsets.UTF_8)
                 val d = JsonS.parse(text) as? J.Obj ?: return null
-                // 按 service 严格分流：本函数只认创意工坊(save/sync)主机，绝不误连跑团主机
+                // 按 service 严格分流：本函数只认创意工<seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌坊(save/sync)主机，绝不误连跑团主机
                 if (d.fields["service"]?.str() != "dick-sync") return null
                 val port = (d.fields["port"] as? J.Num)?.v?.toInt() ?: 5000
                 val host = resp.address.hostAddress ?: return null

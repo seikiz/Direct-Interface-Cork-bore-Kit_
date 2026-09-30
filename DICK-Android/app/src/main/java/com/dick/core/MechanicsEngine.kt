@@ -100,7 +100,7 @@ class MechanicsEngine {
      *  - 未变化字段 → 保留当前值（累加不清零）
      */
     private fun reconcileWithConfig(oldCfg: J.Obj?, newCfg: J.Obj, st: J.Obj) {
-        // 好感度
+        // 好<seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌感度
         val oldAff = oldCfg?.fields?.get("affection") as? J.Obj
         val newAff = newCfg.fields["affection"] as? J.Obj
         if (newAff != null &&
@@ -183,6 +183,10 @@ class MechanicsEngine {
         }
         st.fields["status"] = status
         st.fields["flags"] = J.Obj()
+        // 事件冷却用：_turn 是回合计数、event_counts 记每个事件触发了几次和上次第几轮。
+        // 旧存档没有这两个键，EventJudge 会用 .also 补上，不补也不会崩。
+        st.fields["_turn"] = J.Num(0.0)
+        st.fields["event_counts"] = J.Obj()
         sanitize(st)
         // 泛用变量存储优先：第三个文件夹 JSON 比树快照新、可靠（根治"从0加"）
         val stored = if (forceInitial) null else loadState()
@@ -397,18 +401,104 @@ class MechanicsEngine {
         val cfg = config ?: return null
         val st = state ?: return null
         val evs = cfg.fields["events"] as? J.Arr ?: return null
-        // 判定抽到独立模块 EventJudge（纯函数、只读状态），引擎只负责状态变更
-        val ev = EventJudge.judge(evs, st, lastUserText) ?: return null
+        // 判定抽到独立模块 EventJudge（负责好感/关键词/冷却/次数），引擎只负责状态变更
+        val res = EventJudge.judge(evs, st, lastUserText) ?: return null
+        val ev = res.event
         val id = ev.fields["id"]?.str()
         if (id != null) {
-            val flags = (st.fields["flags"] as? J.Obj) ?: J.Obj().also { st.fields["flags"] = it }
-            flags.fields[id] = J.Bool(true)  // 一次性事件标记
+            // 一次性标记：可重复事件不去置 flag，否则第二次就再也触发不了
+            val once = ev.fields["once"]?.bool() ?: true
+            if (once) {
+                val flags = (st.fields["flags"] as? J.Obj) ?: J.Obj().also { st.fields["flags"] = it }
+                flags.fields[id] = J.Bool(true)
+            }
             // 事件触发顺序记录（供 EndingJudge 的 events_chain 判定"部分影响结局"）
             val log = (st.fields["event_log"] as? J.Arr) ?: J.Arr().also { st.fields["event_log"] = it }
             if (log.items.none { it.str() == id }) log.items.add(J.Str(id))
         }
+        // 事件自带的好感加成：让好感随剧情自动走，不必依赖模型每轮标 [aff]
+        applyEventAffection(ev)
         lastEvent = ev  // 保留最近事件，供 GAL 选项生成结合剧情
         return ev
+    }
+
+    /**
+     * 事件触发时自动加/减好感（ev["aff"]，按上限百分比，与 [aff:+N] 同口径）。
+     * 这就是"好感度自动化"：玩家不用管，剧情节点自己推动关系。
+     */
+    fun applyEventAffection(ev: J.Obj?) {
+        val cfg = config ?: return
+        val st = state ?: return
+        val affDelta = ev?.fields?.get("aff")?.int() ?: 0
+        if (affDelta == 0) return
+        val affCfg = cfg.fields["affection"] as? J.Obj ?: return
+        if (affCfg.fields["enabled"]?.bool() != true) return
+        val lo = affCfg.fields["min"]?.int() ?: 0
+        val hi = affCfg.fields["max"]?.int() ?: 100
+        val delta = Math.round(hi * affDelta / 100.0).toInt()
+        val cur = st.fields["affection"]?.int() ?: 50
+        st.fields["affection"] = J.Num((cur + delta).coerceIn(lo, hi).toDouble())
+    }
+
+    /**
+     * 事件进度：给面板用。每个事件现在是什么状态（已触发/冷却中/差多少好感/可触发）。
+     * 纯读，不改任何状态 —— 玩家看不到进度就会觉得事件坏了。
+     */
+    fun eventProgress(): List<Map<String, Any?>> {
+        val cfg = config ?: return emptyList()
+        val st = state ?: return emptyList()
+        val evs = cfg.fields["events"] as? J.Arr ?: return emptyList()
+        val flags = st.fields["flags"] as? J.Obj
+        val counts = st.fields["event_counts"] as? J.Obj
+        val aff = st.fields["affection"]?.int() ?: 0
+        val turn = st.fields["_turn"]?.int() ?: 0
+        val out = ArrayList<Map<String, Any?>>()
+        for (item in evs.items) {
+            val ev = item as? J.Obj ?: continue
+            val id = ev.fields["id"]?.str() ?: continue
+            val once = ev.fields["once"]?.bool() ?: true
+            val rec = counts?.fields?.get(id) as? J.Obj
+            val fired = rec?.fields?.get("n")?.int() ?: 0
+            val hasAt = rec?.fields?.containsKey("at") == true
+            val last = if (hasAt) (rec!!.fields["at"]?.int() ?: 0) else 0
+            val state_: String
+            val why: String
+            if (once && (fired > 0 || flags?.fields?.get(id)?.bool() == true)) {
+                state_ = "fired"; why = "已触发"
+            } else if (fired > 0 && hasAt) {
+                val cd = ev.fields["cooldown"]?.int() ?: 0
+                val left = cd - (turn - last)
+                if (!once && left > 0) {
+                    state_ = "cooling"; why = "冷却中（还差 $left 轮）"
+                } else {
+                    state_ = "ready"; why = "可以再次触发"
+                }
+            } else {
+                val need = ev.fields["aff_ge"]?.int()
+                if (need != null) {
+                    val gap = need - aff
+                    if (gap > 0) {
+                        state_ = "blocked"; why = "好感还差 $gap（当前 $aff/需要 $need）"
+                    } else {
+                        state_ = "ready"; why = "好感已达标，下一轮触发"
+                    }
+                } else {
+                    state_ = "ready"; why = "无条件，下一轮触发"
+                }
+            }
+            val kws = (ev.fields["keywords"] as? J.Arr)?.items?.mapNotNull { it.str() } ?: emptyList()
+            out.add(mapOf(
+                "id" to id,
+                "name" to (ev.fields["name"]?.str() ?: id),
+                "fired" to (fired > 0),
+                "times" to fired,
+                "state" to state_,
+                "why" to why,
+                "aff_ge" to ev.fields["aff_ge"]?.int(),
+                "keywords" to kws
+            ))
+        }
+        return out
     }
 
     // ---------- GAL 选项效果 ----------

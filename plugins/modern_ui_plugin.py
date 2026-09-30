@@ -1,4 +1,4 @@
-# ============================================================
+# ==============================<seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌==============================
 #   modern_ui_plugin.py - 现代界面（主题美化插件）v1.0
 #
 #   一键把整个应用换成现代化外观：
@@ -60,9 +60,46 @@ class ModernUIPlugin(PluginBase):
             root = tk._default_root
             if root:
                 root.after(600, self.apply_theme)
+                root.after(1500, self._watch_windows)
         except Exception:
             pass
         print("[现代界面] 已加载：主题将自动应用（点击 🎨 主题 打开主题中心）")
+
+    # ============================================================
+    # 让主题覆盖"之后才打开的窗口"
+    # ============================================================
+    def _window_keys(self, root):
+        """只看根的直接子窗口就够了（Toplevel 都直接挂在根下面）。
+        之前递归遍历整棵控件树 —— 每秒对成百上千个控件做 Tcl 往返，
+        纯属浪费，还会拖慢 Tk 相关操作。"""
+        keys = []
+        try:
+            for w in root.winfo_children():
+                if isinstance(w, (tk.Toplevel, CTkToplevel)):
+                    keys.append(str(w))
+        except Exception:
+            pass
+        return keys
+
+    def _watch_windows(self):
+        """主题只作用在"刷的那一刻已存在"的控件上，插件坞里后开的窗口
+        （图片上传 / 世界书编辑器 / 设置窗…）会漏掉，跟主题割裂。
+        这里每秒看一眼窗口有没有增减，有就补刷一次。"""
+        root = None
+        try:
+            root = tk._default_root
+            if root:
+                cur = self._window_keys(root)
+                if cur != getattr(self, "_win_keys", None):
+                    self._win_keys = cur
+                    self.apply_theme()
+        except Exception:
+            pass
+        try:
+            if root:
+                root.after(1000, self._watch_windows)
+        except Exception:
+            pass
 
     # ============================================================
     # 调色板与配色工具
@@ -127,11 +164,14 @@ class ModernUIPlugin(PluginBase):
             pass
 
         btn_h = 26 if compact else 30
+        # 我们刷上去过的强调色要记住：否则第二次换色时 cur 已经是上一次的强调色、
+        # 不再属于"默认蓝"，会被当成"用户显式设的颜色"跳过 → 换色不生效
+        mine = set(self.DEFAULT_BLUES) | set(getattr(self, "_applied_accents", ()))
         for w in self._walk(root):
             try:
                 if isinstance(w, CTkButton):
                     cur = w.cget("fg_color")
-                    if cur in self.DEFAULT_BLUES or cur == "transparent":
+                    if cur in mine or cur == "transparent":
                         w.configure(fg_color=accent, hover_color=hover,
                                     corner_radius=radius, height=btn_h)
                     else:
@@ -177,6 +217,8 @@ class ModernUIPlugin(PluginBase):
                     w.tag_config("token_info", foreground=pal["muted"])
                 except Exception:
                     pass
+        # 记下这次刷上去的强调色，下次换色时才能认出"这是我们自己刷的"并改掉
+        self._applied_accents = set(getattr(self, "_applied_accents", set())) | {accent}
         return True
 
     # ============================================================

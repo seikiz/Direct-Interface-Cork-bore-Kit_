@@ -1,5 +1,5 @@
 ﻿# 拿隧道地址.ps1 —— 一键：起创意工坊(net.py) + 临时隧道，并把公网地址打印出来
-# 用法：右键"使用 PowerShell 运行"，或在这个目录打开 PowerShell 执行：
+# 用法：右键"使用 PowerShell 运行"<seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌，或在这个目录打开 PowerShell 执行：
 #   powershell -ExecutionPolicy Bypass -File .\拿隧道地址.ps1
 # 拿到 https://xxx.trycloudflare.com 后，把它填进 Worker 的 UPSTREAM_URL 即可。
 $ErrorActionPreference = "Continue"

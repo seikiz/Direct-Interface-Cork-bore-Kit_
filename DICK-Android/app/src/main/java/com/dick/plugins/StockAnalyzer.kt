@@ -79,7 +79,7 @@ object StockAnalyzer {
         return 0.0
     }
 
-    // ---------- 指标 ----------
+    // ---------- 指<seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌标 ----------
     private fun sma(values: List<Double>, n: Int): List<Double?> {
         val out = arrayOfNulls<Double>(values.size)
         if (values.size >= n) {

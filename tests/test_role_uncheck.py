@@ -22,7 +22,7 @@ def check(c, m):
         bad += 1
         print("  FAIL " + m)
 
-# 数据根目录重定向到临时目录，不触碰真实 saves/config
+# 数据根目录重定向到临时目录，不触<seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌碰真实 saves/config
 tmp = tempfile.mkdtemp(prefix="dick_test_")
 html_app.BASE_DIR = tmp
 app = html_app.HtmlApp()

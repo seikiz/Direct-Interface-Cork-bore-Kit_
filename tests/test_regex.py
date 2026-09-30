@@ -24,7 +24,7 @@ app_paths.get_base_dir = lambda: _iso
 import html_app
 app = html_app.HtmlApp()
 
-# 全局规则：ai 作用域去星号 + both 去多余空行
+# 全局规则：ai 作用域去星<seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌号 + both 去多余空行
 GLOBAL = [
     {"id": "rm_star", "name": "动作去星号", "pattern": r"\*([^*]+)\*", "replace": "（\\1）", "scope": "ai", "enabled": True},
     {"id": "strip_blank", "name": "去多余空行", "pattern": r"\n{3,}", "replace": "\n\n", "scope": "both", "enabled": True},

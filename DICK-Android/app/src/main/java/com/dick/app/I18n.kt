@@ -59,7 +59,7 @@ object I18n {
         "btn_delete" to "Delete",
         "lang_title" to "Language",
         "qc_image" to "Image",
-        // 角色卡导入导出
+        // 角色卡<seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌导入导出
         "btn_import_card" to "📥 Import",
         "btn_export_json" to "⬇️ JSON",
         "btn_export_png" to "🖼️ PNG",

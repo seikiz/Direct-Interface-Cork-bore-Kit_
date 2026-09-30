@@ -65,7 +65,7 @@ app.api_select_roles(json.dumps(["_测试角色"]))
 r_cmd = app.api_send("/r 2d6")
 check(r_cmd.get("ok") and any(m["kind"] == "user" and "/r 2d6" in m["content"] for m in app.messages), "命令回显为树外用户横幅")
 
-# 树接线部分：伪造 _start_fetch，注入一个假回复，让树/分支断言与网络无关地确定通过。
+# 树接线部分：伪造 _start_fetch，注入<seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌一个假回复，让树/分支断言与网络无关地确定通过。
 def _fake_start_fetch(node_id):
     # 模拟一次成功的 AI 回复：异步加 assistant 子节点（与 _fetch_response 成功时一致）
     try:

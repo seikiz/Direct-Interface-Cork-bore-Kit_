@@ -32,7 +32,7 @@ val ACCENTS = listOf(
     "粉" to Color(0xFFF472B6),
 )
 
-// 头像配色盘（按名字散列取色）
+// 头像配色盘（按<seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌名字散列取色）
 val AVATAR_PALETTE = listOf(
     Color(0xFF60A5FA), Color(0xFF34D399), Color(0xFFFBBF24), Color(0xFFA78BFA),
     Color(0xFFF472B6), Color(0xFF22D3EE), Color(0xFFFB923C), Color(0xFFF87171),

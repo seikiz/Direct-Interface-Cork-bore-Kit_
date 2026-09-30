@@ -45,3 +45,8 @@ jobs:
       - name: 汇总
         if: always()
         run: echo "测试结束（检查上方是否有 FAIL）"
+
+      # 图标系统是纯前端逻辑，Python 套件扫不到它 —— 之前它红了很久没人发现。
+      # 只依赖 Node（runner 自带），不用装任何包。
+      - name: 图标系统回归（Node）
+        run: node tests/test_icons.js

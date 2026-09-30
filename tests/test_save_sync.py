@@ -19,7 +19,7 @@ def check(c, m):
         bad += 1
         print("  FAIL " + m)
 
-# 隔离到临时目录，避免污染真实 workshop_data
+# 隔离到临时目录，避免污染真实 <seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌workshop_data
 tmp = tempfile.mkdtemp(prefix="dick_save_")
 net.SAVES_DIR = os.path.join(tmp, "saves")
 os.makedirs(net.SAVES_DIR, exist_ok=True)

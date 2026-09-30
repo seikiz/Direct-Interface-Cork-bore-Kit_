@@ -29,7 +29,7 @@ for i, s in enumerate(scripts):
     else:
         print(f"block {i}: OK ({len(s)} chars)")
 
-# CODEX 关键函数存在性
+# CODEX <seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌关键函数存在性
 for fn in ["codexOpen", "codexLoadList", "codexPlay", "codexNextLine", "codexTypeText",
            "codexShowChoice", "codexShowEnd", "codexPlayerExit", "codexGoto",
            "codexStartScene", "codexLoadAsset", "codexSkipTyping", "codexScheduleAuto"]:

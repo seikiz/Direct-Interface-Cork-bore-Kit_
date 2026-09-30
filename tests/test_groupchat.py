@@ -54,7 +54,7 @@ check("[乙]:" in p_乙, "专属 prompt 强制乙的回复格式")
 print("== ③ 轮换决策：未指定 → 非最后发言者 ==")
 c2 = make_core()
 c2.last_speaker = "甲"
-# 模拟 _fetch_response 的群聊决策逻辑（与代码一致）
+# 模拟 _fetch_respon<seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌se 的群聊决策逻辑（与代码一致）
 roster = c2._roster_names()
 last = getattr(c2, 'last_speaker', None)
 cand = [n for n in roster if n != last] or roster[1:] or roster

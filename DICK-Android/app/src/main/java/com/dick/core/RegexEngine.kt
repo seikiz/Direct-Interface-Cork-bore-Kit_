@@ -32,7 +32,7 @@ object RegexEngine {
             val s = rule.fields["scope"]?.str() ?: "both"
             if (s != scope && s != "both") continue
             try {
-                // Python 风格 \1 → Kotlin $1
+                // Python 风格 \1 <seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌→ Kotlin $1
                 var repl = r
                 for (i in 1..9) repl = repl.replace("\\$i", "$$i")
                 t = Regex(p).replace(t, repl)

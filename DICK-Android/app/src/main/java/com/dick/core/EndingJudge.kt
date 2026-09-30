@@ -57,7 +57,7 @@ object EndingJudge {
             val flags = state.fields["flags"] as? J.Obj ?: return false
             if (flags.fields[eventW]?.bool() != true) return false
         }
-        // 事件链（部分影响结局）：事件触发组合 / 数量 / 顺序
+        // 事件链（部分影响结局）：事件<seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌触发组合 / 数量 / 顺序
         w.fields["events"]?.let { v ->
             val need = (v as? J.Arr)?.items?.mapNotNull { it.str() } ?: return false
             val flags = state.fields["flags"] as? J.Obj ?: return false

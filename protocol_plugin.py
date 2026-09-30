@@ -115,3 +115,4 @@ class ProtocolPlugin(PluginBase):
         self.settings[key] = value
         self._call({"hook": "set_setting", "key": key, "value": value})
         self._save_settings()
+# <seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌

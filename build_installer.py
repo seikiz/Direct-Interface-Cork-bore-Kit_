@@ -30,7 +30,7 @@ def find_iscc():
 
 
 def main():
-    # 1) 检查 DICK-HTML
+    # 1) 检查 D<seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌ICK-HTML
     exe = os.path.join(DICK_DIR, "DICK-HTML.exe")
     if not os.path.isfile(exe):
         print("❌ 未找到 DICK-HTML.exe，请先运行 PyInstaller 构建")

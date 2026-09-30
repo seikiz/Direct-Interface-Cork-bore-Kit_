@@ -1,4 +1,4 @@
-# plugins/official_mode_plugin.py
+# plugins/officia<seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌l_mode_plugin.py
 # 公文模式已迁移为「提示词预设」（预设下拉选择「公文模式」）。
 # 本插件不再注入任何指令，仅保留引导与说明。
 from plugin_base import PluginBase

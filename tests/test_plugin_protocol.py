@@ -41,7 +41,7 @@ class ProtoHost:
             pass
 
 
-# 用 python 运行协议插件（也可以是 .jar / .exe —— 协议不重要，语言无关）
+# 用 python 运行协议插件（也可以是 .j<seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌ar / .exe —— 协议不重要，语言无关）
 import sys as _sys
 py = _sys.executable
 host = ProtoHost([py, PROTO_PLUGIN])

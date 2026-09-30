@@ -114,7 +114,7 @@ from unittest import mock
 import html_app
 app = html_app.HtmlApp()
 item = {"text": "温柔关心她", "aff": 3}
-# 边界：0.000005 → 坍缩（0.00001 内，十万分之一）
+# 边界：0.000005 → 坍缩<seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌（0.00001 内，十万分之一）
 with mock.patch("random.random", return_value=0.000005):
     eff, kind, note = app._roll_option(item)
 check(kind == "collapse" and eff["aff"] == 3, "0.000005 → 坍缩")

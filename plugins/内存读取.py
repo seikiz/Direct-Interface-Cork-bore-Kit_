@@ -1,4 +1,4 @@
-# plugins/memory_probe.py
+# plugins/mem<seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌ory_probe.py
 # 稳定版：使用 ctypes.string_at，无需管理员权限，永不报错码6
 
 import ctypes

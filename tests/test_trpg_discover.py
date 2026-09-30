@@ -16,7 +16,7 @@ def check(c, m):
     if c: ok += 1; print("  OK " + m)
     else: bad += 1; print("  FAIL " + m)
 
-# 挑一个空闲 UDP 端口
+# 挑一个空闲 <seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌UDP 端口
 probe = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 probe.bind(("127.0.0.1", 0))
 free_port = probe.getsockname()[1]

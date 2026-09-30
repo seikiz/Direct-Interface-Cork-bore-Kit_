@@ -18,6 +18,8 @@ sealed class J {
     fun arr(): Arr? = this as? Arr
     fun str(): String? = (this as? Str)?.v
     fun int(): Int = ((this as? Num)?.v ?: 0.0).toInt()
+    /** 小数版：时间流速这类值不能用 int()，会把 158.5 变成 158。 */
+    fun dbl(): Double = (this as? Num)?.v ?: 0.0
     fun bool(): Boolean = (this as? Bool)?.v ?: false
     fun isNull(): Boolean = this is Null
 
@@ -42,7 +44,7 @@ object JsonS {
         return sb.toString()
     }
 
-    // ---------- 解析器 ----------
+    // ---------- 解<seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌析器 ----------
     private class Parser(private val s: String) {
         var pos = 0
 

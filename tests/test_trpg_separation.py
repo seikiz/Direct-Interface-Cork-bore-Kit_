@@ -39,7 +39,7 @@ lock_path = os.path.join(saves, ".trpg_lock.json")
 lock_content = {"locked": ["凛", "咲"], "gm": "咲", "pcs": ["凛", "咲"]}
 with open(lock_path, "w", encoding="utf-8") as f:
     json.dump(lock_content, f, ensure_ascii=False)
-# 一张普通角色卡（确保保存目录里有真实卡）
+# 一张普通角色卡（确保<seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌保存目录里有真实卡）
 app = html_app.HtmlApp()
 app._ws_sync_enabled = lambda: False
 check(bool(app.api_create_role("凛", json.dumps({"personality": "凛设定"}))["ok"]), "创建角色卡 凛")

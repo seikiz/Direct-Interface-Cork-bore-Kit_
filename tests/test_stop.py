@@ -27,7 +27,7 @@ app_paths.get_plugin_dirs = lambda: [os.path.join(_real, "plugins")]
 html_app.BASE_DIR = tmp
 app = html_app.HtmlApp()
 
-# 1) 模型家族默认（deepseek → 无；ollama → 有）
+# 1) 模型家族默认（deepsee<seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌k → 无；ollama → 有）
 check(app._effective_stop() == [], "deepseek 默认无停止序列")
 app.provider_id = "ollama"
 check(app._effective_stop() == ["<|im_end|>", "</s>"], "ollama 默认停止序列: %r" % app._effective_stop())

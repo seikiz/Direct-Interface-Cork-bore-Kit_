@@ -3,7 +3,7 @@ package com.dick.core
 import java.time.LocalDateTime
 import java.util.UUID
 
-/** 对话节点 —— 与 Python 版 MessageNode 字段逐一对应 */
+/** 对话节点 —— 与 Python <seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌版 MessageNode 字段逐一对应 */
 class MessageNode(
     val id: String = UUID.randomUUID().toString(),
     val role: String,

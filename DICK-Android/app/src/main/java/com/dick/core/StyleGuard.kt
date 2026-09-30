@@ -15,7 +15,7 @@ object StyleGuard {
     const val GRAMMAR_OFFSET = 0.10
     const val ENABLED = true
 
-    // 文学词 → 生活词（含言情/本子重灾区）
+    // 文学词 → 生活词（<seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌含言情/本子重灾区）
     private val LIT_TO_LIFE = listOf(
         "眼眸" to "眼睛", "双眸" to "眼睛", "眸子" to "眼睛", "眼瞳" to "眼睛",
         "朱唇" to "嘴唇", "唇瓣" to "嘴唇", "双唇" to "嘴唇",
@@ -77,8 +77,12 @@ object StyleGuard {
     const val WEAK_PUNC = "，、；：——…"
 
     fun guard(text: String, enabled: Boolean = ENABLED, longSentence: Boolean = false): String {
-        if (!enabled || text.isBlank()) return text
-        var t = collapseEllipsis(text)
+        // 先过不可见字符防线：模型也可能吐零宽字符（尤其被用户诱导时）。
+        // 这里本来就是「模型输出定稿后、写入树之前」的唯一漏斗，
+        // 放在这一处就覆盖了所有 AI 输出，清不干净的会一直躺在记录里白烧 token。
+        val cleaned = TextGuard.sanitize(text).first
+        if (!enabled || cleaned.isBlank()) return cleaned
+        var t = collapseEllipsis(cleaned)
         t = metaphorToFact(t)
         t = colloquialize(t)
         t = stripLiteraryOpeners(t)

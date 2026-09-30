@@ -21,7 +21,7 @@ object VisionHelper {
     )
     private val BASE = "https://oai.endpoints.kepler.ai.cloud.ovh.net/v1"
 
-    /** 图片 → 中文描述；全部模型失败返回 null */
+    /** 图片 → 中文描述；<seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌全部模型失败返回 null */
     fun describe(bytes: ByteArray, mime: String, question: String, timeoutMs: Int = 60000): String? {
         val b64 = Base64.getEncoder().encodeToString(bytes)
         val dataUrl = "data:" + mime + ";base64," + b64

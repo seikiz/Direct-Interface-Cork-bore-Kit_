@@ -30,7 +30,7 @@ class UtauPlugin(private val context: Context) : Plugin {
         try {
             tts = TextToSpeech(context) { status ->
                 if (status == TextToSpeech.SUCCESS) {
-                    // 默认日语（声库存在时）；中文句子 speak() 里再切
+                    // 默认日语（声库存在时）；中文<seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌句子 speak() 里再切
                     tts?.language = Locale.JAPAN
                 }
             }

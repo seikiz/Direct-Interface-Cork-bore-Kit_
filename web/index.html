@@ -10,11 +10,11 @@
   --sub:#94a3b8; --line:#262b34; --accent:#60a5fa; --user:#4ade80;
   --radius:12px; --chat-wallpaper:none;
 }
-body.light{ --bg:#f5f6f8; --panel:#ffffff; --bubble:#ffffff; --text:#1f2937; --sub:#6b7280; --line:#e5e7eb; }
-body.oled{ --bg:#000000; --panel:#0a0a0c; --bubble:#101014; --text:#e5e7eb; --sub:#71717a; --line:#1c1c22; }
+body.light{ --bg:#f5f6f8; --panel:#ffffff; --bubble:#ffffff; --text:#1f2937; --sub:#6b7280; --line:#e5e7eb; color-scheme:light; }
+body.oled{ --bg:#000000; --panel:#0a0a0c; --bubble:#101014; --text:#e5e7eb; --sub:#71717a; --line:#1c1c22; color-scheme:dark; }
 *{ box-sizing:border-box; margin:0; padding:0; }
 html,body{ height:100%; }
-body{ background:var(--bg); color:var(--text); font-family:"Segoe UI","Microsoft YaHei",sans-serif; overflow:hidden; }
+body{ background:var(--bg); color:var(--text); font-family:"Segoe UI","Microsoft YaHei",sans-serif; overflow:hidden; color-scheme:dark; }
 
 #app{ display:flex; height:100vh; }
 /* ---------- 侧边栏 ---------- */
@@ -52,12 +52,46 @@ body{ background:var(--bg); color:var(--text); font-family:"Segoe UI","Microsoft
 .role-card .rc-name .avatar{ width:32px; height:32px; border-radius:50%; object-fit:cover; flex:none; }
 .role-card .rc-name .avatar.letter{ display:flex; align-items:center; justify-content:center; color:#fff; font-weight:700; font-size:14px; }
 .role-card .rc-name .rc-unlock{ font-size:12px; color:#f87171; flex:none; }
-.role-card .rc-actions{ display:flex; align-items:center; gap:2px; border-top:1px dashed var(--line); padding-top:6px; }
-.role-card .rc-actions .iconbtn{ background:none; border:none; cursor:pointer; font-size:12px; opacity:.7; padding:2px 6px; border-radius:6px; color:var(--sub); }
+.role-card .rc-actions{ display:flex; align-items:center; gap:6px; border-top:1px dashed var(--line); padding-top:8px; flex-wrap:wrap; row-gap:6px; }
+.role-card .rc-actions .iconbtn{ background:none; border:none; cursor:pointer; font-size:12px; opacity:.7; padding:4px 8px; border-radius:6px; color:var(--sub); white-space:nowrap; flex:0 0 auto; }
 .role-card .rc-actions .iconbtn:hover{ opacity:1; background:var(--line); }
 .role-card .rc-actions .act-del{ color:#f87171; margin-left:auto; }
+/* 角色卡·多存档：存档点列表 */
+.save-row{ display:flex; align-items:center; gap:8px; padding:8px 10px; margin:6px 0;
+  border:1px solid var(--line); border-radius:10px; background:var(--bubble); }
+.save-row.save-active{ border-color:var(--accent); background:color-mix(in srgb, var(--accent) 10%, var(--bubble)); }
+.save-row .save-label{ font-size:13px; font-weight:600; color:var(--text); overflow:hidden;
+  text-overflow:ellipsis; white-space:nowrap; display:block; }
+.save-row .save-ops .iconbtn{ background:none; border:none; cursor:pointer; font-size:13px;
+  opacity:.7; padding:3px 6px; border-radius:6px; color:var(--sub); }
+.save-row .save-ops .iconbtn:hover{ opacity:1; background:var(--line); }
+.save-row .save-ops .act-del{ color:#f87171; }
+.save-new input{ background:var(--bubble); border:1px solid var(--line); border-radius:8px;
+  color:var(--text); padding:7px 10px; font-size:13px; }
 .avatar{ width:28px; height:28px; border-radius:50%; object-fit:cover; flex:none; background:var(--line); }
 .avatar.letter{ display:flex; align-items:center; justify-content:center; color:#fff; font-weight:700; font-size:13px; }
+/* GAL 制作器 · 线-点-分支 全屏编辑器 */
+.gal-line{ margin:10px 0; border:1px solid var(--line); border-radius:10px; background:var(--panel); }
+.gal-line-head{ display:flex; align-items:center; gap:8px; padding:8px 12px; cursor:pointer; border-bottom:1px dashed var(--line); }
+.gal-line-head b{ font-size:14px; color:#f5c06c; }
+.gal-line-head .gal-count{ font-size:11px; color:var(--sub); }
+/* 顶部工具条：按钮收进自己能换行的组里，避免被 flex:1 占位顶出窗口 */
+.gal-top{ display:flex; align-items:center; gap:10px 12px; padding:14px 18px; border-bottom:1px solid var(--line); flex-wrap:wrap; }
+.gal-top .gal-actions{ display:flex; align-items:center; gap:10px 12px; flex-wrap:wrap; justify-content:flex-end; margin-left:auto; min-width:0; }
+.gal-top .gal-actions .btn2{ white-space:nowrap; flex:0 0 auto; }
+.gal-top #galStats{ white-space:nowrap; }
+.gal-body{ display:flex; flex-wrap:wrap; gap:0; align-items:flex-start; padding:8px 10px; }
+.gal-chip{ display:inline-flex; align-items:center; gap:6px; padding:7px 10px; margin:0; border:1px solid var(--line); border-radius:8px; background:var(--bubble); color:var(--text); font-size:12px; cursor:grab; white-space:nowrap; min-width:60px; }
+.gal-chip.choice{ background:color-mix(in srgb, #f59e0b 14%, var(--bubble)); border-color:#f59e0b; color:#f5c06c; }
+.gal-chip .gal-k{ font-size:10px; color:var(--sub); }
+.gal-chip.drag-over{ outline:2px dashed #f59e0b; }
+.gal-insert{ width:22px; height:22px; flex:none; align-self:center; margin:0 2px; border-radius:50%; background:var(--bubble); color:var(--sub); border:1px dashed var(--line); cursor:pointer; font-size:12px; line-height:20px; text-align:center; }
+.gal-insert:hover{ background:color-mix(in srgb, #f59e0b 20%, var(--bubble)); color:#f5c06c; }
+.gal-fork{ font-size:10px; color:#f59e0b; margin:0 4px; white-space:nowrap; align-self:center; }
+.gal-editor{ background:var(--bubble); border:1px solid var(--line); border-radius:10px; padding:10px 12px; margin:6px 0; }
+.gal-editor .row{ margin:4px 0; }
+.gal-editor input,.gal-editor select,.gal-editor textarea{ background:var(--panel); border:1px solid var(--line); border-radius:6px; color:var(--text); padding:5px 8px; font-size:12px; }
+.gal-opt{ display:inline-flex; gap:4px; align-items:center; margin:3px 4px; }
 .btn{ display:block; width:calc(100% - 24px); margin:5px 12px; padding:7px 10px; border-radius:8px;
   border:1px solid var(--line); background:var(--bubble); color:var(--text); cursor:pointer; font-size:13px; text-align:left; }
 .btn:hover{ border-color:var(--accent); }
@@ -149,6 +183,7 @@ body{ background:var(--bg); color:var(--text); font-family:"Segoe UI","Microsoft
 .ic svg{ width:100%; height:100%; display:block; }
 .ic .ic-img{ width:100%; height:100%; object-fit:contain; display:block; }
 button .ic{ margin-right:2px; }
+.ic:only-child{ margin-right:0; }
 .rc-unlock .ic{ margin:0; }
 .iconbtn .ic{ width:1.1em; height:1.1em; margin:0; }
 
@@ -334,7 +369,7 @@ button .ic{ margin-right:2px; }
 </style>
 </head>
 <body class="dark">
-<!-- Live2D 看板娘容器（插件启用且资源存在时才显示） -->
+<!-- Live2D 看板娘容器（<seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌插件启用且资源存在时才显示） -->
 <div id="l2d-stage"></div>
 <div id="l2d-hint" style="display:none;position:fixed;bottom:80px;left:50%;transform:translateX(-50%);
   background:rgba(0,0,0,.8);color:#ffd700;padding:8px 14px;border-radius:8px;font-size:12px;z-index:9999;"></div>
@@ -360,7 +395,9 @@ button .ic{ margin-right:2px; }
     </div>
     <div class="section-label" id="lblPersona">🧑 玩家角色</div>
     <button class="btn" id="btnPersona">⚙️ 编辑玩家角色</button>
-    <button class="btn" id="btnCodex">📕 CODEX 专属 GALGAME</button>
+    <button class="btn" id="btnCodex">📕 GAL制作器</button>
+    <button class="btn" id="btnGo">[ic:go] 围棋</button>
+    <button class="btn" id="btnBackup">🔐 加密备份</button>
     <button class="btn" id="btnSettings">⚙️ 设置</button>
   </aside>
   <div id="main">
@@ -425,8 +462,8 @@ button .ic{ margin-right:2px; }
     <div id="inputbar">
       <button class="plus" id="plusBtn">➕</button>
       <textarea id="input" placeholder="输入消息... (使用 @角色名 指定说话者)"></textarea>
-      <button id="cardFaceBtn" title="🎴 卡面" onclick="cardFaceShow()" style="background:none;border:none;color:var(--text);font-size:18px;cursor:pointer;padding:0 8px">🎴</button>
-      <button id="genImgBtn" title="🎨 生图" style="background:none;border:none;color:var(--text);font-size:18px;cursor:pointer;padding:0 8px">🎨</button>
+      <button id="cardFaceBtn" title="卡面" onclick="cardFaceShow()" style="background:none;border:none;color:var(--text);font-size:18px;cursor:pointer;padding:0 8px">🎴</button>
+      <button id="genImgBtn" title="生图" style="background:none;border:none;color:var(--text);font-size:18px;cursor:pointer;padding:0 8px">🎨</button>
       <button id="send">发送</button>
       <input type="file" id="fileInput" accept="image/*" style="display:none">
 <!-- 生图模态 -->
@@ -542,7 +579,7 @@ button .ic{ margin-right:2px; }
 <!-- CODEX 专属 GALGAME 管理器 -->
 <div class="modal" id="codexModal">
   <div class="modal-box" style="width:720px">
-    <h3 id="codexTitle">📕 CODEX 专属 GALGAME</h3>
+    <h3 id="codexTitle">📕 GAL制作器</h3>
     <div style="font-size:11px;color:var(--sub);margin-bottom:8px">电脑端独有：选个文件夹自动归类立绘/背景/音乐/配音，改 codex.json 就能做出你的专属视觉小说</div>
     <div class="row" style="justify-content:flex-start">
       <button class="btn2" id="codexNewBtn">➕ 新建</button>
@@ -558,16 +595,16 @@ button .ic{ margin-right:2px; }
     </div>
     <div id="codexList" style="max-height:260px;overflow:auto;margin-top:8px"></div>
     <!-- 编辑/播放 详情面板 -->
-    <div id="codexDetail" style="display:none;margin-top:10px;border-top:1px solid var(--border,#333);padding-top:10px">
+    <div id="codexDetail" style="display:none;margin-top:10px;border-top:1px solid var(--line);padding-top:10px">
       <div class="row" style="justify-content:flex-start">
         <b id="codexDetailName" style="font-size:14px"></b>
         <span style="flex:1"></span>
-        <button class="btn2" id="codexPlayBtn">▶️ 播放</button>
+        <button class="btn2" id="codexPlayBtn">[ic:play] 播放</button>
         <button class="btn2" id="codexReleaseBtn">🚀 发布</button>
         <button class="btn2" id="codexPackBtn">📦 打包 HTML</button>
         <button class="btn2" id="codexExeBtn">🖥️ 打包 EXE</button>
         <button class="btn2 ghost" id="codexPackSaveBtn">📄 另存为…</button>
-        <button class="btn2 ghost" id="codexEditBtn">✏️ 编辑剧本</button>
+        <button class="btn2 ghost" id="codexEditBtn">🎬 编辑(线-点-分支)</button>
         <button class="btn2 ghost" id="codexVoiceBtn">🎙️ 一键配音</button>
         <button class="btn2 ghost" id="codexSpriteBtn">🎴 导入立绘</button>
         <button class="btn2 ghost" id="codexAdvancedBtn">⚙️ 高级</button>
@@ -580,14 +617,31 @@ button .ic{ margin-right:2px; }
       <div id="codexPackInfo" style="display:none;font-size:12px;color:var(--sub);margin:6px 0;padding:8px;background:rgba(46,160,67,.1);border:1px solid rgba(46,160,67,.4);border-radius:6px"></div>
       <!-- 剧本 JSON 编辑器 -->
       <div id="codexEditor" style="display:none;margin-top:8px">
-        <textarea id="codexJsonInput" rows="14" style="width:100%;font-family:monospace;font-size:12px;background:var(--bg,#111);color:var(--text,#ddd);border:1px solid var(--border,#333);border-radius:6px;padding:8px"></textarea>
+        <textarea id="codexJsonInput" rows="14" style="width:100%;font-family:monospace;font-size:12px;background:var(--bg,#111);color:var(--text,#ddd);border:1px solid var(--line);border-radius:6px;padding:8px"></textarea>
         <div class="row" style="margin-top:6px">
           <button class="btn2 ghost" id="codexFmtBtn">🎨 格式化</button>
           <button class="btn2 ghost" id="codexCheckBtn">🔍 校验</button>
+          <button class="btn2 ghost" id="codexGraphBtn">🎬 节点图</button>
           <button class="btn2" id="codexSaveBtn">💾 保存</button>
           <span style="flex:1"></span>
           <span id="codexEditorStatus" style="font-size:12px;color:var(--sub)"></span>
         </div>
+      </div>
+      <!-- 节点图编辑器（线-点-分支 剪辑，GAL 制作器主界面） -->
+      <div id="codexGraphWrap" style="display:none;margin-top:8px">
+        <div class="row" style="justify-content:flex-start;margin-bottom:6px">
+          <button class="btn2" id="cxGraphSaveBtn">💾 保存</button>
+          <button class="btn2" id="cxGraphAddBtn">➕ 加线(场景)</button>
+          <button class="btn2 ghost" id="cxGraphJsonBtn">📝 JSON 高级</button>
+          <span style="flex:1"></span>
+          <span id="cxGraphStatus" style="font-size:12px;color:var(--sub)"></span>
+        </div>
+        <div class="row" style="justify-content:flex-start;margin-bottom:6px;font-size:11px;color:var(--sub)">
+          <span>🎬 线=过程 · 点=节拍 · 分支=岔口（🔀 选项 / 🔒 条件）。点「线」或任意「点」即可编辑该线步骤。</span>
+        </div>
+        <div id="cxGraphCanvas" style="width:100%;height:320px;overflow:auto;background:var(--bg,#0d0d12);border:1px solid var(--line);border-radius:8px"></div>
+        <!-- 场景步骤编辑器 -->
+        <div id="cxSceneEdit" style="display:none;margin-top:8px;border-top:1px solid var(--line);padding-top:8px"></div>
       </div>
       <!-- 资源文件列表 -->
       <div id="codexFiles" style="display:none;margin-top:8px;max-height:200px;overflow:auto"></div>
@@ -596,15 +650,83 @@ button .ic{ margin-right:2px; }
   </div>
 </div>
 
+<!-- GAL 制作器 · 全屏「线-点-分支」专用界面（开发者直入） -->
+<!-- 🎴 围棋：规则由 go_engine 判定，角色靠提示词注入陪下 -->
+<div id="goPanel" style="display:none;position:fixed;inset:0;z-index:9998;background:var(--bg,#0b0e14);flex-direction:column">
+  <div class="gal-top">
+    <b style="font-size:16px;color:var(--text,#eee)">🎴 围棋</b>
+    <span id="goStatus" style="font-size:13px;color:var(--sub,#8a93a3);white-space:nowrap"></span>    <div class="gal-actions">
+      <button class="btn2" id="goNew19">🆕 19 路</button>
+      <button class="btn2 ghost" id="goNew9">🆕 9 路</button>
+      <button class="btn2 ghost" id="goSwap">🔄 换执色</button>
+      <button class="btn2 ghost" id="goUndo">[ic:undo] 悔棋</button>
+      <button class="btn2 ghost" id="goPass">⏭ 停一手</button>
+      <button class="btn2 ghost" id="goResume">[ic:play] 催一手</button>
+      <button class="btn2 ghost" id="goScore">🧮 数目</button>
+      <button class="btn2 ghost" id="goResign">🏳️ 认输</button>
+      <button class="btn2 ghost" id="goClose">✕</button>
+    </div>
+  </div>
+  <div style="flex:1;display:flex;gap:16px;padding:16px;overflow:auto;min-height:0">
+    <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:0;gap:10px">
+      <svg id="goSvg" viewBox="0 0 600 600" style="width:min(72vh,100%);height:auto"></svg>
+      <div id="goInfo" style="font-size:12px;color:var(--sub,#8a93a3);text-align:center;line-height:1.7"></div>
+    </div>
+    <div style="width:300px;flex:0 0 auto;display:flex;flex-direction:column;gap:10px">
+      <div style="font-size:12px;color:var(--sub,#8a93a3)">对局记录</div>
+      <div id="goLog" style="flex:1;min-height:200px;overflow:auto;font-size:12px;line-height:1.8;color:var(--text,#ddd);background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:10px"></div>
+      <div style="font-size:11px;color:var(--sub,#8a93a3);line-height:1.6">
+        规则由引擎判定（提子/打劫/自杀/数目）。角色每手会收到整张棋盘 + 引擎给的候选点，从里面挑一个并说台词。
+      </div>
+    </div>
+  </div>
+</div>
+<div id="galEditor" style="display:none;position:fixed;inset:0;z-index:9999;background:var(--bg,#0b0e14);flex-direction:column">
+  <div class="gal-top">
+    <b id="galTitle" style="font-size:16px;color:var(--text,#eee)">📕 GAL制作器</b>
+    <select id="galPkgSel" style="max-width:260px;background:var(--panel);border:1px solid var(--line);border-radius:8px;color:var(--text);padding:7px 10px;font-size:13px"></select>
+    <button class="btn2" id="galNewBtn">➕ 新建</button>
+    <span id="galStats" style="font-size:12px;color:var(--sub,#8a93a3)"></span>
+    <div class="gal-actions">
+      <button class="btn2 ghost" id="galUndoBtn" title="撤销 (Ctrl+Z)">[ic:undo] 撤销</button>
+      <button class="btn2 ghost" id="galRedoBtn" title="重做 (Ctrl+Shift+Z)">[ic:redo] 重做</button>
+      <button class="btn2" id="galPlayBtn">[ic:play] 预览</button>
+      <button class="btn2 ghost" id="galImportBtn">📥 导入</button>
+      <button class="btn2 ghost" id="galExeBtn">🖥️ EXE</button>
+      <button class="btn2 ghost" id="galPlayerBtn" title="导出成原生播放器（真正的软件，不是网页；可再打包成 EXE / APK）">🎬 播放器</button>
+      <button class="btn2" id="galSaveBtn">💾 保存</button>
+      <button class="btn2" id="galRoleBtn">👥 角色</button>
+      <button class="btn2" id="galAddLineBtn">➕ 加线</button>
+      <button class="btn2 ghost" id="galKeyBtn">⭐ 仅看关键</button>
+      <button class="btn2 ghost" id="galJsonBtn">📝 JSON</button>
+      <button class="btn2 ghost" id="galCloseBtn">✕</button>
+    </div>
+  </div>
+  <div style="padding:6px 16px;font-size:11px;color:var(--sub,#8a93a3);border-bottom:1px solid var(--line)">▸ <b style="color:#7aa2b8">进行</b>=点击继续到下一节点(灰蓝实线) · 🔀 <b style="color:#f5c06c">选项</b>=玩家选择分支(橙线) · 🔒=带条件 · 点「节点」编它内部，拖节点移动</div>
+  <div id="galToast" style="display:none;position:fixed;right:20px;top:20px;z-index:10001;background:rgba(34,197,94,.18);border:1px solid rgba(34,197,94,.6);color:#4ade80;padding:8px 14px;border-radius:8px;font-size:13px;opacity:0;transition:opacity .3s"></div>
+  <div id="galOptPop" style="display:none;position:fixed;z-index:10002;min-width:300px;background:var(--panel);border:1px solid color-mix(in srgb, #f59e0b 55%, var(--line));border-radius:10px;padding:10px 12px;box-shadow:0 10px 40px rgba(0,0,0,.6)"></div>
+  <div id="galLines" style="flex:1;overflow:auto;padding:12px 16px;position:relative;background:radial-gradient(circle, var(--line) 1px, transparent 1px);background-size:22px 22px;background-position:0 0"></div>
+  <div id="galScenePanel" style="display:none;border-top:1px solid var(--line);min-height:200px;max-height:56vh;overflow:auto;resize:vertical;background:var(--panel)"></div>
+  <div id="galRolePanel" style="display:none;border-top:1px solid var(--line);max-height:320px;overflow:auto;background:var(--panel)"></div>
+  <!-- 右键菜单 -->
+  <div id="galCtx" style="display:none;position:fixed;z-index:10000;min-width:180px;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:4px;box-shadow:0 8px 30px rgba(0,0,0,.5)"></div>
+  <!-- 缩放控件 -->
+  <div id="galZoom" style="position:fixed;left:16px;bottom:14px;z-index:10000;display:flex;align-items:center;gap:4px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:4px 8px;box-shadow:0 6px 20px rgba(0,0,0,.4)">
+    <button id="galZoomOut" class="btn2 ghost" title="缩小" style="width:30px;height:30px;padding:0">−</button>
+    <span id="galZoomVal" style="min-width:46px;text-align:center;font-size:12px;color:var(--text,#ddd)">100%</span>
+    <button id="galZoomIn" class="btn2 ghost" title="放大" style="width:30px;height:30px;padding:0">＋</button>
+    <button id="galZoomFit" class="btn2 ghost" title="适应窗口" style="font-size:12px;padding:4px 8px">⤢ 适应</button>
+  </div>
+</div>
+
 <!-- CODEX 粘贴剧本 → 自动转化 -->
-<div class="modal" id="codexPasteModal">
-  <div class="modal-box" style="width:min(92vw,620px)">
+<div class="modal" id="codexPasteModal">  <div class="modal-box" style="width:min(92vw,620px)">
     <h3>📝 粘贴剧本 → 自动转化</h3>
     <div style="font-size:11px;color:var(--sub);margin-bottom:8px">
       直接粘贴 <b>codex.json</b>，或按约定写纯文本剧本自动转成可播格式：<br>
       【场景】标题 · 【背景】xxx / 【音乐】xxx · &gt; 旁白 · 角色名：台词 · 【选项】后跟 “- 文字 → s2” · 【跳转】s2 · 【结局】标题
     </div>
-    <textarea id="codexPasteInput" rows="12" style="width:100%;font-family:monospace;font-size:12px;background:var(--bg,#111);color:var(--text,#ddd);border:1px solid var(--border,#333);border-radius:6px;padding:8px" placeholder="粘贴 JSON 或纯文本剧本…"></textarea>
+    <textarea id="codexPasteInput" rows="12" style="width:100%;font-family:monospace;font-size:12px;background:var(--bg,#111);color:var(--text,#ddd);border:1px solid var(--line);border-radius:6px;padding:8px" placeholder="粘贴 JSON 或纯文本剧本…"></textarea>
     <div class="row" style="margin-top:8px">
       <button class="btn2" id="codexPasteConvertBtn">🪄 自动转化</button>
       <button class="btn2 ghost" onclick="document.getElementById('codexPasteModal').classList.remove('open')">取消</button>
@@ -622,19 +744,19 @@ button .ic{ margin-right:2px; }
     </div>
     <div style="font-size:11px;color:var(--sub);padding:0 12px 6px">
       这是完整播放器 HTML/JS/CSS 源（系统内置模板）。改任何地方，<b>只需保留 <code>__CODEX_PAYLOAD__</code></b> 数据注入点；
-      点「▶️ 试玩」用当前包实时渲染预览，点「💾 保存模板」写入本包，之后打包 HTML/EXE 都沿用这份自定义模板。
+      点「[ic:play] 试玩」用当前包实时渲染预览，点「💾 保存模板」写入本包，之后打包 HTML/EXE 都沿用这份自定义模板。
     </div>
     <div style="display:flex;flex:1;min-height:0;gap:8px;padding:0 12px 12px">
       <div style="flex:1;display:flex;flex-direction:column;min-width:0">
-        <textarea id="codexTplInput" spellcheck="false" style="flex:1;min-height:0;width:100%;font-family:monospace;font-size:12px;background:var(--bg,#111);color:var(--text,#ddd);border:1px solid var(--border,#333);border-radius:6px;padding:8px;white-space:pre"></textarea>
+        <textarea id="codexTplInput" spellcheck="false" style="flex:1;min-height:0;width:100%;font-family:monospace;font-size:12px;background:var(--bg,#111);color:var(--text,#ddd);border:1px solid var(--line);border-radius:6px;padding:8px;white-space:pre"></textarea>
         <div class="row" style="margin-top:6px">
-          <button class="btn2" id="codexTplPlayBtn">▶️ 试玩</button>
+          <button class="btn2" id="codexTplPlayBtn">[ic:play] 试玩</button>
           <button class="btn2 ghost" id="codexTplSaveBtn">💾 保存模板</button>
           <button class="btn2 ghost" id="codexTplResetBtn">↺ 恢复默认</button>
           <span id="codexTplStatus" style="font-size:12px;color:var(--sub);margin-left:6px"></span>
         </div>
       </div>
-      <div style="flex:1;display:flex;flex-direction:column;min-width:0;border:1px solid var(--border,#333);border-radius:6px;background:#000">
+      <div style="flex:1;display:flex;flex-direction:column;min-width:0;border:1px solid var(--line);border-radius:6px;background:#000">
         <div style="padding:4px 8px;font-size:11px;color:var(--sub)">📺 试玩预览</div>
         <iframe id="codexTplPreview" sandbox="allow-scripts" style="flex:1;border:0;background:#000"></iframe>
       </div>
@@ -646,6 +768,7 @@ button .ic{ margin-right:2px; }
 <div id="codexPlayer" style="display:none;position:fixed;inset:0;z-index:9999;background:#000;overflow:hidden">
   <div id="cxBg" style="position:absolute;inset:0;background-size:cover;background-position:center;background-color:#0a0a12"></div>
   <div id="cxSprites" style="position:absolute;left:0;right:0;bottom:120px;top:40px;pointer-events:none;z-index:2"></div>
+  <div id="cxImages" style="position:absolute;left:0;right:0;bottom:120px;top:40px;pointer-events:none;z-index:1;display:none;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap"></div>
   <div id="cxTextbox" style="position:absolute;left:0;right:0;bottom:0;padding:18px 24px 26px;background:linear-gradient(transparent,rgba(0,0,0,.92) 35%);min-height:150px;cursor:pointer">
     <div id="cxSpeaker" style="font-size:17px;font-weight:bold;color:#ffd76e;margin-bottom:6px;display:none"></div>
     <div id="cxText" style="font-size:18px;line-height:1.7;color:#eee;min-height:58px;white-space:pre-wrap"></div>
@@ -864,9 +987,28 @@ button .ic{ margin-right:2px; }
           </div>
           <div style="font-size:11px;color:var(--sub)">默认 暴击10/稀有4/大失败2/天选0.1(千分之一)/坍缩0.001(十万分之一)；正常=剩余概率</div>
         </div>
-        <div class="field"><label id="nrEvLabel">🎬 事件（每行：ID|名称|好感≥|关键词,逗号|触发提示）</label>
-          <textarea id="nrEvents" rows="3" placeholder="confess|告白|80|告白,表白|她鼓起勇气向你告白，请演出这一重要时刻…"></textarea>
-          <div style="font-size:11px;color:var(--sub)">条件满足触发一次，提示注入下一轮对话；好感≥留空=仅按关键词触发</div>
+        <div class="field"><label id="nrEvLabel">🎬 事件</label>
+          <!-- 可视化编辑器：数组是真实来源，下面这个 textarea 只是序列化产物，
+               保持隐藏以兼容所有既有读写路径（回填/收集/模板/存档格式都不动）。 -->
+          <textarea id="nrEvents" rows="3" style="display:none"
+            placeholder="confess|告白|80|告白,表白|她鼓起勇气向你告白，请演出这一重要时刻…"></textarea>
+          <div id="evEditor"></div>
+          <div class="row" style="justify-content:flex-start;margin-top:6px">
+            <button class="btn" style="width:auto;margin:0" onclick="evAdd()">＋ 加一个事件</button>
+            <button class="btn" style="width:auto;margin:0" onclick="evShowProgress()">📊 看进度</button>
+            <button class="btn2 ghost" style="width:auto;margin:0" onclick="evToggleRaw()"><span id="evRawBtnLabel">显示原始格式</span></button>
+          </div>
+          <div id="evRawHint" style="font-size:11px;color:var(--sub);display:none">
+            每行：ID|名称|好感≥|关键词,逗号|触发提示
+          </div>
+          <div style="font-size:11px;color:var(--sub);margin-top:4px">
+            好感≥ 到了就会触发；关键词留空 = 只看好感（推荐，玩家不用猜词）。
+            「可重复」打开后按冷却轮数反复触发，否则只发生一次。
+          </div>
+          <div id="evProgressBar" style="font-size:11px;margin-top:6px;padding:5px 8px;
+               border-radius:6px;background:var(--bg2);color:var(--sub)">
+            <span id="evProgressText">事件进度：需要先保存/选中角色才能看。</span>
+          </div>
         </div>
       </div>
     </div>
@@ -944,6 +1086,21 @@ button .ic{ margin-right:2px; }
   </div>
 </div>
 
+<!-- 角色卡·多存档（新存档功能） -->
+<div class="modal" id="saveModal">
+  <div class="modal-box" style="width:min(94vw,520px)">
+    <h3 id="saveTitle">💾 存档 · 角色</h3>
+    <div class="row save-new" style="justify-content:flex-start">
+      <input id="saveLabel" placeholder="存档名（可留空，自动编号）" style="flex:1">
+      <button class="btn2" id="saveNewBtn">📝 新存档</button>
+    </div>
+    <div id="saveList" style="margin-top:10px;max-height:52vh;overflow:auto"></div>
+    <div class="row" style="justify-content:flex-end;margin-top:14px">
+      <button class="btn2 ghost" id="saveCloseBtn">关闭</button>
+    </div>
+  </div>
+</div>
+
 <!-- 玩家角色卡模态（精细化结构化表单） -->
 <div class="modal" id="personaModal">
   <div class="modal-box">
@@ -982,6 +1139,85 @@ button .ic{ margin-right:2px; }
     <div class="row" style="justify-content:space-between">
       <button class="btn" style="width:auto;margin:2px 0" id="ppAvatar">🖼️ 设置头像</button>
       <span><button class="btn2 ghost" id="ppCancel">取消</button> <button class="btn2" id="ppSave">保存</button></span>
+    </div>
+  </div>
+</div>
+
+<!-- 🔐 加密备份：全程主题化弹窗，不用原生 alert/prompt（深色主题下会闪白框） -->
+<div class="modal" id="memDebugModal">
+  <div class="modal-box" style="width:min(94vw,620px);max-height:82vh;display:flex;flex-direction:column">
+    <h3>🧠 记忆清晰度</h3>
+    <div id="memDebugHead" style="font-size:12px;color:var(--sub);line-height:1.6;margin-bottom:8px"></div>
+    <div id="memDebugList" style="overflow:auto;flex:1;font-size:11px"></div>
+    <div class="row" style="justify-content:flex-end;margin-top:10px">
+      <button class="btn2 ghost" onclick="document.getElementById('memDebugModal').classList.remove('open')">关闭</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="timeDialModal">
+  <div class="modal-box" style="width:min(94vw,420px)">
+    <h3>⏳ 时间流速</h3>
+    <div style="font-size:12px;color:var(--sub);line-height:1.6;margin-bottom:2px">
+      世界那边过得比现实快多少倍。倍率越高，一段时间没说话她那边过得越久。
+    </div>
+    <div id="dialWrap" style="display:flex;justify-content:center;margin:2px 0"></div>
+    <div id="dialReadout" style="text-align:center;margin:2px 0 8px"></div>
+    <div id="dialWarning" style="font-size:11px;color:var(--sub);line-height:1.5;
+         padding:6px 8px;border-radius:6px;border:1px solid var(--line);margin-bottom:10px"></div>
+    <div class="row" style="justify-content:space-between">
+      <button class="btn2 ghost" onclick="document.getElementById('timeDialModal').classList.remove('open')">关闭</button>
+      <button class="btn" id="dialSave">保存这个流速</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="evProgressModal">
+  <div class="modal-box" style="width:min(94vw,560px);max-height:82vh;display:flex;flex-direction:column">
+    <h3>🎬 事件进度</h3>
+    <div id="evProgHead" style="font-size:12px;color:var(--sub);line-height:1.6;margin-bottom:8px"></div>
+    <div id="evProgList" style="overflow:auto;flex:1"></div>
+    <div class="row" style="justify-content:flex-end;margin-top:10px">
+      <button class="btn2 ghost" onclick="document.getElementById('evProgressModal').classList.remove('open')">关闭</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="backupModal">
+  <div class="modal-box" style="width:480px">
+    <h3>🔐 加密备份</h3>
+    <div style="font-size:12px;color:var(--sub);line-height:1.6;margin-bottom:10px">
+      把所有角色卡（含聊天树）、世界卡、玩家卡、剧情包和设置打成<b>一个文件</b>并加密。<br>
+      整份内容连同<b>文件名和目录结构</b>都在密文里 —— 光看这个文件，谁也看不出你有几个存档、叫什么名字。
+    </div>
+
+    <div class="field">
+      <label>备份口令</label>
+      <input id="bkPw" type="password" placeholder="至少 12 位，混合大小写字母和数字">
+      <div id="bkPwMsg" style="font-size:11px;margin-top:4px;color:var(--sub)"></div>
+      <div style="margin-top:6px">
+        <button class="btn2 ghost" id="bkGen" style="font-size:11px;padding:4px 10px;white-space:nowrap">🎲 生成强口令</button>
+        <span id="bkGenHint" style="font-size:11px;color:var(--sub);margin-left:6px"></span>
+      </div>
+    </div>
+    <div class="field">
+      <label>再输一次（确认没打错）</label>
+      <input id="bkPw2" type="password" placeholder="重复上面的口令">
+      <div id="bkWarn" style="font-size:11px;margin-top:4px;color:var(--sub)">
+        ⚠️ 口令<b>不保存在任何地方</b>，忘了就打不开了。请单独记好（抄纸上 / 存密码管理器）。
+      </div>
+    </div>
+
+    <div id="bkStatus" style="font-size:12px;line-height:1.7;margin:10px 0;min-height:18px"></div>
+
+    <div style="font-size:11px;color:var(--sub);margin-top:14px;line-height:1.6">
+      换了电脑、DICK 装不上了也能打开：EXE 旁边的
+      <code style="white-space:nowrap">dick_backup_tool.py</code>（看「备份怎么打开.txt」）
+    </div>
+    <div class="row" style="justify-content:flex-end;flex-wrap:nowrap;gap:8px">
+      <button class="btn2 ghost" id="bkCancel" style="white-space:nowrap;flex:0 0 auto">关闭</button>
+      <button class="btn2 ghost" id="bkRestore" style="white-space:nowrap;flex:0 0 auto">📂 从备份还原</button>
+      <button class="btn2" id="bkExport" style="white-space:nowrap;flex:0 0 auto">🔐 立即备份</button>
     </div>
   </div>
 </div>
@@ -1117,7 +1353,76 @@ var ICONS = {
   '⚔': _ic('<path d="M14.5 17.5L3 6V3h3l11.5 11.5M13 19l6-6M16 16l4 4M19 21l2-2M14.5 6.5L18 3h3v3l-3.5 3.5M5 14l4 4M7 17l-3 3M3 19l2 2"/>'),
   '⚡': _ic('<path d="M13 2L3 14h7l-1 8 11-13h-7z"/>'),
   '🧍': _ic('<circle cx="12" cy="5" r="2"/><path d="M12 8v5M10 13l-2 6 2 1 2-4 2 4 2-1-2-6z"/>'),
-  '💘': _ic('<path d="M12 20s-7-4.6-9.5-9A5 5 0 0 1 12 6a5 5 0 0 1 9.5 5c-2.5 4.4-9.5 9-9.5 9z"/><path d="M12 8l1.5 2L15 8 16.5 10 18 8"/>')
+  '💘': _ic('<path d="M12 20s-7-4.6-9.5-9A5 5 0 0 1 12 6a5 5 0 0 1 9.5 5c-2.5 4.4-9.5 9-9.5 9z"/><path d="M12 8l1.5 2L15 8 16.5 10 18 8"/>'),
+  // ---- 第二批：补齐 UI 里还在裸露的 emoji（状态提示 / CODEX / 围棋 / 记忆树工具 / 主题等） ----
+  '☰': _ic('<path d="M4 7h16M4 12h16M4 17h16"/>'),
+  '✕': _ic('<path d="M6 6l12 12M18 6L6 18"/>'),
+  '📕': _ic('<path d="M5 3h11l3 3v15H5z"/><path d="M8 7h7M8 11h7M8 15h4"/>'),
+  '🎴': _ic('<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M7 15l3-4 2.5 3 2-2.5L18 15"/><circle cx="8.5" cy="9.5" r="1.3"/>'),
+  '📁': _ic('<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>'),
+  '📝': _ic('<path d="M5 3h9l5 5v13H5z"/><path d="M14 3v5h5"/><path d="M8 13h6M8 17h4"/>'),
+  '📦': _ic('<path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z"/><path d="M4 7.5l8 4.5 8-4.5M12 12v9"/>'),
+  '🖥': _ic('<rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/>'),
+  '🎙': _ic('<rect x="9" y="2.5" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3.5M9 21.5h6"/>'),
+  '🗂': _ic('<path d="M3 8a2 2 0 0 1 2-2h3l2 2h3a2 2 0 0 1 2 2"/><rect x="3" y="8" width="18" height="11" rx="2"/>'),
+  '🔀': _ic('<path d="M16 3h5v5"/><path d="M4 20L21 3"/><path d="M21 16v5h-5"/><path d="M15 15l6 6M4 4l5 5"/>'),
+  '🔒': _ic('<rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/>'),
+  '🔐': _ic('<rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/><circle cx="12" cy="15.5" r="1"/>'),
+  '⭐': _ic('<path fill="currentColor" d="M12 3.6l2.5 5.2 5.7.8-4.1 4 1 5.7-5.1-2.7-5.1 2.7 1-5.7-4.1-4 5.7-.8z"/>'),
+  '★': _ic('<path fill="currentColor" d="M12 3.6l2.5 5.2 5.7.8-4.1 4 1 5.7-5.1-2.7-5.1 2.7 1-5.7-4.1-4 5.7-.8z"/>'),
+  '☆': _ic('<path d="M12 3.6l2.5 5.2 5.7.8-4.1 4 1 5.7-5.1-2.7-5.1 2.7 1-5.7-4.1-4 5.7-.8z"/>'),
+  '🆕': _ic('<circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/>'),
+  '🏳': _ic('<path d="M5 21V4"/><path d="M5 5h13l-2.5 3.5L18 12H5z" stroke-dasharray="2.5 2"/>'),
+  '🚩': _ic('<path d="M5 21V4"/><path d="M5 5h13l-2.5 3.5L18 12H5z"/>'),
+  '👥': _ic('<path d="M17 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2"/><circle cx="10" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8"/>'),
+  '🪄': _ic('<path d="M4 20l9-9"/><path d="M13.5 5.5l5 5"/><path d="M6 5l.9 1.7L8.6 7.6 6.9 8.5 6 10.2 5.1 8.5 3.4 7.6l1.7-.9z"/>'),
+  '📺': _ic('<rect x="3" y="6" width="18" height="13" rx="2"/><path d="M8 3l4 3 4-3"/>'),
+  '⛶': _ic('<path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/>'),
+  '🎎': _ic('<circle cx="8.5" cy="5.5" r="2.5"/><path d="M5 21v-5l-1-3h9l-1 3v5"/><circle cx="16.5" cy="8.5" r="2"/><path d="M14 21v-6l-1-2.5h7L19 15v6"/>'),
+  '🌊': _ic('<path d="M3 8c2-2 4-2 6 0s4 2 6 0 4-2 6 0M3 13c2-2 4-2 6 0s4 2 6 0 4-2 6 0M3 18c2-2 4-2 6 0s4 2 6 0 4-2 6 0"/>'),
+  '📖': _ic('<path d="M12 6.5S10 5 6.5 5H4v13h2.5c3.5 0 5.5 1.5 5.5 1.5s2-1.5 5.5-1.5H20V5h-2.5C14 5 12 6.5 12 6.5z"/><path d="M12 6.5v13"/>'),
+  '🏁': _ic('<path d="M5 21V4"/><path d="M5 4h12v7H5z"/><path d="M9 4v3.5M13 7.5V11M17 4v3.5"/>'),
+  '🎁': _ic('<rect x="3" y="8" width="18" height="13" rx="2"/><path d="M3 13h18M12 8v13"/><path d="M12 8S10.6 3 8 3a2.5 2.5 0 0 0 0 5zM12 8s1.4-5 4-5a2.5 2.5 0 0 1 0 5z"/>'),
+  '👁': _ic('<path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6z"/><circle cx="12" cy="12" r="2.6"/>'),
+  '🙈': _ic('<path d="M4 4l16 16"/><path d="M9.6 5.4A10.7 10.7 0 0 1 12 5c6.5 0 10 7 10 7a17.6 17.6 0 0 1-3.3 4.1M6.4 7.6C3.9 9.3 2 12 2 12s3.5 6 10 6a10.7 10.7 0 0 0 4.1-.9"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/>'),
+  '💨': _ic('<path d="M3 8h10a3 3 0 1 0-3-3"/><path d="M3 13h14a3 3 0 1 1-3 3"/><path d="M3 18h7"/>'),
+  '🔊': _ic('<path d="M4 9h3l4-3.5v13L7 15H4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M18.5 6a9 9 0 0 1 0 12"/>'),
+  '💤': _ic('<path d="M20 14.5A8.2 8.2 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5z"/>'),
+  '⚖': _ic('<path d="M12 3v18M5 21h14"/><path d="M4 7h16"/><path d="M7 7l-3 6h6zM17 7l-3 6h6z"/>'),
+  '🧭': _ic('<circle cx="12" cy="12" r="9"/><path d="M15.5 8.5l-2 5-5 2 2-5z"/>'),
+  '📋': _ic('<path d="M9 4H7a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-2"/><rect x="9" y="2" width="6" height="4" rx="1"/><path d="M9 12h6M9 16h4"/>'),
+  '🛠': _ic('<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 9l3 3-3 3M13 15h4"/>'),
+  '🔖': _ic('<path d="M6 3h12v18l-6-4-6 4z"/>'),
+  '🎵': _ic('<path d="M9 18V6l10-2v12"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="16.5" cy="16" r="2.5"/>'),
+  '🔔': _ic('<path d="M18 9a6 6 0 1 0-12 0c0 5-2 6-2 6h16s-2-1-2-6"/><path d="M10.5 20a2 2 0 0 0 3 0"/>'),
+  '💥': _ic('<path d="M12 3l1.8 4L18 5.2l-1.3 4.2 4.3 1.6-4.3 1.6L18 16.8 13.8 15 12 19l-1.8-4L6 16.8l1.3-4.2L3 11l4.3-1.6L6 5.2 10.2 7z"/>'),
+  '⬏': _ic('<path d="M6 15l6-6 6 6"/>'),
+  '⬍': _ic('<path d="M6 9l6 6 6-6"/>'),
+  '⚫': _ic('<circle cx="12" cy="12" r="7" fill="currentColor"/>'),
+  '⚪': _ic('<circle cx="12" cy="12" r="7"/>'),
+  '💗': _ic('<path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8l1 1.1L12 21.2l7.8-7.7 1-1.1a5.5 5.5 0 0 0 0-7.8z"/>'),
+  '⏳': _ic('<path d="M7 3h10v3.2L12.6 12 17 17.8V21H7v-3.2L11.4 12 7 6.2z"/>'),
+  '⏸': _ic('<rect x="7" y="5" width="3.5" height="14" rx="1"/><rect x="13.5" y="5" width="3.5" height="14" rx="1"/>'),
+  '⏭': _ic('<path d="M6 5l9 7-9 7z"/><path d="M18 5v14"/>'),
+  '⏩': _ic('<path d="M4 5l8 7-8 7z"/><path d="M13 5l8 7-8 7z"/>'),
+  '↪': _ic('<path d="M4 12h13M12 7l5 5-5 5"/>'),
+  // ---- 第三批：只在安卓端用到的 emoji（Web 端没有，但 ICONS 是两端的唯一真相源，
+  //      安卓的 VectorDrawable 由它生成，所以一并收录；同义 emoji 复用同一图形） ----
+  '⏰': _ic('<circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2"/><path d="M5 3L3 5M19 3l2 2"/>'),
+  '⏱': _ic('<circle cx="12" cy="13.5" r="7.5"/><path d="M12 10v3.5l2.5 2"/><path d="M9.5 2h5M12 2v3"/>'),
+  '🌏': _ic('<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18"/>'),
+  '🌟': _ic('<path fill="currentColor" d="M12 3.6l2.5 5.2 5.7.8-4.1 4 1 5.7-5.1-2.7-5.1 2.7 1-5.7-4.1-4 5.7-.8z"/>'),
+  '🎤': _ic('<rect x="9" y="2.5" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3.5M9 21.5h6"/>'),
+  '🗣': _ic('<circle cx="9" cy="7" r="3"/><path d="M3 21v-2a5 5 0 0 1 5-5h2a5 5 0 0 1 5 5v2"/><path d="M18 8a4 4 0 0 1 0 6M20.5 5.5a8 8 0 0 1 0 11"/>'),
+  '📜': _ic('<path d="M5 4h12a2 2 0 0 1 2 2v11a3 3 0 0 0 3 3H8a3 3 0 0 1-3-3z"/><path d="M9 8h7M9 12h7"/>'),
+  '🌌': _ic('<path d="M3 12a9 3.5 0 0 0 18 0 9 3.5 0 0 0-18 0"/><circle cx="12" cy="12" r="2" fill="currentColor"/>'),
+  '📡': _ic('<circle cx="12" cy="12" r="2.2"/><path d="M8.6 15.4a5 5 0 0 1 0-6.8M15.4 8.6a5 5 0 0 1 0 6.8M5.7 18.3a9 9 0 0 1 0-12.6M18.3 5.7a9 9 0 0 1 0 12.6"/>'),
+  '🏠': _ic('<path d="M4 11l8-7 8 7"/><path d="M6 10v10h12V10"/><path d="M10 20v-6h4v6"/>'),
+  '🌧': _ic('<path d="M7 15a4.5 4.5 0 0 1 .4-9 6 6 0 0 1 11.6 1.5A3.5 3.5 0 0 1 18 15z"/><path d="M8 18l-1 2M12 18l-1 2M16 18l-1 2"/>'),
+  '👻': _ic('<path d="M6 21V11a6 6 0 0 1 12 0v10l-2-1.5L14 21l-2-1.5L10 21l-2-1.5z"/><path d="M10 10h.01M14 10h.01"/>'),
+  '💡': _ic('<path d="M9.5 18h5M10.5 21h3"/><path d="M12 3a6 6 0 0 0-3.5 10.9V16h7v-2.1A6 6 0 0 0 12 3z"/>'),
+  '📉': _ic('<path d="M3 7l6 6 4-4 8 8"/><path d="M21 11v6h-6"/>'),
+  '👨': _ic('<circle cx="12" cy="8" r="4"/><path d="M4 21v-2a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v2"/>')
 };
 var ICON_FILES = {
   '📂':'ic_folder','🛰':'ic_radio','➕':'ic_plus','❌':'ic_close','⚙':'ic_settings','✅':'ic_check',
@@ -1128,56 +1433,167 @@ var ICON_FILES = {
   '🧹':'ic_clear','🎨':'ic_droplet','✏':'ic_edit','📚':'ic_book','🌿':'ic_branch','📊':'ic_chart',
   '📈':'ic_trend','🎲':'ic_dice','🧠':'ic_chip','🎮':'ic_gamepad','✂':'ic_scissors','🔄':'ic_refresh',
   '🖼':'ic_image','🚀':'ic_rocket','🔧':'ic_wrench','👋':'ic_wave','💬':'ic_chat','🎯':'ic_target',
-  '🎛':'ic_sliders','🎬':'ic_clapper','⚔':'ic_swords','⚡':'ic_bolt','🧍':'ic_person_stand','💘':'ic_heart_arrow'
+  '🎛':'ic_sliders','🎬':'ic_clapper','⚔':'ic_swords','⚡':'ic_bolt','🧍':'ic_person_stand','💘':'ic_heart_arrow',
+  // 第二批
+  '☰':'ic_menu','✕':'ic_x','📕':'ic_book_closed','🎴':'ic_card','📁':'ic_folder','📝':'ic_memo',
+  '📦':'ic_package','🖥':'ic_desktop','🎙':'ic_mic','🗂':'ic_files','🔀':'ic_shuffle','🔒':'ic_lock',
+  '🔐':'ic_lock_key','⭐':'ic_star','★':'ic_star','☆':'ic_star_off','🆕':'ic_plus_circle','🏳':'ic_flag_off',
+  '🚩':'ic_flag','👥':'ic_users','🪄':'ic_wand','📺':'ic_tv','⛶':'ic_fullscreen','🎎':'ic_doll',
+  '🌊':'ic_wave','📖':'ic_book_open','🏁':'ic_flag_end','🎁':'ic_gift','👁':'ic_eye','🙈':'ic_eye_off',
+  '💨':'ic_wind','🔊':'ic_volume','💤':'ic_sleep','⚖':'ic_scale','🧭':'ic_compass','📋':'ic_clipboard',
+  '🛠':'ic_terminal','🔖':'ic_bookmark','🎵':'ic_music','🔔':'ic_bell','💥':'ic_burst','⬏':'ic_chevron_up',
+  '⬍':'ic_chevron_down','⚫':'ic_dot_filled','⚪':'ic_dot_hollow','💗':'ic_heart','⏳':'ic_hourglass',
+  '⏸':'ic_pause','⏭':'ic_skip_forward','⏩':'ic_fast_forward','↪':'ic_arrow_right',
+  // 第三批（安卓端用到的）
+  '⏰':'ic_clock','⏱':'ic_stopwatch','🌏':'ic_globe','🌟':'ic_star','🎤':'ic_mic','🗣':'ic_voice',
+  '📜':'ic_scroll','🌌':'ic_galaxy','📡':'ic_radio','🏠':'ic_home','🌧':'ic_rain','👻':'ic_ghost',
+  '💡':'ic_bulb','📉':'ic_trend_down','👨':'ic_person'
 };
-var _EMOJI_RE = /^([\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{2B00}-\u{2BFF}\u{FE0F}\u{200D}\u{20E3}\u{1F1E6}-\u{1F1FF}]+)/u;
-function iconifyText(textNode) {
-  var s = textNode.data;
-  var m = s.match(_EMOJI_RE);
-  if (!m) return;
-  var clean = m[1].replace(/[\uFE0F]/g, '');
-  var svg = ICONS[clean];
-  var fname = ICON_FILES[clean];
-  if (!svg && !fname) return;
+// 具名图标（文本里写 [ic:名字] 即可）：同一个 emoji 承担多种语义时用名字精确区分
+var NAMED_ICONS = {
+  go: _ic('<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18M15 3v18M3 9h18M3 15h18"/>'),
+  sprite: _ic('<rect x="4" y="3" width="16" height="18" rx="2"/><circle cx="12" cy="9.5" r="2.6"/><path d="M6.5 20.5c0-3.2 2.5-5.5 5.5-5.5s5.5 2.3 5.5 5.5"/>'),
+  sprite_off: _ic('<rect x="4" y="3" width="16" height="18" rx="2"/><circle cx="12" cy="9.5" r="2.6"/><path d="M6.5 20.5c0-3.2 2.5-5.5 5.5-5.5s5.5 2.3 5.5 5.5"/><path d="M4 20L20 4"/>'),
+  undo: _ic('<path d="M3 9h11a5 5 0 0 1 0 10h-4"/><path d="M7 5L3 9l4 4"/>'),
+  redo: _ic('<path d="M21 9H10a5 5 0 0 0 0 10h4"/><path d="M17 5l4 4-4 4"/>'),
+  play: _ic('<path d="M7 4.5l13 7.5-13 7.5z"/>')
+};
+var ICONS_BY_SLUG = (function () {
+  var m = {};
+  for (var k in ICON_FILES) { if (ICONS[k]) m[ICON_FILES[k]] = ICONS[k]; }
+  for (var n in NAMED_ICONS) { m['ic_' + n] = NAMED_ICONS[n]; }
+  return m;
+})();
+// emoji 匹配范围：补上 2300-23FF（⏳⏸⏭⏩）与 2190-21FF（↪）——旧版漏了这两段，
+// 结果「生成中/打包中」这类状态提示里的沙漏一直没被替换掉。
+var _EMOJI_CLS = '[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{2B00}-\u{2BFF}\u{2300}-\u{23FF}\u{2190}-\u{21FF}\u{FE0F}\u{200D}\u{20E3}\u{1F1E6}-\u{1F1FF}]';
+var _EMOJI_RE = new RegExp('^(' + _EMOJI_CLS + '+)', 'u');
+var _ICON_SCAN = new RegExp('\\[ic:([a-z0-9_]+)\\]|(' + _EMOJI_CLS + '+)', 'giu');
+// 这些区域里的文字一律不动：聊天正文（用户/AI 自己打的 emoji 要保留）、已替换的图标、
+// SVG 文本（里面塞 <span> 会直接渲染不出来）、表单控件与代码。
+var _ICON_SKIP = '#chat, .ic, svg, script, style, textarea, input, select, option, code, pre, [data-noicon]';
+function _iconSkip(node) {
+  var p = node.parentNode;
+  if (!p) return true;
+  return !p.closest || !!p.closest(_ICON_SKIP);
+}
+// icons/<ic_name>.png 覆盖：没放图片时不能让每个图标都去撞一次 404 —— 按槽位缓存结果，
+// 并且连续多次未命中就认定这个文件夹是空的、本次会话不再试探（命中一次即清零）。
+var _iconPngHave = {}, _iconPngMiss = 0, _iconPngOff = false;
+function _applyPng(span, slug) {
+  if (!slug || _iconPngOff || typeof Image !== 'function') return;
+  if (_iconPngHave[slug] === false) return;
+  var img = new Image();
+  img.alt = '';
+  img.className = 'ic-img';
+  img.onload = function () {
+    _iconPngHave[slug] = true;
+    _iconPngMiss = 0;
+    span.innerHTML = '';
+    span.appendChild(img);
+  };
+  img.onerror = function () {
+    _iconPngHave[slug] = false;
+    if (++_iconPngMiss >= 20) _iconPngOff = true;
+  };
+  img.src = 'icons/' + slug + '.png';
+}
+function _makeIcon(svg, slug, fallback) {
   var span = document.createElement('span');
   span.className = 'ic';
   if (svg) span.innerHTML = svg;
-  else span.textContent = clean;
-  // 图片覆盖：icons/<ic_name>.png 存在则用图片（与安卓槽位同名），否则回退 SVG/emoji
-  if (fname) {
-    (function(sp, fn) {
-      var img = new Image();
-      img.src = 'icons/' + fn + '.png';
-      img.alt = '';
-      img.className = 'ic-img';
-      img.onload = function() { sp.innerHTML = ''; sp.appendChild(img); };
-    })(span, fname);
+  else if (fallback) span.textContent = fallback;
+  _applyPng(span, slug);
+  return span;
+}
+function _iconLookup(name) {
+  var key = String(name).toLowerCase().replace(/^ic_/, '');
+  var slug = 'ic_' + key;
+  var svg = NAMED_ICONS[key] || ICONS_BY_SLUG[slug] || null;
+  return svg ? { svg: svg, slug: slug } : null;
+}
+function iconifyText(textNode) {
+  var s = textNode.data;
+  if (!s) return;
+  _ICON_SCAN.lastIndex = 0;
+  var hits = [], m;
+  while ((m = _ICON_SCAN.exec(s))) {
+    if (m[1]) {                                     // [ic:名字] 具名标记
+      var hit = _iconLookup(m[1]);
+      if (hit) hits.push([m.index, m.index + m[0].length, hit.svg, hit.slug, '']);
+      continue;
+    }
+    var run = m[2], whole = run.replace(/\uFE0F/g, '');
+    if (ICONS[whole] || ICON_FILES[whole]) {        // 整段命中（单个 emoji 或 ZWJ 组合）
+      hits.push([m.index, m.index + run.length, ICONS[whole] || null,
+                 ICON_FILES[whole] || null, ICONS[whole] ? '' : whole]);
+      continue;
+    }
+    var cps = run.match(/./gu) || [], off = 0;      // 连续多个不同 emoji：逐个拆开
+    for (var i = 0; i < cps.length; i++) {
+      var cp = cps[i], clean = cp.replace(/\uFE0F/g, '');
+      var start = m.index + off;
+      off += cp.length;
+      if (!clean || (!ICONS[clean] && !ICON_FILES[clean])) continue;
+      hits.push([start, m.index + off, ICONS[clean] || null,
+                 ICON_FILES[clean] || null, ICONS[clean] ? '' : clean]);
+    }
   }
-  var rest = document.createTextNode(s.slice(m[0].length));
+  if (!hits.length) return;
   var parent = textNode.parentNode;
-  parent.insertBefore(span, textNode);
-  parent.insertBefore(rest, textNode);
+  if (!parent) return;
+  var at = 0;
+  for (var h = 0; h < hits.length; h++) {
+    if (hits[h][0] > at) parent.insertBefore(document.createTextNode(s.slice(at, hits[h][0])), textNode);
+    parent.insertBefore(_makeIcon(hits[h][2], hits[h][3], hits[h][4]), textNode);
+    at = hits[h][1];
+  }
+  if (at < s.length) parent.insertBefore(document.createTextNode(s.slice(at)), textNode);
   parent.removeChild(textNode);
 }
-var _ICON_ROOTS = ['sidebar', 'main', 'cropModal', 'wsModal', 'settingsModal', 'worldModal', 'editMsgModal', 'roleModal', 'personaModal', 'onboard'];
-function iconifyUI() {
-  for (var i = 0; i < _ICON_ROOTS.length; i++) {
-    var root = document.getElementById(_ICON_ROOTS[i]);
-    if (!root) continue;
-    var walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
-      acceptNode: function (n) {
-        var p = n.parentNode;
-        if (!p || !p.closest) return NodeFilter.FILTER_REJECT;
-        // 跳过聊天内容与已替换的图标
-        if (p.closest('#chat, .ic')) return NodeFilter.FILTER_REJECT;
-        return NodeFilter.FILTER_ACCEPT;
-      }
-    });
-    var nodes = [];
-    while (walker.nextNode()) nodes.push(walker.currentNode);
-    for (var j = 0; j < nodes.length; j++) iconifyText(nodes[j]);
-  }
+function iconifyUI(root) {
+  root = root || document.body || document.documentElement;
+  if (!root || typeof document.createTreeWalker !== 'function') return;
+  var walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+    acceptNode: function (n) {
+      return _iconSkip(n) ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT;
+    }
+  });
+  var nodes = [];
+  while (walker.nextNode()) nodes.push(walker.currentNode);
+  for (var j = 0; j < nodes.length; j++) iconifyText(nodes[j]);
 }
+var _iconBusy = false, _iconQueued = false;
+function _iconSchedule() {
+  if (_iconQueued) return;
+  _iconQueued = true;
+  var go = function () {
+    _iconQueued = false;
+    _iconBusy = true;
+    try { iconifyUI(); } finally { _iconBusy = false; }
+  };
+  if (typeof requestAnimationFrame === 'function') requestAnimationFrame(go);
+  else if (typeof setTimeout === 'function') setTimeout(go, 16);
+  else go();
+}
+// 模态/面板都是 innerHTML 现拼的，改完就过期了 —— 监听 DOM 变更自动补上。
+// #chat 里的流式输出是最高频的变更源，直接跳过不触发整树扫描。
+function iconifyWatch() {
+  if (typeof MutationObserver !== 'function' || !document.body) return;
+  new MutationObserver(function (recs) {
+    if (_iconBusy) return;
+    for (var i = 0; i < recs.length; i++) {
+      var t = recs[i].target;
+      if (t && t.closest && t.closest(_ICON_SKIP)) continue;
+      _iconSchedule();
+      return;
+    }
+  }).observe(document.body, { childList: true, subtree: true, characterData: true });
+}
+// 立刻先跑一遍：静态标记里的 [ic:名字] 不能等到第一次 loadState 才换掉
+// （后端没响应/没配 Key 时也得是图标，不能把 [ic:go] 当字面量露给用户）
+iconifyUI();
+iconifyWatch();
 var streamingEl = null;
 var currentSpeaker = 'AI'; // 当前激活角色（单角色时流式回复显示角色名）
 var pendingImage = null;   // {b64, mime}
@@ -1333,6 +1749,7 @@ function setT(l) {
   document.getElementById('wmAddEntry').textContent = T.addEntry;
   updatePresetName();
   iconifyUI();
+  iconifyWatch();
 }
 
 function speakerColor(name) {
@@ -1362,8 +1779,26 @@ function avatarHtml(name, cls) {
   return '<img class="avatar" src="' + url + '">';
 }
 
+// ---- 零宽字符防线 ----
+// 零宽/不可见字符：白烧 token、卡住渲染、藏提示词注入、绕过关键词过滤。
+// 少量 ZWJ(U+200D)/ZWNJ(U+200C) 是合法的（emoji 组合 👨‍👩‍👧 要靠它），所以少量保留、超标全删。
+var ZW_RE = /[\u200b\u200c\u200d\u2060\ufeff\u00ad\u034f\u180e\u061c\u200e\u200f\u202a-\u202e\u2061-\u2064\u2066-\u2069]|[\u{E0000}-\u{E007F}]/gu;
+function stripInvisible(s) {
+  if (typeof s !== 'string' || !s) return s;
+  var hits = s.match(ZW_RE);
+  if (!hits) return s;
+  var allCond = hits.every(function (c) { return c === '\u200d' || c === '\u200c'; });
+  if (allCond && hits.length <= 4) return s;      // 正常 emoji 组合，别误伤
+  return s.replace(ZW_RE, '');
+}
+function invisibleCount(s) {
+  if (typeof s !== 'string' || !s) return 0;
+  var hits = s.match(ZW_RE);
+  return hits ? hits.length : 0;
+}
+
 function escapeHtml(s) {
-  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  return String(stripInvisible(s)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
 function displayName(speaker, kind) {
@@ -1474,7 +1909,7 @@ function appendMessage(m) {
     ctl += '<button data-act="edit">' + (ICONS['✏'] || '✏️') + '</button>';
   }
   if (m.kind === 'ai') {
-    ctl += '<button data-act="speak" title="🔊 朗读">' + (ICONS['🔊'] || '🔊') + '</button>';
+    ctl += '<button data-act="speak" title="朗读">' + (ICONS['🔊'] || '🔊') + '</button>';
     if (m.swipes && m.swipes.total > 1) {
       ctl += '<button data-act="sprev">◀</button><span class="swipe-n">' + (m.swipes.index + 1) + '/' + m.swipes.total + '</span><button data-act="snext">▶</button>';
     }
@@ -1500,10 +1935,13 @@ function ensureStreaming() {
   return streamingEl;
 }
 
-function setStreaming(text) {
-  if (!text) { removeStreaming(); return; }
+function setStreaming(text, loading) {
+  // 开局（开场白由模型演出）时流式文本还是空的，但必须让用户看到「正在生成」——
+  // 否则开局那段等待期界面一片空白，用户分不清是在生成还是坏了。
+  // 普通发消息时用户自己那句话说出来了、知道在等，所以只有开局需要这个兜底。
+  if (!text && !loading) { removeStreaming(); return; }
   var el = ensureStreaming();
-  el.querySelector('.scontent').textContent = text;
+  el.querySelector('.scontent').textContent = text || '…';
   var chat = document.getElementById('chat');
   chat.scrollTop = chat.scrollHeight;
 }
@@ -1682,7 +2120,7 @@ function poll() {
         appendMessage(m);
         if (m.seq > lastSeq) lastSeq = m.seq;
       });
-      setStreaming(res.streaming);
+      setStreaming(res.streaming, res.opening_loading);
       document.getElementById('send').disabled = !!res.busy;
       renderChoices(res.choices);
       renderMechanism(res.mechanism);
@@ -1952,7 +2390,7 @@ function loadStateFill(s) {
     renderPlugins(s.plugins || []);
     renderQuickReplies();
     if (typeof L2D !== 'undefined' && L2D.syncFromState) { try { L2D.syncFromState(s); } catch (e) {} }
-    setStreaming(s.streaming);
+    setStreaming(s.streaming, s.opening_loading);
     renderChoices(s.choices);
     renderMechanism(s.mechanism);
     renderBattle(s.battle);
@@ -1964,7 +2402,9 @@ function loadStateFill(s) {
       setTimeout(function () { codexPlay(); }, 300);
     }
     document.getElementById('send').disabled = !!s.busy;
-    iconifyUI();
+    // 图标替换交给 iconifyWatch 的 DOM 监听（#chat 的流式输出不会触发整树扫描，
+    // 否则每次轮询都全量走一遍 DOM）。只有不支持 MutationObserver 时才退化为全量扫。
+    if (typeof MutationObserver !== 'function') iconifyUI();
 }
 
 function renderRoles(roles, selected, unlockedMap) {
@@ -1986,6 +2426,7 @@ function renderRoles(roles, selected, unlockedMap) {
       '</div>' +
       '<div class="rc-actions">' +
         '<button class="iconbtn" title="解锁/破甲" data-unlock="' + nm + '" style="' + (unl ? 'color:#f87171' : '') + '">' + (unl ? '🔥 破甲' : '🔥') + '</button>' +
+        '<button class="iconbtn" title="存档点" data-saves="' + nm + '">💾 档</button>' +
         '<button class="iconbtn" title="编辑" data-edit="' + nm + '">✏️ 编辑</button>' +
         '<button class="iconbtn" title="头像" data-avatar="' + nm + '">👤 头像</button>' +
         '<button class="iconbtn" title="导出 JSON" data-xjson="' + nm + '">⬇️ JSON</button>' +
@@ -2093,6 +2534,18 @@ function send() {
   var text = document.getElementById('input').value.trim();
   var hasImg = !!pendingImage;
   if (!text && !hasImg) return;
+  // 零宽字符防线：发出去之前先清干净，别让它白烧 token
+  if (text) {
+    var nz = invisibleCount(text);
+    if (nz) {
+      var wasBomb = nz > 24;
+      text = stripInvisible(text);
+      try { document.getElementById('input').value = text; } catch (e) {}
+      if (wasBomb) {
+        galToast('⚠ 已剔除 ' + nz + ' 个零宽字符（看不见却会白烧 token、卡界面）');
+      }
+    }
+  }
   var imgB64 = hasImg ? pendingImage.b64 : null;
   var imgMime = hasImg ? pendingImage.mime : null;
   if (text) lastUserText = text;
@@ -2349,6 +2802,438 @@ function setFold(id, open) {
 }
 
 // 快速模板：一键填充机制/状态/战斗（工程冗余：让不会填格式的用户也能用）
+// ---------- 事件可视化编辑器 ----------
+// 数组 mechEvents 是真实来源；#nrEvents 只是序列化产物，供既有读写路径使用。
+var mechEvents = [];
+var evRawMode = false;
+
+function evNewId() {
+  var n = 1, used = {};
+  mechEvents.forEach(function (e) { used[e.id] = true; });
+  while (used['ev' + n]) n++;
+  return 'ev' + n;
+}
+
+function evAdd() {
+  mechEvents.push({ id: evNewId(), name: '', aff_ge: '', keywords: [],
+                    prompt: '', once: true, cooldown: 0 });
+  evRender();
+}
+
+function evDel(i) { mechEvents.splice(i, 1); evRender(); }
+
+function evMove(i, d) {
+  var j = i + d;
+  if (j < 0 || j >= mechEvents.length) return;
+  var t = mechEvents[i]; mechEvents[i] = mechEvents[j]; mechEvents[j] = t;
+  evRender();
+}
+
+function evSet(i, f, v) { if (mechEvents[i]) { mechEvents[i][f] = v; evSyncTextarea(); } }
+
+function evToggleRaw() {
+  evRawMode = !evRawMode;
+  document.getElementById('evEditor').style.display = evRawMode ? 'none' : '';
+  document.getElementById('nrEvents').style.display = evRawMode ? '' : 'none';
+  document.getElementById('evRawHint').style.display = evRawMode ? '' : 'none';
+  var lbl = document.getElementById('evRawBtnLabel');
+  if (lbl) lbl.textContent = evRawMode ? '回到可视化' : '显示原始格式';
+  if (evRawMode) evSyncTextarea();
+  else evParseTextarea();   // 从原始格式切回来时，重新解析用户手改的内容
+  evRender();
+}
+
+// 序列化：写回隐藏 textarea
+function evSyncTextarea() {
+  var lines = mechEvents.map(function (e) {
+    return [e.id, e.name || '', (e.aff_ge === '' || e.aff_ge === undefined) ? '' : e.aff_ge,
+            (e.keywords || []).join(','), e.prompt || ''].join('|');
+  });
+  document.getElementById('nrEvents').value = lines.join('\n');
+}
+
+// 反序列化：从隐藏 textarea 读（兼容手改 + 旧卡）
+function evParseTextarea() {
+  var txt = document.getElementById('nrEvents').value || '';
+  var out = [];
+  txt.split('\n').forEach(function (line) {
+    line = line.trim();
+    if (!line) return;
+    var p = line.split('|');
+    if (p.length < 5) return;
+    if (!p[0].trim()) return;
+    var e = { id: p[0].trim(), name: p[1].trim(), prompt: p.slice(4).join('|').trim(),
+              keywords: [], once: true, cooldown: 0 };
+    var ag = p[2].trim();
+    if (ag !== '') { var n = parseInt(ag, 10); if (!isNaN(n)) e.aff_ge = n; }
+    else e.aff_ge = '';
+    e.keywords = p[3].split(',').map(function (x) { return x.trim(); }).filter(Boolean);
+    out.push(e);
+  });
+  mechEvents = out;
+}
+
+// 从一行行文本装载（模板用）；同时刷新编辑器
+function evLoadText(txt) {
+  document.getElementById('nrEvents').value = txt || '';
+  evParseTextarea();
+  evRender();
+}
+
+// ---------- 时间流速表盘 ----------
+// 为什么是对数刻度：10 ~ 1000万 跨 6 个数量级，线性表盘 98% 的行程都挤在
+// 最前几档上，指针一动就是几百万倍，没法用。对数下每转一格 = ×10。
+// 弧线用单条 path，进度用 stroke-dasharray 画 —— 比 angle() 取整稳，
+// 也不会在两端出现毛刺。
+var TIME_DIAL = { presets: [], min: 10, max: 10000000, cur: 720, draft: 720, len: 0 };
+
+var DEG = Math.PI / 180.0;
+var A0 = -210 * DEG;
+var A1 = 30 * DEG;
+
+function dialXY(t, r, cx, cy) {
+  var a = A0 + (A1 - A0) * t;
+  return [cx + r * Math.cos(a), cy + r * Math.sin(a)];
+}
+
+function dialPath(r, cx, cy) {
+  var p0 = dialXY(0, r, cx, cy), p1 = dialXY(1, r, cx, cy);
+  var d = A1 - A0;
+  return 'M ' + p0[0].toFixed(2) + ' ' + p0[1].toFixed(2) +
+         ' A ' + r + ' ' + r + ' 0 ' + (d > Math.PI ? 1 : 0) + ' 1 ' +
+         p1[0].toFixed(2) + ' ' + p1[1].toFixed(2);
+}
+
+function dialPosOf(scale) {
+  var lo = Math.log10(TIME_DIAL.min), hi = Math.log10(TIME_DIAL.max);
+  if (hi <= lo) return 0;
+  var v = Math.log10(Math.max(TIME_DIAL.min, Math.min(TIME_DIAL.max, scale)));
+  return Math.max(0, Math.min(1, (v - lo) / (hi - lo)));
+}
+
+function dialScaleOf(t) {
+  var lo = Math.log10(TIME_DIAL.min), hi = Math.log10(TIME_DIAL.max);
+  return Math.pow(10, lo + (hi - lo) * t);
+}
+
+function fmtScale(s) {
+  if (s >= 1e6) return (s / 1e6).toFixed(s >= 1e7 ? 0 : 1) + 'M';
+  if (s >= 1e4) return Math.round(s / 1e3) + 'K';
+  return String(Math.round(s));
+}
+
+// 和服务端同一套口径：一轮 ≈ 现实 30 秒
+function perRoundText(s) {
+  var sec = s * 30;
+  if (sec < 60) return '一轮约 ' + Math.round(sec) + ' 秒';
+  if (sec < 3600) return '一轮约 ' + Math.round(sec / 60) + ' 分钟';
+  if (sec < 86400) return '一轮约 ' + (sec / 3600).toFixed(1) + ' 小时';
+  var days = sec / 86400;
+  if (days < 30) return '一轮约 ' + days.toFixed(1) + ' 天';
+  var months = days / 30;
+  if (months < 24) return '一轮约 ' + months.toFixed(1) + ' 个月';
+  return '一轮约 ' + (months / 12).toFixed(1) + ' 年';
+}
+
+function dialRender() {
+  var wrap = document.getElementById('dialWrap');
+  if (!wrap) return;
+  var W = 300, H = 216, cx = W / 2, cy = 118, R = 100;
+  var t = dialPosOf(TIME_DIAL.draft);
+  var main = dialPath(R, cx, cy);
+  var n = dialXY(t, R, cx, cy);
+  var s = '';
+  s += '<svg id="dialSvg" width="' + W + '" height="' + H + '" viewBox="0 0 ' + W + ' ' + H + '"'
+     + ' style="touch-action:none;cursor:grab;user-select:none">';
+  // 底弧 + 进度弧
+  s += '<path d="' + main + '" fill="none" stroke="var(--line)" stroke-width="10" stroke-linecap="round"/>';
+  s += '<path d="' + main + '" fill="none" stroke="var(--accent)" stroke-width="10" stroke-linecap="round"'
+     + ' stroke-dasharray="' + TIME_DIAL.len + '" stroke-dashoffset="' + (TIME_DIAL.len * (1 - t)).toFixed(1) + '"/>';
+  // 刻度
+  TIME_DIAL.presets.forEach(function (p) {
+    var pt = dialPosOf(p.scale);
+    var a = dialXY(pt, R - 16, cx, cy), b = dialXY(pt, R + 9, cx, cy);
+    s += '<line x1="' + a[0].toFixed(1) + '" y1="' + a[1].toFixed(1) + '" x2="' + b[0].toFixed(1)
+       + '" y2="' + b[1].toFixed(1) + '" stroke="var(--sub)" stroke-width="1.5" opacity="0.75"/>';
+  });
+  // 指针
+  s += '<line x1="' + cx + '" y1="' + cy + '" x2="' + n[0].toFixed(1) + '" y2="' + n[1].toFixed(1)
+     + '" stroke="var(--text)" stroke-width="2.5" stroke-linecap="round"/>';
+  s += '<circle cx="' + n[0].toFixed(1) + '" cy="' + n[1].toFixed(1) + '" r="6.5" fill="var(--accent)"/>';
+  s += '<circle cx="' + cx + '" cy="' + cy + '" r="7" fill="var(--text)"/>';
+  // 中央读数
+  s += '<text x="' + cx + '" y="' + (cy + 34) + '" text-anchor="middle" font-size="21" font-weight="700"'
+     + ' fill="var(--text)">' + fmtScale(TIME_DIAL.draft) + '×</text>';
+  s += '<text x="' + cx + '" y="' + (cy + 54) + '" text-anchor="middle" font-size="12"'
+     + ' fill="var(--sub)">' + perRoundText(TIME_DIAL.draft) + '</text>';
+  s += '</svg>';
+  wrap.innerHTML = s;
+  dialBind(cx, cy, R);
+  dialWarn();
+}
+
+function dialSetFromXY(clientX, clientY) {
+  var svg = document.getElementById('dialSvg');
+  if (!svg) return;
+  var box = svg.getBoundingClientRect();
+  var x = (clientX - box.left) * (300 / box.width) - 150;
+  var y = (clientY - box.top) * (216 / box.height) - 118;
+  var ang = Math.atan2(y, x);
+  if (ang < A0) ang += 2 * Math.PI;          // 弧度制：A0 是负的
+  var t = (ang - A0) / (A1 - A0);
+  TIME_DIAL.draft = dialScaleOf(Math.max(0, Math.min(1, t)));
+  dialRender();
+}
+
+function dialBind(cx, cy, R) {
+  var svg = document.getElementById('dialSvg');
+  if (!svg) return;
+  var dragging = false;
+  svg.addEventListener('pointerdown', function (e) {
+    dragging = true;
+    try { svg.setPointerCapture(e.pointerId); } catch (err) {}
+    svg.style.cursor = 'grabbing';
+    dialSetFromXY(e.clientX, e.clientY);
+    e.preventDefault();
+  });
+  svg.addEventListener('pointermove', function (e) {
+    if (!dragging) return;
+    dialSetFromXY(e.clientX, e.clientY);
+    e.preventDefault();
+  });
+  var stop = function () { dragging = false; if (svg) svg.style.cursor = 'grab'; };
+  svg.addEventListener('pointerup', stop);
+  svg.addEventListener('pointercancel', stop);
+  svg.addEventListener('lostpointercapture', stop);
+}
+
+function dialWarn() {
+  var el = document.getElementById('dialWarning');
+  if (!el) return;
+  var s = TIME_DIAL.draft;
+  var readout = document.getElementById('dialReadout');
+  var hit = null;
+  TIME_DIAL.presets.forEach(function (p) {
+    if (Math.abs(Math.log10(s) - Math.log10(p.scale)) < 0.02) hit = p;
+  });
+  if (readout) {
+    readout.innerHTML = hit
+      ? '<b>' + hit.name + '</b>'
+      : '<span style="color:var(--sub)">' + perRoundText(s) + '（不在预设档上，也可用）</span>';
+  }
+  el.textContent = (s >= 3600)
+    ? '⚠ 高倍率下时间过得极快：现实几分钟就等于她那边好几天。适合"跳过一段时间"的玩法，'
+      + '不适合慢慢聊。'
+    : '低倍率更像实时聊天：现实里的间隔基本等于她那边的间隔。';
+}
+
+function timeDialOpen() {
+  if (!window.pywebview || !pywebview.api || !pywebview.api.get_time_scale) return;
+  pywebview.api.get_time_scale().then(function (r) {
+    if (!r || !r.ok) {
+      document.getElementById('dialWarning').textContent = (r && r.err) || '读不到时间设置。';
+      document.getElementById('timeDialModal').classList.add('open');
+      return;
+    }
+    TIME_DIAL.presets = r.presets || [];
+    TIME_DIAL.min = r.min || 10;
+    TIME_DIAL.max = r.max || 10000000;
+    TIME_DIAL.cur = r.scale;
+    TIME_DIAL.draft = r.scale;
+    // 弧长：SVG 无路径测量时的可靠近似（半径 R 的圆弧）
+    TIME_DIAL.len = Math.abs(A1 - A0) * 100;
+    dialRender();
+    document.getElementById('timeDialModal').classList.add('open');
+  }).catch(function (e) {
+    document.getElementById('dialWarning').textContent = '读时间设置出错：' + e;
+    document.getElementById('timeDialModal').classList.add('open');
+  });
+}
+
+document.getElementById('dialSave').onclick = function () {
+  if (!window.pywebview || !pywebview.api || !pywebview.api.set_time_scale) return;
+  pywebview.api.set_time_scale(TIME_DIAL.draft).then(function (r) {
+    if (!r || !r.ok) { alert('保存失败：' + ((r && r.err) || '未知')); return; }
+    TIME_DIAL.cur = r.scale;
+    treeStatus('⏳ 时间流速已设为 ' + r.describe);
+    document.getElementById('timeDialModal').classList.remove('open');
+  });
+};
+
+
+// 遗忘被设计成不可建模的，所以不给你看内部数字的话，你判断不出它坏没坏。
+function memDebugDraw(res) {
+  var head = document.getElementById('memDebugHead');
+  var list = document.getElementById('memDebugList');
+  if (!res || !res.ok) {
+    head.textContent = (res && res.err) || '读不到记忆状态。';
+    list.innerHTML = '';
+    document.getElementById('memDebugModal').classList.add('open');
+    return;
+  }
+  var p = res.params || {};
+  head.innerHTML = '历史共 <b>' + res.total + '</b> 条，还记得 <b>' + res.alive
+    + '</b>，已忘 <b>' + res.forgotten + '</b>'
+    + '<br>阈值 ' + res.threshold + '　近窗无条件保留 ' + (res.recent_window || 0) + ' 条'
+    + '<br><span style="opacity:.75">衰减率范围 ' + (p.decay_min || 0) + '~' + (p.decay_max || 0)
+    + '／天，其中 ' + Math.round((p.decay_portion || 0) * 100) + '% 的节点是"快忘"的'
+    + ' —— 这就是"想不起来为什么忘了"的来源</span>';
+  var h = '<table style="width:100%;border-collapse:collapse">'
+    + '<tr style="color:var(--sub)"><th align="left">清晰度</th><th align="left">年龄</th>'
+    + '<th align="left">衰减/天</th><th align="left">内容</th></tr>';
+  (res.rows || []).forEach(function (r) {
+    var dim = r.alive ? '' : 'opacity:.45;text-decoration:line-through;';
+    h += '<tr style="' + dim + 'border-top:1px solid var(--line)">'
+      + '<td style="padding:3px 6px">' + (r.alive ? '✅ ' : '💤 ') + r.salience + '</td>'
+      + '<td style="padding:3px 6px;white-space:nowrap">'
+      + (r.age_days < 1 ? (Math.round(r.age_days * 24) + '小时') : (r.age_days + '天')) + '</td>'
+      + '<td style="padding:3px 6px">' + r.decay_per_day + '</td>'
+      + '<td style="padding:3px 6px">' + evEsc(r.preview) + '</td></tr>';
+  });
+  h += '</table>';
+  list.innerHTML = h;
+  document.getElementById('memDebugModal').classList.add('open');
+}
+
+
+// 玩家看不到进度就会觉得事件坏了。这个面板纯读，不改任何状态。
+var EV_STATE_LABEL = { fired: '✅ 已触发', cooling: '⏳ 冷却中', ready: '▶ 可触发', blocked: '🔒 未达成' };
+
+function evOpenProgress(res) {
+  var head = document.getElementById('evProgHead');
+  var list = document.getElementById('evProgList');
+  if (!res || !res.ok) {
+    head.textContent = (res && res.err) || '读不到事件进度。';
+    list.innerHTML = '';
+    document.getElementById('evProgressModal').classList.add('open');
+    return;
+  }
+  if (!res.total) {
+    head.textContent = '还没有事件。在「🎛️ 机制卡」里加一个。';
+    list.innerHTML = '';
+    document.getElementById('evProgressModal').classList.add('open');
+    return;
+  }
+  head.innerHTML = '共 <b>' + res.total + '</b> 个，已触发 <b>' + res.fired + '</b> 个'
+    + (res.affection !== null && res.affection !== undefined
+        ? '　当前好感 <b>' + res.affection + (res.aff_max ? ('/' + res.aff_max) : '') + '</b>' : '')
+    + (res.turn ? '　已进行 ' + res.turn + ' 轮' : '');
+  var h = '';
+  (res.items || []).forEach(function (x) {
+    var dim = (x.state === 'blocked' || x.state === 'cooling');
+    h += '<div style="padding:7px 9px;border-radius:7px;margin-bottom:6px;border:1px solid var(--line);'
+       + (dim ? 'opacity:.72;' : '') + '">'
+       + '<div style="display:flex;justify-content:space-between;gap:8px">'
+       +   '<b style="font-size:13px">' + evEsc(x.name) + '</b>'
+       +   '<span style="font-size:11px;white-space:nowrap">'
+       +     (EV_STATE_LABEL[x.state] || x.state) + '</span>'
+       + '</div>'
+       + '<div style="font-size:11px;color:var(--sub);margin-top:3px">' + evEsc(x.why || '') + '</div>'
+       + '<div style="font-size:11px;color:var(--sub);margin-top:2px">'
+       +   (x.aff_ge !== null && x.aff_ge !== undefined ? ('好感≥' + x.aff_ge + '　') : '')
+       +   ((x.keywords && x.keywords.length) ? ('关键词：' + evEsc(x.keywords.join('/')))
+                                              : '无关键词闸门')
+       +   (x.times > 1 ? ('　已发生 ' + x.times + ' 次') : '')
+       + '</div></div>';
+  });
+  list.innerHTML = h;
+  document.getElementById('evProgressModal').classList.add('open');
+}
+
+// 编辑器里那一行摘要（不打开弹窗也能看到下一步是什么）
+function evRenderProgress(res) {
+  var bar = document.getElementById('evProgressText');
+  if (!bar) return;
+  if (!res || !res.ok || !res.total) {
+    bar.textContent = (res && res.err) ? ('事件进度：' + res.err)
+      : '事件进度：还没有事件。加一个就会在这里显示进度。';
+    return;
+  }
+  var nxt = null;
+  (res.items || []).forEach(function (x) {
+    if (!nxt && x.state !== 'fired') nxt = x;
+  });
+  var txt = '事件进度 ' + res.fired + '/' + res.total
+          + (res.affection !== null && res.affection !== undefined ? ('　好感 ' + res.affection) : '');
+  if (nxt) txt += '　下一个：' + nxt.name + '（' + (nxt.why || '') + '）';
+  bar.textContent = txt;
+}
+
+function evRefreshProgress() {
+  if (!window.pywebview || !pywebview.api || !pywebview.api.event_progress) return;
+  try {
+    pywebview.api.event_progress().then(evRenderProgress).catch(function () {});
+  } catch (e) { /* 没后端时静默 */ }
+}
+
+function evShowProgress() {
+  if (!window.pywebview || !pywebview.api || !pywebview.api.event_progress) return;
+  try {
+    pywebview.api.event_progress().then(evOpenProgress).catch(function (e) {
+      document.getElementById('evProgHead').textContent = '读事件进度出错：' + e;
+      document.getElementById('evProgressModal').classList.add('open');
+    });
+  } catch (e) { /* 忽略 */ }
+}
+
+function evEsc(s) {
+  return String(s === undefined || s === null ? '' : s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function evRender() {
+  var box = document.getElementById('evEditor');
+  if (!box) return;
+  if (!mechEvents.length) {
+    box.innerHTML = '<div style="font-size:11px;color:var(--sub);padding:6px 0">还没有事件。点下面「＋ 加一个事件」。</div>';
+    evSyncTextarea();
+    return;
+  }
+  var h = '';
+  mechEvents.forEach(function (e, i) {
+    h += '<div class="ev-card" style="border:1px solid var(--line);border-radius:8px;padding:8px;margin-bottom:8px">';
+    h += '<div class="row" style="justify-content:space-between;margin-bottom:6px">'
+       +   '<span style="font-size:11px;color:var(--sub)">事件 ' + (i + 1) + ' / ' + mechEvents.length + '</span>'
+       +   '<span>'
+       +     '<button class="btn2 ghost" style="width:auto;margin:0;padding:1px 7px" onclick="evMove(' + i + ',-1)" title="上移">↑</button> '
+       +     '<button class="btn2 ghost" style="width:auto;margin:0;padding:1px 7px" onclick="evMove(' + i + ',1)" title="下移">↓</button> '
+       +     '<button class="btn2 ghost" style="width:auto;margin:0;padding:1px 7px;color:#e06060" onclick="evDel(' + i + ')" title="删除">✕</button>'
+       +   '</span>'
+       + '</div>';
+    h += '<div class="row" style="justify-content:flex-start;gap:6px;margin-bottom:6px">'
+       +   '<input type="text" value="' + evEsc(e.name) + '" placeholder="事件名（如 告白）" '
+       +     'oninput="evSet(' + i + ',\'name\',this.value)" style="flex:1;min-width:120px">'
+       +   '<input type="text" value="' + evEsc(e.id) + '" placeholder="ID（结局要用）" '
+       +     'oninput="evSet(' + i + ',\'id\',this.value)" style="width:110px">'
+       + '</div>';
+    h += '<div class="row" style="justify-content:flex-start;gap:6px;margin-bottom:6px">'
+       +   '<span style="font-size:11px;color:var(--sub);line-height:30px">好感 ≥</span>'
+       +   '<input type="number" min="0" max="99999" value="' + evEsc(e.aff_ge) + '" placeholder="留空=不限" '
+       +     'oninput="evSet(' + i + ',\'aff_ge\',this.value===\'\'?\'\':(parseInt(this.value,10)||0))" style="width:90px">'
+       +   '<input type="text" value="' + evEsc((e.keywords || []).join(',')) + '" placeholder="关键词（逗号分隔，可留空）" '
+       +     'oninput="evSet(' + i + ',\'keywords\',this.value.split(\',\').map(function(x){return x.trim()}).filter(Boolean))" '
+       +     'style="flex:1;min-width:140px">'
+       + '</div>';
+    h += '<div class="row" style="justify-content:flex-start;gap:10px;margin-bottom:6px">'
+       +   '<label class="chkline" style="cursor:pointer;font-size:11px">'
+       +     '<input type="checkbox" ' + (e.once === false ? 'checked' : '') + ' '
+       +       'onchange="evSet(' + i + ',\'once\',!this.checked)"> 可重复触发</label>'
+       +   '<span style="font-size:11px;color:var(--sub)">冷却（轮）</span>'
+       +   '<input type="number" min="0" max="999" value="' + (e.cooldown || 0) + '" '
+       +     'oninput="evSet(' + i + ',\'cooldown\',parseInt(this.value,10)||0)" style="width:70px">'
+       +   '<span style="font-size:11px;color:var(--sub)">好感加成</span>'
+       +   '<input type="number" min="-100" max="100" value="' + (e.aff !== undefined && e.aff !== '' ? e.aff : '') + '" '
+       +     'placeholder="如 5" oninput="evSet(' + i + ',\'aff\',this.value===\'\'?\'\':(parseInt(this.value,10)||0))" style="width:70px">'
+       + '</div>';
+    h += '<textarea rows="2" placeholder="触发提示：事件发生时给 AI 的演出指令" '
+       +   'oninput="evSet(' + i + ',\'prompt\',this.value)" style="width:100%">' + evEsc(e.prompt) + '</textarea>';
+    h += '</div>';
+  });
+  box.innerHTML = h;
+  evSyncTextarea();
+}
+
+
 function applyMechTemplate(t) {
   if (t === 'love') {
     document.getElementById('nrAffEnabled').checked = true;
@@ -2356,26 +3241,28 @@ function applyMechTemplate(t) {
     document.getElementById('nrAffMax').value = 100;
     document.getElementById('nrAffCrit').value = 0.001;
     document.getElementById('nrStFields').value = 'mood|心情|enum|平静|平静,开心,害羞,生气,委屈\nenergy|精力|int|100|0-100';
-    document.getElementById('nrEvents').value = 'confess|告白|80|告白,喜欢|她鼓起勇气向你告白，请演出这一重要时刻';
+    evLoadText('confess|告白|80|告白,喜欢|她鼓起勇气向你告白，请演出这一重要时刻');
     setFold('foldMech', true); setFold('foldSt', true);
   } else if (t === 'battle') {
     document.getElementById('nrBattleEnabled').checked = true;
     document.getElementById('nrBattleAttrs').value = 'hp|生命|100|100\natk|攻击|10\ndef|防御|5';
-    document.getElementById('nrBattleMech').value = 'spd|速度|8|100\nmp|灵力|20|50';
+    // 元素名是 nrBattleMechAttrs（不是 nrBattleMech）—— 写错会让整套「战斗冒险」
+    // 模板在填机制属性时抛错，属性一栏永远是空的。
+    document.getElementById('nrBattleMechAttrs').value = 'spd|速度|8|100\nmp|灵力|20|50';
     document.getElementById('nrBattleFormulas').value = 'damage=max(1, player_atk*2-def)\ncrit_chance=0.1\ncrit_mult=2';
     document.getElementById('nrBattleMoves').value = 'fire|火球术|player_atk*3-def|mp:5||投掷火球\nstrike|平砍|player_atk-def|\nheal|治愈|20||regen:2|恢复体力';
     document.getElementById('nrBattleBuffs').value = 'regen|再生|2|hp:5|每回合恢复5生命\npoison|中毒|3|hp:-5|每回合损失5生命';
     setFold('foldBattle', true);
   } else if (t === 'event') {
-    document.getElementById('nrEvents').value = 'meet|初遇|0|你好,初次见面|第一次相遇，自然演出\nstorm|风暴夜|30|暴风雨,打雷|暴风雨夜，她害怕地靠近你\nconfess|告白|80|告白,喜欢|她鼓起勇气向你告白';
+    evLoadText('meet|初遇|0|你好,初次见面|第一次相遇，自然演出\nstorm|风暴夜|30|暴风雨,打雷|暴风雨夜，她害怕地靠近你\nconfess|告白|80|告白,喜欢|她鼓起勇气向你告白');
     setFold('foldMech', true);
   } else if (t === 'clear') {
     document.getElementById('nrAffEnabled').checked = false;
     document.getElementById('nrStFields').value = '';
-    document.getElementById('nrEvents').value = '';
+    evLoadText('');
     document.getElementById('nrBattleEnabled').checked = false;
     document.getElementById('nrBattleAttrs').value = '';
-    document.getElementById('nrBattleMech').value = '';
+    document.getElementById('nrBattleMechAttrs').value = '';
     document.getElementById('nrBattleFormulas').value = '';
     document.getElementById('nrBattleMoves').value = '';
     document.getElementById('nrBattleBuffs').value = '';
@@ -2453,11 +3340,42 @@ function collectMechanics() {
     if (ag !== '') { var n = parseInt(ag, 10); if (!isNaN(n)) e.aff_ge = n; }
     var kws = p[3].split(',').map(function (x) { return x.trim(); }).filter(Boolean);
     if (kws.length) e.keywords = kws;
-    if (!e.id || !e.prompt) return;
+    // 只要求 id —— 原来还要求 prompt 非空，于是"只填了名字和好感"的事件
+    // 会被静默丢掉（可视化编辑器里看着有，一存就没了）。提示留空时
+    // 引擎有兜底演出语，所以不该在这里拦。
+    if (!e.id) return;
     e.once = true;
     evs.push(e);
   });
   if (evs.length) mech.events = evs;
+  // once/cooldown 不在管道格式里 —— 从编辑器数组按 id 合并回去，
+  // 否则「可重复触发」勾了也存不进卡。
+  if (mech.events && mech.events.length) {
+    var byId = {};
+    mechEvents.forEach(function (x) { byId[x.id] = x; });
+    mech.events.forEach(function (e) {
+      var src = byId[e.id];
+      if (!src) return;
+      e.once = (src.once === false) ? false : true;
+      var cd = parseInt(src.cooldown, 10);
+      e.cooldown = (isNaN(cd) || cd < 0) ? 0 : cd;
+      var af = parseInt(src.aff, 10);
+      if (!isNaN(af) && af !== 0) e.aff = af;
+    });
+  }
+  // 管道格式放不下的属性（once/cooldown/aff）另存一份 sidecar，
+  // 否则下一次回填就丢了。老卡没有这个字段，读的时候按默认值处理。
+  if (mech.events && mech.events.length) {
+    mech.ev_ext = {};
+    mech.events.forEach(function (e) {
+      var ext = {};
+      if (e.once === false) ext.once = false;
+      if (e.cooldown) ext.cooldown = e.cooldown;
+      if (e.aff) ext.aff = e.aff;
+      if (Object.keys(ext).length) mech.ev_ext[e.id] = ext;
+    });
+    if (!Object.keys(mech.ev_ext).length) delete mech.ev_ext;
+  }
   var ends = [];
   document.getElementById('nrEndings').value.split('\n').forEach(function (line) {
     line = line.trim();
@@ -2667,9 +3585,22 @@ function fillRoleFields(f) {
   }).join('\n');
   document.getElementById('nrStFields').value = stLines;
   var evLines = (mech && mech.events || []).map(function (e) {
-    return [e.id, e.name || '', e.aff_ge !== undefined ? e.aff_ge : '', (e.keywords || []).join(','), e.prompt || ''].join('|');
+    return [e.id, e.name || '', e.aff_ge !== undefined && e.aff_ge !== null ? e.aff_ge : '',
+            (e.keywords || []).join(','), e.prompt || ''].join('|');
   }).join('\n');
-  document.getElementById('nrEvents').value = evLines;
+  // 回填走可视化编辑器：先落文本，再解析成数组，再渲染
+  evLoadText(evLines);
+  // once/cooldown/aff 不在管道格式里，回填时单独接上（否则读旧卡会丢这几个字段）
+  var ext = (mech && mech.ev_ext) || {};
+  (mech && mech.events || []).forEach(function (e, i) {
+    if (!mechEvents[i]) return;
+    var x = ext[e.id] || {};
+    mechEvents[i].once = (x.once === false || e.once === false) ? false : true;
+    mechEvents[i].cooldown = parseInt(x.cooldown !== undefined ? x.cooldown : e.cooldown, 10) || 0;
+    var af = parseInt(x.aff !== undefined ? x.aff : e.aff, 10);
+    mechEvents[i].aff = isNaN(af) ? '' : af;
+  });
+  evRender();
   var endLines = (mech && mech.endings || []).map(function (e) {
     var w = e.when || {};
     var chain = (w.events_chain || []).join(',');
@@ -2685,6 +3616,8 @@ function fillRoleFields(f) {
   setFold('foldSt', !!(mech2 && mech2.status && mech2.status.fields && mech2.status.fields.length));
   setFold('foldBattle', !!(adv && adv.battle && adv.battle.enabled));
   setFold('foldEndings', !!(mech2 && mech2.endings && mech2.endings.length));
+  // 进度摘要：换角色/载入卡之后立刻反映当前状态
+  evRefreshProgress();
 }
 
 function renderWmParams() {
@@ -2735,6 +3668,11 @@ document.getElementById('roleList').addEventListener('click', function (e) {
       document.getElementById('nrTitle').textContent = '编辑角色：' + en;
       document.getElementById('roleModal').classList.add('open');
     });
+    return;
+  }
+  var sv = hitAttr(e, ['data-saves']);
+  if (sv) {
+    openSaves(sv);
     return;
   }
   var n = hitAttr(e, ['data-avatar']);
@@ -2886,6 +3824,105 @@ function reloadRoles() {
     if (s) renderRoles(s.roles || [], s.selected_roles || [], s.role_unlocked || {});
   });
 }
+
+// ===== 角色卡·多存档（新存档功能） =====
+var saveModalCur = null;
+function saveFmtTs(ts) {
+  if (!ts) return '';
+  try { var d = new Date(ts); if (!isNaN(d.getTime())) return d.toLocaleString(); } catch (e) {}
+  return String(ts);
+}
+function openSaves(name) {
+  saveModalCur = name;
+  document.getElementById('saveTitle').textContent = '💾 存档 · ' + name;
+  document.getElementById('saveLabel').value = '';
+  document.getElementById('saveModal').classList.add('open');
+  renderSaveList();
+}
+function renderSaveList() {
+  var name = saveModalCur; if (!name) return;
+  var box = document.getElementById('saveList');
+  box.innerHTML = '<div style="padding:20px;text-align:center;color:var(--sub)">加载中…</div>';
+  pywebview.api.card_saves(name).then(function (r) {
+    if (!r || !r.ok) {
+      box.innerHTML = '<div style="padding:20px;text-align:center;color:var(--sub)">' + ((r && r.err) || '加载失败') + '</div>';
+      return;
+    }
+    var saves = r.saves || [];
+    var active = r.active_save;
+    if (!saves.length) {
+      box.innerHTML = '<div style="padding:20px;text-align:center;color:var(--sub)">还没有存档点。<br>继续聊天后点「📝 新存档」即把当前进度固化成一个存档点。</div>';
+      return;
+    }
+    var html = '';
+    saves.forEach(function (s) {
+      var aid = s.id === active;
+      html += '<div class="save-row' + (aid ? ' save-active' : '') + '">' +
+        '<div class="save-meta" style="flex:1;min-width:0">' +
+          '<span class="save-label">' + (aid ? '● ' : '') + escapeHtml(s.label || '未命名存档') + '</span>' +
+          '<div style="font-size:11px;color:var(--sub)">' + (s.progress || 0) + ' 条对话 · ' + saveFmtTs(s.updated_ts) + '</div>' +
+        '</div>' +
+        '<div class="save-ops" style="flex:none">' +
+          '<button class="iconbtn" title="读档（切换到该存档点）" data-sload="' + escapeHtml(s.id) + '">📂</button>' +
+          '<button class="iconbtn" title="覆盖保存（把当前进度写到该存档点）" data-sovl="' + escapeHtml(s.id) + '">💾</button>' +
+          '<button class="iconbtn" title="重命名" data-sren="' + escapeHtml(s.id) + '">✏️</button>' +
+          '<button class="iconbtn act-del" title="删除" data-sdel="' + escapeHtml(s.id) + '">🗑️</button>' +
+        '</div>' +
+      '</div>';
+    });
+    box.innerHTML = html;
+  }).catch(function () {
+    box.innerHTML = '<div style="padding:20px;text-align:center;color:var(--sub)">加载失败</div>';
+  });
+}
+document.getElementById('saveNewBtn').onclick = function () {
+  var name = saveModalCur; if (!name) return;
+  var lbl = document.getElementById('saveLabel').value.trim();
+  pywebview.api.card_save_new(name, lbl).then(function () { renderSaveList(); });
+};
+document.getElementById('saveCloseBtn').onclick = function () {
+  document.getElementById('saveModal').classList.remove('open');
+};
+document.getElementById('saveList').addEventListener('click', function (e) {
+  var name = saveModalCur; if (!name) return;
+  var t = e.target, act = null, sid = null;
+  while (t && t !== e.currentTarget && t.getAttribute) {
+    var a = t.getAttribute('data-sload'); if (a) { act = 'sload'; sid = a; break; }
+    a = t.getAttribute('data-sovl');   if (a) { act = 'sovl'; sid = a; break; }
+    a = t.getAttribute('data-sren');   if (a) { act = 'sren'; sid = a; break; }
+    a = t.getAttribute('data-sdel');   if (a) { act = 'sdel'; sid = a; break; }
+    t = t.parentNode;
+  }
+  if (!act) return;
+  if (act === 'sren') {
+    var lbl = prompt('新的存档名：');
+    if (lbl === null) return;
+    pywebview.api.card_save_rename(name, sid, lbl).then(renderSaveList);
+    return;
+  }
+  if (act === 'sdel') {
+    if (!confirm('删除这个存档点？')) return;
+    pywebview.api.card_save_delete(name, sid).then(renderSaveList);
+    return;
+  }
+  if (act === 'sovl') {
+    if (!confirm('用当前进度覆盖这个存档点？')) return;
+    pywebview.api.card_save(name, '', sid).then(renderSaveList);
+    return;
+  }
+  if (act === 'sload') {
+    if (!confirm('读档：切换到该存档点？当前未保存的进度会被替换。')) return;
+    pywebview.api.card_save_load(name, sid).then(function () {
+      renderSaveList();
+      // 整刷聊天与新角色历史
+      document.getElementById('chat').innerHTML = '';
+      streamingEl = null;
+      lastSeq = 0;
+      loadState();
+    });
+    return;
+  }
+});
 // ---- 角色卡导入 ----
 document.getElementById('btnImportCard').onclick = function () {
   pywebview.api.import_card().then(function (r) {
@@ -2957,6 +3994,20 @@ document.getElementById('emCancel').onclick = function () {
 };
 // ---- 树状回溯（主线平铺 + 分支收纳，点击任意节点跳回） ----
 var expandedBranches = {};
+function treeStatus(msg) {
+  // 树面板里的一次性提示条：打完分/剪完枝给个明确回执，
+  // 否则用户点完不知道发生了什么（这类操作看不见结果就等于没做）。
+  var p = document.getElementById('branchPanel');
+  if (!p) return;
+  var old = p.querySelector('.b-status');
+  if (old) old.parentNode.removeChild(old);
+  var d = document.createElement('div');
+  d.className = 'b-item b-status';
+  d.style.cssText = 'color:var(--sub);font-style:italic;white-space:normal;';
+  d.textContent = msg;
+  p.insertBefore(d, p.firstChild ? p.firstChild.nextSibling : null);
+  setTimeout(function () { if (d.parentNode) d.parentNode.removeChild(d); }, 8000);
+}
 function loadTree(smart) {
   pywebview.api.tree(treeScope).then(function (list) {
     treeList = list || [];
@@ -2991,6 +4042,226 @@ function renderTreePanel(p) {
     collapseAll();
   };
   head.appendChild(cap);
+  // 树权重：主干 70% / 枝干 50%，有效权重 = 可实行性 × 合理性 × 位置
+  var wBtn = document.createElement('span');
+  wBtn.textContent = '⚖ 打分';
+  wBtn.style.cssText = 'cursor:pointer;color:var(--sub);font-weight:600;user-select:none;';
+  wBtn.title = '给整棵树打分（主干 70% / 枝干 50%），不删任何东西';
+  wBtn.onclick = function (ev) {
+    ev.stopPropagation();
+    wBtn.textContent = '⚖ …';
+    pywebview.api.tree_weights().then(function (r) {
+      wBtn.textContent = '⚖ 打分';
+      if (!r || !r.ok) { alert('打分失败：' + ((r && r.err) || '未知')); return; }
+      var s = r.stats || {};
+      treeStatus('⚖ 已打分 ' + s.scored + ' 个节点（主干 ' + s.trunk
+        + ' / 枝干 ' + s.branch + '）。权重：主干 ' + Math.round(s.trunk_weight * 100)
+        + '% / 枝干 ' + Math.round(s.branch_weight * 100) + '%，阈值 '
+        + Math.round(s.threshold * 100) + '%');
+      loadTree(false);
+    }).catch(function (e) { wBtn.textContent = '⚖ 打分'; });
+  };
+  head.appendChild(wBtn);
+  var pBtn = document.createElement('span');
+  pBtn.textContent = '✂ 剪枝';
+  pBtn.style.cssText = 'cursor:pointer;color:var(--sub);font-weight:600;user-select:none;';
+  pBtn.title = '剪掉低分枝叶（先预览，确认后才真删；主干永不删）';
+  pBtn.onclick = function (ev) {
+    ev.stopPropagation();
+    // 先 dry-run 预览 —— 直接删是不可逆的，必须先让用户看到要删什么
+    pBtn.textContent = '✂ …';
+    pywebview.api.tree_prune(true).then(function (r) {
+      pBtn.textContent = '✂ 剪枝';
+      if (!r || !r.ok) { alert('剪枝检查失败：' + ((r && r.err) || '未知')); return; }
+      if (!r.removed_count) {
+        treeStatus('✂ 没有需要剪的枝叶（阈值 ' + Math.round(r.threshold * 100)
+          + '%，主干与最新候选都受保护）');
+        return;
+      }
+      var lines = (r.removed || []).slice(0, 6).map(function (x) {
+        return '· 有效权重 ' + x.effective + '：' + (x.reasons || []).join('，');
+      }).join('\n');
+      if (!confirm('将要剪掉 ' + r.removed_count + ' 个低分节点：\n' + lines
+        + '\n\n主干（你正在读的这条）不会被删。确定吗？')) return;
+      pywebview.api.tree_prune(false).then(function (r2) {
+        if (!r2 || !r2.ok) { alert('剪枝失败：' + ((r2 && r2.err) || '未知')); return; }
+        treeStatus('✂ 已剪掉 ' + r2.removed_count + ' 个节点（'
+          + r2.before + ' → ' + r2.after + '）');
+        loadTree(false);
+      });
+    }).catch(function () { pBtn.textContent = '✂ 剪枝'; });
+  };
+  head.appendChild(pBtn);
+  // 漂移核查：三态（正常 / 有嫌疑 / 定案漂移）+ 延迟定案
+  // 为什么不自动剪：漂移有时候正是用户想要的走向，判定先给人看
+  var dBtn = document.createElement('span');
+  dBtn.textContent = '🔍 漂移';
+  dBtn.style.cssText = 'cursor:pointer;color:var(--sub);font-weight:600;user-select:none;';
+  dBtn.title = '核查有没有偏离本场目标（先在上面输入框填本场关键词）';
+  dBtn.onclick = function (ev) {
+    ev.stopPropagation();
+    var cur = (window.__driftKeys || []).join('、');
+    var inp = prompt('本场关键词（这场戏在讲什么？逗号分隔）\n'
+      + '只有明确的目标词才可靠——泛泛的重叠分不出「跑题」和「措辞巧合」。', cur);
+    if (inp === null) return;
+    var keys = inp.split(/[,，、\s]+/).filter(function (x) { return x; });
+    if (!keys.length) { treeStatus('没填关键词，不做判定（不填就不会乱定罪）'); return; }
+    window.__driftKeys = keys;
+    pywebview.api.set_drift_keys(JSON.stringify(keys)).then(function () {
+      dBtn.textContent = '🔍 …';
+      pywebview.api.tree_drift(true).then(function (r) {
+        dBtn.textContent = '🔍 漂移';
+        if (!r || !r.ok) { treeStatus('核查失败：' + ((r && r.err) || '未知')); return; }
+        var c = r.counts || {};
+        treeStatus('🔍 核查 ' + r.audited + ' 轮 → 正常 ' + (c.cleared || 0)
+          + ' / 有嫌疑 ' + (c.suspected || 0) + ' / 定案漂移 ' + (c.drifted || 0)
+          + '（只记状态，没有删任何东西）');
+        var bad = (r.verdicts || []).filter(function (v) { return v.state === 'drifted'; });
+        if (bad.length) {
+          console.warn('漂移节点：', bad.map(function (v) {
+            return { node: v.node, coverage: v.coverage, why: v.reasons };
+          }));
+        }
+      }).catch(function () { dBtn.textContent = '🔍 漂移'; });
+    });
+  };
+  head.appendChild(dBtn);
+  // 前瞻展开：把树从"生成后的仓库"挪到"生成之中"
+  // 代价是每轮多 K×D 次调用，所以默认关，且必须显式确认
+  var lBtn = document.createElement('span');
+  lBtn.textContent = '🧭 前瞻';
+  lBtn.style.cssText = 'cursor:pointer;color:var(--sub);font-weight:600;user-select:none;';
+  lBtn.title = '先生成几条路、往前探几轮，挑端点最正的给你（会多花 token）';
+  lBtn.onclick = function (ev) {
+    ev.stopPropagation();
+    var b = parseInt(prompt('前瞻几条分支？（1~5）', '2') || '0', 10);
+    if (!b) return;
+    var d = parseInt(prompt('每条往前探几轮？（1~5）', '2') || '0', 10);
+    if (!d) return;
+    var calls = b * d;
+    if (!confirm('每轮最多多花 ' + calls + ' 次模型调用（' + b + ' 条 × ' + d + ' 轮）。\n\n'
+      + '· 没设本场关键词时不会前瞻（不会瞎挑）\n'
+      + '· 判据还是启发式：搜得越深，判错的代价越大\n\n确定开启吗？')) return;
+    pywebview.api.set_lookahead(true, b, d).then(function (r) {
+      if (!r || !r.ok) { alert('开启失败：' + ((r && r.err) || '未知')); return; }
+      lBtn.textContent = '🧭 前瞻开';
+      lBtn.style.color = '#5fd39a';
+      treeStatus('🧭 前瞻已开：' + r.note);
+    });
+  };
+  head.appendChild(lBtn);
+  // 偏好导出：把树里已经在产生、但不导出就永远拿不到的偏好信号接住
+  var xBtn = document.createElement('span');
+  xBtn.textContent = '📤 偏好';
+  xBtn.style.cssText = 'cursor:pointer;color:var(--sub);font-weight:600;user-select:none;';
+  xBtn.title = '把「同一问下你选了哪条、放弃了哪条」导出成 JSONL（只读，不改任何东西）';
+  xBtn.onclick = function (ev) {
+    ev.stopPropagation();
+    xBtn.textContent = '📤 …';
+    pywebview.api.export_preferences().then(function (r) {
+      xBtn.textContent = '📤 偏好';
+      if (!r || !r.ok) { treeStatus('导出失败：' + ((r && r.err) || '未知')); return; }
+      if (!r.samples && !r.written) { treeStatus('📤 ' + (r.msg || '还没有样本')); return; }
+      var s = r.stats || {};
+      var agree = (s.agreement === null || s.agreement === undefined)
+        ? '一致率未知（先跑一次 ⚖ 打分）' : ('启发式与你的一致率 ' + Math.round(s.agreement * 100) + '%');
+      treeStatus('📤 ' + r.msg + '；' + agree
+        + '；正样本 ' + (s.samples || 0) + ' 条 / 负样本 ' + (s.rejected_total || 0) + ' 条');
+    }).catch(function () { xBtn.textContent = '📤 偏好'; });
+  };
+  head.appendChild(xBtn);
+  // 价值声明（rubric）：第 2 步。声明错了比不声明更糟 —— 搜索会忠实放大它
+  var rBtn = document.createElement('span');
+  rBtn.textContent = '📋 标准';
+  rBtn.style.cssText = 'cursor:pointer;color:var(--sub);font-weight:600;user-select:none;';
+  rBtn.title = '声明本场的评分标准（每行一条）。有这个，前瞻才会按你的标准挑，而不只是避开硬故障';
+  rBtn.onclick = function (ev) {
+    ev.stopPropagation();
+    var cur = (window.__rubric || []).join('\n');
+    var inp = prompt('本场评分标准（每行一条，最多 8 条）\n'
+      + '例：\n每轮必须推进一点，不能原地抒情\n不解释来历，悬念要留住\n不写成说明文，不回答案卷\n\n'
+      + '⚠ 写不好比不写更糟 —— 声明错了，搜索会忠实地放大它。', cur);
+    if (inp === null) return;
+    var items = inp.split('\n').map(function (x) { return x.trim(); })
+      .filter(function (x) { return x; });
+    window.__rubric = items;
+    pywebview.api.set_rubric(items.join('\n')).then(function (r) {
+      if (!r || !r.ok) { alert('保存失败：' + ((r && r.err) || '未知')); return; }
+      if (!items.length) { treeStatus('📋 已清空标准（前瞻退回只用启发式）'); return; }
+      treeStatus('📋 已存 ' + items.length + ' 条标准（' + r.role + '）。'
+        + '开着前瞻时，每条分支的端点会按这些标准判一次分');
+    });
+  };
+  head.appendChild(rBtn);
+  /** 记忆调试：看每条历史的清晰度、年龄、隐藏衰减率。
+   *  遗忘被设计成不可建模的，所以不给你看内部数字的话，你判断不出它坏没坏。 */
+  var memBtn = document.createElement('span');
+  memBtn.textContent = '🧠 记忆';
+  memBtn.style.cssText = 'cursor:pointer;color:var(--sub);font-weight:600;user-select:none;';
+  memBtn.title = '看当前历史的记忆清晰度：还记得哪些、忘了哪些、每条各自多久忘一次'
+    + '（和快捷栏那个「🧠 记忆」回溯命令不同：那个是把旧消息捞回来，这个是看记忆状态）';
+  memBtn.onclick = function (ev) {
+    ev.stopPropagation();
+    if (!window.pywebview || !pywebview.api || !pywebview.api.memory_debug) return;
+    pywebview.api.memory_debug().then(memDebugDraw).catch(function (e) {
+      document.getElementById('memDebugHead').textContent = '读记忆失败：' + e;
+      document.getElementById('memDebugModal').classList.add('open');
+    });
+  };
+  head.appendChild(memBtn);
+  /** 时间流速表盘：世界那边比现实快多少倍。
+   *  对数刻度（每转一格 ×10）—— 线性的话 98% 行程都挤在最前几档上，没法用。 */
+  var dialBtn = document.createElement('span');
+  dialBtn.textContent = '⏳ 流速';
+  dialBtn.style.cssText = 'cursor:pointer;color:var(--sub);font-weight:600;user-select:none;';
+  dialBtn.title = '世界那边过得比现实快多少倍（10 ~ 1000万）。拖表盘调，不用输数字';
+  dialBtn.onclick = function (ev) { ev.stopPropagation(); timeDialOpen(); };
+  head.appendChild(dialBtn);
+  /** 调试面板（非开发者向）：把"训练"这件事变成看数、点一下、看结果。
+   *  它不该出现在开发者入口里 —— 训练排序器不需要懂编程，只需要有偏好数据。 */
+  var dbgBtn = document.createElement('span');
+  dbgBtn.textContent = '🛠 调试';
+  dbgBtn.style.cssText = 'cursor:pointer;color:var(--sub);font-weight:600;user-select:none;';
+  dbgBtn.title = '数据够不够 / 本地训练排序器 / 它学到了什么（不需要服务器）';
+  dbgBtn.onclick = function (ev) {
+    ev.stopPropagation();
+    pywebview.api.ranker_status().then(function (r) {
+      if (!r || !r.ok) { treeStatus('调试面板打不开：' + ((r && r.err) || '未知')); return; }
+      var d = r.readiness || {};
+      var msg = '📊 偏好数据：' + (d.samples || 0) + ' 条（正样本），需 ' + (d.need_more ? (d.samples + d.need_more) : d.samples) + ' 条才够训。\n';
+      if (d.warnings && d.warnings.length) msg += '\n⚠ ' + d.warnings.join('\n⚠ ') + '\n';
+      if (r.heuristic_agreement !== null && r.heuristic_agreement !== undefined) {
+        msg += '\n启发式与你的一致率：' + Math.round(r.heuristic_agreement * 100) + '%\n';
+      }
+      msg += '\n模型：' + (r.model
+        ? ('已训练（训练准确率 ' + r.model.train_acc + '，留出 ' + r.model.holdout_acc + '）')
+        : '还没有') + '\n';
+      if (r.model && r.model.top) {
+        msg += '它在用的特征：' + r.model.top.map(function (x) {
+          return x[0] + ' ' + (x[1] > 0 ? '+' : '') + x[1].toFixed(2);
+        }).join('、') + '\n';
+      }
+      msg += '\n现在训一次吗？' + (d.ready ? '（纯本地，几秒钟，不联网、不用 API Key）'
+                                        : '（数据还不够，训出来是噪声 —— 建议先多滑几次）');
+      if (!confirm(msg)) return;
+      if (!d.ready && !confirm('数据确实不够，还是要训吗？')) return;
+      treeStatus('🛠 训练中…');
+      pywebview.api.train_ranker().then(function (t) {
+        if (!t || !t.ok) { treeStatus('🛠 训练没成：' + ((t && t.err) || '未知')); return; }
+        var top = (t.top || []).map(function (x) {
+          return x[0] + ' ' + (x[1] > 0 ? '+' : '') + x[1].toFixed(2);
+        }).join('、');
+        treeStatus('🛠 ' + t.msg + '；训练准确率 ' + t.train_acc
+          + '，留出 ' + t.holdout_acc + '；权重最大：' + top);
+        if (confirm('要启用它来给前瞻打分吗？\n\n会用你训出来的权重替代我手搓的那套判据。')) {
+          pywebview.api.set_ranker(true).then(function () {
+            treeStatus('🛠 排序器已启用（前瞻时按你训出来的权重挑分支）');
+          });
+        }
+      });
+    });
+  };
+  head.appendChild(dbgBtn);
   var tg = document.createElement('span');
   tg.textContent = (treeScope === 'choices') ? '🔖 只看选项' : '📄 全部节点';
   tg.style.cssText = 'cursor:pointer;color:var(--accent);font-weight:600;user-select:none;';
@@ -3053,7 +4324,7 @@ function renderTreePanel(p) {
     p.appendChild(it);
   }
   if (treeScope === 'choices') {
-    renderChoices(p, addRow);
+    renderTreeChoices(p, addRow);
     return;
   }
   var i = 0;
@@ -3078,7 +4349,9 @@ function renderTreePanel(p) {
   }
 }
 // ---- 选项骨架（只看选项）：按支线分组 + 折叠选项间对话为可展开 ··· 段 ----
-function renderChoices(p, addRow) {
+// 注意：函数名不能叫 renderChoices —— 那是 Galgame 选项面板的渲染器（本文件靠前处已定义），
+// 同名声明会被这一份覆盖，选项面板就再也不刷新了（test_web_dom.py 有同名冲突审计）。
+function renderTreeChoices(p, addRow) {
   var hasChoice = treeList.some(function (n) { return n.is_choice; });
   if (!hasChoice) {
     // 无选项：直接平铺全部（保留定位与回溯，避免空视图）
@@ -3900,7 +5173,7 @@ function renderCodexList(pkgs) {
     var card = document.createElement('div');
     card.className = 'role-card';
     var sel = p.name === codexCur ? 'style="border-color:var(--accent,#f59e0b)"' : '';
-    var res = '🎴' + p.sprites + ' 🖼' + p.bg + ' 🎵' + p.bgm + ' 🎙' + p.voice;
+    var res = '[ic:sprite]' + p.sprites + ' [ic:image]' + p.bg + ' [ic:music]' + p.bgm + ' [ic:mic]' + p.voice;
     card.innerHTML =
       '<div class="rc-name" ' + sel + '>' +
         '<label for="">📕 ' + escapeHtml(p.name) + (p.has_script ? '' : ' <span style="color:#f87171">(缺剧本)</span>') + '</label>' +
@@ -4054,7 +5327,7 @@ function codexAdvancedPlay() {
   pywebview.api.codex_render(codexCur, tpl).then(function (r) {
     if (!r || !r.ok) { codexTplStatus('❌ ' + ((r && r.err) || '渲染失败')); return; }
     document.getElementById('codexTplPreview').srcdoc = r.html || '';
-    codexTplStatus('▶️ 已渲染（试玩预览）');
+    codexTplStatus('[ic:play] 已渲染（试玩预览）');
   });
 }
 function codexAdvancedSave() {
@@ -4117,14 +5390,7 @@ function codexDelete() {
 }
 function codexEdit() {
   if (!codexCur) return;
-  document.getElementById('codexEditor').style.display = 'block';
-  document.getElementById('codexFiles').style.display = 'none';
-  document.getElementById('codexEditorStatus').textContent = '';
-  pywebview.api.codex_get(codexCur).then(function (r) {
-    if (!r || !r.ok) { codexSetStatus('❌ ' + ((r && r.err) || '读取失败')); return; }
-    document.getElementById('codexJsonInput').value = JSON.stringify(r.script, null, 2);
-    codexEditorStatus('剧本 ' + (r.valid ? '✅ 结构正常' : '⚠️ 存在问题'));
-  });
+  galOpenEditor(codexCur);
 }
 function codexEditorStatus(s) { document.getElementById('codexEditorStatus').textContent = s || ''; }
 function codexFormat() {
@@ -4150,6 +5416,1240 @@ function codexSave() {
     else codexEditorStatus('❌ ' + ((r && r.err) || '保存失败'));
   });
 }
+
+// ===== GAL 叙事引擎 · 节点图编辑器（线-点-分支 剪辑） =====
+var _gScript = null;   // 当前正在编辑的剧本对象
+var _gSel = null;      // 当前选中场景 id
+// 注意：这张表同时被 SVG <text>（节点图）和 <option>（下拉）消费，两处都放不进 <span> 图标，
+// 所以只放纯文字（节点图本来就按 kind 上色）；DOM 场景要用图标请取 _gKindIcon。
+var _gKindNames = { say:'台词', note:'旁白', show:'显示立绘', hide:'隐藏立绘', bg:'背景', bgm:'音乐', sfx:'音效', effect:'特效', wait:'等待', setflag:'设标记', roll:'抽取', choice:'分支', jump:'跳转', end:'结局', action:'动作' };
+var _gKindIcon = { say:'[ic:chat]', note:'[ic:memo]', show:'[ic:sprite]', hide:'[ic:sprite_off]', bg:'[ic:image]', bgm:'[ic:music]', sfx:'[ic:bell]', effect:'[ic:burst]', wait:'[ic:hourglass]', setflag:'[ic:flag]', roll:'[ic:dice]', choice:'[ic:shuffle]', jump:'[ic:arrow_right]', end:'[ic:flag_end]', action:'[ic:settings]' };
+function codexGraphStatus(s) { document.getElementById('cxGraphStatus').textContent = s || ''; }
+function codexGraphOpen() {
+  var box = document.getElementById('codexJsonInput');
+  try { _gScript = JSON.parse(box.value || 'null'); } catch (e) { codexGraphStatus('❌ JSON 解析失败: ' + e.message); return; }
+  if (!_gScript || typeof _gScript !== 'object') _gScript = { name: codexCur || '我的故事', scenes: [] };
+  if (!_gScript.scenes) _gScript.scenes = [];
+  _gSel = null;
+  document.getElementById('codexEditor').style.display = 'none';
+  document.getElementById('codexGraphWrap').style.display = 'block';
+  document.getElementById('cxSceneEdit').style.display = 'none';
+  codexRenderGraph();
+  codexGraphStatus('🎬 线-点-分支 · ' + (_gScript.scenes || []).length + ' 条线 · 点「线」编步骤，点分支边改条件');
+}
+function codexGraphJson() {
+  document.getElementById('codexGraphWrap').style.display = 'none';
+  document.getElementById('codexEditor').style.display = 'block';
+  var box = document.getElementById('codexJsonInput');
+  if (_gScript) box.value = JSON.stringify(_gScript, null, 2);
+}
+function codexGraphAddScene() {
+  var t = prompt('新场景(线)标题：', '场景 ' + ((_gScript.scenes || []).length + 1));
+  if (t === null) return;
+  _gScript.scenes = _gScript.scenes || [];
+  var base = _gScript.scenes.length + 1, nid = 's' + base;
+  while (_gScript.scenes.some(function (s) { return s.id === nid; })) { base++; nid = 's' + base; }
+  _gScript.scenes.push({ id: nid, title: (t || nid).trim(), lines: [] });
+  _gSel = nid;
+  codexRenderGraph();
+  codexEditSceneGraph(nid);
+}
+// 图布局（线=过程条，点=节拍，分支=岔口）：每条「线」(场景) 独占一行；行内点是横向排列的节拍。
+function _gLayout() {
+  var scenes = _gScript.scenes || [];
+  var byId = {}; scenes.forEach(function (s) { byId[s.id] = s; });
+  var order = [], seen = {}, q = [scenes[0].id];
+  while (q.length) {
+    var id = q.shift(); if (seen[id]) continue; seen[id] = true;
+    if (byId[id]) order.push(id);
+    var sc = byId[id]; if (!sc) continue;
+    (sc.lines || []).forEach(function (ln) {
+      if (ln && ln.choice) ln.choice.forEach(function (o) { if (o && o.goto && byId[o.goto] && !seen[o.goto]) q.push(o.goto); });
+      if (ln && ln.jump && byId[ln.jump] && !seen[ln.jump]) q.push(ln.jump);
+    });
+    var nxt = sc.next || sc.jump;
+    if (nxt && byId[nxt] && !seen[nxt]) q.push(nxt);
+  }
+  scenes.forEach(function (s) { if (!seen[s.id]) order.push(s.id); });
+  var pos = {};
+  order.forEach(function (id, i) {
+    var sc = byId[id];
+    var beats = (sc && sc.lines) || [];
+    pos[id] = { y: 60 + i * 128, beats: beats, w: Math.max(240, beats.length * 150) };
+  });
+  return { pos: pos, scenes: scenes, byId: byId, order: order };
+}
+function codexRenderGraph() {
+  var wrap = document.getElementById('cxGraphCanvas');
+  var L = _gLayout();
+  var maxX = 600, maxY = 200;
+  L.order.forEach(function (id) { var p = L.pos[id]; if (p) { if (60 + p.w > maxX) maxX = 60 + p.w; if (p.y > maxY) maxY = p.y; } });
+  var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="' + (maxX + 200) + '" height="' + (maxY + 90) + '" style="display:block">' +
+    '<defs><marker id="arr" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#4a5462"/></marker></defs>';
+  var edges = '';
+  function edge(t, ty, label, fromX, fromY) {
+    var q = L.pos[t]; if (!q) return;
+    var x1 = fromX !== undefined ? fromX : (maxX - 60);
+    var y1 = fromY !== undefined ? fromY : 0;
+    var x2 = 60, y2 = q.y + 22;
+    edges += '<path d="M' + x1 + ',' + y1 + ' C' + (x1 + 90) + ',' + y1 + ' ' + (x2 - 90) + ',' + y2 + ' ' + x2 + ',' + y2 + '" fill="none" stroke="' + (ty === 'cond' ? '#f59e0b' : '#4a5462') + '" stroke-width="2" marker-end="url(#arr)"/>' +
+      (label ? '<text x="' + Math.round((x1 + x2) / 2) + '" y="' + Math.round((y1 + y2) / 2 - 5) + '" fill="' + (ty === 'cond' ? '#f59e0b' : '#8a93a3') + '" font-size="10" text-anchor="middle">' + escapeHtml(label) + '</text>' : '');
+  }
+  L.scenes.forEach(function (sc) {
+    var p = L.pos[sc.id]; if (!p) return;
+    (sc.lines || []).forEach(function (ln) {
+      if (!ln || typeof ln !== 'object') return;
+      var kind = ln.kind || 'say';
+      if (kind === 'choice') (ln.choice || []).forEach(function (o, k) {
+        if (o && o.goto && L.byId[o.goto]) edge(o.goto, o.if ? 'cond' : 'line', (o.if ? '🔒' : '🔀') + ' ' + (o.text || ''), 265 + k * 90, p.y + 22);
+      });
+      if (ln.jump && L.byId[ln.jump]) edge(ln.jump, 'line', '跳', 265, p.y + 22);
+    });
+    var nxt = sc.next || sc.jump;
+    if (nxt && L.byId[nxt]) edge(nxt, 'line', '下一', 60 + p.w, p.y + 22);
+  });
+  svg += edges;
+  L.scenes.forEach(function (sc) {
+    var p = L.pos[sc.id]; if (!p) return;
+    var sel = sc.id === _gSel;
+    var lineW = Math.max(240, p.beats.length * 150);
+    // 线 = 一条过程条：左端标题 + 点串
+    var click = 'onclick="codexEditSceneGraph(\'' + escapeHtml(sc.id) + '\')" style="cursor:pointer"';
+    svg += '<g ' + click + '>' +
+      '<rect x="60" y="' + p.y + '" width="' + lineW + '" height="44" rx="10" fill="' + (sel ? 'rgba(245,158,11,.16)' : 'rgba(255,255,255,.04)') + '" stroke="' + (sel ? '#f59e0b' : '#3a4553') + '" stroke-width="' + (sel ? 2 : 1) + '"/>' +
+      '<rect x="60" y="' + p.y + '" width="150" height="44" rx="10" fill="rgba(245,158,11,.10)" stroke="#3a4553" stroke-width="1"/>' +
+      '<text x="70" y="' + (p.y + 20) + '" fill="#f5c06c" font-size="12" font-weight="bold">线 ' + escapeHtml(sc.id || '') + '</text>' +
+      '<text x="70" y="' + (p.y + 35) + '" fill="#8a93a3" font-size="10">' + escapeHtml((sc.title || '').slice(0, 12)) + '</text>' +
+      '</g>';
+    for (var i = 0; i < p.beats.length; i++) {
+      var ln = p.beats[i];
+      if (!ln || typeof ln !== 'object') continue;
+      var bx = 225 + i * 150;
+      var kind = ln.kind || 'say';
+      var icon = _gKindNames[kind] || '·';
+      var isChoice = kind === 'choice';
+      var snip = ((typeof ln.text === 'string' && ln.text) || (isChoice ? '分支' : kind)).slice(0, 12);
+      svg += '<g ' + click + '>' +
+        '<rect x="' + bx + '" y="' + p.y + '" width="140" height="44" rx="8" fill="' + (isChoice ? 'rgba(245,158,11,.12)' : 'rgba(120,160,220,.06)') + '" stroke="' + (isChoice ? '#f59e0b' : '#4a5462') + '" stroke-width="1"/>' +
+        '<text x="' + (bx + 8) + '" y="' + (p.y + 18) + '" fill="' + (isChoice ? '#f59e0b' : '#c8d6e5') + '" font-size="10">' + escapeHtml(icon) + '</text>' +
+        '<text x="' + (bx + 8) + '" y="' + (p.y + 34) + '" fill="#8a93a3" font-size="9">' + escapeHtml(snip) + '</text>' +
+        '</g>';
+    }
+  });
+  svg += '</svg>';
+  wrap.innerHTML = svg;
+}
+function codexEditSceneGraph(sid) {
+  _gSel = sid;
+  var sc = (_gScript.scenes || []).find(function (s) { return s.id === sid; });
+  var panel = document.getElementById('cxSceneEdit');
+  panel.style.display = 'block';
+  panel.innerHTML = '';
+  if (!sc) { panel.innerHTML = '<div style="color:#8a93a3">场景不存在</div>'; return; }
+  var h = document.createElement('div');
+  h.className = 'row';
+  h.style.cssText = 'justify-content:flex-start;align-items:center;margin-bottom:6px';
+  h.innerHTML = '<b style="font-size:14px">场景 ' + escapeHtml(sc.id) + '</b> <input id="cxSceneTitle" style="flex:1;min-width:120px;background:var(--bubble,#161b22);border:1px solid var(--line);border-radius:6px;color:var(--text,#ddd);padding:5px 8px;font-size:13px">';
+  panel.appendChild(h);
+  document.getElementById('cxSceneTitle').value = sc.title || '';
+  document.getElementById('cxSceneTitle').oninput = function () { sc.title = this.value; };
+  // 步骤列表
+  var list = document.createElement('div');
+  list.id = 'cxSceneSteps';
+  panel.appendChild(list);
+  function renderSteps() {
+    list.innerHTML = '';
+    var lines = sc.lines || []; sc.lines = lines;
+    lines.forEach(function (ln, i) { renderStepRow(sc, ln, i); });
+    var add = document.createElement('button');
+    add.className = 'btn2 ghost';
+    add.textContent = '➕ 加一步';
+    add.style.cssText = 'margin-top:6px';
+    add.onclick = function () { sc.lines.push({ kind: 'say', text: '' }); renderSteps(); };
+    list.appendChild(add);
+    var delScene = document.createElement('button');
+    delScene.className = 'btn2 ghost';
+    delScene.textContent = '🗑️ 删除本场景';
+    delScene.style.cssText = 'margin-top:6px;color:#f87171;margin-left:8px';
+    delScene.onclick = function () { _gScript.scenes = _gScript.scenes.filter(function (s) { return s.id !== sc.id; }); _gSel = null; codexRenderGraph(); document.getElementById('cxSceneEdit').style.display = 'none'; };
+    list.appendChild(delScene);
+  }
+  function renderStepRow(sc, ln, i) {
+    var row = document.createElement('div');
+    row.style.cssText = 'display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:4px 0;padding:6px;border:1px solid var(--line);border-radius:6px;background:var(--bubble,#161b22)';
+    var selKind = document.createElement('select');
+    Object.keys(_gKindNames).forEach(function (k) { var o = document.createElement('option'); o.value = k; o.textContent = _gKindNames[k]; selKind.appendChild(o); });
+    selKind.value = ln.kind || 'say';
+    selKind.onchange = function () { ln.kind = selKind.value; if (ln.kind === 'action') { delete ln.text; delete ln.sprite; delete ln.voice; } renderSteps(); };
+    row.appendChild(selKind);
+    var inp;
+    if (ln.kind === 'choice') {
+      var ci = document.createElement('span'); ci.textContent = '分支：'; row.appendChild(ci);
+      (ln.choice || []).forEach(function (o) { renderChoiceItem(row, ln, o); });
+      var addOpt = document.createElement('button'); addOpt.className = 'btn2 ghost'; addOpt.textContent = '➕ 选项'; addOpt.style.cssText = 'font-size:11px;padding:3px 8px'; addOpt.onclick = function () { ln.choice = ln.choice || []; ln.choice.push({ text: '', goto: '' }); renderSteps(); }; row.appendChild(addOpt);
+      row.appendChild(delBtn(ln, i));
+      list.appendChild(row); return;
+    }
+    if (ln.kind === 'jump' || ln.kind === 'end') {
+      inp = mkInput(ln.goto !== undefined ? ln.goto : (ln.end || ''), 's2', function (v) { if (ln.kind === 'jump') ln.goto = v; else ln.end = v; });
+      inp.placeholder = ln.kind === 'jump' ? '目标场景 id' : '结局文本';
+      row.appendChild(inp);
+    } else {
+      inp = mkInput(ln.text || '', '台词文本', function (v) { ln.text = v; });
+      inp.style.cssText = 'flex:2;min-width:150px;background:var(--bubble,#161b22);border:1px solid var(--line);border-radius:6px;color:var(--text,#ddd);padding:5px 8px;font-size:12px';
+      row.appendChild(inp);
+      if (ln.kind === 'say') {
+        var sp = mkInput(ln.sprite || '', '立绘文件', function (v) { ln.sprite = v; });
+        sp.style.cssText = 'flex:1;min-width:80px;background:var(--bubble,#161b22);border:1px solid var(--line);border-radius:6px;color:var(--text,#ddd);padding:5px 8px;font-size:12px';
+        row.appendChild(sp);
+        var vo = mkInput(ln.voice || '', '语音', function (v) { ln.voice = v; });
+        vo.style.cssText = 'flex:1;min-width:80px;background:var(--bubble,#161b22);border:1px solid var(--line);border-radius:6px;color:var(--text,#ddd);padding:5px 8px;font-size:12px';
+        row.appendChild(vo);
+      }
+      if (ln.kind === 'setflag') { var fk = mkInput((ln.flag && ln.flag.k) || '', 'flag 名', function (v) { ln.flag = { k: v, v: true }; }); row.appendChild(fk); }
+      if (ln.kind === 'roll') { var rk = mkInput((ln.roll && ln.roll.d) || 100, '面数', function (v) { ln.roll = { d: Number(v) || 100 }; }); row.appendChild(rk); }
+      if (ln.kind === 'effect') { var ef = mkInput(ln.effect || 'shake', 'shake/flash', function (v) { ln.effect = v; }); row.appendChild(ef); }
+      if (ln.kind === 'wait') { var ms = mkInput(ln.ms || 300, '毫秒', function (v) { ln.ms = Number(v) || 0; }); row.appendChild(ms); }
+    }
+    row.appendChild(delBtn(ln, i));
+    list.appendChild(row);
+  }
+  function renderChoiceItem(row, ln, o) {
+    var box = document.createElement('span');
+    box.style.cssText = 'display:inline-flex;gap:4px;align-items:center;margin:2px 4px';
+    var ot = document.createElement('input'); ot.value = o.text || ''; ot.placeholder = '选项文字'; ot.style.cssText = 'background:var(--bubble,#161b22);border:1px solid var(--line);border-radius:6px;color:var(--text,#ddd);padding:3px 6px;font-size:12px;width:110px'; ot.oninput = function () { o.text = ot.value; }; box.appendChild(ot);
+    var og = document.createElement('input'); og.value = o.goto || ''; og.placeholder = 'goto'; og.style.cssText = 'background:var(--bubble,#161b22);border:1px solid var(--line);border-radius:6px;color:var(--text,#ddd);padding:3px 6px;font-size:12px;width:70px'; og.oninput = function () { o.goto = og.value; }; box.appendChild(og);
+    var oc = document.createElement('input'); oc.value = o.if ? JSON.stringify(o.if) : ''; oc.placeholder = '🔒 条件 {aff:>=85}'; oc.style.cssText = 'background:var(--bubble,#161b22);border:1px solid rgba(245,158,11,.4);border-radius:6px;color:#f59e0b;padding:3px 6px;font-size:12px;width:150px'; oc.oninput = function () { try { o.if = oc.value.trim() ? JSON.parse(oc.value) : undefined; } catch (e) { o.if = undefined; } }; box.appendChild(oc);
+    var del = document.createElement('button'); del.textContent = '✕'; del.className = 'btn2 ghost'; del.style.cssText = 'color:#f87171;font-size:11px;padding:2px 6px'; del.onclick = function () { ln.choice = ln.choice.filter(function (x) { return x !== o; }); renderSteps(); }; box.appendChild(del);
+    row.appendChild(box);
+  }
+  function delBtn(ln, i) {
+    var d = document.createElement('button'); d.textContent = '🗑️'; d.className = 'btn2 ghost'; d.style.cssText = 'color:#f87171;font-size:12px;padding:2px 6px'; d.onclick = function () { sc.lines.splice(i, 1); renderSteps(); }; return d;
+  }
+  function mkInput(val, ph, cb) {
+    var x = document.createElement('input'); x.value = val; x.placeholder = ph; firstInput(x); return x;
+  }
+  function firstInput(x) { x.style.cssText = 'flex:1;min-width:90px;background:var(--bubble,#161b22);border:1px solid var(--line);border-radius:6px;color:var(--text,#ddd);padding:5px 8px;font-size:12px'; x.oninput = function () { cb(x.value); }; }
+  renderSteps();
+  codexRenderGraph();
+}
+function codexSaveGraph() {
+  try { var box = document.getElementById('codexJsonInput'); box.value = JSON.stringify(_gScript, null, 2); codexSave(); codexGraphStatus('✅ 已保存到剧本'); }
+  catch (e) { codexGraphStatus('❌ ' + e.message); }
+}
+document.getElementById('codexGraphBtn').onclick = codexGraphOpen;
+document.getElementById('cxGraphSaveBtn').onclick = codexSaveGraph;
+document.getElementById('cxGraphAddBtn').onclick = codexGraphAddScene;
+document.getElementById('cxGraphJsonBtn').onclick = codexGraphJson;
+
+// ===== GAL 制作器 · 全屏「线-点-分支」编辑器（单独界面，在线内编辑） =====
+var galScript = null;          // 当前编辑剧本
+var galBodies = {};            // sceneId -> body 容器（拖点重排用）
+var galDrag = null;            // 拖拽中的 {scene, idx}
+var galKeyOnly = false;        // 仅看关键节点(骨架)
+var galDragNode = null;        // 拖动节点 {id, sx, sy, bx, by, g}
+var galDragged = false;        // 刚拖过(抑制拖动后的点击开面板)
+var galPan = null;             // 平移 {sx, sy, sl, st}
+var galScale = 1;              // 画布缩放
+var galU = [], galR = [];      // 撤销/重做栈
+function galSnap() { try { return JSON.stringify(galScript); } catch (e) { return null; } }
+function galPushUndo() { var s = galSnap(); if (s) { galU.push(s); if (galU.length > 100) galU.shift(); galR = []; } }
+function galUndo() {
+  if (!galU.length || !galScript) return;
+  galR.push(galSnap());
+  galScript = JSON.parse(galU.pop());
+  if (!galScript.scenes) galScript.scenes = [];
+  galRenderGraph(); galStatsSet();
+}
+function galRedo() {
+  if (!galR.length || !galScript) return;
+  galU.push(galSnap());
+  galScript = JSON.parse(galR.pop());
+  if (!galScript.scenes) galScript.scenes = [];
+  galRenderGraph(); galStatsSet();
+}
+function galToast(msg) {
+  var t = document.getElementById('galToast'); if (!t) return;
+  t.textContent = msg; t.style.display = 'block'; t.style.opacity = '1';
+  clearTimeout(t._tm);
+  t._tm = setTimeout(function () { t.style.opacity = '0'; setTimeout(function () { t.style.display = 'none'; }, 300); }, 1600);
+}
+var galConnecting = null;      // 连线中 {srcId, x0, y0, line, svg}
+var galConnTarget = null;      // 拖拽时悬停的目标场景 id
+var galRAF = null;
+function galNodeDown(ev, id, baseX, baseY) {
+  if (ev.button !== 0) return;   // 右/中键不触发拖节点（给右键菜单用）
+  ev.stopPropagation();
+  galDragged = false;
+  galDragNode = { id: id, sx: ev.clientX, sy: ev.clientY, bx: baseX, by: baseY };
+  document.addEventListener('mousemove', galNodeMove);
+  document.addEventListener('mouseup', galNodeUp);
+}
+function galNodeMove(ev) {
+  if (!galDragNode) return;
+  var dx = ev.clientX - galDragNode.sx, dy = ev.clientY - galDragNode.sy;
+  if (Math.abs(dx) > 3 || Math.abs(dy) > 3) {
+    if (!galDragged) { galDragged = true; galPushUndo(); }
+    var sc = (galScript.scenes || []).find(function (s) { return s.id === galDragNode.id; });
+    if (sc) {
+      sc.gx = galDragNode.bx + dx; sc.gy = galDragNode.by + dy;
+      if (!galRAF) galRAF = requestAnimationFrame(function () { galRAF = null; galRenderGraph(); });  // 实时重画(平滑)，线跟着走
+    }
+  }
+}
+function galNodeUp(ev) {
+  if (!galDragNode) return;
+  document.removeEventListener('mousemove', galNodeMove);
+  document.removeEventListener('mouseup', galNodeUp);
+  if (galRAF) { cancelAnimationFrame(galRAF); galRAF = null; galRenderGraph(); }
+  galDragNode = null;   // galDragged 保持 true 直到下次 mousedown（抑制拖动后点击开面板）
+}
+// 连接节点：从端口拖到目标节点 → 建立 next / choice 分支
+function galConnStart(ev, srcId, x0, y0) {
+  if (ev.button !== 0) return;
+  ev.stopPropagation();
+  galConnecting = { srcId: srcId, x0: x0, y0: y0, svg: document.querySelector('#galLines svg') };
+  var svg = galConnecting.svg;
+  if (svg) {
+    // 追加到缩放组内，保证与节点/线同一坐标系（缩放时对齐）
+    var host = svg.querySelector('g[transform]') || svg;
+    var p = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    p.setAttribute('stroke', '#f59e0b'); p.setAttribute('stroke-width', '2'); p.setAttribute('fill', 'none'); p.setAttribute('stroke-dasharray', '5 3'); p.setAttribute('d', 'M' + x0 + ',' + y0 + ' L' + x0 + ',' + y0);
+    host.appendChild(p);
+    galConnecting.line = p;
+  }
+  document.addEventListener('mousemove', galConnMove);
+  document.addEventListener('mouseup', galConnUp);
+}
+function galConnMove(ev) {
+  if (!galConnecting) return;
+  var svg = galConnecting.svg; if (!svg) return;
+  var r = svg.getBoundingClientRect(), S = galScale || 1;
+  var x = (ev.clientX - r.left) / S, y = (ev.clientY - r.top) / S;
+  if (galConnecting.line) galConnecting.line.setAttribute('d', 'M' + galConnecting.x0 + ',' + galConnecting.y0 + ' C' + galConnecting.x0 + ',' + y + ' ' + x + ',' + galConnecting.y0 + ' ' + x + ',' + y);
+  // 高亮悬停目标节点，提供实时反馈
+  var el = document.elementFromPoint(ev.clientX, ev.clientY), tgtId = null;
+  while (el && el.getAttribute) { if (el.getAttribute('data-scene')) { tgtId = el.getAttribute('data-scene'); break; } el = el.parentNode; }
+  if (tgtId === galConnecting.srcId) tgtId = null;
+  if (galConnTarget !== tgtId) {
+    if (galConnTarget) { var g0 = document.querySelector('[data-scene="' + galConnTarget + '"]'); if (g0) g0.style.filter = ''; }
+    if (tgtId) { var g1 = document.querySelector('[data-scene="' + tgtId + '"]'); if (g1) g1.style.filter = 'brightness(1.35)'; }
+    galConnTarget = tgtId;
+  }
+}
+function galConnUp(ev) {
+  if (!galConnecting) return;
+  document.removeEventListener('mousemove', galConnMove);
+  document.removeEventListener('mouseup', galConnUp);
+  var srcId = galConnecting.srcId, line = galConnecting.line;
+  galConnecting = null;
+  try { if (line && line.parentNode) line.parentNode.removeChild(line); } catch (e) {}
+  if (galConnTarget) { var g0 = document.querySelector('[data-scene="' + galConnTarget + '"]'); if (g0) g0.style.filter = ''; galConnTarget = null; }
+  var el = document.elementFromPoint(ev.clientX, ev.clientY);
+  var node = null;
+  while (el && el.getAttribute) {
+    if (el.getAttribute && el.getAttribute('data-scene')) { node = el.getAttribute('data-scene'); break; }
+    el = el.parentNode;
+  }
+  if (!node || node === srcId) return;
+  galConnectScene(srcId, node);   // 自动判断类型 + toast 反馈
+}
+function galConnectScene(srcId, tgtId, mode) {
+  var sc = (galScript.scenes || []).find(function (s) { return s.id === srcId; });
+  if (!sc) return;
+  galPushUndo();
+  var assertChoice = function () {
+    var cp = (sc.lines || []).find(function (l) { return l && l.choice; });
+    if (cp) { cp.choice = cp.choice || []; cp.choice.push({ text: '选项', goto: tgtId }); }
+    else { sc.lines = sc.lines || []; sc.lines.push({ kind: 'choice', choice: [{ text: '选项', goto: tgtId }] }); }
+    galToast('🔀 已添加选项分支');
+  };
+  if (mode === 'choice') { assertChoice(); }
+  else if (mode === 'next') { sc.next = tgtId; galToast('▸ 已设为进行(下一步)'); }
+  else {
+    // 自动判断：无输出 → 进行(next)；已有输出 → 选项(choice)
+    var hasOut = sc.next != null || sc.jump != null || (sc.lines || []).some(function (l) { return l && l.choice; });
+    if (hasOut) { assertChoice(); }
+    else { sc.next = tgtId; galToast('▸ 已设为进行(下一步)'); }
+  }
+  galRenderGraph();
+}
+function galIsKey(sc) {
+  if (!sc) return false;
+  if (sc.key === true) return true;
+  if (sc.key === false) return false;
+  return (sc.lines || []).some(function (ln) { return ln && ln.choice; });
+}
+function galToggleKey(id) {
+  var sc = (galScript.scenes || []).find(function (s) { return s.id === id; });
+  if (!sc) return;
+  galPushUndo();
+  sc.key = !galIsKey(sc);
+  galRenderGraph();
+}
+var galAllOpen = {};           // sceneId -> 是否整条展开
+function galInput(val, ph, cb) {
+  var x = document.createElement('input');
+  x.value = val; x.placeholder = ph;
+  x.style.cssText = 'flex:1;min-width:110px;background:var(--panel);border:1px solid var(--line);border-radius:6px;color:var(--text);padding:7px 10px;font-size:12px';
+  x.oninput = function () { cb(x.value); };
+  return x;
+}
+// 素材下拉：从包里已有的文件里挑，旁边带「📥 导入」直接从电脑导进包
+var _galAssets = null;
+function galLoadAssets(cb) {
+  if (!codexCur) { cb && cb(); return; }
+  pywebview.api.codex_script_files(codexCur).then(function (r) {
+    _galAssets = (r && r.ok) ? (r.files || {}) : {};
+    cb && cb();
+  }).catch(function () { _galAssets = {}; cb && cb(); });
+}
+function galAssetSelect(kind, val, ph, cb) {
+  var wrap = document.createElement('span');
+  wrap.style.cssText = 'display:inline-flex;align-items:center;gap:6px;flex:1 1 200px;min-width:170px';
+  var sel = document.createElement('select');
+  sel.style.cssText = 'flex:1;min-width:110px;background:var(--panel);border:1px solid var(--line);border-radius:6px;color:var(--text);padding:7px 10px;font-size:12px';
+  var files = (_galAssets && _galAssets[kind]) || [];
+  var list = files.map(function (f) { return kind + '/' + f; });
+  if (val && list.indexOf(val) < 0) list.push(val);   // 包外/旧引用保留，不丢数据
+  var o0 = document.createElement('option'); o0.value = ''; o0.textContent = '（不用' + ph + '）';
+  sel.appendChild(o0);
+  list.forEach(function (p) {
+    var o = document.createElement('option'); o.value = p;
+    o.textContent = p.indexOf(kind + '/') === 0 ? p.slice(kind.length + 1) : p;
+    sel.appendChild(o);
+  });
+  sel.value = val || '';
+  sel.onchange = function () { cb(sel.value); };
+  var imp = document.createElement('button');
+  imp.className = 'btn2 ghost'; imp.textContent = '📥 导入'; imp.title = '从电脑里选' + ph + '，导进这个包';
+  imp.style.cssText = 'font-size:12px;padding:6px 10px;white-space:nowrap;flex:0 0 auto';
+  imp.onclick = function () {
+    imp.disabled = true; imp.textContent = '导入中…';
+    pywebview.api.codex_import_asset(codexCur, kind).then(function (r) {
+      imp.disabled = false; imp.textContent = '📥 导入';
+      if (!r || !r.ok) {
+        if (r && r.err !== 'cancelled') galToast('❌ ' + ((r && r.err) || '导入失败'));
+        return;
+      }
+      _galAssets = r.files || {};
+      var add = (r.added || [])[0] || '';
+      cb(add ? (kind + '/' + add) : sel.value);
+      galToast('✅ 已导入 ' + (r.added || []).length + ' 个文件');
+    }).catch(function (e) {
+      imp.disabled = false; imp.textContent = '📥 导入';
+      galToast('❌ ' + ((e && e.message) || '导入失败'));
+    });
+  };
+  wrap.appendChild(sel); wrap.appendChild(imp);
+  return wrap;
+}
+function galOpenEditor(name) {
+  codexCur = name;
+  galScript = null;
+  document.getElementById('galEditor').style.display = 'flex';
+  document.getElementById('galTitle').textContent = '📕 GAL 制作器 · ' + name;
+  document.getElementById('galStats').textContent = '加载中…';
+  pywebview.api.codex_get(name).then(function (r) {
+    if (!r || !r.ok) { document.getElementById('galStats').textContent = '❌ ' + ((r && r.err) || '加载失败'); return; }
+    galScript = r.script;
+    if (!galScript.scenes) galScript.scenes = [];
+    galEnsureRoles();
+    galRenderGraph();
+    galStatsSet();
+  });
+}
+function galStatsSet() {
+  var n = (galScript.scenes || []).length, pts = 0;
+  (galScript.scenes || []).forEach(function (s) { pts += (s.lines || []).length; });
+  document.getElementById('galStats').textContent = '线 ' + n + ' · 点 ' + pts;
+}
+// ===== 角色管理（独立的角色实体，供台词点下拉选择） =====
+function galEnsureRoles() { if (!galScript.roles) galScript.roles = []; }
+function galToggleRoles() {
+  var p = document.getElementById('galRolePanel'); if (!p) return;
+  var sceneP = document.getElementById('galScenePanel'); if (sceneP) sceneP.style.display = 'none';
+  p.style.display = (p.style.display === 'block') ? 'none' : 'block';
+  if (p.style.display === 'block') galRenderRoles();
+}
+function galRenderRoles() {
+  galEnsureRoles();
+  var p = document.getElementById('galRolePanel'); if (!p) return;
+  p.innerHTML = '';
+  var h = document.createElement('div');
+  h.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:8px 12px;border-bottom:1px solid var(--line)';
+  h.innerHTML = '<b style="font-size:13px;color:var(--text)">👥 角色（独立实体）</b>';
+  var close = document.createElement('button'); close.className = 'btn2 ghost'; close.textContent = '✕'; close.onclick = function () { p.style.display = 'none'; };
+  h.appendChild(close);
+  p.appendChild(h);
+  var wrap = document.createElement('div'); wrap.style.cssText = 'padding:8px 12px';
+  var hint = document.createElement('div'); hint.style.cssText = 'font-size:11px;color:var(--sub);margin-bottom:6px';
+  hint.textContent = '角色名 = 说话时显示的名字；立绘/语音 = 该角色默认值（台词点留空自动套用）。';
+  wrap.appendChild(hint);
+  galScript.roles.forEach(function (r, i) {
+    var row = document.createElement('div'); row.style.cssText = 'display:flex;align-items:center;gap:6px;margin:6px 0';
+    row.appendChild(galInput(r.name || '', '角色名', function (v) { r.name = v; }));
+    row.appendChild(galInput(r.sprite || '', '立绘', function (v) { r.sprite = v; }));
+    row.appendChild(galInput(r.voice || '', '语音', function (v) { r.voice = v; }));
+    var del = document.createElement('button'); del.className = 'btn2 ghost'; del.textContent = '✕'; del.style.cssText = 'color:#f87171;font-size:12px;padding:2px 6px'; del.onclick = function () { galPushUndo(); galScript.roles.splice(i, 1); galRenderRoles(); }; row.appendChild(del);
+    wrap.appendChild(row);
+  });
+  var add = document.createElement('button'); add.className = 'btn2'; add.textContent = '➕ 加角色'; add.onclick = function () { galPushUndo(); galScript.roles.push({ name: '', sprite: '', voice: '' }); galRenderRoles(); };
+  wrap.appendChild(add);
+  p.appendChild(wrap);
+}
+function galRoleSelect(ln) {
+  galEnsureRoles();
+  var sel = document.createElement('select');
+  var opt0 = document.createElement('option'); opt0.value = ''; opt0.textContent = '（未指定）'; sel.appendChild(opt0);
+  (galScript.roles || []).forEach(function (r) { var o = document.createElement('option'); o.value = r.name || ''; o.textContent = r.name || '(未命名角色)'; sel.appendChild(o); });
+  sel.value = ln.speaker || '';
+  sel.onchange = function () { ln.speaker = sel.value; };
+  sel.style.cssText = 'flex:1;min-width:80px;background:var(--panel);border:1px solid var(--line);border-radius:6px;color:var(--text);padding:5px 8px;font-size:12px';
+  return sel;
+}
+// ===== 回档式节点图：场景=节点 · 顺序/分支=连线 · 点节点就地编它的点 =====
+function galGraphLayout() {
+  var scenes = galScript.scenes || [];
+  var byId = {}; scenes.forEach(function (s) { byId[s.id] = s; });
+  var level = {}, order = [], seen = {}, q = [[scenes.length ? scenes[0].id : '', 0]];
+  while (q.length) {
+    var e = q.shift(), id = e[0], lv = e[1];
+    if (!id || seen[id]) continue; seen[id] = true; level[id] = lv; order.push(id);
+    var sc = byId[id]; if (!sc) continue;
+    (sc.lines || []).forEach(function (ln) {
+      if (ln && ln.choice) ln.choice.forEach(function (o) { if (o && o.goto && byId[o.goto] && !seen[o.goto]) q.push([o.goto, lv + 1]); });
+      if (ln && ln.jump && byId[ln.jump] && !seen[ln.jump]) q.push([ln.jump, lv + 1]);
+    });
+    var nxt = sc.next || sc.jump;
+    if (nxt && byId[nxt] && !seen[nxt]) q.push([nxt, lv + 1]);
+  }
+  scenes.forEach(function (s) { if (!seen[s.id]) order.push(s.id); });
+  var rowIn = {};
+  order.forEach(function (id) { var lv = level[id] || 0; if (rowIn[lv] === undefined) rowIn[lv] = 0; rowIn[id] = rowIn[lv]++; });
+  return { byId: byId, order: order, cols: function (id) { return level[id] || 0; }, rows: function (id) { return rowIn[id] || 0; } };
+}
+function galRenderGraph() {
+  var box = document.getElementById('galLines');
+  var panel = document.getElementById('galScenePanel'); if (panel) panel.style.display = 'none';
+  if (!galScript || !galScript.scenes || !galScript.scenes.length) { box.innerHTML = '<div style="color:var(--sub);padding:30px;text-align:center">还没有线(场景)。点「➕ 加线」开始。</div>'; return; }
+  var L = galGraphLayout();
+  var nodeW = 180, nodeH = 84, gx = 260, gy = 150;
+  var pos = {};
+  L.order.forEach(function (id) { var sc = L.byId[id]; var px = 40 + L.cols(id) * gx, py = 30 + L.rows(id) * gy; if (sc && sc.gx !== undefined) px = sc.gx; if (sc && sc.gy !== undefined) py = sc.gy; pos[id] = { x: px, y: py }; });
+  var maxX = 600, maxY = 200;
+  L.order.forEach(function (id) { var p = pos[id]; if (p) { if (p.x + nodeW > maxX) maxX = p.x + nodeW; if (p.y + nodeH > maxY) maxY = p.y + nodeH; } });
+  var S = galScale || 1;
+  var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="' + Math.ceil((maxX + 40) * S) + '" height="' + Math.ceil((maxY + 40) * S) + '" style="display:block;overflow:visible;user-select:none;-webkit-user-select:none"><defs><marker id="garr" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#4a5462"/></marker></defs><g transform="scale(' + S + ')">';
+  function edge(x1, y1, x2, y2, label, cond, dim, openId, focusIdx, etype, eo) {
+    var op = dim === undefined ? 1 : dim;
+    var dx = x2 - x1;
+    var stroke = (etype === 'choice') ? (cond ? '#f59e0b' : '#e8a33d') : '#7aa2b8';
+    var clickFn;
+    if (etype === 'choice') clickFn = "galEditOption('" + escapeHtml(openId) + "'," + (focusIdx === undefined ? -1 : focusIdx) + "," + (eo === undefined ? -1 : eo) + ",event)";
+    else clickFn = "galOpenScenePanel('" + escapeHtml(openId) + "'," + (focusIdx === undefined ? -1 : focusIdx) + ")";
+    var d;
+    if (dx > 4) {
+      // 前向：经源右侧空隙竖道的平滑弯线（不穿节点、无死角）
+      var lane = x1 + 40;
+      d = 'M' + x1 + ',' + y1 + ' C' + lane + ',' + y1 + ' ' + lane + ',' + y2 + ' ' + (x2 - 2) + ',' + y2;
+    } else {
+      // 反向/同层：从上方绕行的弧形
+      var lift = Math.min(y1, y2) - 56;
+      d = 'M' + x1 + ',' + y1 + ' C' + x1 + ',' + lift + ' ' + x2 + ',' + lift + ' ' + (x2 - 2) + ',' + y2;
+    }
+    svg += '<path d="' + d + '" fill="none" stroke="' + stroke + '" stroke-width="1.5" stroke-opacity="' + op + '" marker-end="url(#garr)"/>';
+    // 透明命中区：点整条线即可选中/编辑（不挡节点，节点在后绘制于上层）
+    if (openId) svg += '<path d="' + d + '" fill="none" stroke="rgba(255,255,255,0)" stroke-width="14" style="pointer-events:stroke;cursor:pointer" data-edge="1" data-erole="' + (etype || '') + '" data-esrc="' + escapeHtml(openId) + '" data-eidx="' + (focusIdx === undefined ? -1 : focusIdx) + '" data-eo="' + (eo === undefined ? -1 : eo) + '" onclick="event.stopPropagation();' + clickFn + '"/>';
+    // 标签放在竖道/折线旁，避让节点
+    var laneX = (dx > 4) ? (x1 + 40) : Math.round((x1 + x2) / 2);
+    var lx = laneX + 4, ly = Math.round((y1 + y2) / 2 - 6);
+    if (label) svg += '<text x="' + lx + '" y="' + ly + '" fill="' + stroke + '" font-size="9" opacity="' + op + '" text-anchor="start" style="cursor:pointer" onclick="event.stopPropagation();' + clickFn + '">' + escapeHtml(label) + '</text>';
+  }
+  L.order.forEach(function (id) {
+    var sc = L.byId[id], p = pos[id]; if (!sc || !p) return;
+    var srcKey = galIsKey(sc);
+    var lines = sc.lines || [];
+    for (var i = 0; i < lines.length; i++) {
+      var ln = lines[i]; if (!ln || typeof ln !== 'object') continue;
+      if (ln.choice) ln.choice.forEach(function (o, k) {
+        var gt = L.byId[o.goto];
+        if (o && o.goto && gt && pos[o.goto]) edge(p.x + nodeW, p.y + nodeH / 2 + (k - (ln.choice.length - 1) / 2) * 10, pos[o.goto].x, pos[o.goto].y + nodeH / 2, ((o.if ? '🔒 ' : '🔀 ') + (o.text || '')), o.if ? 1 : 0, galKeyOnly ? (srcKey && galIsKey(gt) ? 1 : 0.25) : 1, sc.id, i, 'choice', k);
+      });
+      if (ln.jump && L.byId[ln.jump] && pos[ln.jump]) edge(p.x + nodeW, p.y + nodeH / 2, pos[ln.jump].x, pos[ln.jump].y + nodeH / 2, '▸ 跳', 0, galKeyOnly ? (srcKey && galIsKey(L.byId[ln.jump]) ? 1 : 0.25) : 1, sc.id, i, 'jump', 0);
+    }
+    var nxt = sc.next || sc.jump;
+    if (nxt && L.byId[nxt] && pos[nxt]) edge(p.x + nodeW, p.y + nodeH / 2, pos[nxt].x, pos[nxt].y + nodeH / 2, '▸ 进行', 0, galKeyOnly ? (srcKey && galIsKey(L.byId[nxt]) ? 1 : 0.25) : 1, sc.id, -1, 'next', 0);
+  });
+  L.order.forEach(function (id) {
+    var sc = L.byId[id], p = pos[id]; if (!sc || !p) return;
+    var isKey = galIsKey(sc);
+    var dim = galKeyOnly && !isKey ? 0.16 : 1;
+    var pts = sc.lines || [];
+    var body = '';
+    for (var i = 0; i < Math.min(3, pts.length); i++) {
+      var ln = pts[i] || {}, kind = ln.kind || 'say';
+      var icon = _gKindNames[kind] || '·';
+      var snip = (typeof ln.text === 'string' && ln.text) || kind;
+      body += '<text x="' + (p.x + 10) + '" y="' + (p.y + 28 + i * 16) + '" fill="var(--sub)" font-size="9">' + escapeHtml(icon + ' ' + String(snip).slice(0, 18)) + '</text>';
+    }
+    if (pts.length > 3) body += '<text x="' + (p.x + 10) + '" y="' + (p.y + 28 + 3 * 16) + '" fill="var(--sub)" font-size="9">…</text>';
+    svg += '<g data-scene="' + escapeHtml(sc.id) + '" onclick="if(!galDragged)galOpenScenePanel(\'' + escapeHtml(sc.id) + '\')" onmousedown="galNodeDown(event,\'' + escapeHtml(sc.id) + '\',' + p.x + ',' + p.y + ')" style="cursor:grab" opacity="' + dim + '">' +
+      '<rect x="' + p.x + '" y="' + p.y + '" width="' + nodeW + '" height="' + nodeH + '" rx="10" fill="' + (isKey ? 'rgba(245,158,11,.14)' : 'var(--bubble)') + '" stroke="' + (isKey ? '#f59e0b' : 'var(--line)') + '" stroke-width="' + (isKey ? 2 : 1) + '"/>' +
+      '<text x="' + (p.x + 10) + '" y="' + (p.y + 20) + '" fill="' + (isKey ? '#f5c06c' : 'var(--text)') + '" font-size="13" font-weight="bold">' + (isKey ? '★ ' : '') + escapeHtml(sc.title || sc.id || '') + '</text>' +
+      body +
+      '<text x="' + (p.x + 10) + '" y="' + (p.y + nodeH - 8) + '" fill="#f5c06c" font-size="9">' + pts.length + ' 点</text>' +
+      '<text x="' + (p.x + nodeW - 14) + '" y="' + (p.y + 20) + '" fill="' + (isKey ? '#f5c06c' : 'var(--sub)') + '" font-size="12" onclick="event.stopPropagation();galToggleKey(\'' + escapeHtml(sc.id) + '\')" onmousedown="event.stopPropagation()" style="cursor:pointer">' + (isKey ? '★' : '☆') + '</text>' +
+      '<circle cx="' + (p.x + nodeW) + '" cy="' + (p.y + nodeH / 2) + '" r="5" fill="#f59e0b" stroke="var(--bg)" stroke-width="1.5" onmousedown="event.stopPropagation();galConnStart(event,\'' + escapeHtml(sc.id) + '\',' + (p.x + nodeW) + ',' + (p.y + nodeH / 2) + ')" style="cursor:crosshair"></circle>' +
+      '</g>';
+  });
+  svg += '</g></svg>';
+  var _sl = box.scrollLeft, _st = box.scrollTop;
+  box.innerHTML = svg;
+  box.scrollLeft = _sl; box.scrollTop = _st;
+}
+// 画布平移 + 缩放（滚轮缩放 / 拖空白平移 / 节点仍可单独拖）
+function galSetupViewport() {
+  var ct = document.getElementById('galLines');
+  if (!ct || ct._gv) return; ct._gv = true;
+  ct.addEventListener('mousedown', function (e) {
+    if (e.button !== 0) return;
+    if (e.target === ct || e.target.tagName === 'svg') {
+      galPan = { sx: e.clientX, sy: e.clientY, sl: ct.scrollLeft, st: ct.scrollTop };
+      e.preventDefault();
+      function mv(ev) { if (!galPan) return; ct.scrollLeft = galPan.sl - (ev.clientX - galPan.sx); ct.scrollTop = galPan.st - (ev.clientY - galPan.sy); }
+      function up() { document.removeEventListener('mousemove', mv); document.removeEventListener('mouseup', up); galPan = null; }
+      document.addEventListener('mousemove', mv);
+      document.addEventListener('mouseup', up);
+    }
+  });
+  ct.addEventListener('wheel', function (e) {
+    e.preventDefault();
+    galZoomTo((galScale || 1) * (e.deltaY < 0 ? 1.12 : 0.88));
+  }, { passive: false });
+}
+function galZoomTo(s) {
+  var ct = document.getElementById('galLines');
+  var sl = ct ? ct.scrollLeft : 0, st = ct ? ct.scrollTop : 0;
+  galScale = Math.max(0.4, Math.min(2.5, s));
+  var d = document.getElementById('galZoomVal'); if (d) d.textContent = Math.round(galScale * 100) + '%';
+  galRenderGraph();
+  if (ct) { ct.scrollLeft = sl; ct.scrollTop = st; }
+}
+function galFit() {
+  var ct = document.getElementById('galLines'); if (!ct || !galScript) return;
+  var L = galGraphLayout();
+  var baseW = 600, baseH = 200;
+  L.order.forEach(function (id) {
+    var sc = L.byId[id];
+    var x = (sc && sc.gx !== undefined) ? sc.gx : 40 + L.cols(id) * 260;
+    var y = (sc && sc.gy !== undefined) ? sc.gy : 30 + L.rows(id) * 150;
+    if (x + 180 + 40 > baseW) baseW = x + 180 + 40;
+    if (y + 84 + 40 > baseH) baseH = y + 84 + 40;
+  });
+  var s = Math.min(ct.clientWidth / baseW, ct.clientHeight / baseH, 1.0);
+  galZoomTo(Math.max(0.4, Math.min(1.5, s)));
+}
+// 右键菜单（节点 / 连线 / 空白）
+function galMenuHide() { var m = document.getElementById('galCtx'); if (m) m.style.display = 'none'; }
+function galMenuShow(items, x, y) {
+  var m = document.getElementById('galCtx'); if (!m) return;
+  m.innerHTML = '';
+  items.forEach(function (it) {
+    if (it === '-') { var s = document.createElement('div'); s.style.cssText = 'border-top:1px solid var(--line);margin:3px 0'; m.appendChild(s); return; }
+    var b = document.createElement('button');
+    b.textContent = it.label;
+    b.style.cssText = 'display:block;width:100%;text-align:left;font-size:12px;padding:6px 10px;color:var(--text);background:transparent;border:none;cursor:pointer;border-radius:6px;transition:background .12s';
+    b.onmouseenter = function () { b.style.background = 'var(--line)'; };
+    b.onmouseleave = function () { b.style.background = 'transparent'; };
+    b.onclick = function () { galMenuHide(); it.fn(); };
+    m.appendChild(b);
+  });
+  m.style.display = 'block';
+  m.style.left = Math.min(x, (window.innerWidth || 1200) - 220) + 'px';
+  m.style.top = Math.min(y, (window.innerHeight || 800) - items.length * 34 - 20) + 'px';
+}
+// 就地编辑「选项」：点选项弹出小编辑框（文本/goto/条件），无需跳面板
+function galOptPopClose() { var p = document.getElementById('galOptPop'); if (p) p.style.display = 'none'; }
+function galEditOption(srcId, idx, eo, ev) {
+  if (ev && ev.stopPropagation) ev.stopPropagation();
+  var sc = (galScript.scenes || []).find(function (s) { return s.id === srcId; });
+  var ln = sc && sc.lines && sc.lines[idx];
+  var opts = ln && ln.choice;
+  var o = opts && opts[eo];
+  var p = document.getElementById('galOptPop');
+  if (!p || !sc || !o) return;
+  p.innerHTML = '<b style="font-size:13px;color:#f5c06c">✏️ 编辑选项</b>';
+  var t = galInput(o.text || '', '选项文字', function (v) { o.text = v; }); t.style.cssText = 'display:block;width:100%;margin-top:6px;background:var(--bubble,#161b22);border:1px solid var(--line);border-radius:6px;color:var(--text,#ddd);padding:6px 8px;font-size:12px'; p.appendChild(t);
+  var g = galInput(o.goto || '', '目标场景 id (goto)', function (v) { o.goto = v; }); g.style.cssText = 'display:block;width:100%;margin-top:6px;background:var(--bubble,#161b22);border:1px solid var(--line);border-radius:6px;color:var(--text,#ddd);padding:6px 8px;font-size:12px'; p.appendChild(g);
+  var c = galInput(o.if ? JSON.stringify(o.if) : '', '🔒 条件 {"aff":">=85"}（可留空）', function (v) { try { o.if = v.trim() ? JSON.parse(v) : undefined; } catch (e) { o.if = undefined; } }); c.style.cssText = 'display:block;width:100%;margin-top:6px;background:var(--bubble,#161b22);border:1px solid rgba(245,158,11,.4);border-radius:6px;color:#f5c06c;padding:6px 8px;font-size:12px'; p.appendChild(c);
+  var btns = document.createElement('div'); btns.style.cssText = 'display:flex;justify-content:space-between;align-items:center;margin-top:8px';
+  var del = document.createElement('button'); del.className = 'btn2 ghost'; del.textContent = '🗑 删选项'; del.style.cssText = 'color:#f87171;padding:5px 12px'; del.onclick = function () { galPushUndo(); opts.splice(eo, 1); galOptPopClose(); galRenderGraph(); }; btns.appendChild(del);
+  var right = document.createElement('div');
+  var add1 = document.createElement('button'); add1.className = 'btn2'; add1.textContent = '➕ 加选项'; add1.style.cssText = 'padding:5px 12px'; add1.onclick = function () { galPushUndo(); opts.push({ text: '选项', goto: '' }); galOptPopClose(); galRenderGraph(); }; right.appendChild(add1);
+  var done = document.createElement('button'); done.className = 'btn2'; done.textContent = '✅ 完成'; done.style.cssText = 'padding:5px 12px;margin-left:6px'; done.onclick = function () { galOptPopClose(); galRenderGraph(); }; right.appendChild(done);
+  btns.appendChild(right);
+  p.appendChild(btns);
+  p.style.display = 'block';
+  p.style.left = Math.min((ev && ev.clientX) || 40, (window.innerWidth || 1200) - 320) + 'px';
+  p.style.top = Math.min((ev && ev.clientY) || 40, (window.innerHeight || 800) - 240) + 'px';
+  document.addEventListener('click', function h(e) { var mp = document.getElementById('galOptPop'); if (mp && mp.style.display === 'block' && !mp.contains(e.target)) { mp.style.display = 'none'; document.removeEventListener('click', h); } });
+}
+
+function galDeleteEdge(srcId, role, idx, eo) {
+  var sc = (galScript.scenes || []).find(function (s) { return s.id === srcId; });
+  if (!sc) return;
+  galPushUndo();
+  if (role === 'next') { delete sc.next; }
+  else if (role === 'jump') { var l = sc.lines && sc.lines[idx]; if (l) delete l.jump; }
+  else if (role === 'choice') { var cp = sc.lines && sc.lines[idx]; if (cp && cp.choice) { cp.choice.splice(eo, 1); if (cp.choice.length === 0) sc.lines.splice(idx, 1); } }
+  galRenderGraph();
+}
+function galSetupCtx() {
+  var ct = document.getElementById('galLines');
+  if (!ct || ct._gctx) return; ct._gctx = true;
+  ct.addEventListener('contextmenu', function (e) {
+    e.preventDefault();
+    var t = e.target, edge = null, node = null;
+    while (t && t.getAttribute) {
+      if (t.getAttribute('data-edge')) { edge = t; break; }
+      if (t.getAttribute('data-scene')) { node = t.getAttribute('data-scene'); break; }
+      t = t.parentNode;
+    }
+    if (edge) {
+      var src = edge.getAttribute('data-esrc'), role = edge.getAttribute('data-erole'), idx = parseInt(edge.getAttribute('data-eidx'), 10), eo = parseInt(edge.getAttribute('data-eo'), 10);
+      galMenuShow([
+        { label: '✏️ 编辑此分支', fn: function () { galOpenScenePanel(src, idx); } },
+        { label: '🗑 删除此连接', fn: function () { galDeleteEdge(src, role, idx, eo); } },
+      ], e.clientX, e.clientY);
+    } else if (node) {
+      var sc = (galScript.scenes || []).find(function (s) { return s.id === node; });
+      galMenuShow([
+        { label: '✏️ 编辑点', fn: function () { galOpenScenePanel(node); } },
+        { label: galIsKey(sc) ? '☆ 标为叙事线' : '⭐ 标为关键节点', fn: function () { galToggleKey(node); } },
+        { label: '✏️ 重命名线', fn: function () { var n = prompt('线标题：', (sc && sc.title) || ''); if (n !== null && sc) { sc.title = n; galRenderGraph(); } } },
+        { label: '🗑 删除线(场景)', fn: function () { if (confirm('删除线「' + ((sc && sc.title) || node) + '」？')) { galScript.scenes = galScript.scenes.filter(function (s) { return s.id !== node; }); galRenderGraph(); } } },
+      ], e.clientX, e.clientY);
+    } else {
+      galMenuShow([
+        { label: '➕ 加线(场景)', fn: galAddLine },
+        { label: galKeyOnly ? '⭐ 全部' : '⭐ 仅看关键', fn: function () { galKeyOnly = !galKeyOnly; var b = document.getElementById('galKeyBtn'); if (b) b.textContent = galKeyOnly ? '⭐ 全部' : '⭐ 仅看关键'; galRenderGraph(); } },
+        { label: '🔍 缩放 100%', fn: function () { galScale = 1; galRenderGraph(); } },
+      ], e.clientX, e.clientY);
+    }
+  });
+  document.addEventListener('click', function (e) { var m = document.getElementById('galCtx'); if (m && m.style.display === 'block' && !m.contains(e.target)) galMenuHide(); });
+}
+// 全局兜底：松开鼠标清除可能残留的拖拽高亮（避免节点"变白"卡住）
+document.addEventListener('mouseup', function () {
+  if (galConnTarget) { var g = document.querySelector('[data-scene="' + galConnTarget + '"]'); if (g) g.style.filter = ''; galConnTarget = null; }
+});
+function galOpenScenePanel(sid, focusIdx) {
+  var sc = (galScript.scenes || []).find(function (s) { return s.id === sid; });
+  var panel = document.getElementById('galScenePanel');
+  if (!sc || !panel) return;
+  panel.style.display = 'block';
+  panel.innerHTML = '';
+  var h = document.createElement('div');
+  h.style.cssText = 'display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--line)';
+  h.innerHTML = '<b style="font-size:14px;color:#f5c06c">线 ' + escapeHtml(sc.id) + ' 「' + escapeHtml(sc.title || '') + '」 · 编辑点</b>';
+  var keyBtn = document.createElement('button'); keyBtn.className = 'btn2'; keyBtn.textContent = galIsKey(sc) ? '⭐ 关键节点' : '☆ 叙事线'; keyBtn.onclick = function () { galToggleKey(sc.id); galOpenScenePanel(sc.id, focusIdx); };
+  h.appendChild(keyBtn);
+  var close = document.createElement('button'); close.className = 'btn2 ghost'; close.textContent = '✕ 收起'; close.onclick = function () { panel.style.display = 'none'; galRenderGraph(); };
+  h.appendChild(close);
+  panel.appendChild(h);
+  // 场景级图片（进入该线即显示，可被点内图片覆盖/退出）
+  var sImg = document.createElement('div'); sImg.style.cssText = 'padding:12px 16px;border-bottom:1px dashed var(--line);font-size:12px;color:var(--sub,#8a93a3)';
+  sImg.appendChild(document.createTextNode('场景图片(进入即显示): '));
+  var sList = document.createElement('span'); sList.style.cssText = 'display:inline-flex;flex-wrap:wrap;gap:8px;margin-top:6px';
+  sc.images = sc.images || [];
+  var renderS = function () {
+    sList.innerHTML = '';
+    sc.images.forEach(function (f, i) {
+      var inp = galInput(f, '图片文件', function (v) { sc.images[i] = v; }); inp.style.cssText = 'width:150px;background:var(--bubble,#161b22);border:1px solid var(--line);border-radius:6px;color:var(--text,#ddd);padding:6px 8px;font-size:12px';
+      var rm = document.createElement('button'); rm.textContent = '✕'; rm.className = 'btn2 ghost'; rm.style.cssText = 'color:#f87171;font-size:12px;padding:4px 8px'; rm.onclick = function () { galPushUndo(); sc.images.splice(i, 1); renderS(); };
+      sList.appendChild(inp); sList.appendChild(rm);
+    });
+  };
+  renderS();
+  sImg.appendChild(sList);
+  var addS = document.createElement('button'); addS.className = 'btn2 ghost'; addS.textContent = '➕ 加场景图'; addS.style.cssText = 'font-size:12px;padding:5px 10px;margin-left:8px'; addS.onclick = function () { galPushUndo(); sc.images.push(''); renderS(); }; sImg.appendChild(addS);
+  panel.appendChild(sImg);
+  // 快速插入调色板：点一下插一个对应类型的点（尽量简化）
+  var pal = document.createElement('div'); pal.style.cssText = 'display:flex;flex-wrap:wrap;gap:8px;padding:12px 16px;border-bottom:1px solid var(--line);font-size:12px;color:var(--sub)';
+  pal.appendChild(document.createTextNode('快速加点: '));
+  [['💬 台词', {kind:'say', text:''}], ['📝 旁白', {kind:'note', note:''}], ['🖼 换景', {kind:'bg', bg:''}],
+   ['🎵 换BGM', {kind:'bgm', bgm:''}], ['🎙 配音', {kind:'say', voice:''}], ['💥 特效', {kind:'effect', effect:'shake'}],
+   ['⏳ 等待', {kind:'wait', ms:500}], ['🔀 分支', {kind:'choice', choice:[{text:'', goto:''}]}],
+   ['[ic:arrow_right] 跳转', {kind:'jump', goto:''}], ['🏁 结局', {kind:'end', end:''}], ['⚙️ 动作', {kind:'action', action:''}]
+  ].forEach(function (p) {
+    var b = document.createElement('button'); b.className = 'btn2 ghost'; b.textContent = p[0];
+    b.style.cssText = 'font-size:12px;padding:5px 12px';
+    b.onclick = function () { galPushUndo(); (sc.lines = sc.lines || []).push(JSON.parse(JSON.stringify(p[1]))); render(); };
+    pal.appendChild(b);
+  });
+  panel.appendChild(pal);
+  var body = document.createElement('div'); body.style.cssText = 'padding:12px 16px;display:flex;flex-direction:column;gap:10px';
+  panel.appendChild(body);
+  var focused = null;
+  function render() {
+    body.innerHTML = '';
+    var lines = sc.lines || []; sc.lines = lines;
+    for (var i = 0; i < lines.length; i++) {
+      var r = galScenePointRow(sc, lines[i], render);
+      if (i === focusIdx) { r.style.outline = '2px solid #f59e0b'; r.style.outlineOffset = '2px'; focused = r; }
+      body.appendChild(r);
+    }
+    var add = document.createElement('button'); add.className = 'btn2'; add.textContent = '➕ 加一点'; add.onclick = function () { galPushUndo(); lines.push({ kind: 'say', text: '' }); render(); };
+    body.appendChild(add);
+  }
+  render();
+  galLoadAssets(function () { try { render(); } catch (e) {} });   // 素材清单到了再刷一次下拉
+  if (focused && focused.scrollIntoView) focused.scrollIntoView({ block: 'center' });
+}
+function galScenePointRow(sc, ln, re) {
+  var row = document.createElement('div');
+  row.className = 'gal-editor';
+  row.style.cssText = 'margin:0;flex-basis:auto;flex-wrap:wrap;gap:10px;padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:var(--bubble,#161b22)';
+  var sel = document.createElement('select');
+  Object.keys(_gKindNames).forEach(function (k) { var o = document.createElement('option'); o.value = k; o.textContent = _gKindNames[k]; sel.appendChild(o); });
+  sel.value = ln.kind || 'say';
+  sel.onchange = function () { galPushUndo(); ln.kind = sel.value; if (ln.kind === 'choice') ln.choice = ln.choice || []; re(); };
+  row.appendChild(sel);
+  if (ln.kind === 'choice') {
+    var optBox = document.createElement('div');
+    var ro = function () {
+      optBox.innerHTML = '';
+      (ln.choice || []).forEach(function (o, k) {
+        var r = document.createElement('div'); r.className = 'row';
+        r.appendChild(galInput(o.text || '', '选项文字', function (v) { o.text = v; }));
+        r.appendChild(galInput(o.goto || '', 'goto', function (v) { o.goto = v; }));
+        var c = galInput(o.if ? JSON.stringify(o.if) : '', '🔒 条件', function (v) { try { o.if = v.trim() ? JSON.parse(v) : undefined; } catch (e) { o.if = undefined; } });
+        c.style.cssText = 'flex:1;min-width:150px;background:var(--bubble,#161b22);border:1px solid rgba(245,158,11,.4);border-radius:6px;color:#f5c06c;padding:5px 8px;font-size:12px';
+        r.appendChild(c);
+        var del = document.createElement('button'); del.className = 'btn2 ghost'; del.textContent = '✕'; del.style.cssText = 'color:#f87171;font-size:11px;padding:2px 6px'; del.onclick = function () { galPushUndo(); ln.choice.splice(k, 1); ro(); }; r.appendChild(del);
+        optBox.appendChild(r);
+      });
+      var add = document.createElement('button'); add.className = 'btn2 ghost'; add.textContent = '➕ 选项'; add.style.cssText = 'font-size:11px;padding:3px 8px'; add.onclick = function () { galPushUndo(); ln.choice = ln.choice || []; ln.choice.push({ text: '', goto: '' }); ro(); }; optBox.appendChild(add);
+    };
+    ro(); row.appendChild(optBox);
+  } else {
+    // 元信息（说话人/立绘/语音/参数）一行，正文独占一行 —— 免得 5 个控件平分一行挤成一条
+    var meta = document.createElement('div');
+    meta.style.cssText = 'display:flex;align-items:center;gap:12px;flex-wrap:wrap;flex:1 1 100%';
+    if (ln.kind === 'say') { meta.appendChild(galRoleSelect(ln)); meta.appendChild(galAssetSelect('sprites', ln.sprite || '', '立绘', function (v) { ln.sprite = v; })); meta.appendChild(galAssetSelect('voice', ln.voice || '', '语音', function (v) { ln.voice = v; })); }
+    if (ln.kind === 'bg') meta.appendChild(galAssetSelect('bg', ln.bg || '', '背景', function (v) { ln.bg = v; }));
+    if (ln.kind === 'bgm') meta.appendChild(galAssetSelect('bgm', ln.bgm || '', '音乐', function (v) { ln.bgm = v; }));
+    if (ln.kind === 'setflag') meta.appendChild(galInput((ln.flag && ln.flag.k) || '', 'flag', function (v) { ln.flag = { k: v, v: true }; }));
+    if (ln.kind === 'effect') meta.appendChild(galInput(ln.effect || 'shake', 'shake/flash', function (v) { ln.effect = v; }));
+    if (ln.kind === 'wait') meta.appendChild(galInput(ln.ms || 300, '毫秒', function (v) { ln.ms = Number(v) || 0; }));
+    if (ln.kind === 'jump') meta.appendChild(galInput(ln.goto || '', '目标线', function (v) { ln.goto = v; }));
+    if (ln.kind === 'end') meta.appendChild(galInput(ln.end || '', '结局', function (v) { ln.end = v; }));
+    if (meta.childNodes.length) row.appendChild(meta);
+    var content = galInput(ln.text || '', (ln.kind === 'note' ? '旁白内容' : '内容'), function (v) { ln.text = v; });
+    content.style.cssText = content.style.cssText + ';flex:1 1 100%';
+    row.appendChild(content);
+  }
+  // 点内图片（可多张，自动适配）+ 退出图片
+  var imgWrap = document.createElement('div'); imgWrap.className = 'row'; imgWrap.style.cssText = 'flex-wrap:wrap;align-items:center;gap:8px;margin-top:8px;flex-basis:100%';
+  imgWrap.appendChild(document.createTextNode('🖼️ 图片:'));
+  var imgList = document.createElement('span'); imgList.style.cssText = 'display:inline-flex;flex-wrap:wrap;gap:8px';
+  ln.images = ln.images || [];
+  var renderImgs = function () {
+    imgList.innerHTML = '';
+    ln.images.forEach(function (f, i) {
+      var inp = galInput(f, '图片文件', function (v) { ln.images[i] = v; }); inp.style.cssText = 'width:150px;background:var(--bubble,#161b22);border:1px solid var(--line);border-radius:6px;color:var(--text,#ddd);padding:6px 8px;font-size:12px';
+      var rm = document.createElement('button'); rm.textContent = '✕'; rm.className = 'btn2 ghost'; rm.style.cssText = 'color:#f87171;font-size:12px;padding:4px 8px'; rm.onclick = function () { galPushUndo(); ln.images.splice(i, 1); renderImgs(); };
+      imgList.appendChild(inp); imgList.appendChild(rm);
+    });
+  };
+  renderImgs();
+  imgWrap.appendChild(imgList);
+  var addImg = document.createElement('button'); addImg.className = 'btn2 ghost'; addImg.textContent = '➕ 图'; addImg.style.cssText = 'font-size:11px;padding:3px 8px'; addImg.onclick = function () { galPushUndo(); ln.images.push(''); renderImgs(); }; imgWrap.appendChild(addImg);
+  var clearImg = document.createElement('label'); clearImg.style.cssText = 'font-size:11px;color:var(--sub);display:inline-flex;align-items:center;gap:4px;margin-left:6px;cursor:pointer';
+  var cb = document.createElement('input'); cb.type = 'checkbox'; cb.checked = !!ln.clearImages; cb.onchange = function () { galPushUndo(); ln.clearImages = cb.checked; };
+  clearImg.appendChild(cb); clearImg.appendChild(document.createTextNode('退出图片'));
+  imgWrap.appendChild(clearImg);
+  row.appendChild(imgWrap);
+  var del = document.createElement('button'); del.className = 'btn2 ghost'; del.textContent = '🗑'; del.style.cssText = 'color:#f87171;font-size:11px;padding:2px 6px'; del.onclick = function () { galPushUndo(); sc.lines = (sc.lines || []).filter(function (x) { return x !== ln; }); re(); }; row.appendChild(del);
+  return row;
+}
+// 干净专用界面入口：📕 GAL制作器 → 直接进入全屏编辑器 + 包选择
+function galOpenInterface() {
+  document.getElementById('galEditor').style.display = 'flex';
+  document.getElementById('galTitle').textContent = '📕 GAL制作器';
+  document.getElementById('galStats').textContent = '';
+  var sel = document.getElementById('galPkgSel');
+  sel.innerHTML = '<option>加载中…</option>';
+  pywebview.api.codex_list().then(function (r) {
+    if (!r || !r.ok) { document.getElementById('galStats').textContent = '❌ ' + ((r && r.err) || '加载失败'); return; }
+    var pkgs = r.packages || [];
+    sel.innerHTML = '';
+    if (!pkgs.length) {
+      sel.innerHTML = '<option value="">（无包）</option>';
+      document.getElementById('galLines').innerHTML = '<div style="color:var(--sub);padding:30px;text-align:center">还没有剧本。<br>点「➕ 新建」生成示例，再进来改成你的故事。</div>';
+      return;
+    }
+    pkgs.forEach(function (p) { var o = document.createElement('option'); o.value = p.name; o.textContent = p.name + (p.scenes ? ' · ' + p.scenes + '线' : ''); sel.appendChild(o); });
+    var pick = pkgs[0].name;
+    if (codexCur && pkgs.some(function (p) { return p.name === codexCur; })) pick = codexCur;
+    sel.value = pick;
+    galOpenEditor(pick);
+  }).catch(function (e) { document.getElementById('galStats').textContent = '❌ ' + (e && e.message ? e.message : '加载失败'); });
+}
+function galNewPkg() {
+  var n = prompt('新建 GAL 包名称（生成示例剧本，可立即编辑/播放）:', '我的故事');
+  if (!n || !n.trim()) return;
+  pywebview.api.codex_create(n.trim()).then(function (r) {
+    if (r && r.ok) { codexCur = r.name || n.trim(); galOpenInterface(); }
+    else alert((r && r.err) || '创建失败');
+  });
+}
+function galPlay() {
+  var n = codexCur; if (!n) return;
+  if (galScript) galSave();     // 先保存，确保预览的是当前编辑
+  codexCur = n;
+  galCloseEditor();
+  codexPlay();
+}
+function galImport() {
+  pywebview.api.codex_import_folder().then(function (r) {
+    if (!r) return;
+    if (r.ok) { galToast('✅ ' + (r.msg || '导入成功')); if (r.name) galOpenEditor(r.name); }
+    else if (r.err && r.err !== 'cancelled') alert(r.err || '导入失败');
+  });
+}
+function galPackExe() {
+  if (!codexCur) return;
+  if (!confirm('把「' + codexCur + '」打包成独立 EXE（双击即玩，首次约 1-2 分钟）？')) return;
+  galToast('⏳ 正在启动打包…');
+  pywebview.api.codex_pack_exe(codexCur).then(function (r) {
+    if (!r || !r.ok) { galToast('❌ ' + ((r && r.err) || '启动失败')); return; }
+    var t = setInterval(function () {
+      pywebview.api.codex_pack_exe_status(codexCur).then(function (s) {
+        if (!s || !s.ok) return;
+        if (s.state === 'building') galToast('⏳ ' + ((s.msg || '打包中…')).slice(0, 40));
+        else if (s.state === 'done') { clearInterval(t); galToast('✅ 打包完成'); }
+        else if (s.state === 'error') { clearInterval(t); galToast('❌ ' + ((s.msg || '打包失败')).slice(0, 40)); }
+      });
+    }, 1500);
+  }).catch(function (e) { galToast('❌ ' + (e && e.message ? e.message : '启动失败')); });
+}
+function galCloseEditor() { document.getElementById('galEditor').style.display = 'none'; }
+// ---- 导出到原生播放器（Kotlin 叙事引擎）----
+// 和「🖥️ EXE」的区别：那个是 HTML 套壳，这个是真正的原生窗口程序，
+// 同一份 codex.json 还能喂给安卓 APK 和 DICK 主程序。
+function galPackPlayer() {
+  if (!codexCur) return;
+  if (!galScript) { alert('先打开一个剧本再导出。'); return; }
+  // 先存盘：导出的一定是当前编辑的内容
+  pywebview.api.codex_save(codexCur, JSON.stringify(galScript)).then(function (r) {
+    if (!r || !r.ok) { alert('保存失败：' + ((r && r.err) || '')); return; }
+    pywebview.api.codex_player_ready().then(function (rd) {
+      if (!rd || !rd.ready) {
+        alert('还没构建播放器。\n\n先在 DICK-Narrative 目录跑一次：\n' +
+              '  powershell -ExecutionPolicy Bypass -File build.ps1 -Exe\n\n' +
+              '构建好之后再回来点这个按钮。');
+        return;
+      }
+      if (!confirm('把「' + codexCur + '」导出成原生播放器？\n\n' +
+                   '会生成一个文件夹：里面是播放器 + 你的故事和素材，\n' +
+                   '整个文件夹一起拷走就能给别人玩（约 130 MB）。\n\n' +
+                   '下一步先让你选放在哪儿（默认桌面）。')) return;
+      galToast('⏳ 正在导出…');
+      pywebview.api.codex_export_player(codexCur).then(function (r2) {
+        if (!r2 || !r2.ok) {
+          if (r2 && r2.err === 'cancelled') { galToast('已取消'); return; }
+          galToast('❌ 导出失败');
+          alert('导出失败：\n' + ((r2 && r2.err) || '未知错误'));
+          return;
+        }
+        var t = setInterval(function () {
+          pywebview.api.codex_player_status(codexCur).then(function (s) {
+            if (!s || !s.ok) return;
+            if (s.state === 'building') { galToast('⏳ ' + ((s.msg || '导出中…')).slice(0, 40)); }
+            else if (s.state === 'done') {
+              clearInterval(t);
+              galToast('✅ 导出完成 · ' + (s.size || '?') + ' MB');
+              var c = s.counts || {};
+              alert('导出完成！\n\n位置：\n' + (s.dest || '') +
+                    '\n\n' + (s.size || '?') + ' MB\n' +
+                    '素材：立绘 ' + (c.sprites || 0) + ' · 背景 ' + (c.bg || 0) +
+                    ' · 音乐 ' + (c.bgm || 0) + ' · 语音 ' + (c.voice || 0) +
+                    '\n\n双击里面的 DICK-Narrative.exe 就能玩。');
+            } else if (s.state === 'error') {
+              clearInterval(t);
+              galToast('❌ ' + ((s.msg || '导出失败')).slice(0, 40));
+              alert('导出失败：\n' + (s.msg || ''));
+            }
+          });
+        }, 1200);
+      }).catch(function (e) { galToast('❌ ' + ((e && e.message) || '导出失败')); });
+    });
+  }).catch(function (e) { alert('保存失败：' + ((e && e.message) || '')); });
+}
+function galRenderLines() {
+  var box = document.getElementById('galLines');
+  box.innerHTML = '';
+  galBodies = {};
+  if (!galScript || !galScript.scenes || !galScript.scenes.length) {
+    box.innerHTML = '<div style="color:var(--sub,#8a93a3);padding:30px;text-align:center">还没有线(场景)。点右上角「➕ 加线(场景)」开始。</div>';
+    return;
+  }
+  galScript.scenes.forEach(function (sc) { box.appendChild(galLineEl(sc)); });
+}
+function galLineEl(sc) {
+  var line = document.createElement('div'); line.className = 'gal-line';
+  var head = document.createElement('div'); head.className = 'gal-line-head';
+  head.innerHTML = '<b>线 ' + escapeHtml(sc.id || '') + '</b><span class="gal-count">「' + escapeHtml((sc.title || '').slice(0, 20)) + '」</span>' +
+    '<span class="gal-count"> ' + ((sc.lines || []).length) + ' 点</span>' +
+    '<span class="gal-count">' + (galAllOpen[sc.id] ? ' ⬏ 收起' : ' ⬍ 展开') + '</span><span style="flex:1"></span>';
+  head.title = '点击整条展开/收起';
+  head.setAttribute('data-head', sc.id);
+  line.appendChild(head);
+  var body = document.createElement('div'); body.className = 'gal-body';
+  line.appendChild(body);
+  galBodies[sc.id] = body;
+  head.onclick = function () { galToggleLine(sc, body, head); };
+  galRenderBody(sc, body, galAllOpen[sc.id] ? -2 : -1);
+  return line;
+}
+function galToggleLine(sc, body, head) {
+  galAllOpen[sc.id] = !galAllOpen[sc.id];
+  galRenderBody(sc, body, galAllOpen[sc.id] ? -2 : -1);
+  if (head) {
+    var sp = head.querySelector ? head.querySelector('.gal-count:last-of-type') : null;
+    if (sp) sp.textContent = galAllOpen[sc.id] ? ' ⬏ 收起' : ' ⬍ 展开';
+  }
+}
+function galRenderBody(sc, body, openIdx) {
+  body.innerHTML = '';
+  var lines = sc.lines || []; sc.lines = lines;
+  for (var i = 0; i < lines.length; i++) {
+    var ins = document.createElement('button'); ins.className = 'gal-insert'; ins.textContent = '+';
+    ins.onclick = function (ev) { galInsertAt(sc, parseInt(ev.currentTarget.getAttribute('data-at'), 10), body); };
+    ins.setAttribute('data-at', i);
+    body.appendChild(ins);
+    if (openIdx === i || openIdx === -2) {
+      body.appendChild(galEditorEl(sc, i, body));
+    } else {
+      body.appendChild(galChipEl(sc, i));
+      if ((sc.lines[i].kind || 'say') === 'choice') (sc.lines[i].choice || []).forEach(function (o) {
+        var f = document.createElement('span'); f.className = 'gal-fork';
+        f.setAttribute('data-goto', o.goto || '');
+        f.setAttribute('data-cond', o.if ? '1' : '');
+        f.textContent = ((o.if ? '🔒 ' : '🔀 ') + (o.text || '') + ' → ' + (o.goto || ''));
+        body.appendChild(f);
+      });
+    }
+  }
+  var last = document.createElement('button'); last.className = 'gal-insert'; last.textContent = '+';
+  last.setAttribute('data-at', lines.length);
+  last.onclick = function (ev) { galInsertAt(sc, parseInt(ev.currentTarget.getAttribute('data-at'), 10), body); };
+  body.appendChild(last);
+  galDrawConnectors();
+}
+function galChipEl(sc, i) {
+  var ln = sc.lines[i];
+  var kind = ln.kind || 'say';
+  var c = document.createElement('div');
+  c.className = 'gal-chip' + (kind === 'choice' ? ' choice' : '');
+  var icon = _gKindIcon[kind] || '·';
+  var snip = (typeof ln.text === 'string' && ln.text) || (kind === 'choice' ? '分支' : kind);
+  c.innerHTML = '<span class="gal-k">' + escapeHtml(icon) + '</span><span>' + escapeHtml(String(snip).slice(0, 16)) + '</span>';
+  c.onclick = function () { galRenderBody(sc, galBodies[sc.id], i); };
+  c.draggable = true;
+  c.dataset.idx = i;
+  c.addEventListener('dragstart', function () { galDrag = { scene: sc.id, idx: i }; });
+  c.addEventListener('dragover', function (e) { e.preventDefault(); c.classList.add('drag-over'); });
+  c.addEventListener('dragleave', function () { c.classList.remove('drag-over'); });
+  c.addEventListener('drop', function (e) { e.preventDefault(); c.classList.remove('drag-over'); galReorder(sc, i); });
+  return c;
+}
+function galReorder(sc, targetIdx) {
+  if (!galDrag || galDrag.scene !== sc.id) return;
+  var src = galDrag.idx; galDrag = null;
+  if (src === targetIdx) return;
+  var mv = sc.lines.splice(src, 1)[0];
+  sc.lines.splice(targetIdx, 0, mv);
+  galRenderBody(sc, galBodies[sc.id], -1);
+}
+// 可视化分支连接线：从 choice 选项点画箭头指向目标「线头」，并带选项/条件标签
+function galDrawConnectors() {
+  if (!document.createElementNS || !galScript || !galScript.scenes) return;
+  var ct = document.getElementById('galLines');
+  var old = document.getElementById('galConn'); if (old && old.remove) old.remove();
+  if (!ct) return;
+  var ctr = ct.getBoundingClientRect();
+  var W = ct.scrollWidth || ct.clientWidth, H = ct.scrollHeight || ct.clientHeight;
+  var svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.setAttribute('id', 'galConn');
+  svg.style.cssText = 'position:absolute;left:0;top:0;width:' + W + 'px;height:' + H + 'px;pointer-events:none;z-index:5';
+  var heads = {};
+  var hs = ct.querySelectorAll('[data-head]');
+  for (var i = 0; i < hs.length; i++) heads[hs[i].getAttribute('data-head')] = hs[i];
+  function draw(x1, y1, x2, y2, label, isCond) {
+    var xm = x2 - 12, ym = y2;
+    var p = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    p.setAttribute('d', 'M' + x1 + ',' + y1 + ' C' + (x1 + 40) + ',' + y1 + ' ' + (xm - 40) + ',' + ym + ' ' + xm + ',' + ym);
+    p.setAttribute('fill', 'none'); p.setAttribute('stroke', isCond ? '#f59e0b' : '#4a5462'); p.setAttribute('stroke-width', '1.5');
+    svg.appendChild(p);
+    var a = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    a.setAttribute('d', 'M' + xm + ',' + (ym - 4) + ' L' + (x2 - 2) + ',' + ym + ' L' + xm + ',' + (ym + 4) + ' Z');
+    a.setAttribute('fill', isCond ? '#f59e0b' : '#4a5462');
+    svg.appendChild(a);
+    if (label) {
+      var t = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+      t.setAttribute('x', Math.round((x1 + x2) / 2));
+      t.setAttribute('y', Math.round((y1 + y2) / 2 - 5));
+      t.setAttribute('fill', isCond ? '#f5c06c' : '#8a93a3');
+      t.setAttribute('font-size', '10'); t.setAttribute('text-anchor', 'middle');
+      t.textContent = label;
+      svg.appendChild(t);
+    }
+  }
+  var forks = ct.querySelectorAll('[data-goto]');
+  for (var j = 0; j < forks.length; j++) {
+    var f = forks[j], g = f.getAttribute('data-goto'), tgt = heads[g];
+    if (!tgt) continue;
+    var fr = f.getBoundingClientRect(), tr = tgt.getBoundingClientRect();
+    var x1 = fr.left - ctr.left + ct.scrollLeft, y1 = (fr.top + fr.height / 2) - ctr.top + ct.scrollTop;
+    var x2 = tr.left - ctr.left + ct.scrollLeft, y2 = (tr.top + tr.height / 2) - ctr.top + ct.scrollTop;
+    draw(x1, y1, x2, y2, (f.getAttribute('data-cond') ? '🔒 ' : '🔀 ') + (f.textContent || ''), !!f.getAttribute('data-cond'));
+  }
+  ct.appendChild(svg);
+}
+function galDeleteAt(sc, i, body) {
+  sc.lines.splice(i, 1);
+  galRenderBody(sc, body, -1);
+}
+function galInsertAt(sc, i, body) {
+  sc.lines.splice(i, 0, { kind: 'say', text: '' });
+  galRenderBody(sc, body, i);
+}
+function galEditorEl(sc, i, body) {
+  var ln = sc.lines[i] || {};
+  var box = document.createElement('div'); box.className = 'gal-editor'; box.style.cssText = 'flex-basis:100%';
+  var row = document.createElement('div'); row.className = 'row';
+  var sel = document.createElement('select');
+  Object.keys(_gKindNames).forEach(function (k) { var o = document.createElement('option'); o.value = k; o.textContent = _gKindNames[k]; sel.appendChild(o); });
+  sel.value = ln.kind || 'say';
+  sel.onchange = function () { ln.kind = sel.value; if (ln.kind === 'choice') ln.choice = ln.choice || []; if (ln.kind !== 'say') { delete ln.sprite; delete ln.voice; } galRenderBody(sc, body, i); };
+  var kindL = document.createElement('label'); kindL.textContent = '类型：'; row.appendChild(kindL); row.appendChild(sel);
+  box.appendChild(row);
+  if (ln.kind === 'choice') {
+    var optBox = document.createElement('div');
+    var opts = ln.choice || []; ln.choice = opts;
+    var renderOpts = function () {
+      optBox.innerHTML = '';
+      opts.forEach(function (o, k) {
+        var r = document.createElement('div'); r.className = 'row';
+        r.appendChild(galInput(o.text || '', '选项文字', function (v) { o.text = v; }));
+        r.appendChild(galInput(o.goto || '', 'goto', function (v) { o.goto = v; }));
+        var c = galInput(o.if ? JSON.stringify(o.if) : '', '🔒 条件 {"aff":">=85"}', function (v) { try { o.if = v.trim() ? JSON.parse(v) : undefined; } catch (e) { o.if = undefined; } });
+        c.style.cssText = 'flex:1;min-width:150px;background:var(--bubble,#161b22);border:1px solid rgba(245,158,11,.4);border-radius:6px;color:#f5c06c;padding:5px 8px;font-size:12px';
+        r.appendChild(c);
+        var del = document.createElement('button'); del.className = 'btn2 ghost'; del.textContent = '✕'; del.style.cssText = 'font-size:11px;padding:2px 6px;color:#f87171'; del.onclick = function () { opts.splice(k, 1); renderOpts(); };
+        r.appendChild(del);
+        optBox.appendChild(r);
+      });
+      var add = document.createElement('button'); add.className = 'btn2 ghost'; add.textContent = '➕ 选项'; add.style.cssText = 'font-size:11px;padding:3px 8px';
+      add.onclick = function () { opts.push({ text: '', goto: '' }); renderOpts(); };
+      optBox.appendChild(add);
+    };
+    renderOpts();
+    box.appendChild(optBox);
+  } else {
+    if (ln.kind === 'say') {
+      box.appendChild(galInput(ln.sprite || '', '立绘文件', function (v) { ln.sprite = v; }));
+      box.appendChild(galInput(ln.voice || '', '语音', function (v) { ln.voice = v; }));
+    }
+    if (ln.kind === 'setflag') box.appendChild(galInput((ln.flag && ln.flag.k) || '', 'flag 名', function (v) { ln.flag = { k: v, v: true }; }));
+    if (ln.kind === 'roll') box.appendChild(galInput((ln.roll && ln.roll.d) || 100, '面数', function (v) { ln.roll = { d: Number(v) || 100 }; }));
+    if (ln.kind === 'effect') box.appendChild(galInput(ln.effect || 'shake', 'shake/flash', function (v) { ln.effect = v; }));
+    if (ln.kind === 'wait') box.appendChild(galInput(ln.ms || 300, '毫秒', function (v) { ln.ms = Number(v) || 0; }));
+    if (ln.kind === 'jump') box.appendChild(galInput(ln.goto || '', '目标线 id', function (v) { ln.goto = v; }));
+    if (ln.kind === 'end') box.appendChild(galInput(ln.end || '', '结局文本', function (v) { ln.end = v; }));
+    box.appendChild(galInput(ln.text || '', '台词/内容', function (v) { ln.text = v; }));
+  }
+  var ops = document.createElement('div'); ops.className = 'row';
+  var done = document.createElement('button'); done.className = 'btn2'; done.textContent = '✅ 完成'; done.onclick = function () { galRenderBody(sc, body, -1); };
+  var del = document.createElement('button'); del.className = 'btn2 ghost'; del.textContent = '🗑 删本点'; del.style.cssText = 'color:#f87171'; del.onclick = function () { galDeleteAt(sc, i, body); };
+  var after = document.createElement('button'); after.className = 'btn2 ghost'; after.textContent = '➕ 其后插入'; after.onclick = function () { galInsertAt(sc, i + 1, body); };
+  ops.appendChild(done); ops.appendChild(del); ops.appendChild(after);
+  box.appendChild(ops);
+  return box;
+}
+function galAddLine() {
+  var t = prompt('新场景(线)标题：', '场景 ' + ((galScript.scenes || []).length + 1));
+  if (t === null) return;
+  galPushUndo();
+  galScript.scenes = galScript.scenes || [];
+  var base = galScript.scenes.length + 1, nid = 's' + base;
+  while (galScript.scenes.some(function (s) { return s.id === nid; })) { base++; nid = 's' + base; }
+  galScript.scenes.push({ id: nid, title: (t || nid).trim(), lines: [] });
+  galRenderGraph(); galStatsSet();
+}
+function galSave() {
+  if (!galScript) { return; }
+  try {
+    document.getElementById('codexJsonInput').value = JSON.stringify(galScript, null, 2);
+    codexSave();
+    galStatsSet();
+    galPushUndo();
+    galToast('✅ 已保存');
+  } catch (e) { alert('保存失败: ' + e.message); }
+}
+function galJson() {
+  if (!galScript) return;
+  _gScript = galScript;
+  document.getElementById('codexJsonInput').value = JSON.stringify(galScript, null, 2);
+  galCloseEditor();
+  document.getElementById('codexModal').classList.add('open');
+  document.getElementById('codexGraphWrap').style.display = 'none';
+  document.getElementById('codexEditor').style.display = 'block';
+}
+document.getElementById('galSaveBtn').onclick = galSave;
+document.getElementById('galRoleBtn').onclick = galToggleRoles;
+galSetupViewport();
+galSetupCtx();
+document.getElementById('galUndoBtn').onclick = galUndo;
+document.getElementById('galRedoBtn').onclick = galRedo;
+document.getElementById('galAddLineBtn').onclick = galAddLine;
+document.getElementById('galZoomIn').onclick = function () { galZoomTo((galScale || 1) * 1.15); };
+document.getElementById('galZoomOut').onclick = function () { galZoomTo((galScale || 1) / 1.15); };
+document.getElementById('galZoomFit').onclick = galFit;
+// 缩放栏可拖动（避免挡住画布）
+(function () {
+  var z = document.getElementById('galZoom'); if (!z) return;
+  var zd = null;
+  z.addEventListener('mousedown', function (ev) {
+    if (ev.button !== 0) return;
+    var b = z.getBoundingClientRect();
+    zd = { sx: ev.clientX, sy: ev.clientY, ox: b.left, oy: b.top };
+    ev.preventDefault();
+    function mv(e) { if (!zd) return; z.style.left = (zd.ox + (e.clientX - zd.sx)) + 'px'; z.style.top = (zd.oy + (e.clientY - zd.sy)) + 'px'; z.style.bottom = 'auto'; }
+    function up() { document.removeEventListener('mousemove', mv); document.removeEventListener('mouseup', up); zd = null; }
+    document.addEventListener('mousemove', mv);
+    document.addEventListener('mouseup', up);
+  });
+})();
+document.addEventListener('keydown', function (e) {
+  if (!galScript || document.getElementById('galEditor').style.display !== 'flex') return;
+  var mod = e.ctrlKey || e.metaKey;
+  if (mod && e.key === 'z') { e.preventDefault(); if (e.shiftKey) galRedo(); else galUndo(); }
+  else if (mod && e.key === 'y') { e.preventDefault(); galRedo(); }
+});
+document.getElementById('galAddLineBtn').onclick = galAddLine;
+document.getElementById('galJsonBtn').onclick = galJson;
+document.getElementById('galCloseBtn').onclick = galCloseEditor;
+document.getElementById('galPlayBtn').onclick = galPlay;
+document.getElementById('galImportBtn').onclick = galImport;
+document.getElementById('galExeBtn').onclick = galPackExe;
+document.getElementById('galPlayerBtn').onclick = galPackPlayer;
+document.getElementById('galNewBtn').onclick = galNewPkg;
+document.getElementById('galKeyBtn').onclick = function () { galKeyOnly = !galKeyOnly; this.textContent = galKeyOnly ? '⭐ 全部' : '⭐ 仅看关键'; galRenderGraph(); };
+document.getElementById('galPkgSel').onchange = function () { var n = this.value; if (n) galOpenEditor(n); };
 function codexExport() {
   if (!codexCur) return;
   pywebview.api.codex_export(codexCur).then(function (r) {
@@ -4295,7 +6795,7 @@ function codexShowFiles() {
       html += '<div class="section-label">' + labels[k] + '（' + files.length + '）</div>';
       if (!files.length) { html += '<div style="font-size:11px;color:var(--sub);padding:2px 0 6px">空</div>'; continue; }
       html += '<div style="display:flex;flex-wrap:wrap;gap:6px;padding:2px 0 8px">' +
-        files.map(function (f) { return '<span style="font-size:11px;background:var(--bg,#111);border:1px solid var(--border,#333);border-radius:4px;padding:2px 6px">' + escapeHtml(f) + '</span>'; }).join('') +
+        files.map(function (f) { return '<span style="font-size:11px;background:var(--bg,#111);border:1px solid var(--line);border-radius:4px;padding:2px 6px">' + escapeHtml(f) + '</span>'; }).join('') +
         '</div>';
     }
     box.innerHTML = html;
@@ -4486,7 +6986,23 @@ function codexSpriteCss(pos) {
   if (pos === 'left') return base + 'left:2%;transform-origin:bottom left;';
   if (pos === 'right') return base + 'right:2%;transform-origin:bottom right;';
   return base + 'left:50%;transform:translateX(-50%);transform-origin:bottom center;';
-}function codexPlayBgm(file) {
+}
+// 点内多张图片：自动适配大小、居中摆放；传空/clear 则退出该层
+function codexSetImages(list) {
+  var box = document.getElementById('cxImages');
+  if (!box) return;
+  box.innerHTML = '';
+  if (!list || !list.length) { box.style.display = 'none'; return; }
+  box.style.display = 'flex';
+  list.forEach(function (f) {
+    var img = document.createElement('img');
+    img.style.cssText = 'max-width:42%;max-height:58%;object-fit:contain;border-radius:8px;box-shadow:0 8px 28px rgba(0,0,0,.55);opacity:0;transition:opacity .4s ease';
+    img.onload = function () { img.style.opacity = '1'; };
+    box.appendChild(img);
+    codexLoadAsset('sprites', f, function (url) { if (url && img.parentNode) img.src = url; });
+  });
+}
+function codexPlayBgm(file) {
   var old = codexPlayer.audioBgm;
   if (old) { old.pause(); old.src = ''; codexPlayer.audioBgm = null; }
   if (!file) return;
@@ -4510,6 +7026,10 @@ function codexPlayVoice(file) {
     codexPlayer.audioVoice = a;
   });
 }
+function codexRole(name) {
+  if (!name || !codexPlayer || !codexPlayer.script || !codexPlayer.script.roles) return null;
+  return (codexPlayer.script.roles || []).find(function (r) { return r && r.name === name; }) || null;
+}
 function codexStartScene(id) {
   var scenes = codexPlayer.scenes;
   var found = false;
@@ -4532,6 +7052,8 @@ function codexStartScene(id) {
   } else {
     codexSetSprites([]);
   }
+  // 场景级图片（可被点内图片覆盖/退出）
+  codexSetImages(codexPlayer.scene.images || null);
   codexNextLine();
 }
 function codexShowChoice(opts) {
@@ -4582,13 +7104,20 @@ function codexNextLine() {
   // 行内资源切换（台词行可同时切背景/音乐/立绘/配音）
   if (ln.bg) codexSetBg(ln.bg);
   if (ln.bgm) codexPlayBgm(ln.bgm);
+  // 若台词指定了角色，且没单独写立绘/语音 → 自动套用该角色的默认立绘/音色
+  var __role = codexRole(ln.speaker);
+  var __sprite = ln.sprite || (__role && __role.sprite);
+  var __voice = ln.voice || (__role && __role.voice);
   // 立绘多位置：sprites 数组优先；单立绘 sprite + pos 兼容
   if (ln.sprites && ln.sprites.length) {
     codexSetSprites(ln.sprites);
-  } else if (ln.sprite) {
-    codexSetSprites([{ file: ln.sprite, pos: ln.pos || 'center' }]);
+  } else if (__sprite) {
+    codexSetSprites([{ file: __sprite, pos: ln.pos || 'center' }]);
   }
-  if (ln.voice) codexPlayVoice(ln.voice);
+  if (__voice) codexPlayVoice(__voice);
+  // 点内多张图片：进入/退出
+  if (ln.images && ln.images.length) codexSetImages(ln.images);
+  else if (ln.clearImages || ln.hideImages) codexSetImages(null);
   if ('text' in ln) {
     codexTypeText(ln.text || '', ln.speaker || '');
   } else if ('note' in ln) {
@@ -4665,8 +7194,162 @@ function codexShowEnd(title) {
   document.getElementById('cxEndTitle').textContent = title || '结局';
   document.getElementById('cxEnd').style.display = 'flex';
 }
+// ================= 🎴 围棋 =================
+// 规则全在 go_engine.py；这里只负责画棋盘、把点击转成坐标、轮询等角色落子。
+var goState = null, goTimer = null, goSize = 19, goHuman = 'black';
+
+function goEl(id) { return document.getElementById(id); }
+
+function goOpen() {
+  goEl('goPanel').style.display = 'flex';
+  pywebview.api.go_state().then(function (r) {
+    if (!r || !r.ok) { goNew(goSize, goHuman); return; }
+    goState = r.state; goSize = r.state.size; goHuman = r.human || 'black';
+    goPaint(r);
+  }).catch(function () { goNew(goSize, goHuman); });
+  if (goTimer) clearInterval(goTimer);
+  goTimer = setInterval(function () {
+    if (goEl('goPanel').style.display === 'none') return;
+    pywebview.api.go_state().then(function (r) {
+      if (r && r.ok) { goState = r.state; goPaint(r); }
+    }).catch(function () {});
+  }, 1500);
+}
+function goClose() {
+  goEl('goPanel').style.display = 'none';
+  if (goTimer) { clearInterval(goTimer); goTimer = null; }
+}
+function goNew(size, human) {
+  pywebview.api.go_new(size, human).then(function (r) {
+    if (r && r.ok) { goState = r.state; goSize = r.state.size; goHuman = r.human || 'black'; goPaint(r); }
+    else galToast('❌ ' + ((r && r.err) || '开不了局'));
+  }).catch(function (e) { galToast('❌ ' + ((e && e.message) || '开不了局')); });
+}
+function goPlay(x, y) {
+  if (!goState || goState.finished) return;
+  var mine = (goHuman === 'black' ? 1 : 2);
+  if ((goState.to_move === 'black' ? 1 : 2) !== mine) { galToast('等对方落子…'); return; }
+  if (goState.grid[y][x]) { galToast('这里有子了'); return; }
+  pywebview.api.go_play(x, y).then(function (r) {
+    if (!r || !r.ok) { galToast('❌ ' + ((r && r.err) || '下不了')); return; }
+    goState = r.state; goPaint({ state: r.state, log: r.log });
+  }).catch(function (e) { galToast('❌ ' + ((e && e.message) || '下不了')); });
+}
+function goAct(api, label) {
+  pywebview.api[api]().then(function (r) {
+    if (!r || !r.ok) { galToast('❌ ' + ((r && r.err) || (label + '失败'))); return; }
+    if (r.state) { goState = r.state; goPaint(r); }
+    if (r.score) {
+      var s = r.score;
+      alert('黑 ' + s.black + ' 目　白 ' + s.white + ' + 贴目 ' + s.komi +
+            ' = ' + s.white_total.toFixed(1) + '\n\n' + s.winner +
+            '\n（提子：黑 ' + s.captured.black + ' / 白 ' + s.captured.white + '）');
+    }
+  }).catch(function (e) { galToast('❌ ' + ((e && e.message) || (label + '失败'))); });
+}
+function goPaint(r) {
+  var st = (r && r.state) || goState;
+  if (!st) return;
+  var svg = goEl('goSvg');
+  var n = st.size, pad = 30, span = 600 - pad * 2, step = span / (n - 1);
+  var COLS = 'ABCDEFGHJKLMNOPQRST';
+  var p = ['<rect x="0" y="0" width="600" height="600" rx="6" fill="#241d15"/>'];
+  for (var i = 0; i < n; i++) {
+    var q = pad + i * step;
+    p.push('<line x1="' + pad + '" y1="' + q + '" x2="' + (600 - pad) + '" y2="' + q + '" stroke="rgba(214,182,130,.45)" stroke-width="1"/>');
+    p.push('<line x1="' + q + '" y1="' + pad + '" x2="' + q + '" y2="' + (600 - pad) + '" stroke="rgba(214,182,130,.45)" stroke-width="1"/>');
+  }
+  var stars = n === 19 ? [3, 9, 15] : (n === 13 ? [3, 6, 9] : [2, 4, 6]);
+  stars.forEach(function (a) {
+    stars.forEach(function (b) {
+      p.push('<circle cx="' + (pad + a * step) + '" cy="' + (pad + b * step) + '" r="3.4" fill="rgba(214,182,130,.8)"/>');
+    });
+  });
+  for (var k = 0; k < n; k++) {
+    p.push('<text x="' + (pad + k * step) + '" y="15" fill="rgba(214,182,130,.55)" font-size="12" text-anchor="middle">' + COLS[k] + '</text>');
+    p.push('<text x="13" y="' + (pad + k * step + 4) + '" fill="rgba(214,182,130,.55)" font-size="12" text-anchor="middle">' + (n - k) + '</text>');
+  }
+  for (var y = 0; y < n; y++) {
+    for (var x = 0; x < n; x++) {
+      var v = st.grid[y][x];
+      if (!v) continue;
+      var cx = pad + x * step, cy = pad + y * step, black = (v === 1);
+      p.push('<circle cx="' + cx + '" cy="' + cy + '" r="' + (step * 0.46).toFixed(2) + '" fill="' +
+             (black ? '#111114' : '#ecebe8') + '" stroke="' + (black ? '#000' : '#8f8b84') + '" stroke-width="1.2"/>');
+    }
+  }
+  if (st.last_move) {
+    p.push('<circle cx="' + (pad + st.last_move[0] * step) + '" cy="' + (pad + st.last_move[1] * step) +
+           '" r="' + (step * 0.17).toFixed(2) + '" fill="#e5484d"/>');
+  }
+  p.push('<g id="goHit"></g>');
+  svg.innerHTML = p.join('');
+
+  var mine = (goHuman === 'black' ? 1 : 2);
+  var myTurn = !st.finished && ((st.to_move === 'black' ? 1 : 2) === mine);
+  var hit = [];
+  if (myTurn) {
+    for (var y2 = 0; y2 < n; y2++) {
+      for (var x2 = 0; x2 < n; x2++) {
+        if (st.grid[y2][x2]) continue;
+        hit.push('<circle cx="' + (pad + x2 * step) + '" cy="' + (pad + y2 * step) + '" r="' +
+                 (step * 0.48).toFixed(2) + '" fill="transparent" style="cursor:pointer" data-gx="' + x2 + '" data-gy="' + y2 + '"/>');
+      }
+    }
+  }
+  var hg = goEl('goHit');
+  if (hg) {
+    hg.innerHTML = hit.join('');
+    Array.prototype.forEach.call(hg.querySelectorAll('[data-gx]'), function (el) {
+      el.addEventListener('click', function () {
+        goPlay(parseInt(el.getAttribute('data-gx'), 10), parseInt(el.getAttribute('data-gy'), 10));
+      });
+    });
+  }
+  var txt;
+  if (st.finished) {
+    txt = '🏁 ' + (st.result || '终局');
+  } else {
+    var who = (st.to_move === 'black' ? '⚫ 黑方' : '⚪ 白方');
+    txt = who + '走' + (myTurn ? '（你）' : '（对方思考中…）') +
+          ' · 第 ' + (st.moves + 1) + ' 手 · 提子 黑' + st.captured.black + ' / 白' + st.captured.white;
+  }
+  goEl('goStatus').textContent = txt;
+  // 「她打算怎么跟你下」——好感度决定的让子/放水 + 棋风
+  var gs = (r && r.settings) || null;
+  var infoEl = goEl('goInfo');
+  if (infoEl) {
+    if (gs) {
+      var deal = gs.handicap ? ('让你 ' + gs.handicap + ' 子')
+               : (gs.komi_extra ? ('多贴 ' + (gs.komi_extra).toFixed(1) + ' 目') : '分先');
+      infoEl.textContent = '💗 好感度 ' + gs.aff + '　·　' + deal +
+        '　·　棋风：' + String(gs.style_label || '均衡').split(' —— ')[0] +
+        '　·　' + (gs.mood || '');
+    } else {
+      infoEl.textContent = '';
+    }
+  }
+  var logs = (r && r.log) || [];
+  goEl('goLog').innerHTML = logs.length
+    ? logs.map(function (s) { return '<div>· ' + escapeHtml(String(s)) + '</div>'; }).join('')
+    : '<div style="color:var(--sub,#8a93a3)">还没开始</div>';
+}
+function goBind() {
+  goEl('btnGo').onclick = goOpen;
+  goEl('goClose').onclick = goClose;
+  goEl('goNew19').onclick = function () { goNew(19, goHuman); };
+  goEl('goNew9').onclick = function () { goNew(9, goHuman); };
+  goEl('goSwap').onclick = function () { goNew(goSize, goHuman === 'black' ? 'white' : 'black'); };
+  goEl('goUndo').onclick = function () { goAct('go_undo', '悔棋'); };
+  goEl('goPass').onclick = function () { goAct('go_pass', '停一手'); };
+  goEl('goResume').onclick = function () { goAct('go_ai', '催一手'); };
+  goEl('goScore').onclick = function () { goAct('go_score', '数目'); };
+  goEl('goResign').onclick = function () { goAct('go_resign', '认输'); };
+}
+goBind();
+
 // 播放器事件绑定
-document.getElementById('btnCodex').onclick = codexOpen;
+document.getElementById('btnCodex').onclick = galOpenInterface;
 document.getElementById('codexCloseBtn').onclick = function () { document.getElementById('codexModal').classList.remove('open'); };
 document.getElementById('codexNewBtn').onclick = codexNew;
 document.getElementById('codexSampleBtn').onclick = codexSample;
@@ -5156,6 +7839,137 @@ var L2D = {
     document.body.appendChild(wm);
   } catch (e) {}
 })();
+
+// ================= 🔐 加密备份 =================
+function bkStatus(html, kind) {
+  var el = document.getElementById('bkStatus');
+  if (!el) return;
+  var color = kind === 'bad' ? '#ff6b6b' : (kind === 'good' ? '#5fd39a' : 'var(--sub)');
+  el.style.color = color;
+  el.innerHTML = html;
+}
+
+function bkOpen() {
+  var a = document.getElementById('bkPw'), b = document.getElementById('bkPw2');
+  a.value = ''; b.value = '';
+  a.type = 'password'; b.type = 'password';   // 复位：别把上次生成的明文口令留在屏幕上
+  document.getElementById('bkPwMsg').textContent = '';
+  document.getElementById('bkGenHint').textContent = '';
+  var warn = document.getElementById('bkWarn');
+  warn.innerHTML = '⚠️ 口令<b>不保存在任何地方</b>，忘了就打不开了。请单独记好（抄纸上 / 存密码管理器）。';
+  warn.style.color = 'var(--sub)';
+  bkStatus('');
+  document.getElementById('backupModal').classList.add('open');
+}
+
+function bkClose() { document.getElementById('backupModal').classList.remove('open'); }
+
+// 生成随机强口令：自己想的口令普遍很弱，而且【忘了就永久打不开】。
+// 让程序给一个 32 字节随机码、切回明文显示并全选，用户直接抄走。
+function bkGen() {
+  var hint = document.getElementById('bkGenHint');
+  hint.textContent = '生成中…';
+  pywebview.api.backup_make_password().then(function (r) {
+    if (!r || !r.ok) { hint.textContent = '生成失败：' + ((r && r.err) || '未知错误'); return; }
+    var pw = r.password;
+    var a = document.getElementById('bkPw'), b = document.getElementById('bkPw2');
+    a.type = 'text'; b.type = 'text';
+    a.value = pw; b.value = pw;
+    try { a.focus(); a.select(); } catch (e) {}
+    var lvl = document.getElementById('bkPwMsg');
+    lvl.textContent = '已生成强口令（' + pw.length + ' 位随机）';
+    lvl.style.color = '#5fd39a';
+    var warn = document.getElementById('bkWarn');
+    warn.innerHTML = '⚠️ <b>现在就把下面这串抄下来</b>（纸上 / 密码管理器），' +
+                     '然后关掉本窗口。这个口令只显示这一次，我们不保存，' +
+                     '丢了这份备份就永久打不开了。';
+    warn.style.color = '#ffb454';
+    hint.textContent = '已填入两栏、已全选，可 Ctrl+C 复制';
+  }).catch(function (e) { hint.textContent = '生成失败：' + e; });
+}
+
+function bkPwStrength() {
+  var pw = document.getElementById('bkPw').value;
+  var msg = document.getElementById('bkPwMsg');
+  if (!pw) { msg.textContent = ''; return; }
+  try {
+    pywebview.api.backup_password_check(pw).then(function (r) {
+      if (!r || !r.ok) { msg.textContent = ''; return; }
+      msg.textContent = r.msg;
+      msg.style.color = r.ok_to_use ? '#5fd39a' : '#ffb454';
+    });
+  } catch (e) { msg.textContent = ''; }
+}
+
+function bkExport() {
+  var pw = document.getElementById('bkPw').value;
+  var pw2 = document.getElementById('bkPw2').value;
+  if (!pw) { bkStatus('请先输入口令。', 'bad'); return; }
+  if (pw !== pw2) { bkStatus('两次输入的口令不一样，请重新确认。', 'bad'); return; }
+  if (pw.length < 12) { bkStatus('口令太短（至少 12 位）。', 'bad'); return; }
+  bkStatus('正在打包并加密，请稍候…');
+  document.getElementById('bkExport').disabled = true;
+  pywebview.api.export_backup_encrypted(pw).then(function (r) {
+    document.getElementById('bkExport').disabled = false;
+    if (!r || !r.ok) {
+      if (r && r.err === 'cancelled') { bkStatus('已取消。'); return; }
+      bkStatus('备份失败：' + ((r && r.err) || '未知错误'), 'bad');
+      return;
+    }
+    var kb = (r.size / 1024).toFixed(1);
+    bkStatus('✅ 备份完成<br>' +
+             '文件：<b>' + escapeHtml(r.name) + '</b><br>' +
+             '共 ' + r.entries + ' 项，加密后 ' + kb + ' KB<br>' +
+             '<span style="color:var(--sub)">存到网盘/U盘都可以 —— 没有口令谁也打不开。</span>', 'good');
+  }).catch(function (e) {
+    document.getElementById('bkExport').disabled = false;
+    bkStatus('备份失败：' + e, 'bad');
+  });
+}
+
+function bkRestore() {
+  var pw = document.getElementById('bkPw').value;
+  if (!pw) { bkStatus('请先输入这份备份的口令，再点还原。', 'bad'); return; }
+  bkStatus('选择备份文件…');
+  pywebview.api.import_backup_encrypted(pw).then(function (r) {
+    if (!r || !r.ok) {
+      if (r && r.err === 'cancelled') { bkStatus('已取消。'); return; }
+      var e = (r && r.err) || '未知错误';
+      if (e.indexOf('口令错误') >= 0 || e.indexOf('篡改') >= 0) {
+        bkStatus('❌ 口令错误，或这个文件被改动过。<br>' +
+                 '<span style="color:var(--sub)">如果确定口令没错，换一份备份再试。</span>', 'bad');
+      } else {
+        bkStatus('还原失败：' + escapeHtml(e), 'bad');
+      }
+      return;
+    }
+    bkStatus('✅ ' + escapeHtml(r.msg), 'good');
+    try { reloadRoles(); } catch (e) {}
+    try { reloadWorlds(); } catch (e) {}
+    try { pywebview.api.state().then(function () {}); } catch (e) {}
+  }).catch(function (e) { bkStatus('还原失败：' + e, 'bad'); });
+}
+
+document.getElementById('btnBackup').onclick = bkOpen;
+document.getElementById('bkCancel').onclick = bkClose;
+document.getElementById('bkExport').onclick = bkExport;
+document.getElementById('bkRestore').onclick = bkRestore;
+document.getElementById('bkPw').oninput = bkPwStrength;
+document.getElementById('bkGen').onclick = bkGen;
+document.getElementById('backupModal').addEventListener('click', function (e) {
+  if (e.target === this) bkClose();
+});
+// 事件进度弹窗：点背景 / Esc 关闭
+document.getElementById('evProgressModal').addEventListener('click', function (e) {
+  if (e.target === this) this.classList.remove('open');
+});
+document.addEventListener('keydown', function (e) {
+  if (e.code !== 'Escape') return;
+  var pm = document.getElementById('evProgressModal');
+  if (pm && pm.classList.contains('open')) { pm.classList.remove('open'); return; }
+  var m = document.getElementById('backupModal');
+  if (m && m.classList.contains('open')) bkClose();
+});
 </script>
 <div class="modal" id="cardFaceModal">
   <div class="modal-box" style="width:min(90vw,760px);height:70vh;display:flex;flex-direction:column">

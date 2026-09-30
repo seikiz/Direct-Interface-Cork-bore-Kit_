@@ -67,6 +67,11 @@ class ChatEngine(
     ): String {
         val messages = J.Arr()
         if (!systemPrompt.isNullOrBlank()) messages.items.add(role("system", systemPrompt))
+        // 时间上下文：粘在历史【之前】，让模型带着时间感去读下面这些对话。
+        // 这就是"两条纸带粘一起"——一条记内容，一条记间隔。
+        TimeContext.build(chain, TimeScale.current)?.let {
+            messages.items.add(role("system", it))
+        }
         for (node in chain) {
             if (node.content.isNotBlank()) messages.items.add(role(node.role, node.content))
         }
@@ -91,7 +96,7 @@ class ChatEngine(
 
     private fun openConn(effBase: String): HttpURLConnection {
         val url = URL(effBase.trimEnd('/') + "/chat/completions")
-        // 配置了代理时走代理（http/https；支持 socks5:// 前缀解析）
+        // 配置了代理时走代理（http/http<seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌s；支持 socks5:// 前缀解析）
         var proxyConn: Proxy? = null
         val p = proxy?.trim()?.takeIf { it.isNotEmpty() }
         if (p != null) {

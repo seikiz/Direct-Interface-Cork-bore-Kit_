@@ -1,4 +1,4 @@
-# ============================================================
+# ==============================<seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌==============================
 #   memory_chain_plugin.py - 记忆链扩容插件（JSON 串口扩容）v1.0
 #
 #   原理：当存档 JSON 超过阈值（"爆满"）时，自动把完整数据归档到
@@ -22,6 +22,26 @@ from datetime import datetime
 
 from plugin_base import PluginBase
 import app_paths
+
+
+def _atomic_write_json(path, data):
+    """原子写 JSON：优先用主程序的 save_guard（全项目统一），拿不到就退回
+    临时文件 + os.replace。
+
+    为什么不能直接用 open(path, "w") + json.dump：
+        写一半失败（磁盘满 / 进程被杀 / 序列化中途出错）会留下一个被截断的文件，
+        而那个路径上原本是完好的存档 —— 表现就是「存档写炸了」。
+    """
+    try:
+        import save_guard
+        save_guard.atomic_write_json(path, data)
+        return
+    except Exception:
+        pass
+    tmp = path + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+    os.replace(tmp, path)
 
 
 class MemoryChainPlugin(PluginBase):
@@ -112,12 +132,16 @@ class MemoryChainPlugin(PluginBase):
         stem = self._stem(path)
         safe = self._safe_stem(stem)
 
-        # 1. 归档：当前完整 JSON → memory/<角色>.part<N>.json
+        # 1. 归档：把【完整原文】原子写一份到 memory/ —— 注意不是 move。
+        #    原来这里是 shutil.move(path, archive_path)：先把存档移走，再重写。
+        #    中间那段时间里存档只剩一份，而且重写用的是 open(path,"w") 非原子写 ——
+        #    写一半失败，原件已不在原地、新文件还是坏的，就是「写炸」。
+        #    改成：先落归档副本 → 再精简 → 再原子写回。任何时刻都至少有一份完整数据。
         chain = self._load_chain()
         parts = chain.setdefault(safe, [])
         seq = len(parts) + 1
         archive_path = os.path.join(self.memory_dir, f"{safe}.part{seq}.json")
-        shutil.move(path, archive_path)
+        _atomic_write_json(archive_path, data)
         parts.append({
             "part": seq,
             "path": os.path.basename(archive_path),
@@ -130,11 +154,10 @@ class MemoryChainPlugin(PluginBase):
         # 2. 精简内存树：只保留最近 KEEP_NODES 个节点 + 系统节点
         kept = self._trim_tree(keep=self.KEEP_NODES)
 
-        # 3. 立即写回一个新的"当前" JSON（保留除历史树外的所有字段）
+        # 3. 原子写回一个新的"当前" JSON（保留除历史树外的所有字段）
         new_data = {k: v for k, v in data.items() if k != "history_tree"}
         new_data["history_tree"] = self.core.get_all_nodes_data()
-        with open(path, "w", encoding="utf-8") as f:
-            json.dump(new_data, f, ensure_ascii=False, indent=2)
+        _atomic_write_json(path, new_data)
 
         print(f"[记忆链扩容] 📦 「{stem}」已归档第 {seq} 部分（{len(nodes)} 节点，"
               f"当前保留 {kept} 节点），历史未丢失")
@@ -229,13 +252,12 @@ class MemoryChainPlugin(PluginBase):
             if not summary:
                 return
             summary_path = os.path.join(self.memory_dir, f"{safe}.summary.json")
-            with open(summary_path, "w", encoding="utf-8") as f:
-                json.dump({
-                    "stem": stem,
-                    "summary": summary,
-                    "generated_at": datetime.now().isoformat(),
-                    "source": os.path.basename(archive_path),
-                }, f, ensure_ascii=False, indent=2)
+            _atomic_write_json(summary_path, {
+                "stem": stem,
+                "summary": summary,
+                "generated_at": datetime.now().isoformat(),
+                "source": os.path.basename(archive_path),
+            })
             print(f"[记忆链扩容] 🧠 压缩记忆已生成（{len(summary)} 字）")
         except Exception as e:
             print(f"[记忆链扩容] 摘要后台任务失败: {e}")

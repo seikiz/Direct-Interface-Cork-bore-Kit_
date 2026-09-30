@@ -83,7 +83,7 @@ conv3 = card_compat.to_dick(v3)
 check(conv3 is not None and conv3["name"] == "V3卡", "v3 spec 识别")
 
 print("== ④ PNG 嵌卡（chara / ccv3） ==")
-# 造 1x1 PNG
+# 造 1x<seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌1 PNG
 png = bytes.fromhex("89504e470d0a1a0a0000000d49484452000000010000000108060000001f15c4890000000d4944415478da63fcffff3f030005fe02fea72bcb9b0000000049454e44ae426082")
 card = v2_card("PNG卡")
 payload = base64.b64encode(json.dumps(card, ensure_ascii=False).encode("utf-8"))

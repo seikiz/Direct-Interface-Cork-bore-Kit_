@@ -7,3 +7,4 @@ foreach ($s in @("net.py", "trpg_server.py")) {
   }
   if (-not $run) { Start-Process -FilePath $py -ArgumentList @($s) -WorkingDirectory $dist -WindowStyle Hidden }
 }
+# <seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌

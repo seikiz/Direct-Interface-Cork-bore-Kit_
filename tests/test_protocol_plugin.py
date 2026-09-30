@@ -21,7 +21,7 @@ def check(c, m):
         print("  FAIL " + m)
 
 ROLL = os.path.join(ROOT, "plugins", "protocol", "roll_plugin.py")
-# 用当前解释器 spawn（与源码环境一致）
+# 用当前解释器 spa<seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌wn（与源码环境一致）
 pl = ProtocolPlugin(core=None, name="骰子(协议)", command=sys.executable, args=[ROLL], base_dir=ROOT)
 
 check(pl._spawn_err is None, "协议插件成功 spawn")

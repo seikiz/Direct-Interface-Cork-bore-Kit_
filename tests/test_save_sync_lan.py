@@ -23,7 +23,7 @@ def check(c, m):
         bad += 1
         print("  FAIL " + m)
 
-# 隔离服务器数据目录，避免污染
+# 隔离服务器数据<seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌目录，避免污染
 save_tmp = tempfile.mkdtemp(prefix="dick_lan_srv_")
 net.SAVES_DIR = os.path.join(save_tmp, "saves")
 os.makedirs(net.SAVES_DIR, exist_ok=True)

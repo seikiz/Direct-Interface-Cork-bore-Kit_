@@ -32,6 +32,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.OutlinedButton
@@ -55,10 +56,17 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
@@ -73,6 +81,7 @@ import com.dick.core.ChatTree
 import com.dick.core.J
 import com.dick.core.JsonS
 import com.dick.core.MechanicsEngine
+import com.dick.core.TimeScale
 import com.dick.core.TreeStore
 import com.dick.core.TrpgSession
 import com.dick.core.TrpgServer
@@ -330,7 +339,7 @@ fun TreeGraph(vm: ChatViewModel, tree: ChatTree, mech: MechanicsEngine, accent: 
             val px = n.x * xSpacing * scale + panX
             val py = n.y * ySpacing * scale + panY
             val chipW = 138f; val chipH = 42f
-            // 灰白成就（MC progress 风）配色
+            // 灰白成就（MC pr<seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌ogress 风）配色
             val bg = when {
                 n.isCurrent -> Color(0xFFffffff)
                 n.isOption -> Color(0xFFF0F1F3)
@@ -472,6 +481,12 @@ class DialogDeps(
     val userDisplayName: () -> String,
     val treeFileFor: () -> File,
     val stateFileFor: () -> File,
+    val listRoleSaves: (String) -> List<J.Obj>,
+    val createRoleSave: (String, String) -> Unit,
+    val saveToRoleSlot: (String, String) -> Unit,
+    val loadRoleSlot: (String, String) -> Unit,
+    val deleteRoleSlot: (String, String) -> Unit,
+    val renameRoleSlot: (String, String, String) -> Unit,
     val mechConfig: () -> J.Obj?,
     val mechBattleConfig: () -> J.Obj?,
     val playerBattleConfig: () -> J.Obj?,
@@ -490,8 +505,256 @@ class DialogDeps(
 )
 
 /** 设置（API 配置 + 主设置） */
+/**
+ * ⏳ 时间流速表盘（手机端）。
+ *
+ * 为什么用对数刻度：10 ~ 1000万 跨 6 个数量级。线性表盘 98% 的行程都挤在
+ * 最前几档上，手指一动就是几百万倍，根本没法用。对数下每转一格 = ×10，
+ * 而人对量级的感知本来也是对数的。
+ *
+ * 表盘用 240° 弧（不是整圆）：底下留缺口，手指从缺口那边进来不会误触。
+ * 换算逻辑全部走 TimeScale，和 PC 端同一套参数。
+ */
+@Composable
+fun TimeScaleDial(
+    current: Double,
+    accent: Color,
+    dialSize: Dp = 240.dp,
+    // 默认跟随环境内容色，而不是写死白 —— 写死白的后果是浅色主题下白字浅底（"字不是反色"）。
+    // 调用方仍可显式传主题色（面板就是传 ThemeSpec.text / muted）。
+    textColor: Color = LocalContentColor.current,
+    subColor: Color = LocalContentColor.current.copy(alpha = 0.62f),
+    onChange: (Double) -> Unit,
+) {
+    // 颜色由调用方传入（这个项目没有全局主题对象，DialogDeps.theme / accent 是约定）
+    val textCol = textColor
+    val subCol = subColor
+    val lineCol = accent.copy(alpha = 0.28f)
+    var draft by remember { mutableStateOf(current) }
+    LaunchedEffect(current) { draft = current }
+
+    // 弧的起止角（度）：-210° 到 30°，共 240°
+    val a0 = -210.0
+    val a1 = 30.0
+
+    // 几何按画布尺寸算【比例】，不再写死像素（原来是 r=100px / cy=118px，而外框是 dp）：
+    // 高密度屏上圆盘只占框的一小块、还偏上 —— 展开成面板后这个毛病会更显眼。
+    fun geom(w: Float, h: Float): Triple<Float, Float, Float> =
+        Triple(w / 2f, h * 0.52f, minOf(w, h) * 0.38f)
+
+    fun pt(t: Double, radius: Float, cx: Float, cy: Float): Pair<Float, Float> {
+        val a = (a0 + (a1 - a0) * t) * Math.PI / 180.0
+        val c = Math.cos(a).toFloat()
+        val s = Math.sin(a).toFloat()
+        return Pair(cx + radius * c, cy + radius * s)
+    }
+
+    Column(Modifier.fillMaxWidth()) {
+        Box(
+            Modifier.fillMaxWidth().height(dialSize),
+            contentAlignment = Alignment.Center,
+        ) {
+            Canvas(
+                Modifier
+                    .fillMaxWidth()
+                    .height(210.dp)
+                    .pointerInput(Unit) {
+                        // 拖拽过程中只改本地 draft（只重组表盘本身），
+                        // 松手才 onChange 提交 —— 每帧都写 VM 状态会触发
+                        // 整棵界面树重组，老手机上会明显卡（第一版就这么写的）。
+                        detectDragGestures(
+                            onDragStart = { off ->
+                                val (cx, cy, _) = geom(size.width.toFloat(), size.height.toFloat())
+                                draft = scaleFromXY(off.x, off.y, cx, cy, a0, a1)
+                            },
+                            onDrag = { change, _ ->
+                                val (cx, cy, _) = geom(size.width.toFloat(), size.height.toFloat())
+                                draft = scaleFromXY(change.position.x, change.position.y, cx, cy, a0, a1)
+                            },
+                            onDragEnd = { onChange(draft) },
+                            onDragCancel = { draft = current },
+                        )
+                    }
+                    .pointerInput(Unit) {
+                        detectTapGestures { off ->
+                            val (cx, cy, _) = geom(size.width.toFloat(), size.height.toFloat())
+                            draft = scaleFromXY(off.x, off.y, cx, cy, a0, a1)
+                            onChange(draft)
+                        }
+                    },
+            ) {
+                val (cx, cy, r) = geom(size.width, size.height)
+                val t = TimeScale.posOf(draft)
+                val arcW = r * 0.10f          // 线宽/刻度全部按半径取比例，放大缩小都不走形
+
+                // 底弧
+                drawArc(
+                    color = lineCol,
+                    startAngle = a0.toFloat(),
+                    sweepAngle = (a1 - a0).toFloat(),
+                    useCenter = false,
+                    topLeft = Offset(cx - r, cy - r),
+                    size = Size(r * 2f, r * 2f),
+                    style = Stroke(width = arcW, cap = StrokeCap.Round),
+                )
+                // 进度弧
+                drawArc(
+                    color = accent,
+                    startAngle = a0.toFloat(),
+                    sweepAngle = ((a1 - a0) * t).toFloat(),
+                    useCenter = false,
+                    topLeft = Offset(cx - r, cy - r),
+                    size = Size(r * 2f, r * 2f),
+                    style = Stroke(width = arcW, cap = StrokeCap.Round),
+                )
+                // 刻度
+                for (p in TimeScale.PRESETS) {
+                    val tp = TimeScale.posOf(p.first)
+                    val i0 = pt(tp, r - r * 0.17f, cx, cy)
+                    val i1 = pt(tp, r + r * 0.09f, cx, cy)
+                    drawLine(
+                        color = subCol,
+                        start = Offset(i0.first, i0.second),
+                        end = Offset(i1.first, i1.second),
+                        strokeWidth = r * 0.022f,
+                    )
+                }
+                // 指针
+                val tip = pt(t, r, cx, cy)
+                drawLine(
+                    color = textCol,
+                    start = Offset(cx, cy),
+                    end = Offset(tip.first, tip.second),
+                    strokeWidth = r * 0.032f,
+                    cap = StrokeCap.Round,
+                )
+                drawCircle(color = accent, radius = r * 0.070f, center = Offset(tip.first, tip.second))
+                drawCircle(color = textCol, radius = r * 0.078f, center = Offset(cx, cy))
+            }
+            // 中央读数（叠在 Canvas 上，用文字排版更省事）
+            // 偏移量跟着 dialSize 走 —— 原来写死 44dp，表盘一改尺寸读数就不在盘面里了
+            Column(
+                Modifier.align(Alignment.Center).offset(y = dialSize * 0.21f),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Text(
+                    TimeScale.describe(draft).substringBefore(" · ").replace("倍", "") + "×",
+                    fontSize = 22.sp, color = textCol, fontWeight = FontWeight.Bold,
+                )
+                Text(TimeScale.perRoundText(draft), fontSize = 11.sp, color = subCol)
+            }
+        }
+        val preset = TimeScale.presetName(draft)
+        Text(
+            if (preset != null) preset else "（不在预设档上，也可以直接用）",
+            fontSize = 11.sp, color = subCol,
+        )
+        Spacer(Modifier.height(4.dp))
+        // 预设按钮：不想拖也可以点
+        FlowRowSimple(TimeScale.PRESETS) { mul, name ->
+            TextButton(onClick = { draft = mul; onChange(mul) }) {
+                Text(TimeScale.perRoundText(mul).replace("一轮约 ", ""), fontSize = 11.sp)
+            }
+        }
+        if (draft >= 3600) {
+            Text(
+                "⚠ 高倍率下时间过得极快：现实几分钟就等于她那边好几天。适合「跳过一段时间」的玩法。",
+                fontSize = 11.sp, color = subCol, lineHeight = 15.sp,
+            )
+        }
+    }
+}
+
+/**
+ * ⏳ 时间流速面板（独立展开）。
+ *
+ * 为什么从设置弹窗里搬出来：
+ *   ① 一块表盘夹在一长串设置项中间，既挤又不像"一个功能"；
+ *   ② 表盘用 detectDragGestures，而设置列表是 verticalScroll ——
+ *      竖向拖表盘会和页面滚动抢手势（拖到一半页面跟着滚）。
+ * 现在设置里只留一行入口，点开就是这块独立面板：表盘更大、读数居中、预设横排。
+ * 面板高度按屏幕算，保证里面【不需要滚动容器】→ 抢手势的问题从根上没有了。
+ */
+@Composable
+fun TimeScalePanel(vm: ChatViewModel, deps: DialogDeps) {
+    if (!vm.showTimeDial.value) return
+    val theme = deps.theme
+    // 表盘尺寸跟着屏幕走：矮屏收一点，换"整块面板不用滚动"
+    val screenH = LocalConfiguration.current.screenHeightDp
+    val dialSize = (screenH * 0.36f).coerceIn(190f, 300f).dp
+    val close = { vm.showTimeDial.value = false }
+
+    Dialog(
+        onDismissRequest = close,
+        properties = DialogProperties(usePlatformDefaultWidth = false),
+    ) {
+        Surface(
+            modifier = Modifier.fillMaxWidth(0.94f),
+            shape = RoundedCornerShape(16.dp),
+            color = theme.bg,
+        ) {
+            Column(Modifier.padding(horizontal = 18.dp, vertical = 14.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("⏳ 时间流速", fontSize = 15.sp, color = theme.text, fontWeight = FontWeight.SemiBold)
+                    Spacer(Modifier.weight(1f))
+                    TextButton(onClick = close) { Text("关闭", color = theme.muted, fontSize = 13.sp) }
+                }
+                Text(
+                    "世界那边过得比现实快多少倍。倍率越高，一段时间没说话她那边过得越久；" +
+                        "刻度是对数的（每格 ×10）。拖表盘、点指针或点下方预设都行。",
+                    fontSize = 11.sp, color = theme.muted, lineHeight = 15.sp,
+                )
+                Spacer(Modifier.height(6.dp))
+                TimeScaleDial(
+                    current = vm.timeScale.value,
+                    accent = deps.accent,
+                    dialSize = dialSize,
+                    textColor = theme.text,
+                    subColor = theme.muted,
+                    onChange = {
+                        vm.timeScale.value = it
+                        // 必须同步进 TimeScale.current —— 引擎组装载荷时（TimeContext）
+                        // 读的是它，不同步的话拨了表盘也不生效。
+                        TimeScale.current = it
+                    },
+                )
+            }
+        }
+    }
+}
+
+/** 极简流式布局：预设按钮不多，够用就行 */
+@Composable
+private fun FlowRowSimple(
+    items: List<Pair<Double, String>>,
+    content: @Composable (Double, String) -> Unit,
+) {
+    Column {
+        var i = 0
+        while (i < items.size) {
+            Row {
+                for (j in i until minOf(i + 4, items.size)) {
+                    content(items[j].first, items[j].second)
+                }
+            }
+            i += 4
+        }
+    }
+}
+
+/** 触点角度 → 倍率。角度归一到 [a0, a1] 再反查对数刻度。 */
+private fun scaleFromXY(x: Float, y: Float, cx: Float, cy: Float, a0: Double, a1: Double): Double {
+    val ang = Math.toDegrees(Math.atan2((y - cy).toDouble(), (x - cx).toDouble()))
+    var a = ang
+    while (a < a0) a += 360.0
+    val t = ((a - a0) / (a1 - a0)).coerceIn(0.0, 1.0)
+    return TimeScale.scaleAt(t)
+}
+
+
 @Composable
 fun SettingsDialog(vm: ChatViewModel, deps: DialogDeps) {
+
     val context = deps.context
     val theme = deps.theme
     val accent = deps.accent
@@ -636,6 +899,15 @@ fun SettingsDialog(vm: ChatViewModel, deps: DialogDeps) {
                 Button(onClick = { presetIdx = (presetIdx + 1) % PRESETS.size }) { Text(I18n.t("lbl_preset", "预设：") + PRESETS[presetIdx].name) }
                 Spacer(Modifier.height(6.dp))
                 Button(onClick = { budgetIdx = (budgetIdx + 1) % BUDGETS.size }) { Text(I18n.budgetLabel(BUDGETS[budgetIdx].first)) }
+                Spacer(Modifier.height(6.dp))
+                // ⏳ 时间流速：表盘搬到独立面板（原来一块表盘塞在这里，
+                // 既挤又与设置页的竖向滚动抢手势）。这行只当入口 + 显示当前值。
+                OutlinedButton(
+                    onClick = { vm.showTimeDial.value = true },
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    IconText("⏳ 时间流速　" + TimeScale.describe(vm.timeScale.value), fontSize = 13.sp)
+                }
                 Spacer(Modifier.height(6.dp))
                 OutlinedButton(onClick = { appIconPicker.launch("image/*") }, modifier = Modifier.fillMaxWidth()) {
                     IconText("🎨 应用图标" + (if (appIcon != null) "（已设置，点击更换）" else "（点击从相册选择）"), fontSize = 13.sp)
@@ -894,7 +1166,72 @@ fun TrpgDialog(vm: ChatViewModel, deps: DialogDeps) {
     }
 }
 
-/** 选角色（多选=群聊） */
+/** 角色卡·多存档：存档点管理（新存档 / 覆盖保存 / 读档 / 重命名 / 删除） */
+@Composable
+fun SaveSlotsDialog(vm: ChatViewModel, deps: DialogDeps, role: String, onClose: () -> Unit) {
+    val theme = deps.theme
+    var tick by remember { mutableStateOf(0) }
+    var newLabel by remember { mutableStateOf("") }
+    var renameSlot by remember { mutableStateOf<String?>(null) }
+    var renameText by remember { mutableStateOf("") }
+    val saves = remember(role, tick) { deps.listRoleSaves(role) }
+    AlertDialog(
+        onDismissRequest = onClose,
+        title = { Text("💾 存档 · " + role) },
+        text = {
+            Column(Modifier.verticalScroll(rememberScrollState())) {
+                if (renameSlot != null) {
+                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                        OutlinedTextField(value = renameText, onValueChange = { renameText = it },
+                            singleLine = true, modifier = Modifier.weight(1f).padding(end = 8.dp))
+                        TextButton(onClick = {
+                            val rs = renameSlot; if (rs != null) deps.renameRoleSlot(role, rs, renameText)
+                            renameSlot = null; renameText = ""; tick++
+                        }) { IconText("重命名", fontSize = 13.sp) }
+                    }
+                    Spacer(Modifier.height(6.dp))
+                }
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                    OutlinedTextField(value = newLabel, onValueChange = { newLabel = it },
+                        placeholder = { Text("存档名（可留空，自动编号）", fontSize = 12.sp) },
+                        singleLine = true, modifier = Modifier.weight(1f).padding(end = 8.dp))
+                    TextButton(onClick = { deps.createRoleSave(role, newLabel); newLabel = ""; tick++ }) { IconText("📝 新存档", fontSize = 13.sp) }
+                }
+                Spacer(Modifier.height(8.dp))
+                if (saves.isEmpty()) {
+                    Text("还没有存档点。继续聊天后点「📝 新存档」即把当前进度固化成一个存档点。", color = Color(0xFF8A93A3), fontSize = 13.sp)
+                } else {
+                    saves.forEach { s ->
+                        val id = s.fields["id"]?.str() ?: return@forEach
+                        val label = s.fields["label"]?.str() ?: "未命名存档"
+                        val prog = s.fields["progress"]?.int() ?: 0
+                        val ts = s.fields["updated_ts"]?.str() ?: ""
+                        Column(
+                            Modifier.fillMaxWidth().padding(vertical = 6.dp)
+                                .border(1.dp, Color(0xFF262B34), RoundedCornerShape(10.dp))
+                                .padding(horizontal = 10.dp, vertical = 6.dp)
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(label, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+                                Row(horizontalArrangement = Arrangement.spacedBy(2.dp),
+                                    modifier = Modifier.horizontalScroll(rememberScrollState())) {
+                                    TextButton(onClick = { deps.loadRoleSlot(role, id); onClose() }, modifier = Modifier.heightIn(min = 40.dp)) { IconText("📂 读档", fontSize = 12.sp) }
+                                    TextButton(onClick = { deps.saveToRoleSlot(role, id); tick++ }, modifier = Modifier.heightIn(min = 40.dp)) { IconText("💾 覆盖", fontSize = 12.sp) }
+                                    TextButton(onClick = { renameSlot = id; renameText = label; tick++ }, modifier = Modifier.heightIn(min = 40.dp)) { IconText("✏️", fontSize = 12.sp) }
+                                    TextButton(onClick = { deps.deleteRoleSlot(role, id); tick++ }, modifier = Modifier.heightIn(min = 40.dp)) { IconText("🗑️", fontSize = 13.sp, color = theme.danger) }
+                                }
+                            }
+                            Text("$prog 条对话 · $ts", color = Color(0xFF8A93A3), fontSize = 11.sp)
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {},
+        dismissButton = { TextButton(onClick = onClose) { Text(I18n.t("btn_done", "关闭")) } },
+    )
+}
+
 @Composable
 fun RolesDialog(vm: ChatViewModel, deps: DialogDeps) {
     val theme = deps.theme
@@ -922,6 +1259,7 @@ fun RolesDialog(vm: ChatViewModel, deps: DialogDeps) {
     var exportTarget by vm.exportTarget
     var roleEditName by vm.roleEditName
     var pendingDelete by vm.pendingDelete
+    var saveRole by remember { mutableStateOf<String?>(null) }
     if (vm.showRoles.value) {
     AlertDialog(
         onDismissRequest = { vm.showRoles.value = false },
@@ -970,6 +1308,7 @@ fun RolesDialog(vm: ChatViewModel, deps: DialogDeps) {
                                 IconText(if (roleUnlocked[n] == true) "🔥 破甲·开" else "🔥 破甲", fontSize = 12.sp, color = if (roleUnlocked[n] == true) theme.danger else Color.Unspecified)
                             }
                             TextButton(onClick = { roleEditName = n }, modifier = Modifier.heightIn(min = 44.dp)) { IconText("✏️ 编辑", fontSize = 12.sp) }
+                            TextButton(onClick = { saveRole = n }, modifier = Modifier.heightIn(min = 44.dp)) { IconText("💾 档", fontSize = 12.sp) }
                             TextButton(onClick = { exportTarget = n to "json"; exportCardLauncher.launch("application/json") }, modifier = Modifier.heightIn(min = 44.dp)) { IconText("⬇️ JSON", fontSize = 12.sp) }
                             TextButton(onClick = { exportTarget = n to "png"; exportCardLauncher.launch("image/png") }, modifier = Modifier.heightIn(min = 44.dp)) { IconText("📤 PNG", fontSize = 12.sp) }
                             TextButton(onClick = { pendingDelete = n to "role" }, modifier = Modifier.heightIn(min = 44.dp)) { IconText("🗑️", color = theme.danger, fontSize = 14.sp) }
@@ -989,6 +1328,9 @@ fun RolesDialog(vm: ChatViewModel, deps: DialogDeps) {
         },
         dismissButton = { TextButton(onClick = { vm.showRoles.value = false }) { Text(I18n.t("btn_done", "完成")) } },
     )
+    saveRole?.let { sr ->
+        SaveSlotsDialog(vm, deps, sr, onClose = { saveRole = null })
+    }
     }
 }
 
@@ -1107,6 +1449,11 @@ fun RoleEditDialog(vm: ChatViewModel, deps: DialogDeps) {
                             }
                             listOf(key, name, type, init, extra).joinToString("|")
                         }?.joinToString("\n") ?: ""
+                    // 事件回填：支持可选的扩展列（好感加成|可重复|冷却）。
+                    // 老卡只有 5 列；once/cooldown/aff 若在扩展列里没有，就从
+                    // mechanics.ev_ext 这个 sidecar 里取 —— PC 端编辑器写的就是它。
+                    // 不读 sidecar 的话，在手机上编辑一次保存就会把它们全清掉。
+                    val evExt = mech?.fields?.get("ev_ext") as? J.Obj
                     rMechEv = (mech?.fields?.get("events") as? J.Arr)
                         ?.items?.mapNotNull { e ->
                             val eo = e as? J.Obj ?: return@mapNotNull null
@@ -1115,7 +1462,14 @@ fun RoleEditDialog(vm: ChatViewModel, deps: DialogDeps) {
                             val affGe = eo.fields["aff_ge"]?.int()?.toString() ?: ""
                             val kws = (eo.fields["keywords"] as? J.Arr)?.items?.mapNotNull { it.str() }?.joinToString(",") ?: ""
                             val prompt = eo.fields["prompt"]?.str() ?: ""
-                            listOf(id, name, affGe, kws, prompt).joinToString("|")
+                            val side = evExt?.fields?.get(id) as? J.Obj
+                            val affBonus = (eo.fields["aff"]?.int()
+                                ?: side?.fields?.get("aff")?.int())?.toString() ?: ""
+                            val repeat = if ((eo.fields["once"]?.bool() == false)
+                                || (side?.fields?.get("once")?.bool() == false)) "可重复" else ""
+                            val cd = (eo.fields["cooldown"]?.int()
+                                ?: side?.fields?.get("cooldown")?.int())?.toString() ?: ""
+                            listOf(id, name, affGe, kws, prompt, affBonus, repeat, cd).joinToString("|")
                         }?.joinToString("\n") ?: ""
                     rEndings = endingsToText(mech?.fields?.get("endings") as? J.Arr)
                     foldEndings = rEndings.isNotBlank()
@@ -1204,7 +1558,8 @@ fun RoleEditDialog(vm: ChatViewModel, deps: DialogDeps) {
                             foldBattle = true
                         }) { Text("⚔️ 战斗冒险", fontSize = 12.sp) }
                         TextButton(onClick = {
-                            rMechEv = "meet|初遇|0|你好,初次见面|第一次相遇，自然演出\nstorm|风暴夜|30|暴风雨,打雷|暴风雨夜，她害怕地靠近你\nconfess|告白|80|告白,喜欢|她鼓起勇气向你告白"
+                            // 模板里带一个"可重复 + 好感加成"的例子，作者照着抄就会用
+                            rMechEv = "meet|初遇|0|你好,初次见面|第一次相遇，自然演出|5\nstorm|风暴夜|30|暴风雨,打雷|暴风雨夜，她害怕地靠近你|10\nconfess|告白|80|告白,喜欢|她鼓起勇气向你告白|20\ndaily|日常闲聊|||来一段轻松的日常||可重复|3"
                             foldMech = true
                         }) { Text("🎬 事件剧本", fontSize = 12.sp) }
                         TextButton(onClick = {
@@ -1222,7 +1577,7 @@ fun RoleEditDialog(vm: ChatViewModel, deps: DialogDeps) {
                         OutlinedTextField(value = rMechAffMax, onValueChange = { rMechAffMax = it }, label = { Text("上限") }, singleLine = true, modifier = Modifier.weight(1f))
                         OutlinedTextField(value = rMechAffCrit, onValueChange = { rMechAffCrit = it }, label = { Text("暴击概率") }, singleLine = true, modifier = Modifier.weight(1f))
                     }
-                    OutlinedTextField(value = rMechEv, onValueChange = { rMechEv = it }, label = { Text("事件（每行 ID|名称|好感≥|关键词,逗号|触发提示）") }, minLines = 3)
+                    OutlinedTextField(value = rMechEv, onValueChange = { rMechEv = it }, label = { Text("事件（每行 ID|名称|好感≥|关键词,逗号|触发提示|好感加成|可重复|冷却）") }, minLines = 3)
                 }
                 FoldHead("📊 状态字段", foldSt, onToggle = { foldSt = !foldSt })
                 if (foldSt) {
@@ -1408,23 +1763,41 @@ fun RoleEditDialog(vm: ChatViewModel, deps: DialogDeps) {
                                     mechObj.fields["status"] = s
                                 }
                                 val evArr = J.Arr()
+                                val evExtWrite = J.Obj()
                                 rMechEv.split("\n").forEach { line ->
                                     val t = line.trim()
                                     if (t.isEmpty()) return@forEach
                                     val p = t.split("|")
                                     if (p.size < 5) return@forEach
                                     val eo = J.Obj()
-                                    eo.fields["id"] = J.Str(p[0].trim())
+                                    val eid = p[0].trim()
+                                    eo.fields["id"] = J.Str(eid)
                                     eo.fields["name"] = J.Str(p[1].trim())
                                     p[2].trim().toIntOrNull()?.let { eo.fields["aff_ge"] = J.Num(it.toDouble()) }
                                     val kws = J.Arr()
                                     p[3].split(",").map { it.trim() }.filter { it.isNotEmpty() }.forEach { kws.items.add(J.Str(it)) }
                                     if (kws.items.isNotEmpty()) eo.fields["keywords"] = kws
                                     eo.fields["prompt"] = J.Str(p.drop(4).joinToString("|").trim())
-                                    eo.fields["once"] = J.Bool(true)
+                                    // 扩展列（可选）：好感加成 | 可重复 | 冷却
+                                    val affBonus = p.getOrNull(5)?.trim()?.toIntOrNull()
+                                    val repeat = p.getOrNull(6)?.trim() == "可重复"
+                                    val cd = p.getOrNull(7)?.trim()?.toIntOrNull() ?: 0
+                                    eo.fields["once"] = J.Bool(!repeat)
+                                    if (affBonus != null && affBonus != 0) eo.fields["aff"] = J.Num(affBonus.toDouble())
+                                    if (repeat && cd > 0) eo.fields["cooldown"] = J.Num(cd.toDouble())
                                     evArr.items.add(eo)
+                                    // sidecar：管道格式放不下的属性另存一份，
+                                    // PC 端编辑器读的就是它（不清掉才算不丢数据）
+                                    val ext = J.Obj()
+                                    if (repeat) ext.fields["once"] = J.Bool(false)
+                                    if (repeat && cd > 0) ext.fields["cooldown"] = J.Num(cd.toDouble())
+                                    if (affBonus != null && affBonus != 0) ext.fields["aff"] = J.Num(affBonus.toDouble())
+                                    if (ext.fields.isNotEmpty()) evExtWrite.fields[eid] = ext
                                 }
-                                if (evArr.items.isNotEmpty()) mechObj.fields["events"] = evArr
+                                if (evArr.items.isNotEmpty()) {
+                                    mechObj.fields["events"] = evArr
+                                    if (evExtWrite.fields.isNotEmpty()) mechObj.fields["ev_ext"] = evExtWrite
+                                }
                                 val endingsArr = parseEndings(rEndings)
                                 if (endingsArr.items.isNotEmpty()) mechObj.fields["endings"] = endingsArr
                                 if (mechObj.fields.isNotEmpty()) adv.fields["mechanics"] = mechObj

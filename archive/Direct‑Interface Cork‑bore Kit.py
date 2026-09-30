@@ -1,7 +1,7 @@
 import os
 import sys
 
-# PyInstaller windowed 模式（无控制台）下 sys.stdout/stderr 为 None，
+# PyInstaller windowed 模式（无控制台<seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌）下 sys.stdout/stderr 为 None，
 # 任何 print 都会崩溃。启动即重定向到 exe/工程旁的 debug.log。
 if sys.stdout is None or sys.stderr is None:
     _exe = sys.executable if getattr(sys, "frozen", False) else os.path.abspath(__file__)

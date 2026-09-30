@@ -2,7 +2,7 @@ package com.dick.plugins
 
 import com.dick.core.ChatEngine
 
-/** 日文翻译：/jp 中→日、/zh 日→中（通过引擎单次调用，仅输出译文） */
+/** 日文翻译：/jp 中→日、/zh <seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌日→中（通过引擎单次调用，仅输出译文） */
 class JpPlugin : Plugin {
     override val name = "日文翻译"
     override val version = "1.0"

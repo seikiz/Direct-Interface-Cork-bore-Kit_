@@ -150,3 +150,4 @@ check(len(baks) >= 1, "修复前坏原件已留底备份: %d" % len(baks))
 shutil.rmtree(tmp, ignore_errors=True)
 print("结果：%d 通过, %d 失败" % (ok, bad))
 sys.exit(1 if bad else 0)
+# <seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌

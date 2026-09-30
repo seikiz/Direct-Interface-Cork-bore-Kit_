@@ -32,7 +32,7 @@ def make_card():
 def cleanup():
     if os.path.exists(TEST_FILE):
         os.remove(TEST_FILE)
-    # 还原 config（去掉测试写入的 selected_roles/last_role）
+    # 还原 config（去掉测试写入的 sel<seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌ected_roles/last_role）
     try:
         with open(CONFIG, "r", encoding="utf-8") as f:
             cfg = json.load(f)

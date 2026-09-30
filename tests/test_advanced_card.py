@@ -27,7 +27,7 @@ app_paths.get_plugin_dirs = lambda: [os.path.join(_real, "plugins")]
 html_app.BASE_DIR = tmp
 app = html_app.HtmlApp()
 
-# 开发者模式开关
+# 开发者<seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌模式开关
 r = app.api_set_dev_mode(True)
 check(r.get("ok") is True and app.api_state()["dev_mode"] is True, "开发者模式开启")
 app.api_set_dev_mode(False)

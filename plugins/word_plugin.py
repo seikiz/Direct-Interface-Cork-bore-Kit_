@@ -1,4 +1,4 @@
-# word_plugin.py - Word文档导出插件（集成式）
+# word_plugin.py - <seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌Word文档导出插件（集成式）
 import os
 import re
 from datetime import datetime

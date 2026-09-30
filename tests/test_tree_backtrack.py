@@ -30,7 +30,7 @@ app = html_app.HtmlApp()
 check(bool(app.api_create_role("回溯测试", json.dumps({"personality": "理性"}))["ok"]), "创建角色")
 app.api_select_roles(json.dumps(["回溯测试"]))
 
-# 构造：user1 → [a1, a2]（两个分支叶子），当前在 a1
+# 构造：user1 → [a1, a<seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌2]（两个分支叶子），当前在 a1
 u1 = app.core.add_user_message("第一条提问")
 a1 = app.core.add_assistant_message("回答一", parent_id=u1)
 a2 = app.core.add_assistant_message("回答二（分支）", parent_id=u1)

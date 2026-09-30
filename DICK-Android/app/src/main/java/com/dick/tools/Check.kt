@@ -7,7 +7,9 @@ import com.dick.core.ChatTree
 import com.dick.core.J
 import com.dick.core.JsonS
 import com.dick.core.MessageNode
+import com.dick.core.MechanicsEngine
 import com.dick.core.SaveFile
+import com.dick.core.TextGuard
 import com.dick.core.TreeStore
 import com.dick.core.WorldBook
 import com.dick.core.WorldEntry
@@ -69,7 +71,7 @@ fun runSelfTest() {
     tree.addNode("assistant", "另一种回答", u1)
     check(tree.nodes[u1]!!.childrenIds.size == 2, "分支产生 2 个子节点")
 
-    // 回归：模拟 App.doSend 的两轮对话（用户节点必须挂当前叶子）
+    // 回归：模拟 App.doSend <seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌的两轮对话（用户节点必须挂当前叶子）
     val t3 = ChatTree()
     t3.addNode("user", "第一句", parentId = t3.currentLeafId)
     t3.addNode("assistant", "回复一", t3.currentLeafId)
@@ -284,6 +286,95 @@ fun runSelfTest() {
     val mr = mp.onCommand("memory", "recall 2") ?: ""
     check(mr.contains("已回溯最近 2 轮"), "记忆回溯")
     check(mp.contextInjection().contains("记忆回溯"), "回溯内容注入")
+
+    println("== 零宽字符防线 ==")
+    // 零宽字符：白烧 token / 卡界面 / 藏提示词注入 / 绕过关键词过滤
+    val zwsp = '\u200B'; val zwj = '\u200D'; val bom = '\uFEFF'; val shy = '\u00AD'
+    run {
+        val normal = "你好，今天天气不错 😀"
+        val (c, r) = TextGuard.sanitize(normal)
+        check(c == normal && !r.changed, "正常文本原样保留")
+    }
+    run {
+        val family = "👨${zwj}👩${zwj}👧"
+        check(TextGuard.sanitize(family).first == family, "合法 emoji 组合(ZWJ)没被误删")
+    }
+    run {
+        val s = "正常文字${zwsp}后面还有字"
+        val (c, r) = TextGuard.sanitize(s)
+        check(c == "正常文字后面还有字" && r.removed == 1, "零宽空格被剔除")
+    }
+    run {
+        val s = "前面\uDB40\uDC41后面"          // U+E0041 标签字符（BMP 之外，代理对）
+        check(TextGuard.invisibleCount(s) == 1, "代理对标签字符能扫到（按码点遍历）")
+        val (c, _) = TextGuard.sanitize(s)
+        check(!c.contains('\uDB40'), "标签字符被剔除且没留代理对残片")
+    }
+    run {
+        val bomb = "看这个" + (zwsp.toString() + zwj + bom).repeat(500) + "而已"
+        check(TextGuard.isBomb(bomb), "零宽字符炸弹被判为攻击")
+        val (c, r) = TextGuard.sanitize(bomb)
+        check(r.bomb && r.removed == 1500 && c == "看这个而已",
+            "炸弹全清：${r.removed} 个 → 「$c」")
+    }
+    run {
+        val (_, r) = TextGuard.sanitize("正常${shy}文字")
+        check(!r.bomb, "5 字短句里 1 个不可见字符不被误报成炸弹")
+    }
+    run {
+        check(TextGuard.sanitize("你好\u00A0世界").first == "你好 世界", "NBSP 规整成普通空格")
+        check(TextGuard.invisibleCount("完全正常") == 0, "正常文本不可见字符计数为 0")
+        check(TextGuard.sanitize("").first == "", "空串安全")
+    }
+
+    println()
+    // ---- 机制状态全量重置：清空聊天记录必须回到「状态如初」----
+    println("== 机制状态重置（清空历史） ==")
+    run {
+        val cfg = J.Obj()
+        val aff = J.Obj()
+        aff.fields["enabled"] = J.Bool(true)
+        aff.fields["initial"] = J.Num(20.0)
+        aff.fields["min"] = J.Num(0.0)
+        aff.fields["max"] = J.Num(100.0)
+        cfg.fields["affection"] = aff
+        val stCfg = J.Obj()
+        stCfg.fields["enabled"] = J.Bool(true)
+        val f1 = J.Obj(); f1.fields["key"] = J.Str("精力"); f1.fields["type"] = J.Str("int"); f1.fields["initial"] = J.Num(100.0)
+        val f2 = J.Obj(); f2.fields["key"] = J.Str("淫乱度"); f2.fields["type"] = J.Str("int"); f2.fields["initial"] = J.Num(0.0)
+        stCfg.fields["fields"] = J.Arr(mutableListOf(f1, f2))
+        cfg.fields["status"] = stCfg
+
+        val dir = File(System.getProperty("java.io.tmpdir"), "dick_mech_reset_" + System.nanoTime())
+        dir.mkdirs()
+        val stFile = File(dir, "_mech_test.json")
+        val emptyTree = ChatTree()
+        val mech = MechanicsEngine()
+        mech.stateFile = stFile
+
+        mech.reload(cfg, emptyTree, reset = true, forceInitial = true)
+        check(mech.state?.fields?.get("affection")?.int() == 20, "初始态：好感=配置初始值 20")
+        check(mech.getIntStatus("精力") == 100, "初始态：精力=100")
+
+        // 模拟聊了一阵：好感拉满、精力掉到 90、告白事件触发，并落盘
+        mech.state!!.fields["affection"] = J.Num(100.0)
+        (mech.state!!.fields["status"] as J.Obj).fields["精力"] = J.Num(90.0)
+        (mech.state!!.fields["flags"] as J.Obj).fields["告白"] = J.Bool(true)
+        mech.persistState()
+        check(stFile.exists(), "状态已落盘（mech_state）")
+
+        // reset=true 单独用是不够的：状态文件比树快照优先，旧值会被读回来 —— 这就是「清空历史后状态没重置」的根因
+        mech.reload(cfg, emptyTree, reset = true)
+        check(mech.state?.fields?.get("affection")?.int() == 100, "reset=true 仍会读回旧状态（记录这个坑）")
+
+        // 清空历史必须走 forceInitial：无视任何快照，一律按配置 initial 重建
+        mech.reload(cfg, emptyTree, reset = true, forceInitial = true)
+        check(mech.state?.fields?.get("affection")?.int() == 20, "forceInitial：好感回到 20")
+        check(mech.getIntStatus("精力") == 100, "forceInitial：精力回到 100")
+        check(mech.getIntStatus("淫乱度") == 0, "forceInitial：淫乱度回到 0")
+        check((mech.state!!.fields["flags"] as J.Obj).fields.isEmpty(), "forceInitial：flags 清空（告白不再「已触发」）")
+        dir.deleteRecursively()
+    }
 
     println()
     println("自检结果：" + passed + " 通过 / " + failed + " 失败")

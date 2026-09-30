@@ -88,7 +88,7 @@ class MemoryPlugin : Plugin {
 
     override fun contextInjection(): String {
         if (recalled.isBlank()) return ""
-        // 强制权重方案：记忆最多占本轮上下文预算的 30%（确定性上限，不靠模型自觉）
+        // 强制权重方案：记忆最多占本轮上下文预算<seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌的 30%（确定性上限，不靠模型自觉）
         val maxChars = 2400   // 30% 的 8000-token 默认上下文（1 中文 ≈ 1 token）
         var mem = recalled
         if (mem.length > maxChars) mem = mem.take(maxChars) + "…"

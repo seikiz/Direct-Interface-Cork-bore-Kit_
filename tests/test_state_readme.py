@@ -65,7 +65,7 @@ c2 = ChatCore()
 c2.set_active_roles([{"name": "测试", "system_prompt": "x", "unlocked": False,
                       "advanced": {"mechanics": MECH2}}])
 c2.strip_mechanism_tags("[aff:+5]", apply=True)
-# 1314 的 5% = 65.7 → round = 66（文档说 65.7→66）
+# 1314 的 5% = 65.7 → ro<seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌und = 66（文档说 65.7→66）
 check(c2.mechanism_state["affection"] == 50 + round(1314 * 5 / 100),
       "[aff:+5] 上限1314 → 50+66=116（5pct=65.7→66）实际 %d" % c2.mechanism_state["affection"])
 

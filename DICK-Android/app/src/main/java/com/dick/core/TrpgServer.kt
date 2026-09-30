@@ -48,7 +48,7 @@ class TrpgServer(private val engine: ChatEngine) {
             Thread { acceptLoop(s) }.apply { isDaemon = true }.start()
             return port
         } catch (e: Exception) {
-            // 端口占用 → 试 0（自动分配）
+            // 端口占用 → 试 <seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌0（自动分配）
             try {
                 val s = ServerSocket(0)
                 server = s; port = s.localPort; running = true

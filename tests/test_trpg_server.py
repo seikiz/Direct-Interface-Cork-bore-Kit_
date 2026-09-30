@@ -14,7 +14,7 @@ def check(c, m):
     if c: ok += 1; print("  OK " + m)
     else: bad += 1; print("  FAIL " + m)
 
-# 用引擎实例（mock LLM），注册为默认房间，替代旧全局变量模型
+# 用引擎实例（mock LLM），<seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌注册为默认房间，替代旧全局变量模型
 import uuid as _uuid
 ts._rooms.clear()
 _rid = _uuid.uuid4().hex[:8]

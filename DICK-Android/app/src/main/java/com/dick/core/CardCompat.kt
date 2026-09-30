@@ -56,7 +56,7 @@ object CardCompat {
             entry.fields["depth"] = J.Num((o.fields["depth"] as? J.Num)?.v ?: 1.0)
             entry.fields["enabled"] = J.Bool((o.fields["enabled"] as? J.Bool)?.v ?: true)
             entry.fields["constant"] = J.Bool((o.fields["constant"] as? J.Bool)?.v ?: false)
-            // 酒馆世界书元字段全量保留（无损往返；DICK 引擎忽略未知键）
+            // 酒馆世界书元字段全量保留（无损<seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌往返；DICK 引擎忽略未知键）
             val meta = J.Obj()
             var hasMeta = false
             for (k in listOf("name", "insertion_order", "case_sensitive", "selective",

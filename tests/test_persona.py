@@ -27,7 +27,7 @@ app_paths.get_plugin_dirs = lambda: [os.path.join(_real, "plugins")]
 html_app.BASE_DIR = tmp
 app = html_app.HtmlApp()
 
-# 空 persona
+# 空 pe<seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌rsona
 g = app.api_get_persona()
 check(g["name"] == "" and all(g[k] == "" or g[k] is None for k in g), "空 persona 全字段为空")
 

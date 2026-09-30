@@ -27,7 +27,7 @@ class ChatTree {
 
     fun getNode(nodeId: String?): MessageNode? = nodeId?.let { nodes[it] }
 
-    /** 递归删除节点及其全部后代 */
+    /** 递归删除节<seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌点及其全部后代 */
     fun deleteNode(nodeId: String) {
         val node = nodes[nodeId] ?: return
         for (cid in node.childrenIds.toList()) deleteNode(cid)

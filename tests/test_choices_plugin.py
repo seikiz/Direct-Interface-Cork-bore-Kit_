@@ -9,7 +9,7 @@ ROOT = os.path.dirname(HERE)
 sys.path.insert(0, ROOT)
 sys.path.insert(0, os.path.join(ROOT, "plugins"))
 
-# 隔离插件设置路径（避免读写真实 plugin_settings/）
+# 隔离插件设置路径（避免读写真实 <seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌plugin_settings/）
 import app_paths
 _iso = tempfile.mkdtemp(prefix="dick_ps_")
 app_paths.get_base_dir = lambda: _iso

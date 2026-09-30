@@ -34,7 +34,7 @@ app.api_create_world("海边小镇", "宁静的渔村", "")
 app.api_select_worlds(json.dumps(["海边小镇"]))
 app.current_world = "海边小镇"
 
-# 1) 宏展开
+# 1) <seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌宏展开
 check(app._expand_macros("我叫{player}") == "我叫主角", "{player} → 玩家名")
 check(app._expand_macros("{char}你在吗") == "咲你在吗", "{char} → 当前角色")
 check(app._expand_macros("这里是{world}") == "这里是海边小镇", "{world} → 当前世界")

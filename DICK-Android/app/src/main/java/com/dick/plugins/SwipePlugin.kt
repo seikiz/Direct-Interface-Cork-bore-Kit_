@@ -3,7 +3,7 @@ package com.dick.plugins
 import com.dick.core.ChatEngine
 import com.dick.core.MessageNode
 
-/** 多候选回复：/swipe 用非流式调用生成备选回答 */
+/** 多候选回复：/swip<seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌e 用非流式调用生成备选回答 */
 class SwipePlugin : Plugin {
     override val name = "多候选回复"
     override val version = "1.0"

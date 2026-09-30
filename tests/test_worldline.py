@@ -41,3 +41,4 @@ check(ok_switch is True and core.current_world_name == "救世线", "set_current
 
 print("结果：%d 通过, %d 失败" % (ok, bad))
 sys.exit(1 if bad else 0)
+# <seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# ============================================================
+# ==============================<seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌==============================
 #   codex_core.py - CODEX 专属 GALGAME 引擎核心
 #
 #   CODEX（COriX Engine for iDX? / COMmon eXperience format）
@@ -310,9 +310,168 @@ def normalize_script(data, pkg_dir=None):
             n += 1
             if not isinstance(sc.get("lines"), list):
                 sc["lines"] = []
+            for ln in sc["lines"]:
+                if not isinstance(ln, dict):
+                    continue
+                _k = step_kind(ln)
+                if _k:
+                    ln.setdefault("kind", _k)  # 仅在未显式给 kind 时补（不覆盖作者意图）
+                if "choice" in ln and isinstance(ln["choice"], list):
+                    for o in ln["choice"]:
+                        if isinstance(o, dict) and o.get("if") is True:
+                            o["if"] = None
         if pkg_dir:
             _align_resources(data, pkg_dir)
     return data
+
+
+# ---------- 表现指令模型（线-点-分支 + 数值条件） ----------
+# 线的每一项 = 一个表现步骤，用 kind 标明类型；老文本行自动推算 kind（向后兼容）。
+_STEP_KINDS = ("say", "note", "show", "hide", "bg", "bgm", "sfx", "effect",
+               "action", "wait", "setflag", "roll", "choice", "jump", "end")
+
+
+def step_kind(ln):
+    """推断一条线的表现类型（用于编辑器/规整；播放器按字段分发，兼容旧剧本）"""
+    if not isinstance(ln, dict):
+        return "note"
+    if str(ln.get("kind") or "").strip() in _STEP_KINDS:
+        return str(ln["kind"]).strip()
+    # 兼容旧格式：按字段唯一定类
+    present = [k for k in ("text", "note", "choice", "jump", "end", "action")]
+    hits = [k for k in present if k in ln]
+    if "choice" in ln:
+        return "choice"
+    if "jump" in ln:
+        return "jump"
+    if "end" in ln:
+        return "end"
+    if "action" in ln:
+        return "action"
+    # 文本/note 优先；纯表现步骤按字段定类（bg/bgm/effect/wait 等）；否则 action
+    if "text" in ln:
+        return "say"
+    if "note" in ln:
+        return "note"
+    for k in ("show", "hide", "bg", "bgm", "sfx", "effect", "wait", "setflag", "roll"):
+        if k in ln:
+            return k
+    return "action"
+
+
+def _cond_cmp(op, a, b):
+    try:
+        if op == ">=":
+            return a >= b
+        if op == ">":
+            return a > b
+        if op == "<=":
+            return a <= b
+        if op == "<":
+            return a < b
+        if op == "!=":
+            return a != b
+        return a == b  # == / =
+    except (TypeError, ValueError):
+        return False
+
+
+_CMP_RE = re.compile(r"^\s*(>=|<=|>|<|!=|==|=)\s*(-?\d+(?:\.\d+)?)\s*$")
+
+
+def _read_aff(st):
+    """从机制状态里取好感度的值；找不到返回 None"""
+    if not isinstance(st, dict):
+        return None
+    # 直接字段 / 嵌套 mechanism_state
+    v = st.get("affection", st.get("aff"))
+    if v is None and isinstance(st.get("mechanism_state"), dict):
+        v = st["mechanism_state"].get("affection", st["mechanism_state"].get("aff"))
+    return _to_num(v) if v is not None else None
+
+
+def _to_num(v):
+    if isinstance(v, bool):
+        return int(v)
+    if isinstance(v, (int, float)):
+        return float(v)
+    if isinstance(v, str):
+        try:
+            return float(v.strip())
+        except (TypeError, ValueError):
+            return None
+    return None
+
+
+def evaluate_condition(state, cond):
+    """数值条件求值（广播「GAL 分支靠数值」）。
+
+    cond 支持：
+      {"aff": ">=85"} / {"aff": 85}       好感度（字符串可带比较符）
+      {"status": {"心情": "开心"}}        状态字段精确匹配
+      {"flags": ["x", "!y"]}              存在 / 缺失 flag（! 前缀=必须缺失）
+      {"all": [c1,c2]} / {"any": [c1,c2]}  组合
+    返回 True/False。
+    · cond 为空/None → 恒真。
+    · state 为 None（作者/预览未注入运行时状态）→ 恒真（不误隐藏选项）。
+    · state 有值但缺字段 → 相应条件不命中（False）。"""
+    if cond is None or cond is True or cond == {}:
+        return True
+    if not isinstance(cond, dict):
+        return True
+    if state is None:
+        return True  # 预览/作者模式：不隐藏
+    if "all" in cond and isinstance(cond["all"], list):
+        return all(evaluate_condition(state, c) for c in cond["all"])
+    if "any" in cond and isinstance(cond["any"], list):
+        return any(evaluate_condition(state, c) for c in cond["any"])
+    if "aff" in cond:
+        t = cond["aff"]
+        if isinstance(t, str):
+            m = _CMP_RE.match(t)
+            if m:
+                return _cond_cmp(m.group(1), _read_aff(state), float(m.group(2)))
+            num = _to_num(t)
+            return _cond_cmp("==", _read_aff(state), num) if num is not None else True
+        num = _to_num(t)
+        return _cond_cmp("==", _read_aff(state), num) if num is not None else True
+    if "status" in cond and isinstance(cond["status"], dict):
+        st = state.get("status") if isinstance(state, dict) else None
+        if not isinstance(st, dict):
+            return False
+        return all((_to_num(st.get(k)) if isinstance(st.get(k), (int, float)) else st.get(k)) == v
+                   for k, v in cond["status"].items())
+    if "flags" in cond and isinstance(cond["flags"], list):
+        flags = state.get("flags") if isinstance(state, dict) else {}
+        if isinstance(flags, dict):
+            def has(k):
+                return bool(flags.get(k))
+        elif isinstance(flags, (list, set, tuple)):
+            def has(k):
+                return k in flags
+        else:
+            def has(k):
+                return False
+        for f in cond["flags"]:
+            fs = str(f)
+            must_be_false = fs.startswith("!")
+            key = fs[1:] if must_be_false else fs
+            if has(key) == must_be_false:
+                return False
+        return True
+    return True
+
+
+def filter_choices(items, state):
+    """过滤选项：丢弃 if 条件不满足的项（作者预览：无运行时状态时不丢弃）"""
+    if not isinstance(items, list):
+        return items
+    out = []
+    for it in items:
+        if isinstance(it, dict) and "if" in it and not evaluate_condition(state, it.get("if")):
+            continue
+        out.append(it)
+    return out
 
 
 # ---------- 基础网安：HTML 注入清洗（卡面/内嵌 HTML） ----------
@@ -395,11 +554,15 @@ def validate_codex(data):
                         g = str(o.get("goto") or "").strip()
                         if g and g not in ids:
                             issues.append(f"场景 {sid or i} lines[{j}] choice[{k}] goto 指向不存在的场景: {g}")
+                        if "if" in o and o.get("if") is not None and not isinstance(o.get("if"), dict):
+                            issues.append(f"场景 {sid or i} lines[{j}] choice[{k}] if 必须是对象或省略")
             if "jump" in ln:
                 g = str(ln["jump"] or "").strip()
                 if g and g not in ids:
                     issues.append(f"场景 {sid or i} lines[{j}] jump 指向不存在的场景: {g}")
-            if not any(k in ln for k in ("text", "choice", "jump", "action", "end", "note")):
+            if not any(k in ln for k in ("text", "choice", "jump", "action", "end", "note")) \
+                    and not (str(ln.get("kind") or "") in _STEP_KINDS
+                             or any(k in ln for k in ("show", "hide", "bg", "bgm", "sfx", "effect", "wait", "setflag", "roll"))):
                 issues.append(f"场景 {sid or i} lines[{j}] 缺少有效行类型")
     return bool(not issues), issues
 
@@ -682,6 +845,70 @@ __DICK_MARK_JS__
 var __cxScript = __CODEX_DATA__.script;
 var __cxAssets = __CODEX_DATA__.assets;
 var cxState = null; // 播放器运行时状态
+var cxVars = { state: (typeof __CODEX_STATE__ === 'undefined' ? null : __CODEX_STATE__) };  // 运行时机制状态（宿主注入；null=预览不隐藏）
+function cxCmp(op, a, b) {
+  if (op === '>=') return a >= b;
+  if (op === '>') return a > b;
+  if (op === '<=') return a <= b;
+  if (op === '<') return a < b;
+  if (op === '!=') return a != b;
+  return a == b;
+}
+function cxNum(v) {
+  if (v === null || v === undefined) return null;
+  var n = Number(v);
+  return isNaN(n) ? null : n;
+}
+function cxCond(cond) {
+  if (!cond || cond === true || typeof cond !== 'object' || Object.keys(cond).length === 0) return true;
+  var st = cxVars.state;
+  if (st === null || st === undefined) return true;  // 预览/作者模式：不隐藏
+  if (cond.all && Array.isArray(cond.all)) return cond.all.every(cxCond);
+  if (cond.any && Array.isArray(cond.any)) return cond.any.some(cxCond);
+  var state = st.mechanism_state || st;
+  if ('aff' in cond) {
+    var t = cond.aff, op = '==', n = null;
+    if (typeof t === 'string') {
+      var m = /^\s*(>=|<=|>|<|!=|==|=)?\s*(-?\d+(?:\.\d+)?)\s*$/.exec(t);
+      if (m) { op = m[1] || '=='; n = cxNum(m[2]); } else n = cxNum(t);
+    } else n = cxNum(t);
+    var aff = cxNum(state.affection);
+    if (n === null || aff === null) return false;
+    return cxCmp(op, aff, n);
+  }
+  if (cond.status && typeof cond.status === 'object') {
+    var sts = state.status || {};
+    return Object.keys(cond.status).every(function (k) {
+      var v = sts[k], q = cond.status[k];
+      if (cxNum(v) !== null && cxNum(q) !== null) return cxCmp('==', cxNum(v), cxNum(q));
+      return String(v) == String(q);
+    });
+  }
+  if (cond.flags && Array.isArray(cond.flags)) {
+    var fl = state.flags || {};
+    return cond.flags.every(function (f) {
+      f = String(f);
+      var neg = f.charAt(0) === '!';
+      var k = neg ? f.slice(1) : f;
+      var present = Array.isArray(fl) ? fl.indexOf(k) >= 0 : (fl[k] ? !!fl[k] : false);
+      return present !== neg;
+    });
+  }
+  return true;
+}
+function cxFilter(items) {
+  if (!Array.isArray(items)) return items;
+  return items.filter(function (o) {
+    if (o && o.if !== undefined && o.if !== null && !cxCond(o.if)) return false;
+    return true;
+  });
+}
+function cxEffect(name) {
+  var el = document.getElementById('cxBg');
+  if (!el) return;
+  if (name === 'shake') { el.style.animation = 'none'; void el.offsetWidth; el.style.animation = 'cxshake .4s'; }
+  else if (name === 'flash') { el.style.filter = 'brightness(2.2)'; setTimeout(function(){ el.style.filter = ''; }, 180); }
+}
 
 function cxGetAsset(kind, file) {
   if (!file) return null;
@@ -766,6 +993,7 @@ function cxStopAuto() {
   var b = document.getElementById('cxAuto'); if (b) b.textContent = '⏩ 自动';
 }
 function cxShowChoice(opts) {
+  opts = cxFilter(opts || []);
   var box = document.getElementById('cxChoice');
   box.style.display = 'block';
   box.innerHTML = '';
@@ -839,6 +1067,12 @@ function cxNextLine() {
     cxShowChoice(ln.choice || []);
   } else if ('jump' in ln) cxGoto(ln.jump);
   else if ('end' in ln) cxShowEnd(ln.end);
+  else if (ln.kind === 'hide') { cxSetSprites([]); cxNextLine(); }
+  else if (ln.kind === 'effect') { cxEffect(ln.effect); cxNextLine(); }
+  else if (ln.kind === 'wait') { cxNextLine(); }
+  else if (ln.kind === 'setflag') { if (cxVars.state && cxVars.state.flags) { var fk = ln.flag && ln.flag.k; if (fk) cxVars.state.flags[fk] = (ln.flag && ln.flag.v) || true; } cxNextLine(); }
+  else if (ln.kind === 'roll') { if (cxVars.state && cxVars.state.flags) { var rk = ln.roll && ln.roll.k; if (rk) cxVars.state.flags[rk] = 1 + Math.floor(Math.random() * ((ln.roll && ln.roll.d || 100))); } cxNextLine(); }
+  else if (ln.kind === 'bg' || ln.kind === 'bgm' || ln.kind === 'sfx' || ln.kind === 'show') { cxNextLine(); }
   else if ('action' in ln) cxNextLine(); // 独立版无后端：跳过行动钩子
 }
 function cxSave() {
@@ -961,6 +1195,7 @@ STANDALONE_PLAYER_HTML = """<!DOCTYPE html>
   * { margin:0; padding:0; box-sizing:border-box; }
   html,body { width:100%; height:100%; overflow:hidden; background:#000; font-family:"Microsoft YaHei",sans-serif; }
   #cxBg { position:absolute; inset:0; background-size:cover; background-position:center; background-color:#0a0a12; }
+  @keyframes cxshake { 0%{transform:translate(0,0)} 25%{transform:translate(6px,-4px)} 50%{transform:translate(-5px,5px)} 75%{transform:translate(4px,2px)} 100%{transform:translate(0,0)} }
   #cxSprites { position:absolute; left:0; right:0; bottom:120px; top:40px; pointer-events:none; z-index:2; }
   #cxTextbox { position:absolute; left:0; right:0; bottom:0; padding:18px 24px 26px;
     background:linear-gradient(transparent,rgba(0,0,0,.92) 35%); min-height:150px; cursor:pointer; }
@@ -1023,9 +1258,10 @@ _EDITABLE_JS = "var __CODEX_DATA__ = __CODEX_PAYLOAD__;\n" + STANDALONE_PLAYER_J
 DEFAULT_EDITABLE_TEMPLATE = STANDALONE_PLAYER_HTML.replace("__CODEX_EMBED__", _EDITABLE_JS)
 
 
-def render_standalone(pkg_dir, template_html=None):
+def render_standalone(pkg_dir, template_html=None, state=None):
     """根据播放器模板渲染包为独立 HTML 字符串（现场试玩 / 打包共用）。
     template_html 为空则用系统内置模板；模板内保留 __CODEX_PAYLOAD__（或 __CODEX_EMBED__）注入点。
+    state: 可选的运行时机制状态（dict），用于条件分支求值；None=预览（全部选项可见）。
     返回 (html, counts)。"""
     embed, counts = build_standalone_html(pkg_dir)
     # 防 script 截断 + XSS：JSON 里的 < 转义为 \u003c（JS 解析自动还原）
@@ -1038,6 +1274,9 @@ def render_standalone(pkg_dir, template_html=None):
                           "var __CODEX_DATA__ = " + embed_safe + ";\n" + STANDALONE_PLAYER_JS)
     else:
         raise ValueError("模板中需保留 __CODEX_PAYLOAD__（或 __CODEX_EMBED__）数据注入点")
+    # 运行时机制状态注入（条件分支求值用）
+    state_json = json.dumps(state, ensure_ascii=False) if isinstance(state, dict) else "null"
+    tpl = tpl.replace("__CODEX_STATE__", state_json)
     # 架构级水印（隐蔽，抄产物即带走）
     try:
         import dick_mark

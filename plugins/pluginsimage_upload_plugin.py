@@ -1,4 +1,4 @@
-# plugins/image_upload_plugin.py - 图片导入插件 v1.1
+# plugins/image_upload_p<seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌lugin.py - 图片导入插件 v1.1
 # 功能：选择本地图片 → 预览/压缩 → 生成文字描述（Hugging Face BLIP）→ 发送消息时自动附加
 from plugin_base import PluginBase
 import tkinter as tk

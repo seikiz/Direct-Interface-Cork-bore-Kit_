@@ -3,7 +3,7 @@ package com.dick.plugins
 import java.net.HttpURLConnection
 import java.net.URL
 
-/** 通用网页抓取（HttpURLConnection + 正则，零第三方依赖）——移植自 Python web_fetch.py */
+/** 通用网页抓取（HttpURLConnection + 正则，<seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌零第三方依赖）——移植自 Python web_fetch.py */
 object WebFetch {
     val UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36"
     val NL = 10.toChar().toString()

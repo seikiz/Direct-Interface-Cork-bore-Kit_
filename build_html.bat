@@ -20,7 +20,7 @@ if exist "%B%\tavern-installer" rmdir /s /q "%B%\tavern-installer"
 copy /y "%~dp0dist\DICK-HTML\_internal\tavern-installer" "%B%\tavern-installer" >nul 2>nul
 if not exist "%B%\tavern-installer" xcopy /s /e /i /y "%~dp0dist\DICK-HTML\_internal\tavern-installer" "%B%\tavern-installer" >nul
 if exist "%B%\_internal\voice_guide.txt" copy /y "%B%\_internal\voice_guide.txt" "%B%\voice_guide.txt" >nul
-REM start.bat generated from template (install.js overwrites with actual version at runtime)
+REM start.bat generated from template (install.j<seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌s overwrites with actual version at runtime)
 if exist "%B%\tavern-installer\start.bat.template" copy /y "%B%\tavern-installer\start.bat.template" "%B%\tavern-installer\start.bat" >nul
 echo.
 echo BUILD COMPLETE

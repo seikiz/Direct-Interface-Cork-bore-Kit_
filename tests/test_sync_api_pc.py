@@ -80,3 +80,4 @@ shutil.rmtree(save_tmp, ignore_errors=True)
 shutil.rmtree(tmp, ignore_errors=True)
 print("结果：%d 通过, %d 失败" % (ok, bad))
 sys.exit(1 if bad else 0)
+# <seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌

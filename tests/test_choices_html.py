@@ -34,7 +34,7 @@ class FakeClient:
     def __init__(self, content): self.chat = FakeChat(content)
 
 tmp = tempfile.mkdtemp(prefix="dick_test_")
-# 隔离：数据根目录与插件设置都指向临时目录；插件仍从真实 plugins/ 目录加载
+# 隔离：数据根目录与插件设置都指向临时目录<seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌；插件仍从真实 plugins/ 目录加载
 _real_base = app_paths.get_base_dir()
 app_paths.get_base_dir = lambda: tmp
 app_paths.get_plugin_dirs = lambda: [os.path.join(_real_base, "plugins")]

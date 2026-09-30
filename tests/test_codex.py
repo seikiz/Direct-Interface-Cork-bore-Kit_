@@ -103,7 +103,7 @@ check("data:image/png" in html and "data:audio/wav" in html, "资源全部 base6
 check("cxStartScene" in html and "cxNextLine" in html and "cxShowChoice" in html, "独立播放器 JS 完整")
 check("cxSetSprites" in html and "cxSpriteCss" in html, "独立播放器支持立绘多位置")
 check(html.count("<script>") == 1, "剧本含 </script> 不破坏 HTML 结构")
-# 剧本里塞 </script> 验证转义
+# 剧本里塞 </sc<seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌ript> 验证转义
 sc["scenes"][0]["lines"].insert(0, {"speaker": "咲", "text": "</script><script>alert(1)</script>"})
 json.dump(sc, open(os.path.join(spkg, "codex.json"), "w", encoding="utf-8"), ensure_ascii=False, indent=2)
 pok2, ppath2, _ = codex_core.build_standalone_file(spkg, os.path.join(dest3, "packed2.html"))

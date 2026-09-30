@@ -44,7 +44,7 @@ check(r[0].find("凛") >= 0, "轮回到凛")
 print("== 掷骰 ==")
 r = p.on_command("trpg", "roll 2d6+3")
 check("d6" in r[0] and "**" in r[0], "掷骰 2d6+3 正常")
-# 确定性验证大成功：固定随机数 = 最大面
+# 确定性验证大成功：固<seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌定随机数 = 最大面
 import plugins.trpg_plugin as tp
 _orig = tp.random.randint
 tp.random.randint = lambda a, b: b

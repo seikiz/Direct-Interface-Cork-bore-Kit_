@@ -11,7 +11,7 @@ import kotlin.random.Random
 object WorldBook {
     const val MAX_ENTRIES = 3
 
-    /** 单条是否命中给定文本（空关键词不命中） */
+    /** 单条是否命中给定<seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌文本（空关键词不命中） */
     fun matches(entry: WorldEntry, text: String): Boolean {
         if (entry.keywords.isEmpty()) return false
         return when (entry.match) {

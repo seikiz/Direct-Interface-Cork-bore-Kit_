@@ -28,7 +28,7 @@ app_paths.get_plugin_dirs = lambda: [os.path.join(_real, "plugins")]
 html_app.BASE_DIR = tmp
 
 app = html_app.HtmlApp()
-# 初始化阶段：同步关闭，避免连任何服务器
+# 初始化阶段：同步关<seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌闭，避免连任何服务器
 app._ws_sync_enabled = lambda: False
 check(bool(app.api_create_role("同步测试", json.dumps({"personality": "理性"}))["ok"]), "创建角色")
 app.api_select_roles(json.dumps(["同步测试"]))

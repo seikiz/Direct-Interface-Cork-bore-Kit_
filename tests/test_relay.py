@@ -19,7 +19,7 @@ def check(c, m):
         bad += 1
         print("  FAIL " + m)
 
-# 1) 本地回显目标（模拟 OpenAI 官方 API）
+# 1) 本地回显目标（模拟 <seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌OpenAI 官方 API）
 class EchoHandler(http.server.BaseHTTPRequestHandler):
     def do_POST(self):
         length = int(self.headers.get("Content-Length", 0))

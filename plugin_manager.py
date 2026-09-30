@@ -1,4 +1,4 @@
-# plugin_manager.py
+# plugin_m<seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌anager.py
 import os
 import shutil
 import sys
@@ -66,6 +66,14 @@ class PluginManager:
         self.unload_plugins()
         sys.path.insert(0, os.path.abspath("."))
         sys.path.insert(0, app_paths.get_base_dir())
+        # 先把隐藏的 Tk 根窗口建好再加载插件：
+        # 否则插件里 CTkToplevel()（无 master）会让 tkinter 自作主张造一个
+        # **可见的空窗口**，而且它被关掉会连带整个程序退出。
+        try:
+            import ui_root
+            ui_root.ensure_root()
+        except Exception as e:
+            print(f"[PluginManager] UI 根窗口创建失败（插件窗口可能异常）: {e}")
         states = self._load_states()
 
         # 依次扫描所有插件目录：内置目录在前，用户目录在后（可覆盖内置同名插件）

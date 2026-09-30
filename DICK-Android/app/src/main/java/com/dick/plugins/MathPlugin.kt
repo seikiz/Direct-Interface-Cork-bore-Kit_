@@ -70,7 +70,7 @@ class MathPlugin : Plugin {
     }
 }
 
-/** 安全表达式求值（白名单：数字/四则/括号/常用函数，不用反射/eval） */
+/** 安全表达式求值（白名单：数字/四则<seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌/括号/常用函数，不用反射/eval） */
 object SafeEval {
     fun eval(expr: String): Double {
         val p = Parser(expr.replace(" ", ""))

@@ -40,14 +40,23 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.text.InlineTextContent
+import androidx.compose.foundation.text.appendInlineContent
+import androidx.compose.runtime.remember
+import androidx.compose.ui.text.Placeholder
+import androidx.compose.ui.text.PlaceholderVerticalAlign
+import androidx.compose.ui.text.buildAnnotatedString
 
-/** 把字符串开头的 emoji 前缀提取出来，返回 (去 FE0F 的 emoji, 剩余文本)。无 emoji 时返回 (null, 原串)。 */
-private val EMOJI_PREFIX = Regex("^(?:[\\uD83C-\\uDBFF][\\uDC00-\\uDFFF]|[\\u2600-\\u27BF\\u2B00-\\u2BFF\\uFE0F\\u200D\\u20E3])+")
+/** 把字符串开头的 emoji 前缀提取出来，返回 (去 FE0F 的 emoji, 剩余文本)。无 emoji 时返回 (null, 原串)。
+ *  范围与 Web 端 web/index.html 的 _EMOJI_CLS 保持一致：2300-23FF（⏳⏸⏭⏩）与
+ *  2190-21FF（↪）以前漏了，导致「⏳ 生成中」这类状态提示在手机上一直是彩色 emoji。 */
+private val EMOJI_PREFIX = Regex("^(?:[\\uD83C-\\uDBFF][\\uDC00-\\uDFFF]|[\\u2600-\\u27BF\\u2B00-\\u2BFF\\u2300-\\u23FF\\u2190-\\u21FF\\uFE0F\\u200D\\u20E3])+")
 fun splitLeadingEmoji(s: String): Pair<String?, String> {
     val m = EMOJI_PREFIX.find(s) ?: return null to s
     return m.value.replace("\uFE0F", "") to s.removePrefix(m.value)
@@ -108,10 +117,97 @@ private val EMOJI_RES: Map<String, Int> = mapOf(
     "⚡" to R.drawable.ic_bolt,
     "🧍" to R.drawable.ic_person_stand,
     "💘" to R.drawable.ic_heart_arrow,
+    "☰" to R.drawable.ic_menu,
+    "✕" to R.drawable.ic_x,
+    "📕" to R.drawable.ic_book_closed,
+    "🎴" to R.drawable.ic_card,
+    "📁" to R.drawable.ic_folder,
+    "📝" to R.drawable.ic_memo,
+    "📦" to R.drawable.ic_package,
+    "🖥" to R.drawable.ic_desktop,
+    "🎙" to R.drawable.ic_mic,
+    "🗂" to R.drawable.ic_files,
+    "🔀" to R.drawable.ic_shuffle,
+    "🔒" to R.drawable.ic_lock,
+    "🔐" to R.drawable.ic_lock_key,
+    "⭐" to R.drawable.ic_star,
+    "★" to R.drawable.ic_star,
+    "☆" to R.drawable.ic_star_off,
+    "🆕" to R.drawable.ic_plus_circle,
+    "🏳" to R.drawable.ic_flag_off,
+    "🚩" to R.drawable.ic_flag,
+    "👥" to R.drawable.ic_users,
+    "🪄" to R.drawable.ic_wand,
+    "📺" to R.drawable.ic_tv,
+    "⛶" to R.drawable.ic_fullscreen,
+    "🎎" to R.drawable.ic_doll,
+    "🌊" to R.drawable.ic_wave,
+    "📖" to R.drawable.ic_book_open,
+    "🏁" to R.drawable.ic_flag_end,
+    "🎁" to R.drawable.ic_gift,
+    "👁" to R.drawable.ic_eye,
+    "🙈" to R.drawable.ic_eye_off,
+    "💨" to R.drawable.ic_wind,
+    "🔊" to R.drawable.ic_volume,
+    "💤" to R.drawable.ic_sleep,
+    "⚖" to R.drawable.ic_scale,
+    "🧭" to R.drawable.ic_compass,
+    "📋" to R.drawable.ic_clipboard,
+    "🛠" to R.drawable.ic_terminal,
+    "🔖" to R.drawable.ic_bookmark,
+    "🎵" to R.drawable.ic_music,
+    "🔔" to R.drawable.ic_bell,
+    "💥" to R.drawable.ic_burst,
+    "⬏" to R.drawable.ic_chevron_up,
+    "⬍" to R.drawable.ic_chevron_down,
+    "⚫" to R.drawable.ic_dot_filled,
+    "⚪" to R.drawable.ic_dot_hollow,
+    "💗" to R.drawable.ic_heart,
+    "⏳" to R.drawable.ic_hourglass,
+    "⏸" to R.drawable.ic_pause,
+    "⏭" to R.drawable.ic_skip_forward,
+    "⏩" to R.drawable.ic_fast_forward,
+    "↪" to R.drawable.ic_arrow_right,
+    "⏰" to R.drawable.ic_clock,
+    "⏱" to R.drawable.ic_stopwatch,
+    "🌏" to R.drawable.ic_globe,
+    "🌟" to R.drawable.ic_star,
+    "🎤" to R.drawable.ic_mic,
+    "🗣" to R.drawable.ic_voice,
+    "📜" to R.drawable.ic_scroll,
+    "🌌" to R.drawable.ic_galaxy,
+    "📡" to R.drawable.ic_radio,
+    "🏠" to R.drawable.ic_home,
+    "🌧" to R.drawable.ic_rain,
+    "👻" to R.drawable.ic_ghost,
+    "💡" to R.drawable.ic_bulb,
+    "📉" to R.drawable.ic_trend_down,
+    "👨" to R.drawable.ic_person,
 )
+/** 排版符号（箭头/星号等）：这些交给字体渲染更稳，和 Web 端那套「不替换」名单一个口径。 */
+private val TYPO_GLYPHS = setOf("→", "←", "↑", "↓", "↔", "↻", "◀", "▶", "▸", "▾", "★", "☆", "·")
+/** 任意位置的 emoji（范围与 EMOJI_PREFIX 一致，这里用来找【句中】的图标） */
+private val EMOJI_ANY = Regex("[\\uD83C-\\uDBFF][\\uDC00-\\uDFFF]|[\\u2600-\\u27BF\\u2B00-\\u2BFF\\u2300-\\u23FF\\u2190-\\u21FF\\u20E3]")
+/** 切成 (emoji | null, 文本) 段：emoji 段画成图标，文本段原样保留。 */
+private fun splitEmojiSegments(s: String): List<Pair<String?, String>> {
+    val out = mutableListOf<Pair<String?, String>>()
+    var last = 0
+    for (m in EMOJI_ANY.findAll(s)) {
+        val e = m.value.replace("\uFE0F", "")
+        if (e in TYPO_GLYPHS || EMOJI_RES[e] == null) continue
+        if (m.range.first > last) out.add(null to s.substring(last, m.range.first))
+        out.add(e to "")
+        last = m.range.last + 1
+    }
+    if (out.isEmpty()) return listOf(null to s)
+    if (last < s.length) out.add(null to s.substring(last))
+    return out
+}
 /**
- * 渲染 UI 框架标签：开头的 emoji 自动换成黑白线性图标（颜色跟随 color / LocalContentColor），
- * 其余文本照常显示。找不到对应图标的 emoji（如聊天内容）原样保留。
+ * 渲染 UI 框架标签：emoji 自动换成黑白线性图标（颜色跟随 color / LocalContentColor）。
+ *   · 行首只有一个图标 → 走 Row（和以前完全一样，不动那三百多处已有排版）
+ *   · 句中也有图标 → 走 AnnotatedString + InlineTextContent（长文案照常折行）
+ *   · 查不到图标的 emoji（聊天内容、排版符号）原样保留
  */
 @Composable
 fun IconText(
@@ -126,22 +222,49 @@ fun IconText(
 ) {
     val (emoji, rest) = splitLeadingEmoji(text)
     val res = emoji?.let { EMOJI_RES[it] } ?: 0
-    if (res == 0) {
-        Text(text, modifier = modifier, fontSize = fontSize, fontWeight = fontWeight, color = color, maxLines = maxLines)
-    } else {
-        val tint = if (color == Color.Unspecified) LocalContentColor.current else color
-        Row(modifier = modifier, verticalAlignment = Alignment.CenterVertically) {
-            Icon(
-                painterResource(res), null,
-                modifier = Modifier.size(iconSize),
-                tint = tint,
-            )
-            if (rest.isNotBlank()) {
-                Spacer(Modifier.width(gap))
-                Text(rest, fontSize = fontSize, fontWeight = fontWeight, color = color, maxLines = maxLines)
+    val tint = if (color == Color.Unspecified) LocalContentColor.current else color
+    val segments = remember(text) { splitEmojiSegments(text) }
+    if (!segments.any { it.first != null }) {
+        if (res == 0) {
+            Text(text, modifier = modifier, fontSize = fontSize, fontWeight = fontWeight, color = color, maxLines = maxLines)
+        } else {
+            Row(modifier = modifier, verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    painterResource(res), null,
+                    modifier = Modifier.size(iconSize),
+                    tint = tint,
+                )
+                if (rest.isNotBlank()) {
+                    Spacer(Modifier.width(gap))
+                    Text(rest, fontSize = fontSize, fontWeight = fontWeight, color = color, maxLines = maxLines)
+                }
+            }
+        }
+        return
+    }
+    // Placeholder 的宽高要 TextUnit（随字号缩放），所以把 Dp 换一下
+    val iconSp = with(LocalDensity.current) { iconSize.toSp() }
+    val providers = remember(segments, iconSp, iconSize, tint) {
+        segments.mapNotNull { it.first }.distinct().associateWith { e ->
+            InlineTextContent(Placeholder(iconSp, iconSp, PlaceholderVerticalAlign.Center)) {
+                Icon(painterResource(EMOJI_RES.getValue(e)), null, Modifier.size(iconSize), tint = tint)
             }
         }
     }
+    val ann = remember(segments) {
+        buildAnnotatedString {
+            segments.forEach { (e, t) -> if (e == null) append(t) else appendInlineContent(e, e) }
+        }
+    }
+    Text(
+        ann,
+        modifier = modifier,
+        fontSize = fontSize,
+        fontWeight = fontWeight,
+        color = color,
+        maxLines = maxLines,
+        inlineContent = providers,
+    )
 }
 /** 可折叠区块标题行（▸/▾ 指示，点击切换） */
 @Composable
@@ -155,7 +278,7 @@ fun FoldHead(title: String, folded: Boolean, onToggle: () -> Unit, modifier: Mod
         Text(if (folded) "▸" else "▾", fontSize = 12.sp, color = Color(0xFF94A3B8))
     }
 }
-// ---------- 聊天/头像/抽屉 组件（自 App.kt 拆出） ----------
+// ---------- 聊天/头像/抽屉 组件（<seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌自 App.kt 拆出） ----------
 fun parseSpeaker(reply: String, roster: Set<String>): Pair<String?, String> {
     val m = Regex("""^[\[【]([^\]】]{1,30})[\]】]\s*[:：]?\s*""", RegexOption.DOT_MATCHES_ALL).find(reply.trim())
     if (m == null) return null to reply

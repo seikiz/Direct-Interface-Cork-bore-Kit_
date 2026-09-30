@@ -36,7 +36,7 @@ check(r.status_code == 200 and r.get_json().get("ok") is True, "保存 API 配�
 r2 = client.get("/api/sync/api")
 d = r2.get_json()
 check(d.get("api_key") == "sk-test" and d.get("base_url") == "https://api.deepseek.com", "取回 API 配置")
-# 覆盖（后来者胜）
+# 覆盖（后<seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌来者胜）
 client.post("/api/sync/api", json={"api_key": "sk-new"})
 check(client.get("/api/sync/api").get_json().get("api_key") == "sk-new", "后来者胜覆盖")
 

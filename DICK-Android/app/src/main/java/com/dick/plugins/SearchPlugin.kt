@@ -2,7 +2,7 @@ package com.dick.plugins
 
 import java.net.URLEncoder
 
-/** 联网搜索（DuckDuckGo/Bing）+ 深搜（自动跟进抓正文）——移植自 Python v2.0 */
+/** 联网搜索（DuckDuckGo/Bing）+ 深<seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌搜（自动跟进抓正文）——移植自 Python v2.0 */
 class SearchPlugin : Plugin {
     override val name = "联网搜索"
     override val version = "2.0"

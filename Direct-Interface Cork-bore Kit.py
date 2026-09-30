@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# <seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌<seikiz>  DICK source mark (invisible)
+# <seikiz>  DICK sour<seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌ce mark (invisible)
 # ============================================================
 #   html_app.py - HTML 前端（pywebview 壳）
 #   后端复用 ChatCore + 插件体系；前端 web/index.html（纯 HTML/CSS/JS）
@@ -17,6 +17,7 @@ import sys
 import threading
 import re
 import random
+import uuid
 
 # PyInstaller windowed 模式（无控制台）下 stdout/stderr 为 None，print 会崩溃。
 # 启动即重定向到 exe 旁的 debug.log。
@@ -320,6 +321,10 @@ def assemble_role_prompt(name, fields, legacy):
         parts.append(legacy)
     sections = []
     for key, label in ROLE_FIELDS:
+        # 开场白不进系统提示。它是「这一场的起点场景」，由 _start_opening() 交给模型
+        # 演出第一幕，不进提示词当设定 —— 同一段文字喂两遍会让模型复述它。
+        if key == "first_mes":
+            continue
         v = fields.get(key) or ""
         if isinstance(v, list):
             v = "、".join(str(x) for x in v if str(x).strip())
@@ -339,6 +344,37 @@ def assemble_role_prompt(name, fields, legacy):
                 "4. 不要急着推进剧情，先像个人一样自然地回应；故事由互动推动，不是由你念稿推动。")
     parts.append(_reality)
     return chr(10) + chr(10).join(parts) if len(parts) > 1 else (parts[0] if parts else "")
+
+
+def role_prompt_from_card(name, data):
+    """由角色卡数据算出真正要用的系统提示，返回 (prompt, fields, legacy)。
+
+    这里有个踩过的坑：
+        assemble_role_prompt 恒定追加「角色卡面·角色塑造」小节，所以它的返回值
+        【永远非空】。原来两处载入都写成
+            assemble_role_prompt(...) or data.get("system_prompt", "")
+        那个 or 回退是死代码，永远轮不到。
+        后果：把设定只写在 system_prompt 里、一个结构化字段都没用的卡
+        （实测两张，其中一张 2230 字），载入时整份设定被替换成 247 字样板文字，
+        角色等于完全没有设定，而且界面上看不出任何异常。
+    现在的规则：
+        有结构化字段 → 按字段渲染（保持可编辑）；
+        一个字段都没有 → 存档正文就是角色的全部设定，直接用，不能丢。
+    """
+    fields = {k: (data.get(k) or "") for k, _ in ROLE_FIELDS}
+    legacy = data.get("legacy") or ""
+    rendered = assemble_role_prompt(name, fields, legacy)
+
+    def _has(v):
+        if isinstance(v, (list, tuple)):
+            return any(str(x).strip() for x in v)
+        return bool(str(v or "").strip())
+
+    own = any(_has(fields.get(k)) for k, _ in ROLE_FIELDS) or _has(legacy)
+    stored = data.get("system_prompt") or ""
+    if own or not stored.strip():
+        return rendered, fields, legacy
+    return stored, fields, legacy
 
 
 def _render_world_desc(w):
@@ -362,7 +398,7 @@ def _render_world_desc(w):
 PROVIDERS = [
     {"id": "deepseek", "name": "DeepSeek 官方", "free": False,
      "base_url": "https://api.deepseek.com",
-     "models": ["deepseek-v4-flash", "deepseek-v4-pro", "deepseek-chat", "deepseek-reasoner",
+     "models": ["deepseek-flash", "deepseek-chat", "deepseek-reasoner",
                 "deepseek-v4-flash-vision-exp"],
      "buy_url": "https://platform.deepseek.com/"},
     {"id": "ovh", "name": "OVH 免费链（免 Key）", "free": True,
@@ -416,20 +452,18 @@ PROVIDERS = [
      "buy_url": "https://platform.stepfun.com"},
     {"id": "openai", "name": "OpenAI", "free": False,
      "base_url": "https://api.openai.com/v1",
-     "models": ["gpt-4o", "gpt-4o-mini", "gpt-4.1", "gpt-4.1-mini", "gpt-4.1-nano",
-                "o3", "o3-mini", "o4-mini", "chatgpt-4o-latest"],
+     "models": ["gpt-5.2", "gpt-5", "gpt-5-mini", "gpt-5-nano", "o5", "o5-mini",
+                "gpt-4.1", "gpt-4.1-mini"],
      "buy_url": "https://platform.openai.com/"},
     {"id": "anthropic", "name": "Anthropic Claude", "free": False,
      "base_url": "https://api.anthropic.com/v1",
-     "models": ["claude-opus-4-20250514", "claude-sonnet-4-20250514",
-                "claude-3-7-sonnet-latest", "claude-3-5-sonnet-latest",
-                "claude-3-5-haiku-latest", "claude-3-opus-latest"],
+     "models": ["claude-opus-4-8", "claude-sonnet-4-6", "claude-haiku-4-5",
+                "claude-opus-4-8-latest", "claude-sonnet-4-6-latest", "claude-haiku-4-5-latest"],
      "buy_url": "https://console.anthropic.com/"},
     {"id": "gemini", "name": "Google Gemini", "free": False,
      "base_url": "https://generativelanguage.googleapis.com/v1beta/openai",
-     "models": ["gemini-2.5-pro", "gemini-2.5-flash", "gemini-2.5-flash-lite",
-                "gemini-2.0-flash", "gemini-2.0-flash-lite", "gemini-2.0-flash-thinking-exp",
-                "gemini-1.5-pro", "gemini-1.5-flash"],
+     "models": ["gemini-3.8-flash", "gemini-3.7-flash", "gemini-3.5-pro", "gemini-3.0-flash",
+                "gemini-2.5-pro", "gemini-2.5-flash"],
      "buy_url": "https://aistudio.google.com/"},
     {"id": "ollama", "name": "Ollama 本地（免费）", "free": True,
      "base_url": "http://localhost:11434/v1",
@@ -562,6 +596,11 @@ class HtmlApp:
         self.render_epoch = 0       # 树重建时 +1，前端据此整刷消息列表
         self.streaming = ""
         self.busy = False
+        # 「正在加载开场白」。为什么单独一个状态：加载气泡的条件是
+        # 「busy 且有流式文本」，而开局时文本还是空的 —— 界面会一片空白。
+        # 普通发消息时用户自己那句话说出来了、知道在等；开局本来就是空的，
+        # 空白就等于「坏了」。所以开局必须单独给一个加载态。
+        self.opening_loading = False
         self.total_tokens = 0
         self.preset_name = ""
         self.persona = None         # {"name","background","notes",...}
@@ -622,10 +661,8 @@ class HtmlApp:
                     if data is None:
                         continue
                     if isinstance(data, dict) and data.get("system_prompt"):
-                        fields = {k: (data.get(k) or "") for k, _ in ROLE_FIELDS}
-                        legacy = data.get("legacy") or ""
-                        prompt = assemble_role_prompt(data.get("name") or fn[:-5], fields, legacy) \
-                            or data.get("system_prompt", "")
+                        prompt, fields, legacy = role_prompt_from_card(
+                            data.get("name") or fn[:-5], data)
                         self.roles.append({"name": data.get("name") or fn[:-5],
                                            "file": fn, "prompt": prompt, "data": data,
                                            "fields": fields, "legacy": legacy,
@@ -809,6 +846,12 @@ class HtmlApp:
                 data["system_prompt"] = r["prompt"]
                 data["kind"] = "dick_card"
                 data["history_tree"] = self.core.get_all_nodes_data()
+                # 机制状态显式持久化到角色卡（修复"清空/重选回落 initial"：
+                # 不依赖树的临时 ms 快照，保存当前状态供还原）
+                try:
+                    data["mechanics_state"] = self.core.mechanism_snapshot()
+                except Exception:
+                    pass
                 # 进度同步时间戳（UTC ISO，跨设备按该串比较新旧）
                 try:
                     from datetime import datetime, timezone
@@ -988,7 +1031,7 @@ class HtmlApp:
                 "preset": self.preset_name,
                 "persona": self.persona,
                 "has_key": bool(self.api_keys.get(self.provider_id) or self.config.get("api_key")),
-                "model": self.config.get("model", "deepseek-v4-flash"),
+                "model": self.config.get("model", "deepseek-flash"),
                 "base_url": self.config.get("base_url", "https://api.deepseek.com"),
                 "providers": PROVIDERS,
                 "provider": self.provider_id,
@@ -1027,6 +1070,7 @@ class HtmlApp:
                 "messages": self.messages,
                 "streaming": self.streaming,
                 "busy": self.busy,
+                "opening_loading": self.opening_loading,
                 "tokens": self.total_tokens,
                 "epoch": self.render_epoch,
                 "choices": self._choices_state(),
@@ -1040,6 +1084,7 @@ class HtmlApp:
         with self._lock:
             items = [m for m in self.messages if m["seq"] > last_seq]
             return {"items": items, "streaming": self.streaming, "busy": self.busy,
+                    "opening_loading": self.opening_loading,
                     "tokens": self.total_tokens, "epoch": self.render_epoch,
                     "choices": self._choices_state(),
                     "mechanism": {"config": getattr(self.core, "_mech_config", None),
@@ -1637,6 +1682,17 @@ class HtmlApp:
         return processed, processed
 
     def _send_text(self, display_text, hidden_send, image, is_choice=False):
+        # 零宽字符防线：白烧 token / 卡界面 / 藏提示词注入 / 绕过关键词过滤。
+        # 放在最前面 —— 后面入树、发 API、渲染用的都是清干净的文本。
+        try:
+            import text_guard
+            display_text, _grep = text_guard.sanitize(display_text)
+            if _grep.get("changed"):
+                self._append_sys(text_guard.summary(_grep), kind="warn", speaker="安全")
+            if hidden_send:
+                hidden_send, _ = text_guard.sanitize(hidden_send)
+        except Exception:
+            pass
         # 显示/存储用原文；若翻译隐藏（hidden_send 非空且不同），译文存 metadata["ja_input"]，
         # _fetch_response 发 AI 时优先用译文（聊天永远看不到日文）
         content = self._apply_regex_pipeline(display_text or "", "user")
@@ -1660,6 +1716,15 @@ class HtmlApp:
         self._rebuild_messages()
 
     def _on_response(self, ai_reply, usage):
+        # 回复到了 → 开场加载态结束（无论这轮是不是开局，清掉都安全）
+        self.opening_loading = False
+        # 模型也可能吐零宽字符（尤其被用户诱导时）→ 同样清掉再入树，
+        # 否则它会一直躺在聊天记录里，每次请求都白烧 token
+        try:
+            import text_guard
+            ai_reply, _grep = text_guard.sanitize(ai_reply)
+        except Exception:
+            pass
         if usage:
             self.total_tokens += int(getattr(usage, "total_tokens", 0) or 0)
         # 中字日配：提取 [ja]...[/ja] 隐藏配音句（存节点 metadata，正文剥离）
@@ -1715,10 +1780,17 @@ class HtmlApp:
                     p.on_message_received(getattr(self, "_last_user", ""), ai_reply)
                 except Exception:
                     pass
+        # 围棋：从模型回复里解析落子（引擎校验；非法/找不到就驳回重选或兜底）
+        try:
+            if getattr(self, "_go", None) is not None:
+                self._go_after_reply(ai_reply if isinstance(ai_reply, str) else "")
+        except Exception:
+            pass
 
     def _on_error(self, err_msg):
         self.streaming = ""
         self.busy = False
+        self.opening_loading = False     # 出错也要收掉开场加载态，否则会一直转圈
         self._save_tree()
         # 商业化质量的错误提示：把裸异常转成"用户能行动"的指引
         msg = str(err_msg or "")
@@ -1749,6 +1821,11 @@ class HtmlApp:
                           "advanced": (r.get("data") or {}).get("advanced")}
                     if i == 0 and reload_tree and r.get("data") and r["data"].get("history_tree"):
                         rd["history_tree"] = r["data"]["history_tree"]
+                    # 角色卡显式持久化的机制状态：传入 core 以便清空/重选时正确还原
+                    if i == 0 and r.get("data"):
+                        ms0 = (r["data"] or {}).get("mechanics_state")
+                        if isinstance(ms0, dict):
+                            rd["mechanics_state"] = ms0
                     roles_data.append(rd)
         self.core.set_active_roles(roles_data)
         self.core.set_worlds(self._worlds_for_core())
@@ -1762,7 +1839,72 @@ class HtmlApp:
         # 切换角色 = 新会话：旧剧情选项作废
         self._clear_choices()
         self.core.pending_event = None
+        # 前瞻投机器的开关状态要跟着走：关键词是按角色存的，
+        # 换了角色可能就从"有目标"变成"没目标"，这时必须摘掉投机器。
+        self._sync_speculator()
+        self._start_opening()
         self._rebuild_messages()
+
+    def _start_opening(self):
+        """新会话开场：把角色卡的开场白当【场景】交给模型，由它现场演出第一幕。
+
+        为什么不是直接把开场白贴出来：
+            贴出来的是作者写死的文字，和当前选中的世界卡/玩家卡/好感度无关，
+            读起来像一段设定文档，而不是「她在对你说话」。
+            交给模型演，开场才会对上当前配置，用户才有沉浸感。
+        发不出去时（没配 Key / 没有开场白 / 正在忙）退回直接显示原文，
+        免得界面一片空白 —— 有开场白总比空着强。
+        """
+        try:
+            if len(self.selected_roles) != 1:
+                return 0                     # 群聊不做开场，避免多个角色抢话
+            tree = self.core.tree
+            # 已有历史（续聊/存档）就不再演，否则每次切回来都重演一遍
+            for n in tree.nodes.values():
+                if n.role in ("user", "assistant"):
+                    return 0
+            name = self.selected_roles[0]
+            role = next((r for r in self.roles if r["name"] == name), None)
+            if not role:
+                return 0
+            data = role.get("data") or {}
+            fields = role.get("fields") or {}
+            mes = str(data.get("first_mes") or fields.get("first_mes") or "").strip()
+            if not mes:
+                return 0
+
+            # 首选：让模型把这段场景演出来
+            fired = False
+            try:
+                self.busy = True
+                self.streaming = ""
+                self.opening_loading = True      # 让界面在模型吐字之前就有加载提示
+                fired = self.core.generate_opening(
+                    mes,
+                    on_stream=lambda full: setattr(
+                        self, "streaming",
+                        self.core.strip_mechanism_tags(full, apply=False)),
+                    on_response=self._on_response,
+                    on_error=self._on_error,
+                )
+            except Exception:
+                fired = False
+                self.opening_loading = False
+            if fired:
+                self._rebuild_messages()
+                return 1
+
+            # 退路：发不出去就直接把开场白原文显示出来
+            self.busy = False
+            self.opening_loading = False
+            nid = self.core.add_assistant_message(
+                mes, parent_id=tree.current_leaf_id,
+                metadata={"speaker": role.get("name"), "usage": None, "greeting": True})
+            tree.current_leaf_id = nid
+            tree.fix_leaf()
+            return 1
+        except Exception:
+            return 0                          # 开场失败不该阻断开聊
 
     def api_select_roles(self, names_json):
         try:
@@ -2158,7 +2300,7 @@ class HtmlApp:
             prompt = ("根据下面的灵感，撰写一张角色卡。只输出 JSON（不要多余解释）：" + NL +
                       '{"name": "角色名", "appearance": "外貌", "personality": "性格（详写）", "background": "过去经历（详写）", "speech": "说话方式（语气/口癖/句式）", "first_mes": "开场白", "mes_example": "对话示例", "notes": "备注"}' + NL +
                       "灵感：" + idea)
-        model = self.config.get("model", "deepseek-v4-flash")
+        model = self.config.get("model", "deepseek-flash")
         try:
             resp = client.chat.completions.create(
                 model=model,
@@ -2224,6 +2366,178 @@ class HtmlApp:
                         "unlocked": bool(r.get("unlocked", False)),
                         "advanced": adv}
         return None
+
+    # ---------- 角色卡·多存档（新存档功能：保存/读取/切换/删除/重命名） ----------
+    def _card_snapshot(self):
+        """构造一份当前会话的存档快照（对话树 + 机制状态 + 进度元数据）"""
+        from datetime import datetime, timezone
+        tree = self.core.get_all_nodes_data()
+        mech = None
+        try:
+            mech = self.core.mechanism_snapshot()
+        except Exception:
+            mech = None
+        n_nodes = 0
+        if isinstance(tree, dict):
+            nodes = tree.get("nodes") or {}
+            n_nodes = sum(1 for n in nodes.values()
+                          if isinstance(n, dict) and (n.get("role") or "") != "system")
+        return {
+            "history_tree": tree,
+            "mechanism_state": mech,
+            "_tree_ts": datetime.now(timezone.utc).isoformat(),
+            "progress": n_nodes,  # 正式聊天条数（不含系统节点）
+        }
+
+    @staticmethod
+    def _save_summary(entry):
+        """存档的轻量摘要（不携带整棵树，避免前端负载过大）"""
+        if not isinstance(entry, dict):
+            return None
+        return {"id": entry.get("id"), "label": entry.get("label") or "未命名存档",
+                "created_ts": entry.get("created_ts"), "updated_ts": entry.get("updated_ts"),
+                "_tree_ts": entry.get("_tree_ts"),
+                "progress": int(entry.get("progress", 0) or 0)}
+
+    def _role_by_name(self, name):
+        return next((r for r in self.roles if r["name"] == name), None)
+
+    def _commit_card_data(self, r, data):
+        """把改动后的角色卡 data 写回文件 + 同步内存快照（保留 name/system_prompt/kind）"""
+        data = dict(data)
+        data["name"] = r["name"]
+        data["system_prompt"] = r["prompt"]
+        data["kind"] = "dick_card"
+        try:
+            save_guard.backup_file(os.path.join(self.save_dir, r["file"]))
+            save_guard.atomic_write_json(os.path.join(self.save_dir, r["file"]), data)
+        except Exception:
+            pass
+        r["data"] = data
+        return data
+
+    def api_card_saves(self, name):
+        """列出某角色卡的存档点（只返回摘要，不返回整棵树）"""
+        r = self._role_by_name(name)
+        if not r:
+            return {"ok": False, "err": "角色不存在"}
+        data = r.get("data") or {}
+        saves = data.get("saves") or []
+        if not isinstance(saves, list):
+            saves = []
+        return {"ok": True, "saves": [self._save_summary(s) for s in saves],
+                "active_save": data.get("active_save") or None}
+
+    def api_card_save_new(self, name, label):
+        """『新存档』：把当前进度固化为一个新的存档点，并设为当前活动存档"""
+        r = self._role_by_name(name)
+        if not r:
+            return {"ok": False, "err": "角色不存在"}
+        data = r.get("data") or {}
+        saves = data.get("saves") or []
+        if not isinstance(saves, list):
+            saves = []
+        snap = self._card_snapshot()
+        sid = "s-" + uuid.uuid4().hex[:10]
+        entry = {"id": sid,
+                 "label": (label or "").strip() or "存档 " + str(len(saves) + 1),
+                 "created_ts": snap["_tree_ts"], "updated_ts": snap["_tree_ts"],
+                 "history_tree": snap["history_tree"], "mechanism_state": snap["mechanism_state"],
+                 "_tree_ts": snap["_tree_ts"], "progress": snap["progress"]}
+        saves.append(entry)
+        data["saves"] = saves
+        data["active_save"] = sid
+        self._commit_card_data(r, data)
+        return {"ok": True, "save": self._save_summary(entry), "active_save": sid}
+
+    def api_card_save(self, name, label, save_id=None):
+        """『存档』：把当前进度写入目标存档点；无目标则新建一个（可附新标签）"""
+        r = self._role_by_name(name)
+        if not r:
+            return {"ok": False, "err": "角色不存在"}
+        data = r.get("data") or {}
+        saves = data.get("saves") or []
+        if not isinstance(saves, list):
+            saves = []
+        sid = save_id or data.get("active_save")
+        snap = self._card_snapshot()
+        entry = None
+        if sid:
+            entry = next((s for s in saves if s.get("id") == sid), None)
+            if entry:
+                entry["history_tree"] = snap["history_tree"]
+                entry["mechanism_state"] = snap["mechanism_state"]
+                entry["_tree_ts"] = snap["_tree_ts"]
+                entry["updated_ts"] = snap["_tree_ts"]
+                entry["progress"] = snap["progress"]
+                if label and str(label).strip():
+                    entry["label"] = str(label).strip()
+            else:
+                sid = None
+        if not sid:
+            sid = "s-" + uuid.uuid4().hex[:10]
+            entry = {"id": sid,
+                     "label": (label or "").strip() or "存档 " + str(len(saves) + 1),
+                     "created_ts": snap["_tree_ts"], "updated_ts": snap["_tree_ts"],
+                     "history_tree": snap["history_tree"], "mechanism_state": snap["mechanism_state"],
+                     "_tree_ts": snap["_tree_ts"], "progress": snap["progress"]}
+            saves.append(entry)
+        data["saves"] = saves
+        data["active_save"] = sid
+        self._commit_card_data(r, data)
+        return {"ok": True, "save": self._save_summary(entry), "active_save": sid}
+
+    def api_card_save_load(self, name, save_id):
+        """『读档/切换』：把指定存档点还原为当前会话（对话树 + 机制状态 + 进度时间戳）"""
+        r = self._role_by_name(name)
+        if not r:
+            return {"ok": False, "err": "角色不存在"}
+        data = r.get("data") or {}
+        saves = data.get("saves") or []
+        if not isinstance(saves, list):
+            saves = []
+        entry = next((s for s in saves if s.get("id") == save_id), None)
+        if not entry:
+            return {"ok": False, "err": "存档不存在"}
+        data["history_tree"] = entry.get("history_tree")
+        data["mechanics_state"] = entry.get("mechanism_state")
+        data["_tree_ts"] = entry.get("_tree_ts") or data.get("_tree_ts")
+        data["active_save"] = save_id
+        self._commit_card_data(r, data)
+        # 该角色当前被选中且是核心会话角色时，重载 core 以刷新聊天树与机制状态
+        if name in self.selected_roles:
+            self._activate_core(reload_tree=True)
+        return {"ok": True}
+
+    def api_card_save_delete(self, name, save_id):
+        """『删除』：移除一个存档点；若删除的是活动存档则清空活动指针"""
+        r = self._role_by_name(name)
+        if not r:
+            return {"ok": False, "err": "角色不存在"}
+        data = r.get("data") or {}
+        saves = data.get("saves") or []
+        if not isinstance(saves, list):
+            saves = []
+        saves = [s for s in saves if s.get("id") != save_id]
+        data["saves"] = saves
+        if data.get("active_save") == save_id:
+            data["active_save"] = None
+        self._commit_card_data(r, data)
+        return {"ok": True}
+
+    def api_card_save_rename(self, name, save_id, label):
+        """『重命名』：修改存档点标签"""
+        r = self._role_by_name(name)
+        if not r:
+            return {"ok": False, "err": "角色不存在"}
+        data = r.get("data") or {}
+        saves = data.get("saves") or []
+        entry = next((s for s in saves if s.get("id") == save_id), None)
+        if not entry:
+            return {"ok": False, "err": "存档不存在"}
+        entry["label"] = (label or "").strip() or entry.get("label") or "未命名存档"
+        self._commit_card_data(r, data)
+        return {"ok": True, "save": self._save_summary(entry)}
 
     @staticmethod
     def _entry_hit(entry, text_lower):
@@ -2425,6 +2739,483 @@ class HtmlApp:
 
 
     # ---------- 滑条 / 编辑 / 分支 ----------
+    # ---------- 漂移核查（三态 + 延迟定案） ----------
+    def _drift_keys(self):
+        """取当前角色的「本场关键词」（这场戏在讲什么）。
+
+        为什么要作者填：实测下来，泛泛的词面重叠分不出「跑题」和「措辞巧合」，
+        只有明确的目标词才是可靠信号。自动抽词在没有分词的情况下抽不准，
+        所以这里让作者给 —— 不填就等于不做漂移判定（不会乱定罪）。
+        """
+        name = (self.selected_roles or [None])[0]
+        allk = self.config.get("drift_keys") or {}
+        return list(allk.get(name or "", []) or [])
+
+    def api_set_drift_keys(self, keys_json):
+        """设置当前角色的本场关键词（逗号/顿号分隔的字符串）。"""
+        name = (self.selected_roles or [None])[0]
+        if not name:
+            return {"ok": False, "err": "先选一个角色"}
+        raw = keys_json or ""
+        if isinstance(raw, str) and raw.strip().startswith("["):
+            try:
+                keys = [str(x).strip() for x in json.loads(raw) if str(x).strip()]
+            except Exception:
+                keys = []
+        else:
+            keys = [k.strip() for k in re.split(r"[,，、\s]+", str(raw)) if k.strip()]
+        allk = dict(self.config.get("drift_keys") or {})
+        allk[name] = keys
+        self.config["drift_keys"] = allk
+        self._save_config()
+        return {"ok": True, "keys": keys, "role": name}
+
+    def api_tree_drift(self, dry_run=True):
+        """核查当前主干有没有漂移。三态：cleared / suspected / drifted。
+
+        默认只写状态、**不删任何东西** —— 判定这事儿先让用户看着跑一阵。
+        确认漂移的节点可以通过 api_tree_prune 之外的路径手动处理，
+        不在这里自动剪，因为"漂移"有时候正是用户想要的走向。
+        """
+        try:
+            import tree_weight
+        except Exception as e:
+            return {"ok": False, "err": "缺少 tree_weight 模块：" + str(e)[:120]}
+        keys = self._drift_keys()
+        if not keys:
+            return {"ok": False, "err": "还没设本场关键词。点「🔍 漂移核查」上面的输入框填几个词，"
+                                        "例如：册子、扉页、铅笔字",
+                    "need_keys": True}
+        # 案卷 = 世界卡 + 角色卡 + 开局那几轮（"现实"的文本化）
+        case_parts = []
+        for r in (self.roles or []):
+            if r.get("name") in (self.selected_roles or []):
+                case_parts.append(str(r.get("prompt") or ""))
+        for w in (self.worlds or []):
+            if w.get("name") in (self.selected_worlds or []):
+                case_parts.append(str(w.get("description") or ""))
+        case_text = "\n".join(case_parts)
+        try:
+            r = tree_weight.audit_tree(self.core.tree, keys, case_text, write=True)
+            self._save_tree()
+            return r
+        except Exception as e:
+            return {"ok": False, "err": "核查失败：" + str(e)[:200]}
+
+    # ---------- 前瞻展开（树壳 → 树状AI 的那一步） ----------
+    def _case_text(self):
+        """案卷：世界卡 + 选中角色卡 —— 漂移/编造核查要比对的"现实"。"""
+        parts = []
+        for r in (self.roles or []):
+            if r.get("name") in (self.selected_roles or []):
+                parts.append(str(r.get("prompt") or ""))
+        for w in (self.worlds or []):
+            if w.get("name") in (self.selected_worlds or []):
+                parts.append(str(w.get("description") or ""))
+        return "\n".join(parts)
+
+    def _rubric(self):
+        """取当前角色声明的价值标准（rubric）。这是「价值声明」，第 2 步。"""
+        name = (self.selected_roles or [None])[0]
+        allr = self.config.get("rubrics") or {}
+        try:
+            import rubric as _rb
+            return _rb.normalize(allr.get(name or "", []))
+        except Exception:
+            return list(allr.get(name or "", []) or [])
+
+    def api_set_rubric(self, text):
+        """设置当前角色的价值标准（每行一条，或用 ；分隔）。
+
+        这是「价值声明」——比训练一个 PRM 便宜几个数量级的替代品。
+        但代价必须说清楚：**写不好比不写更糟**，声明错了，搜索会忠实地放大它。
+        """
+        name = (self.selected_roles or [None])[0]
+        if not name:
+            return {"ok": False, "err": "先选一个角色"}
+        try:
+            import rubric as _rb
+            items = _rb.normalize(text or "")
+            cap = _rb.MAX_CRITERIA
+        except Exception:
+            items = [x.strip() for x in str(text or "").split("\n") if x.strip()]
+            cap = 8
+        allr = dict(self.config.get("rubrics") or {})
+        allr[name] = items
+        self.config["rubrics"] = allr
+        self._save_config()
+        return {"ok": True, "role": name, "criteria": items, "max": cap,
+                "note": "最多 %d 条；条数越多模型越容易平均化、判不出差别" % cap}
+
+    def _judge_endpoint(self, text):
+        """价值判定：给端点回复打 0~1。
+
+        优先用【你自己训出来的排序器】——它的权重是从你的偏好里拟合的，
+        比手搓的那套更懂你要什么；没有模型时退回 rubric（模型判定）。
+        两者都没有就返回 None，前瞻退回纯启发式。
+        """
+        # ① 训好的排序器（纯本地，零 API 调用 —— 这也是它比 rubric 便宜的地方）
+        if (self.config.get("ranker") or {}).get("on"):
+            try:
+                import ranker
+                m = ranker.load(self._ranker_path())
+                if m:
+                    chain = self.core.get_current_chain()
+                    parent = ""
+                    for x in reversed(chain):
+                        if x.get("role") == "assistant":
+                            parent = str(x.get("content") or "")
+                            break
+                    s = ranker.score(m.get("w"), text, parent, [], 
+                                     self._drift_keys(), self._case_text())
+                    if s is not None:
+                        return s
+            except Exception:
+                pass
+        # ② 退回 rubric（要一次模型调用）
+        crit = self._rubric()
+        if not crit:
+            return None
+        try:
+            import rubric as _rb
+        except Exception:
+            return None
+        core = self.core
+
+        def _complete(msgs):
+            txt, _u = core._stream_create(list(msgs), None)
+            return txt or ""
+
+        r = _rb.judge(_complete, crit, self.core.get_current_chain(), text)
+        return r.get("score")
+
+    def _speculate(self, messages):
+        """投机器：拿到本轮完整载荷，先往前生成几条路，挑端点最正的交给用户。
+
+        返回 None 表示不干预（走原来的单路生成）。
+        跑在 _fetch_response 的工作线程里，不阻塞界面。
+        """
+        cfg = self.config.get("lookahead") or {}
+        if not cfg.get("on"):
+            return None
+        keys = self._drift_keys()
+        if not keys:
+            return None                      # 没目标就不前瞻（否则等于瞎挑）
+        try:
+            import lookahead
+        except Exception:
+            return None
+        core = self.core
+
+        def _complete(msgs):
+            txt, _usage = core._stream_create(list(msgs), None)
+            return txt or ""
+
+        try:
+            res = lookahead.expand(
+                _complete, list(messages),
+                branches=int(cfg.get("branches") or lookahead.DEF_BRANCHES),
+                depth=int(cfg.get("depth") or lookahead.DEF_DEPTH),
+                keys=keys, case_text=self._case_text(),
+                cap=int(cfg.get("cap") or lookahead.COST_CAP),
+                judge_fn=self._judge_endpoint
+                if (self._rubric() or (self.config.get("ranker") or {}).get("on"))
+                else None)
+        except Exception as e:
+            self._append_sys("⚠️ 前瞻展开异常，已按原路继续：" + str(e)[:120], kind="warn")
+            return None
+        if not res.get("ok"):
+            return None
+        try:
+            self._append_sys("🧭 " + lookahead.describe(res).replace("\n", "；"))
+        except Exception:
+            pass
+        return res.get("first")
+
+    def _sync_speculator(self):
+        """按配置挂/摘投机器。挂在 core 上，因为载荷是在 core 里组装的。"""
+        cfg = self.config.get("lookahead") or {}
+        self.core.speculator = self._speculate if cfg.get("on") else None
+        return bool(cfg.get("on"))
+
+    def api_set_lookahead(self, enabled, branches=None, depth=None, cap=None):
+        """开关前瞻展开。开之前请先设好本场关键词 —— 没目标就无从比较。"""
+        cfg = dict(self.config.get("lookahead") or {})
+        cfg["on"] = bool(enabled)
+        if branches is not None:
+            cfg["branches"] = max(1, min(int(branches or 2), 5))
+        if depth is not None:
+            cfg["depth"] = max(1, min(int(depth or 2), 5))
+        if cap is not None:
+            cfg["cap"] = max(1, min(int(cap or 12), 40))
+        self.config["lookahead"] = cfg
+        self._save_config()
+        on = self._sync_speculator()
+        try:
+            import lookahead
+            b = int(cfg.get("branches") or lookahead.DEF_BRANCHES)
+            d = int(cfg.get("depth") or lookahead.DEF_DEPTH)
+            cost = b * d
+        except Exception:
+            cost = 0
+        return {"ok": True, "on": on, "config": cfg,
+                "per_turn_calls": cost,
+                "note": "每轮最多 %d 次额外调用；没设本场关键词时不会前瞻" % cost}
+
+    def api_export_preferences(self):
+        """把树里已经形成的偏好对导出成 JSONL（只读，不改任何东西）。
+
+        为什么现在就要导：偏好信号只在产生的那一刻存在。你滑过去了，
+        "他拒绝了哪条"就沉进树里 —— 不导出就永远拿不到，而且它只增不减。
+        顺带给出【启发式与你实际选择的一致率】，那是"能不能用这个价值函数做前瞻"的实证依据。
+        """
+        try:
+            import preference_export
+        except Exception as e:
+            return {"ok": False, "err": "缺少 preference_export 模块：" + str(e)[:120]}
+        try:
+            r = preference_export.scan_dir(self.save_dir)
+        except Exception as e:
+            return {"ok": False, "err": "扫描存档失败：" + str(e)[:200]}
+        recs = r.get("records") or []
+        if not recs:
+            return {"ok": True, "samples": 0, "by_role": {},
+                    "msg": "还没有可用的偏好样本。样本来自「同一个问题下生成过多条候选」——"
+                           "多用几次重 roll（♻ 重新生成）就会有。"}
+        import datetime as _dt
+        ts = _dt.datetime.now().strftime("%Y%m%d_%H%M%S")
+        out = self._pick_save_path("DICK_偏好数据_" + ts + ".jsonl", ("JSONL (*.jsonl)",))
+        if not out.lower().endswith(".jsonl"):
+            out += ".jsonl"
+        try:
+            n = preference_export.export_jsonl(recs, out)
+        except Exception as e:
+            return {"ok": False, "err": "写入失败：" + str(e)[:160]}
+        s = r.get("sum") or {}
+        return {"ok": True, "file": out, "name": os.path.basename(out), "written": n,
+                "by_role": r.get("by_role") or {}, "stats": s,
+                "msg": "已导出 %d 条偏好对（来自 %d 个角色）" %
+                       (n, len(r.get("by_role") or {}))}
+
+    # ---------- 平民化训练（调试面板 · 非开发者可用） ----------
+    def _ranker_path(self):
+        return os.path.join(self.base_dir, "ranker.json")
+
+    def api_event_progress(self):
+        """事件进度面板：每个事件现在是什么状态（已触发/冷却中/差多少好感/可以触发）。
+
+        命名约定：pywebview 暴露给前端的方法一律以 api_ 开头，
+        前端写 pywebview.api.event_progress()（前缀由桥自动加）。
+        所以这里必须是 api_event_progress，两边去掉前缀后同名才算接上。
+        （test_js_api_binding 会抓这个名字不一致，静默失效很难查。）
+        """
+        cfg = None
+        try:
+            cfg = self.core._mech_config
+        except Exception:
+            cfg = None
+        try:
+            items = self.core.event_progress(cfg)
+        except Exception as e:
+            return {"ok": False, "err": "读事件进度失败：" + str(e)[:160]}
+        st = self.core.mechanism_state or {}
+        cfgs = cfg if isinstance(cfg, dict) else {}
+        aff_cfg = cfgs.get("affection") if isinstance(cfgs.get("affection"), dict) else None
+        return {
+            "ok": True,
+            "enabled": bool(cfgs.get("events")),
+            "affection": st.get("affection"),
+            "aff_max": (int(aff_cfg.get("max", 100) or 100) if aff_cfg else None),
+            "turn": st.get("_turn", 0),
+            "items": items,
+            "fired": sum(1 for x in items if x.get("fired")),
+            "total": len(items),
+        }
+
+    def api_memory_debug(self):
+        """记忆调试：看当前历史每条的记忆清晰度、年龄、隐藏衰减率、还剩多少寿命。
+
+        为什么必须有这个：遗忘被刻意设计成【不可建模】的（每个节点一个隐藏衰减率），
+        所以从外部观察根本判断不出它有没有坏。必须能直接看内部数字。
+        """
+        import time as _t
+        core = self.core
+        try:
+            import salience as _sal
+        except Exception as e:
+            return {"ok": False, "err": "缺 salience 模块：" + str(e)[:120]}
+        now = _t.time()
+        try:
+            chain = core.tree.get_current_chain()
+        except Exception as e:
+            return {"ok": False, "err": "读历史失败：" + str(e)[:120]}
+        rows = []
+        for m in chain:
+            if m.get("role") == "system":
+                continue
+            nid = m.get("_node_id")
+            s = _sal.salience(m, now=now) if nid else 0.0
+            dec = _sal.hidden_decay(nid) if nid else 0.0
+            age_days = 0.0
+            try:
+                ts = float(m.get("_ts") or 0)
+                if ts:
+                    age_days = max(0.0, (now - ts) / 86400.0)
+            except (TypeError, ValueError):
+                pass
+            rows.append({
+                "id": nid,
+                "age_days": round(age_days, 2),
+                "salience": round(s, 4),
+                "decay_per_day": round(dec, 4),
+                "alive": bool(s >= _sal.KEEP_THRESHOLD),
+                "role": m.get("role"),
+                "preview": str(m.get("content") or "")[:40],
+            })
+        alive = [r for r in rows if r["alive"]]
+        return {
+            "ok": True,
+            "threshold": _sal.KEEP_THRESHOLD,
+            "recent_window": getattr(core, "recent_window", None),
+            "total": len(rows),
+            "alive": len(alive),
+            "forgotten": len(rows) - len(alive),
+            "rows": rows,
+            "params": {"decay_min": _sal.DECAY_MIN, "decay_max": _sal.DECAY_MAX,
+                       "decay_portion": _sal.DECAY_PORTION},
+        }
+
+    def api_get_time_scale(self):
+        """当前软件时间流速 + 可选的预设档位（给按钮用，不需要用户输入数字）。"""
+        try:
+            import time_scale as _ts
+        except Exception as e:
+            return {"ok": False, "err": "缺 time_scale 模块：" + str(e)[:120]}
+        cur = _ts.load()
+        return {
+            "ok": True,
+            "scale": cur,
+            "describe": _ts.describe(cur),
+            "min": _ts.MIN_SCALE,
+            "max": _ts.MAX_SCALE,
+            "presets": [{"scale": m, "name": n} for m, n in _ts.PRESETS],
+            "age_mode": getattr(__import__("salience"), "AGE_MODE", "real"),
+        }
+
+    def api_set_time_scale(self, scale):
+        """设定流速。只接受预设里有的值（或合法范围内的数字）。"""
+        try:
+            import time_scale as _ts
+        except Exception as e:
+            return {"ok": False, "err": "缺 time_scale 模块：" + str(e)[:120]}
+        val = _ts.save(scale)
+        return {"ok": True, "scale": val, "describe": _ts.describe(val)}
+
+    def api_ranker_status(self):
+        """给非开发者看的：数据够不够、模型有没有、它在用什么特征。"""
+        out = {"ok": True}
+        try:
+            import preference_export, ranker
+        except Exception as e:
+            return {"ok": False, "err": "缺少模块：" + str(e)[:120]}
+        try:
+            r = preference_export.scan_dir(self.save_dir)
+            recs = r.get("records") or []
+            rd = ranker.readiness(recs)
+        except Exception as e:
+            return {"ok": False, "err": "读偏好数据失败：" + str(e)[:160]}
+        out["readiness"] = rd
+        out["by_role"] = r.get("by_role") or {}
+        # 现在有多少条没打分的样本（训之前先打分才有一致率可比）
+        s = r.get("sum") or {}
+        out["heuristic_agreement"] = s.get("agreement")
+        m = ranker.load(self._ranker_path())
+        if m:
+            out["model"] = {"train_acc": m.get("train_acc"),
+                            "holdout_acc": m.get("holdout_acc"),
+                            "n_samples": m.get("n_samples"),
+                            "top": ranker.explain(m, top=6)}
+        else:
+            out["model"] = None
+        out["enabled"] = bool((self.config.get("ranker") or {}).get("on"))
+        return out
+
+    def api_train_ranker(self):
+        """在本地把偏好数据训成一个排序器。纯 numpy，几秒钟，不需要服务器。"""
+        try:
+            import preference_export, ranker
+        except Exception as e:
+            return {"ok": False, "err": "缺少模块：" + str(e)[:120]}
+        try:
+            r = preference_export.scan_dir(self.save_dir)
+            recs = r.get("records") or []
+        except Exception as e:
+            return {"ok": False, "err": "读偏好数据失败：" + str(e)[:160]}
+        # 案卷用当前角色的（特征里的 confab 要用）
+        try:
+            m = ranker.train(recs, keys=self._drift_keys(), case_text=self._case_text())
+        except Exception as e:
+            return {"ok": False, "err": "训练失败：" + str(e)[:200]}
+        if not m.get("ok"):
+            return {"ok": False, "err": m.get("err"), "readiness": m.get("readiness")}
+        try:
+            ranker.save(m, self._ranker_path())
+        except Exception as e:
+            return {"ok": False, "err": "模型存不下来：" + str(e)[:160]}
+        return {"ok": True, "train_acc": m.get("train_acc"),
+                "holdout_acc": m.get("holdout_acc"),
+                "n_pairs": m.get("n_pairs"), "n_samples": m.get("n_samples"),
+                "top": ranker.explain(m, top=6),
+                "path": self._ranker_path(),
+                "msg": "训练完成（纯本地，没有联网、没有用你的 API Key）"}
+
+    def api_set_ranker(self, enabled):
+        """启用/停用训好的排序器。启用后它会替代启发式给前瞻分支打分。"""
+        cfg = dict(self.config.get("ranker") or {})
+        cfg["on"] = bool(enabled)
+        self.config["ranker"] = cfg
+        self._save_config()
+        return {"ok": True, "on": cfg["on"]}
+
+    def api_tree_weights(self):
+        """给整棵树打分并写回节点元数据（主干 70% / 枝干 50%，有效权重 = 可实行性 × 合理性 × 位置）。
+
+        只打分不删任何东西 —— 让用户先看清楚再决定要不要剪。
+        """
+        try:
+            import tree_weight
+        except Exception as e:
+            return {"ok": False, "err": "缺少 tree_weight 模块：" + str(e)[:120]}
+        try:
+            st = tree_weight.annotate(self.core.tree)
+            self._save_tree()
+            return {"ok": True, "stats": st}
+        except Exception as e:
+            return {"ok": False, "err": "打分失败：" + str(e)[:200]}
+
+    def api_tree_prune(self, dry_run=True):
+        """按有效权重剪掉低分枝叶。
+
+        硬规则（都在 tree_weight 里保证，这里不重复实现）：
+          主干永不删 / system 永不删 / 主干上没有对话节点时一律不剪 / 不留断头孤儿。
+        dry_run=True 时只报告不真删。
+        """
+        try:
+            import tree_weight
+        except Exception as e:
+            return {"ok": False, "err": "缺少 tree_weight 模块：" + str(e)[:120]}
+        try:
+            before = len(self.core.tree.nodes)
+            r = tree_weight.prune(self.core.tree, dry_run=bool(dry_run))
+            if not dry_run and r.get("removed_count"):
+                self._save_tree()
+                self._rebuild_messages()
+            r["before"] = before
+            r["after"] = len(self.core.tree.nodes)
+            return r
+        except Exception as e:
+            return {"ok": False, "err": "剪枝失败：" + str(e)[:200]}
+
     def api_regenerate(self, seq):
         """重新生成：为最后一条 AI 消息生成新候选（滑条）"""
         msg = next((m for m in self.messages if m["seq"] == seq), None)
@@ -3031,10 +3822,8 @@ class HtmlApp:
                     with open(os.path.join(self.save_dir, fn), "r", encoding="utf-8") as f:
                         data = json.load(f)
                     if isinstance(data, dict) and data.get("system_prompt"):
-                        fields = {k: (data.get(k) or "") for k, _ in ROLE_FIELDS}
-                        legacy = data.get("legacy") or ""
-                        prompt = assemble_role_prompt(data.get("name") or fn[:-5], fields, legacy) \
-                            or data.get("system_prompt", "")
+                        prompt, fields, legacy = role_prompt_from_card(
+                            data.get("name") or fn[:-5], data)
                         self.roles.append({"name": data.get("name") or fn[:-5], "file": fn,
                                            "prompt": prompt, "data": data,
                                            "fields": fields, "legacy": legacy})
@@ -3532,6 +4321,254 @@ class HtmlApp:
         except Exception as e:
             return {"ok": False, "err": "导出失败：" + str(e)[:200]}
 
+    # ---------- 备份内容（明文备份 / 加密备份共用同一份） ----------
+
+    def _backup_entries(self):
+        """返回 [(zip 内相对路径, bytes)]。
+        抽出来是为了让「明文备份」和「加密备份」内容完全一致，
+        不然两份实现迟早会走偏。"""
+        out = []
+        for r in self.roles:
+            data = dict(r.get("data") or {})
+            data["name"] = r["name"]
+            data["system_prompt"] = r.get("prompt") or data.get("system_prompt", "")
+            if r["name"] in self.selected_roles:
+                td = self.core.get_all_nodes_data()
+                if len(td.get("nodes", {})) > 1:
+                    data["history_tree"] = td
+            out.append(("saves/" + r["file"],
+                        json.dumps(data, ensure_ascii=False, indent=2).encode("utf-8")))
+        for w in self.worlds:
+            fn = self._safe_name(w.get("name") or "") + ".json"
+            out.append(("worlds/" + fn,
+                        json.dumps(w, ensure_ascii=False, indent=2).encode("utf-8")))
+        if self.persona:
+            out.append(("personas/persona.json",
+                        json.dumps(self.persona, ensure_ascii=False, indent=2).encode("utf-8")))
+        safe_cfg = self._encrypt_config_secrets(self.config) or self.config
+        out.append(("config.json",
+                    json.dumps(safe_cfg, ensure_ascii=False, indent=2).encode("utf-8")))
+        # codex/ 里是生成出来的剧情包 —— 全项目最不可替代的一类数据
+        # （config 能重设、世界卡能重下，写出来的故事没了就是没了），
+        # 之前漏在外面，而它恰好被一次打包脚本误删过，所以必须进备份。
+        try:
+            cdir = getattr(self, "codex_dir", None)
+            if cdir and os.path.isdir(cdir):
+                for fn in sorted(os.listdir(cdir)):
+                    full = os.path.join(cdir, fn)
+                    if os.path.isfile(full):
+                        with open(full, "rb") as f:
+                            out.append(("codex/" + fn, f.read()))
+                    elif os.path.isdir(full):
+                        for dp, _dn, fns in os.walk(full):
+                            for f2 in fns:
+                                fp = os.path.join(dp, f2)
+                                rel = os.path.relpath(fp, cdir).replace("\\", "/")
+                                with open(fp, "rb") as f:
+                                    out.append(("codex/" + rel, f.read()))
+        except Exception:
+            pass          # codex 读不到不该让整份备份失败
+        return out
+
+    @staticmethod
+    def _zip_entries(entries, root):
+        import zipfile
+        import io
+        buf = io.BytesIO()
+        with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
+            for path, data in entries:
+                z.writestr(root + "/" + path, data)
+        return buf.getvalue()
+
+    def _pick_save_path(self, fname, types):
+        """保存对话框（失败/无 UI 时退回桌面）"""
+        out = None
+        try:
+            import webview
+            win = webview.windows[0] if getattr(webview, "windows", None) else None
+            if win is not None:
+                res = win.create_file_dialog(webview.FileDialog.SAVE,
+                                             save_filename=fname, file_types=types)
+                if res:
+                    out = res[0]
+        except Exception:
+            pass
+        if not out:
+            out = os.path.join(os.path.expanduser("~"), "Desktop", fname)
+        return out
+
+    # ---------- 加密备份 ----------
+
+    BACKUP_EXT = ".dickbackup"
+
+    def api_backup_password_check(self, password):
+        """给界面用：实时告诉用户口令够不够强（不存任何东西）"""
+        try:
+            import crypto_core
+            lvl, msg = crypto_core.password_strength(password or "")
+            return {"ok": True, "level": lvl, "msg": msg,
+                    "ok_to_use": lvl >= 2}
+        except Exception as e:
+            return {"ok": False, "err": str(e)[:120]}
+
+    def api_backup_make_password(self):
+        """生成一个随机强口令。
+
+        为什么要这个：备份的安全性 100% 取决于口令，而人自己想的口令
+        普遍很弱（生日、拼音、叠字）。更麻烦的是【忘了就永久打不开】——
+        我们没留后门，也没有任何找回手段。
+        所以让程序给一个 32 字节随机的，用户抄在纸上收好，
+        这比「想一个好记的」既更安全、也更不容易忘。
+        """
+        try:
+            import crypto_core
+            return {"ok": True, "password": crypto_core.make_recovery_code()}
+        except Exception as e:
+            return {"ok": False, "err": str(e)[:120]}
+
+    def api_export_backup_encrypted(self, password):
+        """加密备份：整体打包 → 用口令加密成【一个文件】。
+
+        比「加密 zip」更好：连文件名、目录结构、有几个存档、config 里的字段
+        全都看不见 —— 加密 zip 只加密内容，文件名和结构仍是明文。
+        """
+        try:
+            import crypto_core
+            import datetime as _dt
+        except Exception as e:
+            return {"ok": False, "err": "缺少加密模块 crypto_core：" + str(e)[:120]}
+        lvl, msg = crypto_core.password_strength(password or "")
+        if lvl < 2:
+            return {"ok": False,
+                    "err": "口令不够强（%s）。加密备份的安全性 100%% 取决于口令强度，"
+                           "请至少 12 位、混合大小写字母和数字。" % msg}
+        try:
+            ts = _dt.datetime.now().strftime("%Y%m%d_%H%M%S")
+            entries = self._backup_entries()
+            raw_zip = self._zip_entries(entries, "DICK_备份_" + ts)
+            blob = crypto_core.encrypt(password, raw_zip)
+            out = self._pick_save_path("DICK_加密备份_" + ts + self.BACKUP_EXT,
+                                       ("DICK 加密备份 (*" + self.BACKUP_EXT + ")",))
+            if not out.lower().endswith(self.BACKUP_EXT):
+                out += self.BACKUP_EXT
+            with open(out, "wb") as f:
+                f.write(blob)
+            return {"ok": True, "file": out, "name": os.path.basename(out),
+                    "size": os.path.getsize(out),
+                    "entries": len(entries),
+                    "zip_bytes": len(raw_zip),
+                    "container_bytes": len(blob),
+                    "info": crypto_core.info(blob)}
+        except Exception as e:
+            return {"ok": False, "err": "加密备份失败：" + str(e)[:200]}
+
+    def api_import_backup_encrypted(self, password):
+        """还原加密备份：解密 → 解压 → 覆盖 saves/worlds/personas/config。
+        覆盖前会把原文件复制到 saves/backup/ 下，避免一失手全没了。"""
+        try:
+            import crypto_core
+            import zipfile
+            import io
+            import datetime as _dt
+        except Exception as e:
+            return {"ok": False, "err": "缺少加密模块：" + str(e)[:120]}
+        try:
+            import webview
+            win = webview.windows[0] if getattr(webview, "windows", None) else None
+            if win is None:
+                return {"ok": False, "err": "窗口未就绪"}
+            res = win.create_file_dialog(
+                webview.FileDialog.OPEN,
+                file_types=("DICK 加密备份 (*" + self.BACKUP_EXT + ")", "所有文件 (*.*)"))
+        except Exception as e:
+            return {"ok": False, "err": "对话框失败：" + str(e)[:120]}
+        if not res:
+            return {"ok": False, "err": "cancelled"}
+        src = res[0]
+        try:
+            with open(src, "rb") as f:
+                blob = f.read()
+        except Exception as e:
+            return {"ok": False, "err": "读不到文件：" + str(e)[:120]}
+        try:
+            raw_zip = crypto_core.decrypt(password, blob)
+        except Exception as e:
+            return {"ok": False, "err": str(e)[:160]}
+        try:
+            z = zipfile.ZipFile(io.BytesIO(raw_zip))
+        except Exception as e:
+            return {"ok": False, "err": "备份内容损坏：" + str(e)[:120]}
+
+        ts = _dt.datetime.now().strftime("%Y%m%d_%H%M%S")
+        bak = os.path.join(self.save_dir, "backup", "restore_" + ts)
+        try:
+            restored = self._restore_from_zip(z, bak)
+        except Exception as e:
+            return {"ok": False, "err": "还原失败：" + str(e)[:200]}
+        return {"ok": True, "restored": restored,
+                "backup_dir": bak if os.path.isdir(bak) else "",
+                "msg": "已还原：存档 %d / 世界 %d / 玩家卡 %d / 剧情包 %d / 设置 %d。"
+                       "（原文件已备份到 saves/backup/）"
+                       % (restored["saves"], restored["worlds"],
+                          restored["personas"], restored["codex"],
+                          restored["config"])}
+
+    def _restore_from_zip(self, z, bak):
+        """把备份 zip 铺回磁盘。抽成独立方法是为了能脱离文件对话框测试 ——
+        这段逻辑包含「写到哪」的判断，出错的代价是覆盖用户数据，必须可测。"""
+        restored = {"saves": 0, "worlds": 0, "personas": 0, "config": 0, "codex": 0}
+        root = os.path.realpath(os.path.abspath(self.base_dir))
+        for info in z.infolist():
+            if info.is_dir():
+                continue
+            safe = info.filename.replace("\\", "/")
+            parts = safe.split("/")
+            if len(parts) < 2:
+                continue
+            # zip 路径穿越防护：'..' 若被写进备份，还原时就能写到 DICK 目录之外。
+            # GCM 已保证文件没被改过，这是纵深防御，成本几乎为零。
+            if ".." in parts:
+                continue
+            rel = "/".join(parts[1:])
+            if rel == "config.json":
+                dst = self.config_file
+                key = "config"
+            # 注意：这里判断的是 rel 里的层级，不是 parts 的长度 ——
+            # parts 还含最外层根目录名，用 len(parts)==2 会把全部条目跳过。
+            elif rel.startswith("saves/") and rel.count("/") == 1:
+                dst = os.path.join(self.save_dir, os.path.basename(rel))
+                key = "saves"
+            elif rel.startswith("worlds/") and rel.count("/") == 1:
+                dst = os.path.join(self.world_dir, os.path.basename(rel))
+                key = "worlds"
+            elif rel.startswith("personas/") and rel.count("/") == 1:
+                dst = os.path.normpath(
+                    os.path.join(self.preset_dir, "..", "personas", os.path.basename(rel)))
+                key = "personas"
+            elif rel.startswith("codex/"):
+                # codex 可能是目录，要保留子目录层级
+                dst = os.path.join(self.codex_dir,
+                                   rel[len("codex/"):].replace("/", os.sep))
+                key = "codex"
+            else:
+                continue
+            ap = os.path.realpath(os.path.abspath(dst))
+            if not (ap == root or ap.startswith(root + os.sep)):
+                continue
+            # 覆盖前先留一份原件
+            if os.path.isfile(dst):
+                try:
+                    os.makedirs(bak, exist_ok=True)
+                    import shutil as _sh
+                    _sh.copy2(dst, os.path.join(bak, os.path.basename(dst)))
+                except Exception:
+                    pass
+            os.makedirs(os.path.dirname(dst), exist_ok=True)
+            with open(dst, "wb") as f:
+                f.write(z.read(info))
+            restored[key] += 1
+        return restored
+
     def api_export_backup(self):
         """一键备份：把所有角色卡(含聊天树)、世界卡、玩家卡、以及 config 打进一个 zip。
         安全网入口：用户把 zip 存到别处/云端，即可完整迁移/还原。默认存到桌面。"""
@@ -4007,6 +5044,221 @@ class HtmlApp:
         except Exception as e:
             return {"ok": False, "err": str(e)[:120]}
 
+    # ---------- 导出到「叙事引擎」原生播放器（Kotlin，EXE / APK） ----------
+    # 和上面「打包 HTML EXE」的区别：这里产出的是真正的原生窗口程序，
+    # 引擎与渲染器分离，同一份 codex.json 还能喂给安卓 APK 和 DICK 主程序。
+
+    PLAYER_DIRNAME = "DICK-Narrative"
+    PLAYER_EXE = "DICK-Narrative.exe"
+
+    def _find_player_dir(self):
+        """找到已构建好的播放器目录（含 DICK-Narrative.exe）；没有返回 None。
+        先试约定位置，再在数据目录（及下两层）里扫一遍，容忍用户随便放。"""
+        exe = self.PLAYER_EXE
+
+        def has_exe(d):
+            try:
+                return bool(d) and os.path.isfile(os.path.join(d, exe))
+            except Exception:
+                return False
+
+        b = self.base_dir
+        dev = os.path.join(self.PLAYER_DIRNAME, "app", "build", "compose",
+                           "binaries", "main", "app", self.PLAYER_DIRNAME)
+        name = self.PLAYER_DIRNAME
+        up1 = os.path.dirname(b)          # dist\DICK-HTML → dist\dist
+        up2 = os.path.dirname(up1)        # 再上一层：打包版 DICK 就靠这个找到工程里的播放器
+        cands = [
+            os.environ.get("DICK_PLAYER_DIR"),
+            os.path.join(b, dev),                              # 开发：构建输出
+            os.path.join(b, "player", name),
+            os.path.join(b, name + "-播放器"),
+            os.path.join(b, "播放器", name),
+            os.path.join(b, "播放器"),
+            os.path.join(b, name),
+            # 上一层 / 上两层：兼容「DICK-HTML 在子目录、播放器在工程根」这种布局
+            os.path.join(up1, dev),
+            os.path.join(up1, name + "-播放器"),
+            os.path.join(up1, name),
+            os.path.join(up2, dev),
+            os.path.join(up2, name + "-播放器"),
+            os.path.join(up2, name),
+        ]
+        for c in cands:
+            if has_exe(c):
+                return c
+
+        # 兜底扫描：数据目录本身 → 一层子目录 → 两层子目录
+        def subdirs(d):
+            try:
+                return [os.path.join(d, n) for n in sorted(os.listdir(d))
+                        if os.path.isdir(os.path.join(d, n))]
+            except Exception:
+                return []
+
+        for d in [b] + subdirs(b) + subdirs(up1) + subdirs(up2):
+            if has_exe(d):
+                return d
+            for d2 in subdirs(d):
+                if has_exe(d2):
+                    return d2
+        return None
+
+    @staticmethod
+    def _player_size_mb(path):
+        total = 0
+        for root, _dirs, files in os.walk(path):
+            for f in files:
+                try:
+                    total += os.path.getsize(os.path.join(root, f))
+                except Exception:
+                    pass
+        return round(total / 1048576.0, 1)
+
+    def api_codex_export_player(self, name):
+        """把 CODEX 包导出成「播放器 + 故事」的成品目录（后台线程）。
+        产出结构：
+            <目标目录>/<包名>/
+                DICK-Narrative.exe  app/  runtime/    ← 原生播放器（自带运行时）
+                story/codex.json  sprites/ bg/ bgm/ voice/
+                玩这个.txt
+        """
+        try:
+            pkg = self._codex_pkg_path(name)
+            if not os.path.isfile(os.path.join(pkg, "codex.json")):
+                return {"ok": False, "err": "包不存在"}
+            player = self._find_player_dir()
+            if not player:
+                return {"ok": False,
+                        "err": "还没构建播放器。先在 DICK-Narrative 目录跑一次 build.ps1 -Exe，"
+                               "或把窗口里的「目标目录」指到已构建好的播放器上。"}
+            # 选目标目录（默认桌面）
+            dest_root = None
+            try:
+                import webview
+                win = webview.windows[0] if getattr(webview, "windows", None) else None
+                if win is not None:
+                    desktop = os.path.join(os.path.expanduser("~"), "Desktop")
+                    res = win.create_file_dialog(
+                        webview.FileDialog.FOLDER,
+                        directory=desktop if os.path.isdir(desktop) else os.path.expanduser("~"))
+                    if not res:
+                        return {"ok": False, "err": "cancelled"}
+                    dest_root = res[0]
+            except Exception:
+                dest_root = None
+            if not dest_root:
+                dest_root = os.path.join(pkg, "dist", "player")
+
+            safe = codex_core._safe_name(name)
+            dest = os.path.join(dest_root, safe)
+            state_file = os.path.join(pkg, "dist", ".player_build_state.json")
+            try:
+                os.makedirs(os.path.dirname(state_file), exist_ok=True)
+                save_guard.atomic_write_json(state_file,
+                                             {"state": "building", "msg": "准备导出…"})
+            except Exception:
+                pass
+            threading.Thread(target=self._codex_player_worker,
+                             args=(name, player, dest, state_file),
+                             daemon=True).start()
+            return {"ok": True, "dest": dest}
+        except Exception as e:
+            return {"ok": False, "err": str(e)[:200]}
+
+    def _codex_player_worker(self, name, player, dest, state_file):
+        """后台：拷播放器 + 放故事，并写状态文件"""
+        def set_state(st, msg, extra=None):
+            d = {"state": st, "msg": msg}
+            if extra:
+                d.update(extra)
+            try:
+                save_guard.atomic_write_json(state_file, d)
+            except Exception:
+                pass
+        try:
+            import shutil
+            pkg = self._codex_pkg_path(name)
+
+            set_state("building", "正在复制播放器（约 127 MB，第一次稍慢）…")
+            if os.path.isdir(dest):
+                # 删不干净通常是播放器还开着（exe 被占用）→ 说人话，别抛 WinError
+                try:
+                    shutil.rmtree(dest)
+                except Exception:
+                    locked = []
+                    for root, _dirs, files in os.walk(dest):
+                        for fn in files:
+                            try:
+                                os.remove(os.path.join(root, fn))
+                            except Exception:
+                                locked.append(fn)
+                    if locked:
+                        set_state("error",
+                                  "目标目录里有文件正被占用（多半是播放器还开着）："
+                                  + "、".join(sorted(set(locked))[:5])
+                                  + " —— 请先关掉 DICK-Narrative.exe 再导出。")
+                        return
+                    shutil.rmtree(dest, ignore_errors=True)
+            os.makedirs(dest, exist_ok=True)
+            shutil.copytree(player, dest, dirs_exist_ok=True)
+
+            set_state("building", "正在放入故事与素材…")
+            story = os.path.join(dest, "story")
+            # 播放器自带一份示例故事，导出时必须清掉，否则会和你的故事打架
+            shutil.rmtree(story, ignore_errors=True)
+            os.makedirs(story, exist_ok=True)
+            shutil.copy2(os.path.join(pkg, "codex.json"),
+                         os.path.join(story, "codex.json"))
+            counts = {}
+            for kind in codex_core.SUBDIRS:
+                src = os.path.join(pkg, kind)
+                n = 0
+                if os.path.isdir(src):
+                    dst = os.path.join(story, kind)
+                    os.makedirs(dst, exist_ok=True)
+                    for fn in sorted(os.listdir(src)):
+                        sp = os.path.join(src, fn)
+                        if os.path.isfile(sp):
+                            shutil.copy2(sp, os.path.join(dst, fn))
+                            n += 1
+                counts[kind] = n
+
+            readme = os.path.join(dest, "玩这个.txt")
+            try:
+                with open(readme, "w", encoding="utf-8") as f:
+                    f.write(
+                        "《%s》\n\n"
+                        "双击 DICK-Narrative.exe 就能玩。\n"
+                        "整个文件夹要一起拷走（runtime 和 app 是播放器自带的运行环境）。\n\n"
+                        "操作：鼠标点任意处推进 / 空格回车推进 / Esc 打开菜单\n"
+                        "剧情分支会按好感度、状态、标记自动筛选。\n" % name)
+            except Exception:
+                pass
+
+            size = self._player_size_mb(dest)
+            set_state("done", "导出完成",
+                      {"dest": dest, "size": size, "counts": counts,
+                       "rel": os.path.basename(dest)})
+        except Exception as e:
+            set_state("error", str(e)[:300])
+
+    def api_codex_player_status(self, name):
+        """查询「导出到播放器」进度（前端轮询）"""
+        state_file = os.path.join(self._codex_pkg_path(name), "dist", ".player_build_state.json")
+        try:
+            with open(state_file, "r", encoding="utf-8") as f:
+                return {"ok": True, **json.load(f)}
+        except FileNotFoundError:
+            return {"ok": True, "state": "idle", "msg": "尚未开始"}
+        except Exception as e:
+            return {"ok": False, "err": str(e)[:120]}
+
+    def api_codex_player_ready(self):
+        """播放器是否已构建（前端用来提示/禁用按钮）"""
+        p = self._find_player_dir()
+        return {"ok": True, "ready": bool(p), "dir": p or ""}
+
     # ================= CODEX 系统权限（DICK 内置特权引擎） =================
 
     def api_codex_register_assoc(self):
@@ -4254,7 +5506,7 @@ class HtmlApp:
                 tpl = html
             else:
                 tpl = codex_core._load_custom_template(pkg)
-            out, _counts = codex_core.render_standalone(pkg, tpl)
+            out, _counts = codex_core.render_standalone(pkg, tpl, state=getattr(self.core, "mechanism_state", None))
             return {"ok": True, "html": out}
         except Exception as e:
             return {"ok": False, "err": str(e)[:200]}
@@ -4396,6 +5648,58 @@ class HtmlApp:
                 ".flac": "audio/flac", ".mp4": "audio/mp4", ".m4a": "audio/mp4"}.get(ext, "application/octet-stream")
         return {"ok": True, "data": "data:" + mime + ";base64," + _b64.b64encode(raw).decode("ascii")}
 
+    # 素材类型 → (文件对话框说明, 允许的扩展名)
+    ASSET_KINDS = {
+        "sprites": ("图片 (*.png;*.jpg;*.jpeg;*.webp;*.gif)", (".png", ".jpg", ".jpeg", ".webp", ".gif")),
+        "bg": ("图片 (*.png;*.jpg;*.jpeg;*.webp;*.gif)", (".png", ".jpg", ".jpeg", ".webp", ".gif")),
+        "bgm": ("音频 (*.mp3;*.wav;*.ogg;*.flac;*.m4a)", (".mp3", ".wav", ".ogg", ".flac", ".m4a")),
+        "voice": ("音频 (*.mp3;*.wav;*.ogg;*.flac;*.m4a;*.mp4)", (".mp3", ".wav", ".ogg", ".flac", ".m4a", ".mp4")),
+    }
+
+    def api_codex_import_asset(self, name, kind):
+        """把素材文件导入包内对应目录（sprites/bg/bgm/voice），支持多选。
+        返回 {ok, added:[文件名], files:{按类型分组}}，方便前端刷新下拉。"""
+        if kind not in codex_core.SUBDIRS:
+            return {"ok": False, "err": "未知素材类型：" + str(kind)}
+        try:
+            import webview
+            win = webview.windows[0] if getattr(webview, "windows", None) else None
+            if win is None:
+                return {"ok": False, "err": "窗口未就绪"}
+            desc, _exts = self.ASSET_KINDS[kind]
+            res = win.create_file_dialog(webview.FileDialog.OPEN, allow_multiple=True,
+                                         file_types=(desc, "所有文件 (*.*)"))
+        except Exception as e:
+            return {"ok": False, "err": "对话框失败：" + str(e)}
+        if not res:
+            return {"ok": False, "err": "cancelled"}
+        if not isinstance(res, (list, tuple)):
+            res = [res]
+        ok_exts = self.ASSET_KINDS[kind][1]
+        dst_dir = os.path.join(self._codex_pkg_path(name), kind)
+        os.makedirs(dst_dir, exist_ok=True)
+        import shutil as _sh
+        added = []
+        for src in res:
+            base = os.path.basename(str(src))
+            if os.path.splitext(base)[1].lower() not in ok_exts:
+                continue
+            out = os.path.join(dst_dir, base)
+            i = 1
+            while os.path.exists(out):
+                stem, e = os.path.splitext(base)
+                out = os.path.join(dst_dir, f"{stem}_{i}{e}")
+                i += 1
+            try:
+                _sh.copy2(src, out)
+                added.append(os.path.basename(out))
+            except Exception:
+                pass
+        if not added:
+            return {"ok": False, "err": "没有导入任何文件（格式不支持？）"}
+        files = self.api_codex_script_files(name).get("files", {})
+        return {"ok": True, "added": added, "files": files}
+
     def api_codex_script_files(self, name):
         """列出包内全部资源文件（按 kind 分组）——播放器/编辑器引用列表"""
         out = {k: [] for k in codex_core.SUBDIRS}
@@ -4408,6 +5712,409 @@ class HtmlApp:
                 except Exception:
                     pass
         return {"ok": True, "files": out}
+
+    # ================= 围棋（规则引擎 + 提示词注入） =================
+    # 设计：规则全部由 go_engine 决定，模型只负责「从候选点里挑一个 + 说台词」。
+    # 19 路每步有 250+ 合法点，ASCII 坐标又不携带形状信息，让模型自由算棋必乱下；
+    # 所以每轮把引擎挑出的候选点一起注入，模型选，引擎校验。
+
+    def _go_game(self):
+        return getattr(self, "_go", None)
+
+    # 棋风关键词：从角色卡的性格描述里推断，让「性格」真的影响落子而不只是台词
+    GO_STYLE_WORDS = {
+        "aggressive": ["好战", "激进", "暴躁", "强势", "攻击", "争强", "不服输", "凶", "狠",
+                       "狂妄", "挑衅", "火爆", "嗜血", "暴虐", "战斗", "危险", "咄咄"],
+        "solid": ["谨慎", "稳重", "冷静", "沉着", "细腻", "保守", "理性", "严谨", "稳健",
+                  "小心", "缜密", "沉稳", "克制", "耐心", "踏实"],
+        "proud": ["骄傲", "自负", "自信", "高傲", "目中无人", "天才", "自恋", "优越",
+                  "高贵", "不屑", "傲慢", "大小姐", "冷淡"],
+        "playful": ["随性", "懒", "散漫", "调皮", "顽皮", "跳脱", "漫不经心", "任性",
+                    "胡闹", "活泼", "开朗", "天真", "好奇", "贪玩"],
+    }
+    GO_STYLE_LABEL = {
+        "aggressive": "好战 —— 喜欢贴身纠缠、追杀、叫吃",
+        "solid": "稳重 —— 喜欢连接、围地、稳扎稳打",
+        "proud": "高傲 —— 喜欢占大场星位做模样，不屑贴身缠斗",
+        "playful": "随性 —— 下得跳脱，偶尔神来一笔或随手一着",
+        "balanced": "均衡 —— 该怎么下怎么下",
+    }
+
+    # ── 好感度 → 棋局设定（想调难度就改这里）────────────────────
+    # 格式：(好感下限, 让子数, 放水概率, 关系描述)
+    #
+    # 让子数上限是 1 —— 再多就不像在下棋了，而是像在哄人。
+    # 所以【放水概率】才是真正决定难度的那一列，想让棋更轻松就调它。
+    # 真要让更多子：改下面的 GO_MAX_HANDICAP（引擎支持到 9 子），
+    # 同时记得把这张表里对应档位的让子数一起改大。
+    GO_MAX_HANDICAP = 1
+    GO_KOMI_PER_HANDICAP = 5.0     # 玩家执白时，1 子折成多少目贴还给他
+
+    GO_AFF_TIERS = [
+        (85, 1, 0.30, "很亲近，愿意让着你一子"),
+        (70, 1, 0.20, "关系不错，会不自觉地放水"),
+        (50, 1, 0.05, "还算熟，让一子客气一下"),
+        (0, 0, 0.00, "还没什么交情，不留情"),
+    ]
+
+    def _go_settings(self):
+        """按好感度算出这盘的让子数 / 放水概率 / 额外贴目"""
+        aff = 50
+        try:
+            v = (self.core.mechanism_state or {}).get("affection")
+            if isinstance(v, (int, float)):
+                aff = v
+        except Exception:
+            pass
+        handicap, mercy, mood = 0, 0.0, self.GO_AFF_TIERS[-1][3]
+        for lo, h, m, label in self.GO_AFF_TIERS:
+            if aff >= lo:
+                handicap, mercy, mood = h, m, label
+                break
+        # 上限在这里再夹一次：以后有人把表里的数字改大了，也不会真的多让子
+        handicap = max(0, min(int(handicap), self.GO_MAX_HANDICAP))
+        human = getattr(self, "_go_human", "black")
+        komi_extra = 0.0
+        if human == "white":
+            # 玩家执白时没法给他让子，改成多贴目（她吃亏）
+            komi_extra = handicap * self.GO_KOMI_PER_HANDICAP
+            handicap = 0
+        return {"aff": aff, "handicap": handicap, "mercy": mercy,
+                "komi_extra": komi_extra, "mood": mood}
+
+    def api_go_settings(self):
+        """给界面显示「这盘棋她打算怎么跟你下」"""
+        st = self._go_settings()
+        b = self._go_game()
+        st["ok"] = True
+        st["human"] = getattr(self, "_go_human", "black")
+        st["size"] = b.size if b else 19
+        st["style"] = self._go_style()
+        st["style_label"] = self.GO_STYLE_LABEL.get(st["style"], "")
+        st["komi"] = b.komi if b else 7.5
+        return st
+
+    def _go_style(self):
+        """从当前角色卡推断棋风；好感度也会影响（低→更冲，高→更稳）"""
+        try:
+            roles = getattr(self.core, "active_roles", None) or []
+            text = ""
+            for r in roles[:1]:
+                if not isinstance(r, dict):
+                    continue
+                for k in ("personality", "description", "scenario", "name", "system_prompt"):
+                    v = r.get(k)
+                    if isinstance(v, str):
+                        text += v + "\n"
+            scores = {}
+            for st, words in self.GO_STYLE_WORDS.items():
+                scores[st] = sum(text.count(w) for w in words)
+            best = "balanced"
+            if scores:
+                cand = max(scores, key=lambda k: scores[k])
+                if scores[cand] > 0:
+                    best = cand
+            # 机制卡联动：好感度低时更冲，高时更稳（只在没明显性格倾向时生效）
+            if best == "balanced":
+                aff = None
+                try:
+                    aff = (self.core.mechanism_state or {}).get("affection")
+                except Exception:
+                    aff = None
+                if isinstance(aff, (int, float)):
+                    if aff < 30:
+                        best = "aggressive"
+                    elif aff >= 80:
+                        best = "solid"
+            return best
+        except Exception:
+            return "balanced"
+
+    def _go_note(self, text):
+        log = getattr(self, "_go_log", None)
+        if log is None:
+            log = self._go_log = []
+        log.append(text)
+        if len(log) > 200:
+            del log[:-200]
+
+    def api_go_new(self, size=19, human_color="black", komi=7.5):
+        """开新局。human_color: 'black' 或 'white'"""
+        try:
+            import go_engine as ge
+        except Exception as e:
+            return {"ok": False, "err": "围棋引擎缺失：" + str(e)[:120]}
+        try:
+            size = int(size or 19)
+        except Exception:
+            size = 19
+        if size not in (9, 13, 19):
+            size = 19
+        b = ge.new_game(size=size, komi=float(komi or 7.5))
+        self._go = b
+        human = "white" if str(human_color).lower().startswith("w") else "black"
+        self._go_human = human
+        self._go_log = []
+        st = self._go_settings()
+        if human == "black" and st["handicap"]:
+            n = b.setup_handicap(st["handicap"])
+            self._go_note("让子局：她让你 %d 子（好感度 %d，%s）" % (n, st["aff"], st["mood"]))
+        elif human == "white" and st["komi_extra"]:
+            b.komi += st["komi_extra"]
+            self._go_note("她多贴 %.1f 目给你（好感度 %d，%s）" % (st["komi_extra"], st["aff"], st["mood"]))
+        self._go_note("开新局：%d 路，你执%s，贴目 %.1f，她的棋风「%s」" %
+                      (size, "黑" if human == "black" else "白", b.komi,
+                       self.GO_STYLE_LABEL.get(self._go_style(), "均衡").split(" —— ")[0]))
+        self._go_maybe_ai_first()
+        return {"ok": True, "state": b.state(), "human": human,
+                "settings": st, "log": self._go_log[-6:]}
+
+    def api_go_state(self):
+        b = self._go_game()
+        if b is None:
+            return {"ok": False, "err": "还没开局"}
+        try:
+            cands = [c["display"] for c in b.candidates(limit=6)]
+        except Exception:
+            cands = []
+        st = self._go_settings()
+        st["style_label"] = self.GO_STYLE_LABEL.get(self._go_style(), "")
+        return {"ok": True, "state": b.state(),
+                "human": getattr(self, "_go_human", "black"),
+                "candidates": cands,
+                "settings": st,
+                "log": getattr(self, "_go_log", [])[-10:]}
+
+    def api_go_play(self, x, y):
+        """玩家落子（x,y 为 0 起算的内部坐标）。落完自动触发 AI 回手。"""
+        b = self._go_game()
+        if b is None:
+            return {"ok": False, "err": "还没开局"}
+        r = b.play(int(x), int(y))
+        if not r["ok"]:
+            return {"ok": False, "err": r["reason"]}
+        self._go_note("你落子 %s%s" % (r["display"],
+                                    ("，提 %d 子" % len(r["captured"])) if r["captured"] else ""))
+        if b.finished:
+            return {"ok": True, "state": b.state(), "ended": True, "log": self._go_log[-6:]}
+        self._go_ai_turn("我下在 %s。" % r["display"])
+        return {"ok": True, "state": b.state(), "log": self._go_log[-6:]}
+
+    def api_go_pass(self):
+        b = self._go_game()
+        if b is None:
+            return {"ok": False, "err": "还没开局"}
+        r = b.pass_turn()
+        self._go_note("你停一手")
+        if r.get("ended") or b.finished:
+            return {"ok": True, "state": b.state(), "ended": True, "log": self._go_log[-6:]}
+        self._go_ai_turn("我停一手（pass）。")
+        return {"ok": True, "state": b.state(), "log": self._go_log[-6:]}
+
+    def api_go_undo(self):
+        """悔棋：退回到自己上一次落子之前（退两手：AI 一手 + 自己一手）。"""
+        b = self._go_game()
+        if b is None:
+            return {"ok": False, "err": "还没开局"}
+        n = 0
+        for _ in range(2):
+            if b.undo()["ok"]:
+                n += 1
+        if n:
+            self._go_note("悔棋 %d 手" % n)
+        return {"ok": True, "state": b.state(), "undone": n, "log": self._go_log[-6:]}
+
+    def api_go_resign(self):
+        b = self._go_game()
+        if b is None:
+            return {"ok": False, "err": "还没开局"}
+        import go_engine as ge
+        human = getattr(self, "_go_human", "black")
+        color = ge.BLACK if human == "black" else ge.WHITE
+        r = b.resign(color)
+        self._go_note("你认输 —— " + b.result)
+        return {"ok": True, "state": b.state(), "result": b.result}
+
+    def api_go_score(self):
+        b = self._go_game()
+        if b is None:
+            return {"ok": False, "err": "还没开局"}
+        s = b.score()
+        return {"ok": True, "score": s}
+
+    def _go_ai_first(self):
+        """玩家执白时，开局让 AI 先走"""
+        b = self._go_game()
+        human = getattr(self, "_go_human", "black")
+        if b is None or b.finished:
+            return
+        ai_black = (human == "white")
+        if ai_black and b.to_move == b.BLACK and len(b.moves) == 0:
+            self._go_ai_turn("（对局开始，你执黑先行。）")
+
+    def _go_maybe_ai_first(self):
+        try:
+            self._go_ai_first()
+        except Exception:
+            pass
+
+    def _go_prompt_block(self):
+        """构造注入给模型的棋盘说明 + 候选点"""
+        import go_engine as ge
+        b = self._go_game()
+        human = getattr(self, "_go_human", "black")
+        ai_color = "白" if human == "black" else "黑"
+        my_mark = "O" if ai_color == "白" else "X"
+        cands = []
+        style = self._go_style()
+        gs = self._go_settings()
+        try:
+            cands = b.candidates(b.to_move, limit=6, style=style, mercy=gs["mercy"])
+        except Exception:
+            pass
+        lines = []
+        lines.append("你执%s（棋盘上 %s 是你的子），对方执%s。" % (ai_color, my_mark,
+                                                            "黑" if ai_color == "白" else "白"))
+        lines.append("你的棋风：%s。选点请贴合你的性格。" %
+                     self.GO_STYLE_LABEL.get(style, self.GO_STYLE_LABEL["balanced"]))
+        # 好感度 → 这盘棋的设定（让子/放水），让她的态度和棋局一致
+        if gs["handicap"]:
+            lines.append("这是让子局：你让了对方 %d 子。你们的关系——%s。"
+                         "可以偶尔手软，但别放得太明显，输了也别恼。" % (gs["handicap"], gs["mood"]))
+        elif gs["komi_extra"]:
+            lines.append("你多贴了 %.1f 目给对方，是让着她的。你们的关系——%s。"
+                         % (gs["komi_extra"], gs["mood"]))
+        else:
+            lines.append("分先对局，关系——%s。不必留情，全力下。" % gs["mood"])
+        lines.append("")
+        lines.append("当前棋盘（X=黑子 O=白子 .=空；列 A-T 跳过 I，行 1-19 自下往上）：")
+        lines.append(b.to_ascii())
+        lines.append("")
+        st = b.score()
+        ai_stone = ge.BLACK if ai_color == "黑" else ge.WHITE
+        opp_stone = ge.WHITE if ai_color == "黑" else ge.BLACK
+        lines.append("已提子：你 %d 子，对方 %d 子。已下 %d 手。" %
+                     (b.captured[ai_stone], b.captured[opp_stone], len(b.moves)))
+        if cands:
+            lines.append("")
+            lines.append("【引擎给你的候选点】这几个点都不错，**优先从里面挑一个**：")
+            for i, c in enumerate(cands, 1):
+                lines.append("   %d. %s —— %s" % (i, c["display"], c["why"]))
+        lines.append("")
+        lines.append("要求：")
+        lines.append("1. 落子必须是**空点**、且不能让你的子自杀；不要下在刚被提掉的打劫点上。")
+        lines.append("2. 回复里**必须**用一个坐标明确说出你下在哪里，例如「我下在 Q16」。")
+        lines.append("3. 再用你自己的口吻说一两句台词，体现性格（可以吐槽棋局、可以挑衅、可以紧张）。")
+        lines.append("4. 不要解释规则，不要输出棋盘。")
+        return "\n".join(lines)
+
+    def _go_ai_turn(self, user_line=""):
+        """轮到 AI：把棋盘注入 pending_event，然后发一句话触发请求"""
+        b = self._go_game()
+        if b is None or b.finished:
+            return
+        human = getattr(self, "_go_human", "black")
+        if (b.to_move == b.BLACK) == (human == "black"):
+            return                                    # 还没轮到 AI
+        try:
+            blocks = [self._go_prompt_block()]
+            fix = getattr(self, "_go_fix", None)
+            if fix:
+                blocks.append("")
+                blocks.append("【上一手被驳回】%s 请重新选一个合法的点。" % fix)
+                self._go_fix = None
+            self.core.pending_event = {
+                "id": "_go_turn", "name": "围棋·轮到你",
+                "prompt": "\n".join(blocks),
+            }
+        except Exception as e:
+            self._append_sys("围棋：注入失败 %s" % str(e)[:120])
+            return
+        self._send_text(user_line or "（轮到你落子）", None, None)
+
+    def _go_parse_move(self, reply):
+        """从回复里解析落子坐标。返回 (x,y) 或 None。
+        优先命中引擎给的候选点；否则取最后一个合法坐标。"""
+        import re as _re
+        b = self._go_game()
+        if b is None or not reply:
+            return None
+        pat = _re.compile(r"(?<![A-Za-z0-9])([A-HJ-Ta-hj-t])\s?(\d{1,2})(?![0-9])")
+        found = []
+        for m in pat.finditer(str(reply)):
+            xy = b.from_display(m.group(1) + m.group(2))
+            if xy and xy not in found:
+                found.append(xy)
+        if not found:
+            return None
+        try:
+            cand = [(c["x"], c["y"]) for c in b.candidates(b.to_move, limit=8, style=self._go_style())]
+        except Exception:
+            cand = []
+        for xy in found:                      # 先看是不是候选点
+            if xy in cand and b.is_legal(xy[0], xy[1])[0]:
+                return xy
+        for xy in reversed(found):            # 再退而求其次：最后一个能下的
+            if b.is_legal(xy[0], xy[1])[0]:
+                return xy
+        return None
+
+    def _go_after_reply(self, reply):
+        """模型回复落地后的钩子：解析并落子。解析不到就引擎兜底，保证棋局永远能推进。"""
+        import threading as _th
+        b = self._go_game()
+        if b is None or b.finished:
+            return
+        human = getattr(self, "_go_human", "black")
+        if (b.to_move == b.BLACK) == (human == "black"):
+            return                                    # 现在不是 AI 的回合
+        xy = self._go_parse_move(reply)
+        if xy is not None:
+            r = b.play(xy[0], xy[1])
+            if r["ok"]:
+                self._go_note("对手落子 %s%s" % (r["display"],
+                                             ("，提 %d 子" % len(r["captured"])) if r["captured"] else ""))
+                if b.finished:
+                    self._go_note("终局：" + b.result)
+                return
+            reason = r.get("reason") or "非法手"
+        else:
+            reason = "回复里没找到可用的坐标"
+
+        # 驳回重选：最多重试 1 次；延迟一下让本轮 _on_response 先跑完（busy 复位）
+        tries = getattr(self, "_go_retry", 0)
+        if tries < 1:
+            self._go_retry = tries + 1
+            self._go_fix = reason
+            self._go_note("⚠ 对手这一手有问题（%s），让它重选一次" % reason)
+            try:
+                _th.Timer(0.8, lambda: self._go_ai_turn("（刚才那手不行，重选一个点）")).start()
+                return
+            except Exception:
+                pass
+
+        # 兜底：引擎替它落一手，棋局绝不停住
+        self._go_retry = 0
+        try:
+            cands = b.candidates(b.to_move, limit=1)
+        except Exception:
+            cands = []
+        if cands:
+            c = cands[0]
+            r = b.play(c["x"], c["y"])
+            if r["ok"]:
+                self._go_note("⚠ 对手没给出合法坐标，裁判代落 %s（%s）" % (r["display"], c["why"]))
+                if b.finished:
+                    self._go_note("终局：" + b.result)
+
+    def api_go_ai(self):
+        """手动让 AI 走一手（调试/补救用）"""
+        b = self._go_game()
+        if b is None:
+            return {"ok": False, "err": "还没开局"}
+        self._go_retry = 0
+        self._go_ai_turn("（继续）")
+        return {"ok": True, "state": b.state()}
 
     def api_speak_node(self, node_id):
         """消息旁喇叭按钮：按 node_id 朗读该条 AI 消息（合成缓存于 tts_cache，重复点击不重合成）。

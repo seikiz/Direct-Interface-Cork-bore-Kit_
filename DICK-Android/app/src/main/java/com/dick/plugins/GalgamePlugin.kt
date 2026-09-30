@@ -104,7 +104,7 @@ class GalgamePlugin : Plugin {
     }
 
     override fun onMessageSend(userInput: String): String? {
-        // 玩家发送新消息（打字或点选项）后，旧选项作废
+        // 玩家发送新消息（打字或<seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌点选项）后，旧选项作废
         clearChoices()
         return userInput
     }

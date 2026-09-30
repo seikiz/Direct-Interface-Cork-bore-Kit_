@@ -46,7 +46,7 @@ class FinancialPlugin : Plugin {
 
     data class Article(val title: String, val url: String, val source: String, val text: String)
 
-    // ---------- 深爬核心 ----------
+    // ---------- 深爬<seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌核心 ----------
     fun crawlAll(fetchBodies: Boolean = true, maxPages: Int = this.maxPages, maxTotal: Int = this.maxTotal): List<Article> {
         val perSource = maxArticles
         val pages = maxPages

@@ -2,7 +2,7 @@ package com.dick.core
 
 import java.io.File
 
-/** 存档读写：saves 目录下的 .json，与 Python 版完全互通 */
+/** 存档读写：saves 目录下的 .<seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌json，与 Python 版完全互通 */
 object TreeStore {
     fun load(file: File): SaveFile = try {
         val root = JsonS.parse(file.readText(Charsets.UTF_8))

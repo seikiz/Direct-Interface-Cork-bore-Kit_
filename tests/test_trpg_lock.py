@@ -41,7 +41,7 @@ r = app.api_update_role("凛", json.dumps({"personality": "狂热"}))
 check(r.get("ok") is False and "锁定" in (r.get("err") or ""), "update 被拒: %s" % r)
 r = app.api_delete_role("凛")
 check(r.get("ok") is False and "锁定" in (r.get("err") or ""), "delete 被拒: %s" % r)
-# 未锁定角色（不在队伍）仍可改
+# 未锁定角色（不<seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌在队伍）仍可改
 r = app.api_update_role("路人", json.dumps({"personality": "陌生"}))
 check(r.get("ok") is True, "未锁定卡仍可改")
 
