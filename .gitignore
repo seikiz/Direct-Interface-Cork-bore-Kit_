@@ -127,3 +127,7 @@ _phone/
 /_*.jpeg
 /_*.png
 /_*.webp
+/_*.gif
+# 临时导出的小说样本（验证 EPUB/Word 导出）
+/_*.epub
+/_*.docx

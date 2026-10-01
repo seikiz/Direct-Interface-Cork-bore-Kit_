@@ -4324,8 +4324,56 @@ class HtmlApp:
         except Exception as e:
             return {"ok": False, "err": "导出失败：" + str(e)[:200]}
 
-    # ---------- 备份内容（明文备份 / 加密备份共用同一份） ----------
+    def api_export_novel(self, fmt="epub"):
+        """把当前聊天记录导出成【小说】（EPUB / Word）。
 
+        与 api_export_chat 的区别：那个导的是扁平消息列表（分支、重生成、回溯过的内容
+        全糊在一起）；这个走树上的实际路径（root → current_leaf_id），并把当时没走过的
+        分支收成脚注 —— 于是每局对话都能变成一部读得下去的作品。
+        """
+        import novel_export
+        try:
+            tree = self.core.get_all_nodes_data()
+        except Exception as e:
+            return {"ok": False, "err": "读取聊天树失败：" + str(e)[:120]}
+        # 标题：当前选中的角色名（群聊就拼起来）
+        try:
+            names = [r.get("name") for r in (self.roles or [])
+                     if r.get("name") in (self.selected_roles or [])]
+        except Exception:
+            names = []
+        who = "、".join([n for n in names if n][:3]) or "对话"
+        title = who + " · 对话小说"
+        try:
+            author = ((self.persona or {}).get("name") or "").strip()
+        except Exception:
+            author = ""
+        fmt = (fmt or "epub").strip().lower()
+        is_word = fmt in ("docx", "word")
+        default_name = novel_export.safe_name(title) + (".docx" if is_word else ".epub")
+        try:
+            import webview
+            win = webview.windows[0] if getattr(webview, "windows", None) else None
+            if win is None:
+                return {"ok": False, "err": "窗口未就绪"}
+            types = ("Word (*.docx)",) if is_word else ("EPUB (*.epub)",)
+            res = win.create_file_dialog(webview.FileDialog.SAVE,
+                                         save_filename=default_name, file_types=types)
+            if not res:
+                return {"ok": False, "err": "cancelled"}
+            path = res[0]
+            want = ".docx" if is_word else ".epub"
+            if not path.lower().endswith(want):
+                path += want
+        except Exception as e:
+            return {"ok": False, "err": "保存对话框失败：" + str(e)[:120]}
+        ok, msg = novel_export.export_novel(tree, fmt, path, title=title, author=author)
+        if not ok:
+            return {"ok": False, "err": msg}
+        return {"ok": True, "file": os.path.basename(path), "path": path, "msg": msg,
+                "title": title}
+
+    # ---------- 备份内容（明文备份 / 加密备份共用同一份） ----------
     def _backup_entries(self):
         """返回 [(zip 内相对路径, bytes)]。
         抽出来是为了让「明文备份」和「加密备份」内容完全一致，

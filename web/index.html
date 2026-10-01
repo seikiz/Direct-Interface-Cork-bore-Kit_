@@ -436,6 +436,7 @@ button .ic{ margin-right:2px; }
       </div>
       <div class="row">
         <button class="chip" id="qcExport">💾 导出Word</button>
+      <button class="chip" id="qcNovel" title="把这段对话按你实际走过的剧情线导出成小说（未选的分支收成脚注）；格式 EPUB，手机/阅读器都能看">📖 导出小说</button>
         <button class="chip" id="qcTheme">🎨 主题</button>
       </div>
       <!-- 财报：折叠区块，仅启用财报模式才显示（未启用隐藏，不铺满面板） -->
@@ -1681,7 +1682,7 @@ function setT(l) {
       wsUpload:'📤 Upload local', wsDel:'🗑️ Delete', wsExport:'📤 Export file', wsOpen:'📂 Open folder',
       stBudget:'🧮 Context budget', stAuto:'🤖 Auto follow-up', stAutoHint:'Other characters follow up in group chat (max 2 per round)',
       stFont:'🔤 Font size', stPlugins:'🔌 Plugins', qcRead:'📄 Read doc', qcClearDoc:'🧹 Clear doc',
-      qcExport:'💾 Export Word', qcTheme:'🎨 Theme', budgetUnlimited:'Unlimited',
+      qcExport:'💾 Export Word', qcNovel:'📖 Export novel (EPUB)', qcTheme:'🎨 Theme', budgetUnlimited:'Unlimited',
       chLoading:'⏳ Generating options…' };
   } else {
     T = { sidebar:'角色与世界', roles:'📂 存档列表', worlds:'🌍 世界卡（多选 = 平行世界）',
@@ -1711,7 +1712,7 @@ function setT(l) {
       wsUpload:'📤 上传本地', wsDel:'🗑️ 删除', wsExport:'📤 导出文件', wsOpen:'📂 打开目录',
       stBudget:'🧮 上下文预算', stAuto:'🤖 自动接话', stAutoHint:'群聊时其他角色自动跟进（每轮最多 2 次）',
       stFont:'🔤 字体大小', stPlugins:'🔌 插件管理', qcRead:'📄 读文档', qcClearDoc:'🧹 清文档',
-      qcExport:'💾 导出Word', qcTheme:'🎨 主题', budgetUnlimited:'不限',
+      qcExport:'💾 导出Word', qcNovel:'📖 导出小说(EPUB)', qcTheme:'🎨 主题', budgetUnlimited:'不限',
       chLoading:'⏳ 正在生成选项…' };
   }
   document.getElementById('cardsTitle').textContent = '🎭 ' + T.sidebar;
@@ -7833,6 +7834,13 @@ document.getElementById('qcExport').onclick = function () {
     if (r && r.ok) alert('✅ 已导出：' + r.file);
     else if (r && r.err !== 'cancelled') alert((r && r.err) || '导出失败');
   });
+};
+document.getElementById('qcNovel').onclick = function () {
+  // 小说导出：走树上的实际路径，未选的分支变成脚注（普通「导出Word」导的是扁平列表）
+  pywebview.api.export_novel('epub').then(function (r) {
+    if (r && r.ok) alert('✅ 已导出《' + (r.title || '') + '》\n' + (r.msg || '') + '\n\n文件：' + r.file);
+    else if (r && r.err !== 'cancelled') alert((r && r.err) || '导出失败');
+  }).catch(function (e) { alert('导出失败：' + e); });
 };
 document.getElementById('qcTheme').onclick = function () {
   themeIdx = (themeIdx + 1) % THEMES.length;
