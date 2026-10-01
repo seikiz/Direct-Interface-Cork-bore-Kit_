@@ -89,7 +89,7 @@ def main():
     check(u"算作一个结局而不是错误", r["stats"]["endings"] == 1 and not r["issues"], str(r))
     check(u"没有 end 行时也不报错", r["ok"] is True, str(r["issues"]))
 
-    print(u"\n== ⑤ 双播放器一致性：内嵌预览不执行的步骤 ==")
+    print(u"\n== ⑤ 双播放器一致性（2026-10 起内嵌预览已补齐语义）==")
     s = script([
         {"id": "s1", "lines": [{"kind": "setflag", "flag": {"k": "met"}},
                                {"kind": "roll", "roll": {"k": "luck", "d": 100}},
@@ -99,11 +99,10 @@ def main():
         {"id": "s2", "lines": [{"end": "完"}]},
     ])
     r = CX.analyze_codex(s)
-    check(u"setflag 被标为预览不生效", has(r["warnings"], u"「setflag」"), str(r["warnings"]))
-    check(u"roll 被标为预览不生效", has(r["warnings"], u"「roll」"), str(r["warnings"]))
-    check(u"wait 被标为预览不生效", has(r["warnings"], u"「wait」"), str(r["warnings"]))
-    check(u"这些是 warnings 不是 issues（剧本本身没坏）", r["ok"], str(r["issues"]))
-    check(u"警告里给出具体位置", has(r["warnings"], u"s1:lines["), str(r["warnings"]))
+    check(u"setflag/roll/wait 不再报「预览不执行」",
+          not has(r["warnings"], u"不执行"), str(r["warnings"]))
+    check(u"改为提示带条件的选项会实时隐藏", has(r["warnings"], u"带条件的选项"), str(r["warnings"]))
+    check(u"条件选项本身不算错误", r["ok"], str(r["issues"]))
 
     s = script([{"id": "s1", "lines": [{"action": "/speak hi"}, {"end": "完"}]}])
     r = CX.analyze_codex(s)

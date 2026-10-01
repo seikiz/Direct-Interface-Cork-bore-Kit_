@@ -2106,6 +2106,7 @@ function renderBattle(b) {
 function renderMechanism(m) {
   var bar = document.getElementById('mechbar');
   if (!bar) return;
+  mechSnapshot = m;   // 给剧本预览的条件分支用（见 codexCond）：这里存最近一次机制状态
   var cfg = m && m.config, st = m && m.state;
   var fields = (cfg && cfg.status && cfg.status.fields || []).slice();
   if (!cfg || !st || (!cfg.affection && !fields.length)) {
@@ -7246,7 +7247,7 @@ function codexStartScene(id) {
   codexSetImages(codexPlayer.scene.images || null);
   codexNextLine();
 }
-function codexShowChoice(opts) {
+function codexShowChoice(opts, hiddenCount, totalCount) {
   var box = document.getElementById('cxChoice');
   box.style.display = 'block';
   box.innerHTML = '';
@@ -7255,6 +7256,19 @@ function codexShowChoice(opts) {
     codexPlayer.lastChoicePoint = { sceneId: codexPlayer.curSceneId, lineIdx: codexPlayer.lineIdx };
     var lb = document.getElementById('cxRewind');
     if (lb) lb.textContent = '⏪ 回到选项';
+  }
+  if (hiddenCount) {
+    // 让作者一眼看出"这里有条件分支被门住了"，而不是以为剧本漏写了选项
+    var hint = document.createElement('div');
+    hint.style.cssText = 'font-size:12px;color:#fbbf24;margin:2px 0 6px';
+    hint.textContent = '🔒 ' + hiddenCount + '/' + (totalCount || 0) +
+      ' 个选项因条件不满足被隐藏　' + codexVarsHint();
+    box.appendChild(hint);
+  } else if (codexPlayer && codexPlayer.vars && codexPlayer.vars.available) {
+    var h2 = document.createElement('div');
+    h2.style.cssText = 'font-size:11px;color:var(--sub,#8a93a3);margin:2px 0 6px';
+    h2.textContent = codexVarsHint();
+    box.appendChild(h2);
   }
   opts.forEach(function (o) {
     var b = document.createElement('button');
@@ -7277,11 +7291,122 @@ function codexGoto(id) {
   if (!id) { codexNextLine(); return; }
   codexStartScene(id);
 }
+// ---------- 内嵌预览的条件分支（与导出播放器的 cxCond / cxFilter 同语义）----------
+// 2026-10 之前：内嵌预览既不评估条件、也不执行 setflag/roll ——
+// 条件选项在编辑器里永远全部显示、标志位永远不置位，作者只能导出以后才知道写得对不对。
+// 现在两边同语义，且预览读的是【本局机制状态的快照】。
+var mechSnapshot = null;   // renderMechanism 每次收到 state 都会更新它
+
+function codexSnapshotVars() {
+  // 为什么用快照而不是实时状态：
+  //   ① 试玩时 setflag/roll 只改快照 —— 绝不能污染玩家真实存档的好感/标志；
+  //   ② 快照保留当前好感度 →“好感 85 才出现的隐藏选项”在预览里当场就能验证。
+  var m = mechSnapshot || {};
+  var st = m.state || null;
+  if (!st) return { available: false, affection: null, status: {}, flags: {} };
+  return {
+    available: true,
+    affection: (st.affection === undefined ? null : st.affection),
+    status: st.status || {},
+    flags: st.flags || {},
+  };
+}
+function codexVars() {
+  if (!codexPlayer) return null;
+  if (!codexPlayer.vars) codexPlayer.vars = codexSnapshotVars();
+  return codexPlayer.vars;
+}
+function codexNum(v) {
+  if (v === null || v === undefined) return null;
+  var n = Number(v);
+  return isNaN(n) ? null : n;
+}
+function codexCmp(op, a, b) {
+  if (op === '>=') return a >= b;
+  if (op === '>') return a > b;
+  if (op === '<=') return a <= b;
+  if (op === '<') return a < b;
+  if (op === '!=') return a != b;
+  return a == b;
+}
+function codexCond(cond) {
+  if (!cond || cond === true || typeof cond !== 'object' || !Object.keys(cond).length) return true;
+  var v = codexVars();
+  if (!v || !v.available) return true;   // 没有机制状态（作者模式）→ 不隐藏，与导出播放器一致
+  if (cond.all && Array.isArray(cond.all)) return cond.all.every(codexCond);
+  if (cond.any && Array.isArray(cond.any)) return cond.any.some(codexCond);
+  if ('aff' in cond) {
+    var t = cond.aff, op = '==', n = null;
+    if (typeof t === 'string') {
+      var m = /^\s*(>=|<=|>|<|!=|==|=)?\s*(-?\d+(?:\.\d+)?)\s*$/.exec(t);
+      if (m) { op = m[1] || '=='; n = codexNum(m[2]); } else n = codexNum(t);
+    } else n = codexNum(t);
+    var aff = codexNum(v.affection);
+    if (n === null || aff === null) return false;
+    return codexCmp(op, aff, n);
+  }
+  if (cond.status && typeof cond.status === 'object') {
+    var sts = v.status || {};
+    return Object.keys(cond.status).every(function (k) {
+      var a = sts[k], b = cond.status[k];
+      if (codexNum(a) !== null && codexNum(b) !== null) return codexCmp('==', codexNum(a), codexNum(b));
+      return String(a) == String(b);
+    });
+  }
+  if (cond.flags && Array.isArray(cond.flags)) {
+    var fl = v.flags || {};
+    return cond.flags.every(function (f) {
+      f = String(f);
+      var neg = f.charAt(0) === '!';
+      var k = neg ? f.slice(1) : f;
+      var present = Array.isArray(fl) ? fl.indexOf(k) >= 0 : (fl[k] ? !!fl[k] : false);
+      return present !== neg;
+    });
+  }
+  return true;
+}
+function codexFilterOpts(opts) {
+  var shown = [], hidden = 0;
+  (opts || []).forEach(function (o) {
+    if (o && o.if !== undefined && o.if !== null && !codexCond(o.if)) { hidden++; return; }
+    shown.push(o);
+  });
+  return { shown: shown, hidden: hidden, total: (opts || []).length };
+}
+function codexEffect(name) {
+  var el = document.getElementById('cxBg');
+  if (!el) return;
+  if (name === 'shake') {
+    el.style.transition = 'none';
+    el.style.transform = 'translateX(-9px)';
+    setTimeout(function () {
+      el.style.transform = 'translateX(9px)';
+      setTimeout(function () { el.style.transform = ''; el.style.transition = ''; }, 70);
+    }, 70);
+  } else if (name === 'flash') {
+    el.style.filter = 'brightness(2.2)';
+    setTimeout(function () { el.style.filter = ''; }, 180);
+  }
+}
+function codexVarsHint() {
+  var v = codexVars();
+  if (!v || !v.available) return '';
+  var parts = [];
+  if (v.affection !== null && v.affection !== undefined) parts.push('好感 ' + v.affection);
+  var fk = Object.keys(v.flags || {});
+  if (fk.length) parts.push('标志 ' + fk.join('/'));
+  var sk = Object.keys(v.status || {});
+  if (sk.length) parts.push('状态 ' + sk.map(function (k) { return k + '=' + v.status[k]; }).join(' '));
+  return parts.length ? ('预览状态：' + parts.join('　')) : '';
+}
+
 function codexNextLine() {
   if (!codexPlayer) return;
+  if (codexPlayer.waitTimer) { clearTimeout(codexPlayer.waitTimer); codexPlayer.waitTimer = null; }  // 点一下就跳过等待
   if (codexPlayer.typing) { codexSkipTyping(); return; }
   if (codexPlayer.lineIdx >= codexPlayer.lines.length) {
-    // 场景播完：默认回场景列表第一个（避免卡死）；有 jump 才跳
+    // 场景播完：jump → next → 完结
+    // （旧注释写的是"默认回场景列表第一个（避免卡死）"，与实现不符，已改正）
     var sc = codexPlayer.scene;
     if (sc && sc.jump) { codexStartScene(sc.jump); return; }
     if (sc && sc.next) { codexStartScene(sc.next); return; }
@@ -7318,14 +7443,45 @@ function codexNextLine() {
     codexScheduleAuto();
   } else if ('choice' in ln) {
     document.getElementById('cxNote').textContent = '';
-    codexShowChoice(ln.choice || []);
+    var __f = codexFilterOpts(ln.choice || []);
+    codexShowChoice(__f.shown, __f.hidden, __f.total);
   } else if ('jump' in ln) {
     codexGoto(ln.jump);
   } else if ('end' in ln) {
     codexShowEnd(ln.end);
   } else if ('action' in ln) {
     // 插件钩子：调用现有插件命令（如 /speak 语音合成、/tts 等）
+    // 注意：导出成独立 HTML 后没有后端，这一句会被跳过（导出播放器里的行为）
     pywebview.api.codex_run_action(String(ln.action)).then(function () {}).catch(function () {});
+    codexNextLine();
+  } else if (ln.kind === 'hide') {
+    codexSetSprites([]); codexNextLine();
+  } else if (ln.kind === 'effect') {
+    codexEffect(ln.effect); codexNextLine();
+  } else if (ln.kind === 'wait') {
+    // 真等待（导出播放器同步为同一语义）：默认 300ms，上限 5s，点一下可跳过
+    var __ms = codexNum(ln.ms);
+    __ms = (__ms === null ? 300 : Math.max(0, Math.min(__ms, 5000)));
+    codexPlayer.waitTimer = setTimeout(function () {
+      codexPlayer.waitTimer = null;
+      codexNextLine();
+    }, __ms);
+  } else if (ln.kind === 'setflag') {
+    var __v = codexVars();
+    var __k = (ln.flag && ln.flag.k) || '';
+    if (__v && __k) __v.flags[__k] = (ln.flag && ln.flag.v !== undefined) ? ln.flag.v : true;
+    codexNextLine();
+  } else if (ln.kind === 'roll') {
+    var __v2 = codexVars();
+    var __rk = (ln.roll && ln.roll.k) || '';
+    var __d = codexNum(ln.roll && ln.roll.d);
+    if (__v2 && __rk) __v2.flags[__rk] = 1 + Math.floor(Math.random() * (__d && __d > 0 ? __d : 100));
+    codexNextLine();
+  } else if (ln.kind === 'bg' || ln.kind === 'bgm' || ln.kind === 'sfx' || ln.kind === 'show') {
+    codexNextLine();          // 资源类步骤：上面已经切过资源，这里只负责前进
+  } else {
+    // 兜底：任何没识别出来的步骤也要前进 —— 旧版会"什么都不做"，表现为
+    // 预览里莫名多一次点击、甚至看起来卡住。
     codexNextLine();
   }
 }

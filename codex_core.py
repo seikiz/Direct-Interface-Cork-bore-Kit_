@@ -727,8 +727,16 @@ def analyze_codex(data, pkg_dir=None):
         issues.append("没有任何可达结局：所有路径都会绕回自己（检查 jump/goto 是否成环）")
     stats["endings"] = len(reached_ends)
 
-    # ---- 双播放器一致性：内嵌预览不执行这些步骤 ----
-    unhandled_hits = {}
+    # ---- 双播放器一致性 ----
+    # 2026-10 已把内嵌预览补齐：kind 分发（setflag/roll/wait/effect/hide/show/bg/bgm/sfx）
+    # 与条件过滤都跟导出播放器同语义，所以这里不再报"预览不执行"。
+    # 仍然真实存在的差异只有一个：action 需要后端。
+    if any(isinstance(ln, dict) and "action" in ln
+           for s in scenes for ln in (s.get("lines") or [])):
+        warnings.append("用了「action」行动钩子：只在 DICK 主程序内生效，导出独立 HTML 后会被跳过")
+    # 条件分支：静态体检按"所有条件都可能通过"来看（与播放器的作者模式一致），
+    # 但至少要让作者知道哪些选项是门住的 —— 预览里被隐藏时会有提示。
+    gated = 0
     for s in scenes:
         sid = str(s.get("id") or "").strip()
         if sid not in reached_scenes:
@@ -736,15 +744,12 @@ def analyze_codex(data, pkg_dir=None):
         for j, ln in enumerate(s.get("lines") or []):
             if not isinstance(ln, dict) or (sid, j) not in seen:
                 continue
-            k = step_kind(ln)
-            if k in _UNHANDLED_KINDS:
-                unhandled_hits.setdefault(k, []).append("%s:lines[%d]" % (sid, j))
-    for k, where in sorted(unhandled_hits.items()):
-        warnings.append("用了「%s」步骤（%d 处，如 %s）：内嵌预览不会执行它（导出后才生效）"
-                        % (k, len(where), where[0]))
-    if any(isinstance(ln, dict) and "action" in ln
-           for s in scenes for ln in (s.get("lines") or [])):
-        warnings.append("用了「action」行动钩子：只在 DICK 主程序内生效，导出独立 HTML 后会被跳过")
+            for o in (ln.get("choice") or []):
+                if isinstance(o, dict) and o.get("if") not in (None, {}):
+                    gated += 1
+    if gated:
+        warnings.append("有 %d 个带条件的选项：预览会按当前好感/标志/状态实时隐藏，"
+                        "被门住时选项区会显示「🔒 n/m 个选项因条件不满足被隐藏」" % gated)
 
     # ---- 素材引用 ----
     refs = {}
@@ -782,6 +787,305 @@ def analyze_codex(data, pkg_dir=None):
 
     return {"ok": not issues, "issues": issues, "warnings": warnings,
             "stats": stats, "dead_lines": dead_lines}
+
+
+# ---------- 无头运行时：条件求值 + 剧本模拟 ----------
+# 这两个函数是「播放器语义的 Python 侧镜像」，用途：
+#   ① 测试：不用开浏览器就能跑遍剧本的所有分支，断言每个结局可达、条件分支真的按好感开关
+#   ② 与 analyze_codex 互为交叉验证（同一份剧本，两者的可达场景集合必须一致）
+# 语义与两个 JS 播放器保持一致（尤其 cxCond / codexCond 的条件形式）。
+
+def cond_pass(cond, state):
+    """条件求值：与 JS 侧 cxCond/codexCond 同语义。
+
+    state=None → 作者模式，条件一律视为通过（与播放器"没有机制状态时不隐藏"一致）。
+    支持：{"all":[...]} {"any":[...]} {"aff":">=85"} {"status":{"k":v}} {"flags":["a","!b"]}
+    """
+    if cond is None or cond is True or not isinstance(cond, dict) or not cond:
+        return True
+    if state is None:
+        return True
+    st = state.get("mechanism_state") or state if isinstance(state, dict) else {}
+    if cond.get("all") and isinstance(cond["all"], list):
+        return all(cond_pass(c, state) for c in cond["all"])
+    if cond.get("any") and isinstance(cond["any"], list):
+        return any(cond_pass(c, state) for c in cond["any"])
+    if "aff" in cond:
+        target, op = cond["aff"], "=="
+        if isinstance(target, str):
+            m = re.match(r"^\s*(>=|<=|>|<|!=|==|=)?\s*(-?\d+(?:\.\d+)?)\s*$", target)
+            target = m.group(2) if m else target
+            op = (m.group(1) or "==") if m else "=="
+        def num(v):
+            try:
+                return float(v)
+            except (TypeError, ValueError):
+                return None
+        n, aff = num(target), num(st.get("affection"))
+        if n is None or aff is None:
+            return False
+        return {">=": aff >= n, ">": aff > n, "<=": aff <= n, "<": aff < n,
+                "!=": aff != n}.get(op, aff == n)
+    if isinstance(cond.get("status"), dict):
+        cur = st.get("status") or {}
+        for k, q in cond["status"].items():
+            v = cur.get(k)
+            try:
+                if float(v) == float(q):
+                    continue
+            except (TypeError, ValueError):
+                pass
+            if str(v) != str(q):
+                return False
+        return True
+    if isinstance(cond.get("flags"), list):
+        fl = st.get("flags") or {}
+        for f in cond["flags"]:
+            f = str(f)
+            neg = f.startswith("!")
+            k = f[1:] if neg else f
+            present = (k in fl) if isinstance(fl, list) else bool(fl.get(k))
+            if present == neg:
+                return False
+        return True
+    return True
+
+
+def _state_with(state, flags):
+    """复制 state 并替换 flags（模拟里每步的 flag 变动都产生新状态，避免互相污染）"""
+    base = dict(state or {})
+    inner = dict(base.get("mechanism_state") or base)
+    inner["flags"] = dict(flags)
+    if base.get("mechanism_state"):
+        base["mechanism_state"] = inner
+    else:
+        base = inner
+    return base
+
+
+def _flags_of(state):
+    if not isinstance(state, dict):
+        return {}
+    inner = state.get("mechanism_state") or state
+    return dict(inner.get("flags") or {})
+
+
+def simulate(data, state=None, max_states=20000, roll_values=None):
+    """无头枚举：把剧本所有可达状态走一遍（含 setflag/roll 造成的分支）。
+
+    返回 {"ok", "endings": [文本], "states": n, "gated": [...], "cycles": bool,
+          "truncated": bool, "visited_scenes": set}
+    state=None 表示作者模式（条件全通过）—— 与静态体检的口径一致。
+    roll_values：可选，按出现顺序给 roll 步骤指定结果（测试用；不给就随机）。
+    """
+    scenes = [s for s in (data.get("scenes") or []) if isinstance(s, dict)]
+    by_id = {}
+    for s in scenes:
+        sid = str(s.get("id") or "").strip()
+        if sid and sid not in by_id:
+            by_id[sid] = s
+    if not by_id:
+        return {"ok": False, "msg": "没有场景", "endings": [], "states": 0,
+                "gated": [], "cycles": False, "truncated": False, "visited_scenes": set()}
+    first = str(scenes[0].get("id") or "").strip()
+    rolls = list(roll_values or [])
+    roll_i = 0
+    # 作者模式（state=None）：条件一律视为通过，也不记 gated —— 与静态体检口径一致。
+    # 注意不能靠 _state_with(None, ...) 造出来的字典来判：那会让"无状态"变成"有状态"，
+    # 于是 aff 条件因为拿不到 affection 而全部失败（这个坑真踩过）。
+    author_mode = state is None
+    endings, gated, visited = [], [], set()
+    seen = set()
+    cycles = False
+    truncated = False
+    init = _state_with(state, _flags_of(state))
+    # 队列元素：(场景, 行号, flags, 路径摘要)
+    queue = [(first, 0, _flags_of(init), [])]
+    while queue:
+        sid, idx, flags, path = queue.pop()
+        if len(seen) >= max_states:
+            truncated = True
+            break
+        sc = by_id.get(sid)
+        if sc is None:
+            continue
+        visited.add(sid)
+        st_now = _state_with(state, flags)
+        lines = sc.get("lines") or []
+        if idx >= len(lines):
+            nxt = str(sc.get("jump") or sc.get("next") or "").strip()
+            if nxt and nxt in by_id:
+                key = ("->", nxt, tuple(sorted(flags.items())))
+                if key in seen:
+                    cycles = True
+                    continue
+                seen.add(key)
+                queue.append((nxt, 0, flags, path))
+            else:
+                endings.append("场景 %s 播完完结" % sid)
+            continue
+        key = (sid, idx, tuple(sorted(flags.items())))
+        if key in seen:
+            cycles = True
+            continue
+        seen.add(key)
+        ln = lines[idx]
+        if not isinstance(ln, dict):
+            queue.append((sid, idx + 1, flags, path))
+            continue
+        nxt_flags = dict(flags)
+        # 先执行会改状态的步骤
+        if ln.get("kind") == "setflag":
+            k = (ln.get("flag") or {}).get("k")
+            if k:
+                v = (ln.get("flag") or {}).get("v", True)
+                nxt_flags[str(k)] = v
+        elif ln.get("kind") == "roll":
+            k = (ln.get("roll") or {}).get("k")
+            if k:
+                try:
+                    d = int((ln.get("roll") or {}).get("d") or 100)
+                except (TypeError, ValueError):
+                    d = 100
+                if roll_i < len(rolls):
+                    nxt_flags[str(k)] = rolls[roll_i]
+                else:
+                    nxt_flags[str(k)] = 1 + (hash((sid, idx)) % max(1, d))
+                roll_i += 1
+        opts = ln.get("choice")
+        moved = False
+        if isinstance(opts, list):
+            for o in opts:
+                if not isinstance(o, dict):
+                    continue
+                cond = o.get("if")
+                if cond not in (None, {}) and not author_mode and not cond_pass(cond, st_now):
+                    gated.append("%s:lines[%d] 选项「%s」被条件门住" %
+                                 (sid, idx, str(o.get("text") or "")[:16]))
+                    continue
+                g = str(o.get("goto") or "").strip()
+                if not g:
+                    queue.append((sid, idx + 1, nxt_flags, path))
+                elif g in by_id:
+                    queue.append((g, 0, nxt_flags, path))
+            moved = True
+        elif str(ln.get("jump") or "").strip():
+            g = str(ln["jump"]).strip()
+            if g in by_id:
+                queue.append((g, 0, nxt_flags, path))
+            moved = True
+        elif "end" in ln:
+            endings.append(str(ln.get("end") or "完结"))
+            moved = True
+        if not moved:
+            queue.append((sid, idx + 1, nxt_flags, path))
+    return {"ok": True, "endings": sorted(set(endings)), "states": len(seen),
+            "gated": gated, "cycles": cycles, "truncated": truncated,
+            "visited_scenes": visited}
+
+
+def run_path(data, picks, state=None, max_steps=1000, roll_values=None):
+    """按给定选择序列跑**一条**路径（picks 里每个数字 = 当次显示出来的第几个选项）。
+
+    与真播放器的差别：这里不渲染，只走流程；因此可以用来在 CI 里断言
+    "好感到 85 时第 2 个选项才出现""设了 flag 之后那条路才通"这类事情。
+    返回 {"ok","steps":[...],"ending","flags","stopped"}
+    """
+    scenes = [s for s in (data.get("scenes") or []) if isinstance(s, dict)]
+    by_id = {}
+    for s in scenes:
+        sid = str(s.get("id") or "").strip()
+        if sid and sid not in by_id:
+            by_id[sid] = s
+    if not by_id:
+        return {"ok": False, "stopped": "没有场景", "steps": [], "ending": None, "flags": {}}
+    sid = str(scenes[0].get("id") or "").strip()
+    idx = 0
+    flags = _flags_of(_state_with(state, _flags_of(state)))
+    rolls = list(roll_values or [])
+    roll_i = 0
+    picks = list(picks or [])
+    pick_i = 0
+    steps = []
+    for _ in range(max_steps):
+        sc = by_id.get(sid)
+        if sc is None:
+            return {"ok": False, "stopped": "跳到了不存在的场景 " + sid, "steps": steps,
+                    "ending": None, "flags": flags}
+        lines = sc.get("lines") or []
+        if idx >= len(lines):
+            nxt = str(sc.get("jump") or sc.get("next") or "").strip()
+            if nxt and nxt in by_id:
+                steps.append("→ 跳转 %s" % nxt)
+                sid, idx = nxt, 0
+                continue
+            return {"ok": True, "stopped": "完结", "steps": steps,
+                    "ending": "场景 %s 播完完结" % sid, "flags": flags}
+        ln = lines[idx]
+        if not isinstance(ln, dict):
+            idx += 1
+            continue
+        st_now = _state_with(state, flags)
+        kind = step_kind(ln)
+        if kind == "setflag":
+            k = (ln.get("flag") or {}).get("k")
+            if k:
+                flags[str(k)] = (ln.get("flag") or {}).get("v", True)
+                steps.append("setflag %s" % k)
+            idx += 1
+            continue
+        if kind == "roll":
+            k = (ln.get("roll") or {}).get("k")
+            if k:
+                if roll_i < len(rolls):
+                    flags[str(k)] = rolls[roll_i]
+                else:
+                    try:
+                        d = int((ln.get("roll") or {}).get("d") or 100)
+                    except (TypeError, ValueError):
+                        d = 100
+                    flags[str(k)] = 1 + (hash((sid, idx)) % max(1, d))
+                roll_i += 1
+                steps.append("roll %s=%s" % (k, flags[str(k)]))
+            idx += 1
+            continue
+        opts = ln.get("choice")
+        if isinstance(opts, list):
+            shown = [o for o in opts if isinstance(o, dict)
+                     and (o.get("if") in (None, {}) or cond_pass(o.get("if"), st_now))]
+            if not shown:
+                return {"ok": False, "stopped": "选项全被条件挡住（无法继续）", "steps": steps,
+                        "ending": None, "flags": flags}
+            pick = picks[pick_i] if pick_i < len(picks) else 0
+            pick_i += 1
+            if not isinstance(pick, int) or pick < 0 or pick >= len(shown):
+                pick = 0
+            o = shown[pick]
+            steps.append("选择「%s」" % str(o.get("text") or "")[:20])
+            g = str(o.get("goto") or "").strip()
+            if g and g in by_id:
+                sid, idx = g, 0
+            else:
+                idx += 1
+            continue
+        if "jump" in ln:
+            g = str(ln.get("jump") or "").strip()
+            if g in by_id:
+                steps.append("→ 跳转 %s" % g)
+                sid, idx = g, 0
+                continue
+            idx += 1
+            continue
+        if "end" in ln:
+            return {"ok": True, "stopped": "到达结局", "steps": steps,
+                    "ending": str(ln.get("end") or "完结"), "flags": flags}
+        # 台词/表现类：记录一句然后前进
+        txt = str(ln.get("text") or ln.get("note") or "")
+        if txt:
+            steps.append("%s：%s" % (ln.get("speaker") or "·", txt[:30]))
+        idx += 1
+    return {"ok": False, "stopped": "步数超限（可能是死循环）", "steps": steps,
+            "ending": None, "flags": flags}
 
 
 def make_template(name="我的故事"):
@@ -1258,6 +1562,7 @@ function cxGoto(id) {
 }
 function cxNextLine() {
   if (!cxState) return;
+  if (cxState.waitTimer) { clearTimeout(cxState.waitTimer); cxState.waitTimer = null; }  // 点一下跳过等待
   if (cxState.typing) { cxSkipTyping(); return; }
   if (cxState.lineIdx >= cxState.lines.length) {
     var sc = cxState.scene;
@@ -1286,11 +1591,17 @@ function cxNextLine() {
   else if ('end' in ln) cxShowEnd(ln.end);
   else if (ln.kind === 'hide') { cxSetSprites([]); cxNextLine(); }
   else if (ln.kind === 'effect') { cxEffect(ln.effect); cxNextLine(); }
-  else if (ln.kind === 'wait') { cxNextLine(); }
+  else if (ln.kind === 'wait') {
+    // 真等待（与主程序内嵌预览同语义）：默认 300ms、上限 5s、点一下可跳过
+    var ms = Number(ln.ms); if (isNaN(ms)) ms = 300;
+    ms = Math.max(0, Math.min(ms, 5000));
+    cxState.waitTimer = setTimeout(function () { cxState.waitTimer = null; cxNextLine(); }, ms);
+  }
   else if (ln.kind === 'setflag') { if (cxVars.state && cxVars.state.flags) { var fk = ln.flag && ln.flag.k; if (fk) cxVars.state.flags[fk] = (ln.flag && ln.flag.v) || true; } cxNextLine(); }
   else if (ln.kind === 'roll') { if (cxVars.state && cxVars.state.flags) { var rk = ln.roll && ln.roll.k; if (rk) cxVars.state.flags[rk] = 1 + Math.floor(Math.random() * ((ln.roll && ln.roll.d || 100))); } cxNextLine(); }
   else if (ln.kind === 'bg' || ln.kind === 'bgm' || ln.kind === 'sfx' || ln.kind === 'show') { cxNextLine(); }
   else if ('action' in ln) cxNextLine(); // 独立版无后端：跳过行动钩子
+  else cxNextLine();                      // 兜底：没识别出来的步骤也前进，别卡住
 }
 function cxSave() {
   if (!cxState || !cxState.curSceneId) return;
