@@ -1052,6 +1052,9 @@ class HtmlApp:
                 "image_gen_key": self.config.get("image_gen_key", ""),
                 "image_gen_base_url": self.config.get("image_gen_base_url", "https://api.siliconflow.cn/v1"),
                 "image_gen_model": self.config.get("image_gen_model", "black-forest-labs/FLUX.1-schnell"),
+                "image_gen_backend": self.config.get("image_gen_backend", "auto"),
+                # 上次生图的输入（面板打开时自动回填，省得反复重敲提示词）
+                "image_gen_last": dict(self.config.get("image_gen_last") or {}),
                 "auto_turn": self.auto_turn,
                 "font": self.font_size,
                 "budget": int(self.config.get("context_budget", 0) or 0),
@@ -6176,28 +6179,67 @@ class HtmlApp:
         except Exception as e:
             return {"ok": False, "err": str(e)[:120]}
 
-    def api_gen_image(self, prompt, preset="anime", size="1024x1024", negative_prompt="", extra=""):
-        """生图：预设风格 + 提示词 → 图片（base64/url）。配置走设置里的生图 Key/端点。"""
-        import image_gen
+    def _image_gen_cfg(self):
+        """生图配置集中一处（Key/端点/后端/模型），免得各处默认值漂移。"""
         try:
-            cfg = self.config
-            key = (cfg.get("image_gen_key") or "").strip()
-            base_url = (cfg.get("image_gen_base_url") or "https://api.siliconflow.cn/v1").strip()
-            model = (cfg.get("image_gen_model") or "black-forest-labs/FLUX.1-schnell").strip()
+            cfg = self.config or {}
         except Exception:
-            key, base_url, model = "", "https://api.siliconflow.cn/v1", "black-forest-labs/FLUX.1-schnell"
-        if not key:
-            return {"ok": False, "err": "未配置生图 API Key（设置 → 生图）"}
+            cfg = {}
+        return {
+            "key": (cfg.get("image_gen_key") or "").strip(),
+            "base_url": (cfg.get("image_gen_base_url")
+                         or "https://api.siliconflow.cn/v1").strip(),
+            "model": (cfg.get("image_gen_model")
+                      or "black-forest-labs/FLUX.1-schnell").strip(),
+            "backend": (cfg.get("image_gen_backend") or "auto").strip() or "auto",
+        }
+
+    def api_gen_image(self, prompt, preset="anime", size="1024x1024", negative_prompt="",
+                      extra="", seed=None):
+        """生图：预设风格 + 提示词 → 图片（base64/url）。配置走设置里的生图 Key/端点/后端。
+
+        seed 留空 = 后端随机；填了就固定（配合「🎲 重抽」可以一直换到满意为止）。
+        上一次的输入会记进 config.image_gen_last，下次打开面板自动回填 ——
+        调提示词是个反复试的过程，不该每次都重新敲一遍。
+        """
+        import image_gen
+        c = self._image_gen_cfg()
+        # 要不要 key 交给引擎按【后端】判断：三种本地/免费后端允许留空，
+        # 别在 UI 层写死 —— 写死了就没法用免费生图。
+        if not c["key"] and image_gen.needs_key(c["base_url"], c["backend"]):
+            return {"ok": False, "err": "未配置生图 API Key（设置 → 生图；"
+                                        "或把端点换成免费的 Pollinations / 本地 SD）"}
+        presets = image_gen.load_presets(self.base_dir)
+        # 只有「空」才算随机；seed=0 是合法种子，别当成没填
+        if seed is None or (isinstance(seed, str) and not seed.strip()):
+            seed = None
+        try:
+            seed = int(seed) if seed is not None else None
+        except Exception:
+            seed = None
         ok, data, msg = image_gen.generate(
-            prompt, preset=preset, size=size, api_key=key,
-            base_url=base_url, model=model, negative_prompt=negative_prompt, extra=extra)
+            prompt, preset=preset, size=size, api_key=c["key"], base_url=c["base_url"],
+            model=c["model"], negative_prompt=negative_prompt, extra=extra,
+            seed=seed, presets=presets, backend=c["backend"])
         if not ok:
             return {"ok": False, "err": msg}
+        # 记住这次的输入（调提示词要反复试，别让人每次重敲）
+        try:
+            self.config["image_gen_last"] = {
+                "prompt": prompt, "preset": preset, "size": size,
+                "negative_prompt": negative_prompt, "extra": extra,
+                "seed": data.get("seed") if data.get("seed") is not None else seed,
+            }
+            self._save_config()
+        except Exception:
+            pass
         # 生图结果进聊天（sys_msgs 带 image 字段，_rebuild_messages 会展示）
         try:
             if data.get("b64"):
-                import base64 as _b
-                data_url = "data:image/png;base64," + data["b64"]
+                # 用引擎回报的真实类型：免 Key 后端（Pollinations）回的是 JPEG，
+                # 一律写成 image/png 属于谎报类型（浏览器通常能猜对，但别指望）
+                mime = data.get("mime") or "image/png"
+                data_url = "data:" + mime + ";base64," + data["b64"]
             elif data.get("url"):
                 data_url = data["url"]
             else:
@@ -6206,14 +6248,45 @@ class HtmlApp:
                                   "content": "[" + preset + "] " + prompt,
                                   "image": data_url, "node_id": None})
             self._rebuild_messages()
-            return {"ok": True, "image": data_url, "preset": preset}
+            return {"ok": True, "image": data_url, "preset": preset,
+                    "seed": data.get("seed"), "note": "" if msg == "ok" else msg,
+                    "backend": image_gen.resolve_backend(c["base_url"], c["backend"])}
         except Exception as e:
             return {"ok": False, "err": "生图结果处理失败：" + str(e)[:100]}
 
     def api_gen_presets(self):
-        """生图预设列表"""
+        """生图预设列表（内置 + 用户自定义 image_presets.json）"""
         import image_gen
-        return {"ok": True, "presets": image_gen.list_presets()}
+        return {"ok": True, "presets": image_gen.list_presets(
+            image_gen.load_presets(self.base_dir))}
+
+    def api_get_image_presets_file(self):
+        """给设置面板的预设编辑器：用户自定义预设文件的原始内容。"""
+        import image_gen
+        obj = image_gen.user_presets_json(self.base_dir)
+        example = {
+            "guofeng": {"label": "国风线稿", "prompt": "chinese ink line art, ",
+                        "desc": "自己加的风格"},
+            "photoreal2": "raw photo, 85mm, f1.8, ",
+            "_说明": "下划线开头的键会被忽略，可以拿来写注释；同名 id 会覆盖内置预设",
+        }
+        return {"ok": True, "presets": obj, "example": example,
+                "path": image_gen.presets_path(self.base_dir),
+                "builtin": [{"id": k, "label": v["label"]} for k, v in image_gen.PRESETS.items()]}
+
+    def api_save_image_presets_file(self, text):
+        """保存用户预设文件（传 '{}' 即恢复内置默认）。"""
+        import json as _json
+        import image_gen
+        try:
+            obj = _json.loads(text or "{}")
+        except Exception as e:
+            return {"ok": False, "err": "JSON 格式有误：" + str(e)[:120]}
+        ok, msg = image_gen.save_presets(self.base_dir, obj)
+        if not ok:
+            return {"ok": False, "err": msg}
+        return {"ok": True, "msg": msg, "presets": image_gen.list_presets(
+            image_gen.load_presets(self.base_dir))}
 
     def api_codex_run_action(self, cmd):
         """播放器行动钩子（CODEX 深度集成 DICK 的系统权限）。
@@ -6437,13 +6510,19 @@ class HtmlApp:
         self._ws_push_api()
         return {"ok": True, "provider": pid}
 
-    def api_save_image_gen(self, key, base_url, model):
-        """保存生图配置（key/端点/模型），存 config.json"""
+    def api_save_image_gen(self, key, base_url, model, backend="auto"):
+        """保存生图配置（key/端点/模型/后端），存 config.json"""
+        import image_gen
         self.config["image_gen_key"] = (key or "").strip()
         self.config["image_gen_base_url"] = (base_url or "https://api.siliconflow.cn/v1").strip()
         self.config["image_gen_model"] = (model or "black-forest-labs/FLUX.1-schnell").strip()
+        b = (backend or "auto").strip().lower()
+        self.config["image_gen_backend"] = b if b in image_gen.BACKENDS else "auto"
         self._save_config()
-        return {"ok": True}
+        return {"ok": True, "backend": image_gen.resolve_backend(
+            self.config["image_gen_base_url"], self.config["image_gen_backend"]),
+            "needs_key": image_gen.needs_key(self.config["image_gen_base_url"],
+                                             self.config["image_gen_backend"])}
 
     def api_set_proxy(self, proxy):
         """设置 LLM 通道代理（http/https/socks5；空串 = 直连）"""

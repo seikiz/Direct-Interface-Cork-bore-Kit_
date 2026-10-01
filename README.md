@@ -43,6 +43,20 @@
 - 深色 / 浅色 / OLED 三套主题 + 四色强调色；文字与图标颜色全部跟随主题
 - 手机端「彻底清空历史」= 机制状态回到初始值 **且重演一遍开场白**（状态如初，连第一句也在）
 
+### 生图
+- **一个入口，四种后端**：只改「生图端点」，后端自动认（也能手选，本地服务不在默认端口时用）
+  | 端点 | 后端 | 要 Key 吗 |
+  |---|---|---|
+  | `https://image.pollinations.ai` | Pollinations | **不要**（免费公共档，会限流） |
+  | `https://api.siliconflow.cn/v1` 等 | OpenAI 兼容（硅基流动 FLUX / 智谱 CogView / 任意中转） | 要 |
+  | `http://127.0.0.1:7860` | 本地 A1111 / Forge / SD.Next（`/sdapi/v1/txt2img`） | 不要 |
+  | `http://127.0.0.1:8188` | 本地 ComfyUI（`/prompt` + `/history` 轮询 + `/view`） | 不要 |
+- **提示词分两层**：风格预设（自动拼前缀）+ 内容，另有「补充风格词」追加在末尾 —— 调提示词时不用重复敲风格
+- **种子 + 🎲 重抽**：留空=随机，填了就能复现同一张；重抽=换个随机种子再来一张，挑到满意就把种子留下
+- **预设可自己加**：设置 → 生图预设，写 `image_presets.json`（同名 id 覆盖内置预设），不写就用内置 6 套
+- 出图直接进聊天（点输入框旁的 🎨），上次填的内容自动回填
+- 免 Key 免费档的实测边界：**右下角带 pollinations.ai 水印**（`nologo=true` 去不掉），请求 1024 也可能只回 768 —— 要干净大图就填 Key 或走本地 SD
+
 ### 其他
 - **插件系统**：23 个内置插件（Python 后端），`.py` 丢进 `plugins/` 即用，无商店无审核；**声明式**设置与界面按钮（写 `settings_schema` / `ui_buttons` 就自动生成 UI）。标准见 `PLUGIN_DEV.md`；另有子进程 JSON-RPC 协议插件
 - 正则管道（ai/user 作用域）、去 AI 味、文本/风格闸门（零宽字符防线）
@@ -96,14 +110,15 @@ node install.js     # 或双击 install.bat
 
 | 路径 | 干什么 |
 |---|---|
-| `Direct-Interface Cork-bore Kit.py` | **桌面入口**：单个类 `HtmlApp`（约 6000 行），对外暴露 152 个 `api_*` 供前端 js_api 调用 |
+| `Direct-Interface Cork-bore Kit.py` | **桌面入口**：单个类 `HtmlApp`（约 6000 行），对外暴露 154 个 `api_*` 供前端 js_api 调用 |
 | `web/index.html` | 前端单页（约 8000 行）：聊天、GAL 编辑器、CODEX 编辑器/播放器、插件坞、图标字典 |
 | `DICK_core.py` | 聊天核心：树状记忆、上下文裁剪、群聊隔离、机制/战斗结算的胶水层 |
+| `image_gen.py` | 生图引擎：四种后端（OpenAI 兼容 / Pollinations 免 Key / 本地 SD / 本地 ComfyUI）+ 预设覆盖层 + seed |
 | `codex_core.py` | CODEX 成作引擎（剧本解析 → 校验 → 独立 HTML / EXE / `.codex` 包） |
 | `plugins/` | 23 个插件 + `protocol/` 协议插件 |
 | `DICK-Android/` | 安卓端（Compose）：`core` / `app` / `plugins` / `tools` 四层 |
 | `DICK-Narrative/` | Compose Multiplatform 原生 GALGAME 播放器（EXE + APK），故事格式见其 README |
-| `tests/` | 59 个 Python 测试脚本（逐个独立运行）+ JS 图标回归 |
+| `tests/` | 60 个 Python 测试脚本（逐个独立运行）+ JS 图标回归 |
 | `tools/` | `gen_android_icons.py`（图标 → VectorDrawable）、`gen_icon_preview.py`（图标总览页）、存档同步 |
 | `tree_weight.py` `salience.py` `lookahead.py` `ranker.py` `rubric.py` | 记忆权重与剪枝 / 有损遗忘曲线 / 前瞻展开 / 排序器 / 价值判据 |
 | `save_guard.py` `crypto_core.py` `dick_backup_tool.py` | 原子写+备份+校验自愈 / 加密备份容器 / 独立解密工具 |
@@ -119,7 +134,7 @@ python build_release.py --build                     # 清缓存 + 打包 + 自�
 python build_release.py                             # 已打包过：只做后处理/自检/打 zip
 
 # 测试
-python tests/test_*.py                              # 逐个跑（59 个脚本）
+python tests/test_*.py                              # 逐个跑（60 个脚本）
 node tests/test_icons.js                            # 前端图标系统回归（需 Node）
 powershell -File DICK-Android/selftest/run.ps1      # 安卓自检（TextGuard + 机制状态重置）
 
@@ -133,7 +148,7 @@ python tools/gen_icon_preview.py                    # → _icons_preview.html，
 
 ### 发布流水线
 
-`build_release.py` 做四件事：① 后处理（把 `tavern-installer` 从 `_internal/` 提到顶层 + 生成 `start.bat`）② **自检**：包内 `web/index.html` 必须与源码一致且含 12 个特征串（专治 PyInstaller 缓存旧前端）③ 打 zip 到 `../DICK-发布/DICK-电脑版.zip`（包内平铺，解压即用）④ 核对手机 apk 时间戳是否过期。
+`build_release.py` 做四件事：① 后处理（把 `tavern-installer` 从 `_internal/` 提到顶层 + 生成 `start.bat`）② **自检**：包内 `web/index.html` 必须与源码一致且含 16 个特征串（专治 PyInstaller 缓存旧前端）③ 打 zip 到 `../DICK-发布/DICK-电脑版.zip`（包内平铺，解压即用）④ 核对手机 apk 时间戳是否过期。
 
 > ⚠️ 打包前**必须关掉正在运行的 `DICK-HTML.exe`**，否则它会锁住 `debug.log` 导致打包失败。
 > ⚠️ 安装包：`build_installer.py` 需要 Inno Setup 与 `installer/DICK_Setup.iss`，**该目录未随仓库提供**，所以目前不产出 `DICK-Setup.exe`——直接用便携版 zip。
@@ -144,7 +159,7 @@ python tools/gen_icon_preview.py                    # → _icons_preview.html，
 
 ## 数据与隐私
 
-便携式设计：数据都在 exe 旁，不写注册表 —— `saves/`（角色卡与聊天树）、`worlds/`、`personas/`、`prompt_presets/`、`memory/`、`plugin_settings/`、`exports/`、`config.json`（全局设置与 API Key）。
+便携式设计：数据都在 exe 旁，不写注册表 —— `saves/`（角色卡与聊天树）、`worlds/`、`personas/`、`prompt_presets/`、`memory/`、`plugin_settings/`、`exports/`、`config.json`（全局设置与 API Key）、`image_presets.json`（自定义生图预设）。
 
 `.gitignore` 已排除**存档、世界卡、玩家卡、插件设置、`config.json`、导出与缓存**，所以克隆下来是干净的；反过来说，**源码克隆没有 Key，首次启动需要自己填**。
 

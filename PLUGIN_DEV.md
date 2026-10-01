@@ -84,6 +84,23 @@ def on_message_received(self, user_input, ai_reply):
 
 ---
 
+## 五之二、上下文注入钩子（contextInjection）
+
+```python
+def contextInjection(self):
+    """返回一段要追加进系统提示词的文本；不需要就返回空串或 None。
+
+    管理器会把【所有已启用插件】的返回值聚合起来注入系统提示词 ——
+    适合"这一轮必须遵守的规则""当前剧情状态""本插件能用的命令清单"这类
+    每轮都要在场的内容。跑团模式插件就是用它把 GM 规则注进去的。
+
+    ⚠️ 每轮都会注入，而且计入上下文预算：别在这里放会无限增长的东西。
+    """
+    return "【我的插件】当前状态：……"
+```
+
+---
+
 ## 六、命令钩子（核心）
 
 ```python
@@ -203,6 +220,7 @@ print("[我的插件] 加载完成")   # 输出到 debug.log（exe 模式）或�
 | 自定义命令 | `on_command` + `name` |
 | 用户发言前改文本 | `on_message_send` |
 | AI 回复后做处理 | `on_message_received` |
+| 每轮往系统提示词加内容 | `contextInjection` |
 | 可配置项 | `settings_schema` + `get_setting/set_setting` |
 | 界面按钮 | `ui_buttons`（method/insert） |
 | 初始化/清理 | `on_load` / `on_unload` |

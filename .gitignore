@@ -8,6 +8,8 @@ workshop_config.json
 memory/
 quick_replies.json
 financial_history.json
+# 用户自定义生图预设（内置预设写死在 image_gen.py，这个是用户覆盖层）
+image_presets.json
 
 # API Key / 密钥（任何地方）
 *.key
@@ -113,3 +115,15 @@ _phone/
 
 # 跑测试/脚本留下的临时目录
 /_tmp*/
+
+# 测试用 tempfile.mkdtemp 的产物：本机 venv（utau_env）里 tempfile 会退化成工作目录，
+# 于是 mkdtemp 出来的目录全落在项目根 —— 是垃圾，不是源码（/dick_*/ 只匹配目录，不碰 .py）
+/tmp*/
+/dick_*/
+/sg_*/
+
+# 临时截图/出图样本（验证生图、UI 截图这类）
+/_*.jpg
+/_*.jpeg
+/_*.png
+/_*.webp

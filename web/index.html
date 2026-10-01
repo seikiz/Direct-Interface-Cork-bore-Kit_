@@ -477,8 +477,13 @@ button .ic{ margin-right:2px; }
     <div class="field"><label>画面内容（描述要生成什么）</label>
       <textarea id="genPrompt" rows="3" placeholder="例如：她站在樱花树下回头微笑，微风拂起银白发丝"></textarea>
     </div>
+    <div class="field"><label>补充风格词（可选，追加在内容之后）</label>
+      <input id="genExtra" placeholder="例如：masterpiece, upper body, soft rim light, 逆光">
+    </div>
     <div class="field"><label>负面提示（可选，不想要的内容）</label>
-      <input id="genNegative" placeholder="例如：模糊, 变形, 多余手指"></div>
+      <input id="genNegative" placeholder="例如：模糊, 变形, 多余手指">
+      <div id="genNegativeHint" style="font-size:11px;color:var(--sub);margin-top:3px"></div>
+    </div>
     <div class="row" style="justify-content:flex-start">
       <label style="font-size:12px;color:var(--sub);margin-right:6px">尺寸</label>
       <select id="genSize" style="width:110px">
@@ -487,15 +492,19 @@ button .ic{ margin-right:2px; }
         <option value="768x1024">竖版 768x1024</option>
         <option value="512x512">小方形 512</option>
       </select>
+      <label style="font-size:12px;color:var(--sub);margin:0 6px 0 14px">种子</label>
+      <input id="genSeed" style="width:110px" placeholder="留空=随机">
+      <button class="btn2 ghost" id="genReroll" style="width:auto;margin:0 0 0 6px;padding:4px 8px"
+              title="换一个随机种子，重新生成（同一个种子能复现同一张图）">🎲 重抽</button>
     </div>
+    <div id="genNote" style="font-size:11px;color:var(--sub);margin-top:4px"></div>
     <div id="genResult" style="margin-top:8px;display:none;text-align:center">
       <img id="genResultImg" style="max-width:100%;max-height:260px;border-radius:8px">
     </div>
     <div class="row">
       <button class="btn2 ghost" onclick="document.getElementById('genImgModal').classList.remove('open')">取消</button>
       <button class="btn2" id="genGo" style="width:auto;margin:0">✨ 生成</button>
-    </div>
-  </div>
+    </div>  </div>
 </div>
 <!-- 头像裁剪模态 -->
 <div class="modal" id="cropModal">
@@ -832,13 +841,40 @@ button .ic{ margin-right:2px; }
     <div class="mech-fold" id="foldImgGen">
       <div class="fold-head" onclick="toggleFold('foldImgGen')"><span>🎨 生图设置</span><span class="fold-arrow">▾</span></div>
       <div class="fold-body">
-        <div class="field"><label>生图 API Key（默认 SiliconFlow，可换）</label>
-          <input id="stImgKey" type="password" placeholder="sk-..."></div>
-        <div class="field"><label>生图端点（OpenAI 兼容 /images/generations）</label>
-          <input id="stImgBase" placeholder="https://api.siliconflow.cn/v1"></div>
-        <div class="field"><label>生图模型</label>
-          <input id="stImgModel" placeholder="black-forest-labs/FLUX.1-schnell"></div>
+        <div class="field"><label>生图后端（自动识别按端点判断；本地服务不在默认端口时手动选）</label>
+          <select id="stImgBackend">
+            <option value="auto">自动识别（推荐）</option>
+            <option value="openai">OpenAI 兼容（需 Key）</option>
+            <option value="pollinations">Pollinations 免 Key 免费</option>
+            <option value="sdwebui">本地 A1111 / Forge（/sdapi）</option>
+            <option value="comfyui">本地 ComfyUI（8188）</option>
+          </select></div>
+        <div class="field"><label>生图 API Key（硅基流动 / 智谱 / 任意兼容中转；免 Key 端点留空即可）</label>
+          <input id="stImgKey" type="password" placeholder="sk-...（免 Key 端点可留空）"></div>
+        <div class="field"><label>生图端点（OpenAI 兼容 /images/generations；填 https://image.pollinations.ai 则免 Key 免费出图）</label>
+          <input id="stImgBase" placeholder="https://api.siliconflow.cn/v1　或　https://image.pollinations.ai"></div>
+        <div class="field"><label>生图模型（免 Key 端点填 flux / turbo；本地 ComfyUI 填 checkpoint 文件名 .safetensors）</label>
+          <input id="stImgModel" placeholder="black-forest-labs/FLUX.1-schnell　或　flux　或　sd_xl_base_1.0.safetensors"></div>
         <button class="btn2 ghost" id="stImgSave" style="width:auto;margin:0">💾 保存生图设置</button>
+        <div style="font-size:11px;color:var(--sub);margin-top:6px" id="stImgState"></div>
+      </div>
+    </div>
+    <div class="mech-fold" id="foldImgPreset">
+      <div class="fold-head" onclick="toggleFold('foldImgPreset');loadPresetEditor()"><span>🎭 生图预设（自定义风格）</span><span class="fold-arrow">▾</span></div>
+      <div class="fold-body">
+        <div style="font-size:11px;color:var(--sub);margin-bottom:6px" id="stPresetState"></div>
+        <textarea id="stPresetText" rows="8" spellcheck="false"
+                  style="width:100%;font-family:ui-monospace,Consolas,monospace;font-size:12px"></textarea>
+        <div class="row" style="justify-content:flex-start;gap:6px;margin-top:6px">
+          <button class="btn2 ghost" id="stPresetSave" style="width:auto;margin:0">💾 保存预设</button>
+          <button class="btn2 ghost" id="stPresetExample" style="width:auto;margin:0">📋 填入示例</button>
+          <button class="btn2 ghost" id="stPresetReset" style="width:auto;margin:0">↺ 恢复内置</button>
+        </div>
+        <div style="font-size:11px;color:var(--sub);margin-top:6px">
+          写法：<code>{"国风": {"label": "国风线稿", "prompt": "chinese ink line art, ", "desc": "说明"}}</code>
+          或简写 <code>{"国风": "chinese ink line art, "}</code>；
+          <b>同名 id 覆盖内置预设</b>，下划线开头的键（如 <code>_说明</code>）会被忽略，可以拿来写注释。
+        </div>
       </div>
     </div>
     <div class="field"><label id="stTheme">主题 / Theme</label>
@@ -2343,6 +2379,9 @@ function loadStateFill(s) {
     document.getElementById('stImgKey').value = s.image_gen_key ? '••••••••' : '';
     document.getElementById('stImgBase').value = s.image_gen_base_url || 'https://api.siliconflow.cn/v1';
     document.getElementById('stImgModel').value = s.image_gen_model || 'black-forest-labs/FLUX.1-schnell';
+    var stImgBe = document.getElementById('stImgBackend');
+    if (stImgBe) stImgBe.value = s.image_gen_backend || 'auto';
+    applyGenLast(s.image_gen_last);
     fillProvider(currentProviderId, true);
     document.getElementById('stBaseInput').value = s.base_url || document.getElementById('stBaseInput').value;
     document.getElementById('stProxyInput').value = s.proxy || '';
@@ -2623,17 +2662,35 @@ document.getElementById('imgprevRemove').onclick = clearImage;
 document.getElementById('send').onclick = send;
 // ---------- 生图 ----------
 var genPresets = [];
+var genLast = {};            // 上次生图的输入（由 state 回填，后端也记着）
+function applyGenLast(last) {
+  if (!last || typeof last !== 'object') return;
+  genLast = last;
+  var set = function (id, v) { var el = document.getElementById(id); if (el && v !== undefined && v !== null) el.value = v; };
+  set('genPrompt', last.prompt);
+  set('genExtra', last.extra);
+  set('genNegative', last.negative_prompt);
+  set('genSize', last.size);
+  set('genSeed', last.seed === undefined || last.seed === null ? '' : last.seed);
+  if (last.preset) {
+    var sel = document.getElementById('genPreset');
+    if (sel) sel.value = last.preset;
+  }
+}
 function loadGenPresets() {
   pywebview.api.gen_presets().then(function (r) {
     if (r && r.ok && r.presets) {
       genPresets = r.presets;
       var sel = document.getElementById('genPreset');
+      var keep = sel.value || (genLast && genLast.preset) || '';
       sel.innerHTML = '';
       r.presets.forEach(function (p) {
         var o = document.createElement('option');
-        o.value = p.id; o.textContent = p.label;
+        o.value = p.id; o.textContent = p.label + (p.custom ? ' ★' : '');
         sel.appendChild(o);
       });
+      if (keep) sel.value = keep;
+      if (!sel.value && r.presets.length) sel.value = r.presets[0].id;
       sel.onchange = function () {
         var p = genPresets.find(function (x) { return x.id === sel.value; });
         document.getElementById('genPresetDesc').textContent = p ? p.desc : '';
@@ -2644,26 +2701,63 @@ function loadGenPresets() {
 }
 document.getElementById('genImgBtn').onclick = function () {
   loadGenPresets();
+  genHintByBackend();
   document.getElementById('genResult').style.display = 'none';
+  document.getElementById('genNote').textContent = '';
   document.getElementById('genImgModal').classList.add('open');
 };
-document.getElementById('genGo').onclick = function () {
+function genRun() {
   var prompt = document.getElementById('genPrompt').value.trim();
   if (!prompt) { alert('请输入画面内容'); return; }
-  var btn = this; btn.disabled = true; btn.textContent = '⏳ 生成中...';
+  var go = document.getElementById('genGo');
+  go.disabled = true; go.textContent = '⏳ 生成中...';
   var preset = document.getElementById('genPreset').value;
   var size = document.getElementById('genSize').value;
   var neg = document.getElementById('genNegative').value.trim();
-  pywebview.api.gen_image(prompt, preset, size, neg).then(function (r) {
-    btn.disabled = false; btn.textContent = '✨ 生成';
+  var extra = document.getElementById('genExtra').value.trim();
+  var seed = document.getElementById('genSeed').value.trim();
+  document.getElementById('genNote').textContent = '生成中，本地模型可能要几十秒…';
+  pywebview.api.gen_image(prompt, preset, size, neg, extra, seed).then(function (r) {
+    go.disabled = false; go.textContent = '✨ 生成';
     if (r && r.ok && r.image) {
       document.getElementById('genResultImg').src = r.image;
       document.getElementById('genResult').style.display = 'block';
+      if (r.seed !== undefined && r.seed !== null) document.getElementById('genSeed').value = r.seed;
+      document.getElementById('genNote').textContent =
+        (r.backend ? '后端：' + r.backend + '　' : '') + (r.note || '');
+      genLast = { prompt: prompt, preset: preset, size: size,
+                  negative_prompt: neg, extra: extra, seed: r.seed };
     } else {
+      document.getElementById('genNote').textContent = (r && r.err) || '生成失败';
       alert((r && r.err) || '生成失败');
     }
-  }).catch(function () { btn.disabled = false; btn.textContent = '✨ 生成'; });
+  }).catch(function () {
+    go.disabled = false; go.textContent = '✨ 生成';
+    document.getElementById('genNote').textContent = '生成异常，看控制台/日志';
+  });
+}
+document.getElementById('genGo').onclick = function () { genRun(); };
+document.getElementById('genReroll').onclick = function () {
+  // 重抽 = 换个随机种子再生成（同一个种子能复现同一张，挑到满意的就把种子留下）
+  document.getElementById('genSeed').value = Math.floor(Math.random() * 1000000000);
+  genRun();
 };
+// 后端不同，能用的参数也不同：负面提示词只有兼容端点/本地 SD 吃
+function genHintByBackend() {
+  var be = (document.getElementById('stImgBackend') || {}).value || 'auto';
+  var base = (document.getElementById('stImgBase') || {}).value || '';
+  if (be === 'auto') {
+    if (/pollinations/i.test(base)) be = 'pollinations';
+    else if (/:8188|comfyui/i.test(base)) be = 'comfyui';
+    else if (/:7860|sdwebui|a1111|forge|fooocus/i.test(base)) be = 'sdwebui';
+    else be = 'openai';
+  }
+  var hint = document.getElementById('genNegativeHint');
+  if (!hint) return;
+  hint.textContent = (be === 'pollinations')
+    ? '免 Key 后端不支持负面提示词（填了会被忽略）；风格词建议写进「补充风格词」。'
+    : (be === 'comfyui' ? '本地 ComfyUI：负面提示词会进 7 号节点；尺寸以 512 的倍数为佳。' : '');
+}
 document.getElementById('input').addEventListener('keydown', function (e) {
   if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); }
 });
@@ -4547,10 +4641,51 @@ document.getElementById('stCancel').onclick = function () { document.getElementB
 document.getElementById('stImgSave').onclick = function () {
   var key = document.getElementById('stImgKey').value.trim();
   if (key === '••••••••') key = '';
-  pywebview.api.save_image_gen(key, document.getElementById('stImgBase').value.trim(), document.getElementById('stImgModel').value.trim()).then(function (r) {
-    if (r && r.ok) alert('✅ 生图设置已保存');
-    else alert((r && r.err) || '保存失败');
+  var be = (document.getElementById('stImgBackend') || {}).value || 'auto';
+  pywebview.api.save_image_gen(key, document.getElementById('stImgBase').value.trim(), document.getElementById('stImgModel').value.trim(), be).then(function (r) {
+    if (r && r.ok) {
+      document.getElementById('stImgState').textContent =
+        '当前后端：' + (r.backend || 'openai') + (r.needs_key ? '（需要 Key）' : '（不需要 Key）');
+      genHintByBackend();
+      alert('✅ 生图设置已保存（后端：' + (r.backend || '') + '）');
+    } else {
+      alert((r && r.err) || '保存失败');
+    }
   });
+};
+// ---------- 生图预设编辑器 ----------
+function loadPresetEditor() {
+  pywebview.api.get_image_presets_file().then(function (r) {
+    if (!r || !r.ok) return;
+    var txt = JSON.stringify(r.presets || {}, null, 2);
+    document.getElementById('stPresetText').value = txt === '{}' ? '' : txt;
+    var n = Object.keys(r.presets || {}).length;
+    document.getElementById('stPresetState').textContent =
+      (n ? '已有 ' + n + ' 个自定义预设。' : '还没有自定义预设。') +
+      '内置：' + (r.builtin || []).map(function (b) { return b.label; }).join('、') +
+      '　文件：' + (r.path || '');
+    window.__presetExample = r.example || {};
+  });
+}
+document.getElementById('stPresetSave').onclick = function () {
+  var text = document.getElementById('stPresetText').value.trim() || '{}';
+  pywebview.api.save_image_presets_file(text).then(function (r) {
+    if (r && r.ok) {
+      loadPresetEditor();
+      loadGenPresets();
+      alert('✅ ' + (r.msg || '预设已保存') + '（生图面板的风格下拉已刷新）');
+    } else {
+      alert((r && r.err) || '保存失败');
+    }
+  });
+};
+document.getElementById('stPresetExample').onclick = function () {
+  document.getElementById('stPresetText').value =
+    JSON.stringify(window.__presetExample || {}, null, 2);
+};
+document.getElementById('stPresetReset').onclick = function () {
+  document.getElementById('stPresetText').value = '';
+  document.getElementById('stPresetSave').click();
 };
 document.getElementById('stProviderBtn').onclick = function (e) {
   e.stopPropagation();
