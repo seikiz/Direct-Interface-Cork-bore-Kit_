@@ -168,6 +168,7 @@ python tools/gen_icon_preview.py                    # → _icons_preview.html，
 - `说明书.md` — 完整使用说明（安装 / 角色 / 世界 / 记忆 / 办公 / 财报 / 语音 / 命令大全 / FAQ）
 - `PLUGIN_DEV.md` — 插件编写标准（钩子 / 声明式设置 / UI 按钮 / 访问 core / 调试发布）
 - `状态变量说明.md` — 机制卡 / 战斗 / 好感度标签速查（给不写代码的人看）
+- `待办与想法.md` — 未开工的方案与**已验证过的前提**（例：画面抓取/录屏联动的依赖现状与代价）
 - `DICK-Narrative/README.md` — 播放器与 `codex/1.0` 故事格式规格
 - `声库安装说明.txt` — UTAU 声库怎么找、怎么装
 
