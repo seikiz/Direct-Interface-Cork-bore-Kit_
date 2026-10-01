@@ -6288,6 +6288,33 @@ class HtmlApp:
         return {"ok": True, "msg": msg, "presets": image_gen.list_presets(
             image_gen.load_presets(self.base_dir))}
 
+    def api_codex_analyze(self, script_json, pkg_name=""):
+        """剧本体检：对【编辑器里当前这份（可能还没保存的）剧本】做结构分析。
+
+        script_json 由前端 JSON.stringify(galScript) 直接传过来 —— 不要求先保存，
+        所以作者改一行就能立刻体检。pkg_name 用来同时检查素材引用（缺文件/孤儿文件）。
+        """
+        import codex_core
+        try:
+            data = json.loads(script_json or "{}")
+        except Exception as e:
+            return {"ok": False, "err": "剧本 JSON 解析失败：" + str(e)[:120]}
+        pkg_dir = None
+        try:
+            name = (pkg_name or "").strip()
+            if name:
+                cand = os.path.join(self.codex_dir, name)
+                if os.path.isdir(cand):
+                    pkg_dir = cand
+        except Exception:
+            pkg_dir = None
+        try:
+            rep = codex_core.analyze_codex(data, pkg_dir=pkg_dir)
+        except Exception as e:
+            return {"ok": False, "err": "体检失败：" + str(e)[:140]}
+        rep["checked_pkg"] = pkg_dir or ""
+        return rep
+
     def api_codex_run_action(self, cmd):
         """播放器行动钩子（CODEX 深度集成 DICK 的系统权限）。
         支持：

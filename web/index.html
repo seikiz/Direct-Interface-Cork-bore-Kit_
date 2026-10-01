@@ -704,6 +704,7 @@ button .ic{ margin-right:2px; }
       <button class="btn2 ghost" id="galExeBtn">🖥️ EXE</button>
       <button class="btn2 ghost" id="galPlayerBtn" title="导出成原生播放器（真正的软件，不是网页；可再打包成 EXE / APK）">🎬 播放器</button>
       <button class="btn2" id="galSaveBtn">💾 保存</button>
+      <button class="btn2 ghost" id="galCheckBtn" title="剧本体检：不可达场景 / 死行 / 走不到结局 / 素材缺失 / 预览与导出不一致">🔍 体检</button>
       <button class="btn2" id="galRoleBtn">👥 角色</button>
       <button class="btn2" id="galAddLineBtn">➕ 加线</button>
       <button class="btn2 ghost" id="galKeyBtn">⭐ 仅看关键</button>
@@ -717,6 +718,8 @@ button .ic{ margin-right:2px; }
   <div id="galLines" style="flex:1;overflow:auto;padding:12px 16px;position:relative;background:radial-gradient(circle, var(--line) 1px, transparent 1px);background-size:22px 22px;background-position:0 0"></div>
   <div id="galScenePanel" style="display:none;border-top:1px solid var(--line);min-height:200px;max-height:56vh;overflow:auto;resize:vertical;background:var(--panel)"></div>
   <div id="galRolePanel" style="display:none;border-top:1px solid var(--line);max-height:320px;overflow:auto;background:var(--panel)"></div>
+  <!-- 🔍 剧本体检结果（见 galCheckRun）：结构问题 / 预览不一致 / 素材 / 统计 -->
+  <div id="galCheckPanel" style="display:none;border-top:1px solid var(--line);max-height:46vh;overflow:auto;background:var(--panel);padding:10px 14px;font-size:13px"></div>
   <!-- 右键菜单 -->
   <div id="galCtx" style="display:none;position:fixed;z-index:10000;min-width:180px;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:4px;box-shadow:0 8px 30px rgba(0,0,0,.5)"></div>
   <!-- 缩放控件 -->
@@ -6746,6 +6749,57 @@ function galJson() {
 }
 document.getElementById('galSaveBtn').onclick = galSave;
 document.getElementById('galRoleBtn').onclick = galToggleRoles;
+document.getElementById('galCheckBtn').onclick = galCheckRun;
+// ---------- 🔍 剧本体检（结构 / 预览一致性 / 素材 / 统计）----------
+function galCheckRender(r) {
+  var box = document.getElementById('galCheckPanel');
+  if (!r || r.err) {
+    box.innerHTML = '<div style="color:#f87171">体检失败：' + ((r && r.err) || '未知错误') + '</div>';
+    box.style.display = 'block';
+    return;
+  }
+  var st = r.stats || {};
+  var h = [];
+  h.push('<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">' +
+    '<b>🔍 剧本体检</b>' +
+    '<span style="color:var(--sub);font-size:12px">线 ' + (st.scenes || 0) + ' · 点 ' + (st.lines || 0) +
+    ' · 选项 ' + (st.choices || 0) + ' · 结局 ' + (st.endings || 0) +
+    ' · 约 ' + (st.est_minutes || 0) + ' 分钟' + (r.checked_pkg ? ' · 已查素材' : ' · 未查素材（先保存）') + '</span>' +
+    '<span style="flex:1"></span>' +
+    '<button class="btn2 ghost" style="width:auto;margin:0;padding:3px 10px" onclick="galCheckHide()">收起</button></div>');
+  var issues = r.issues || [], warns = r.warnings || [];
+  if (!issues.length && !warns.length) {
+    h.push('<div style="color:#4ade80">✅ 没查出问题：场景都可达、没有死行、能走到结局、素材引用完整。</div>');
+  }
+  if (issues.length) {
+    h.push('<div style="color:#f87171;margin:6px 0 4px"><b>结构问题 ' + issues.length + ' 条（会真的坏）</b></div>');
+    issues.forEach(function (t) {
+      h.push('<div style="padding:3px 0 3px 14px;border-left:2px solid #f87171;margin-bottom:3px">' + galCheckEsc(t) + '</div>');
+    });
+  }
+  if (warns.length) {
+    h.push('<div style="color:#fbbf24;margin:10px 0 4px"><b>提示 ' + warns.length + ' 条（不坏，但会咬人）</b></div>');
+    warns.forEach(function (t) {
+      h.push('<div style="padding:3px 0 3px 14px;border-left:2px solid #fbbf24;margin-bottom:3px">' + galCheckEsc(t) + '</div>');
+    });
+  }
+  box.innerHTML = h.join('');
+  box.style.display = 'block';
+}
+function galCheckEsc(s) {
+  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+function galCheckHide() { document.getElementById('galCheckPanel').style.display = 'none'; }
+function galCheckRun() {
+  var box = document.getElementById('galCheckPanel');
+  box.innerHTML = '<div style="color:var(--sub)">体检中…</div>';
+  box.style.display = 'block';
+  var pkg = (document.getElementById('galPkgSel') || {}).value || '';
+  pywebview.api.codex_analyze(JSON.stringify(galScript || {}), pkg).then(galCheckRender)
+    .catch(function (e) {
+      box.innerHTML = '<div style="color:#f87171">体检调用失败：' + galCheckEsc(e) + '</div>';
+    });
+}
 galSetupViewport();
 galSetupCtx();
 document.getElementById('galUndoBtn').onclick = galUndo;
