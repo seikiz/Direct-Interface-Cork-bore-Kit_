@@ -26,7 +26,10 @@ sys.stdout.reconfigure(encoding="utf-8")
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
 BUILD = os.path.join(ROOT, "dist", "DICK-HTML")
-REL = os.path.join(os.path.dirname(ROOT), "DICK-发布")
+# 发布目录：默认在工程上一级（DICK-发布/），可用 --out 或环境变量 DICK_REL_DIR 改。
+# 为什么需要这个开关：某些环境里 Python 进程写不了那个目录（只能读），
+# 而打包本身没问题 —— 那就先写到能写的地方，再自己移过去。
+REL = os.environ.get("DICK_REL_DIR") or os.path.join(os.path.dirname(ROOT), "DICK-发布")
 PY = os.path.join(ROOT, "utau_env", "Scripts", "python.exe")
 
 # 包内前端必须含这些串，<seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌否则说明打进去的是旧前端
@@ -264,7 +267,10 @@ def step_bundle_player():
         print("     别人点「🎬 播放器」会提示未构建；要带上就先在 DICK-Narrative 跑 build.ps1 -Exe")
         return False
     if os.path.isdir(dst):
-        shutil.rmtree(dst, ignore_errors=True)
+        # 必须用 force_rmtree：播放器里的 DICK-Narrative.exe 带只读位，
+        # 普通 shutil.rmtree(ignore_errors=True) 会【静默失败】→ 紧接着 copytree 撞
+        # FileExistsError(WinError 183)。这条只在"不重新编译、只重打包"的快路径上必现。
+        force_rmtree(dst)
     shutil.copytree(src, dst)
     # 播放器自带一份示例故事，让用户直接双击 exe 也有东西看；导出时会自动被清掉
     mb = 0
@@ -336,16 +342,44 @@ def step_selfcheck():
 def step_zip():
     print("== 5) 打 zip ==")
     os.makedirs(REL, exist_ok=True)
+    # 先确认这个目录真的能写（有些环境/杀软下 Python 会 PermissionError）——
+    # 与其写到一半失败，不如立刻给出可操作的提示。
+    try:
+        probe = os.path.join(REL, "_write_probe.tmp")
+        with open(probe, "w", encoding="utf-8") as f:
+            f.write("ok")
+        os.remove(probe)
+    except OSError as e:
+        fail("发布目录不可写：%s（%s）。用 --out 换一个目录，例如："
+             "python build_release.py --out .\\_release_out" % (REL, e))
     zpath = os.path.join(REL, "DICK-电脑版.zip")
-    if os.path.exists(zpath):
-        os.remove(zpath)
+    # 先写 .part 再原子替换：Defender 实时保护会锁住"刚创建的大文件"，
+    # 直接往目标路径写会随机撞 PermissionError（实测：紧跟 126 MB 播放器拷贝之后必现一次）。
+    part = zpath + ".part"
+    if os.path.exists(part):
+        try:
+            os.remove(part)
+        except OSError:
+            pass
     count = 0
-    with zipfile.ZipFile(zpath, "w", zipfile.ZIP_DEFLATED) as z:
+    with zipfile.ZipFile(part, "w", zipfile.ZIP_DEFLATED) as z:
         for base, _dirs, files in os.walk(BUILD):
             for fn in files:
                 p = os.path.join(base, fn)
                 z.write(p, os.path.relpath(p, BUILD))
                 count += 1
+    # 落位：目标被占用就退避重试（杀软扫描通常几秒内结束）
+    last = None
+    for i in range(10):
+        try:
+            os.replace(part, zpath)
+            last = None
+            break
+        except OSError as e:
+            last = e
+            time.sleep(1.5)
+    if last is not None:
+        fail("zip 落位失败（目标被占用）：%s —— 关掉正在读这个 zip 的程序/杀软再试。" % last)
     size = os.path.getsize(zpath) / 1048576.0
     print("   %s" % zpath)
     print("   文件数 %d ／ %.1f MB" % (count, size))
@@ -396,8 +430,67 @@ def step_report():
         print("   提示：网页前端改动只影响电脑版，安卓端不打包 web/，无需重建 apk。")
 
 
+def step_scrub():
+    """打 zip 前，把「开发者的运行时状态 / 个人数据 / 日志」从包里剔掉。
+
+    为什么必须做（都是真事）：
+      · 顶层 config.json 是上一次在打包目录里跑出来的运行状态。它带着
+        welcome_shown=true —— 随包发出去，**每个下载者都会跳过首次启动的欢迎页与填 Key 引导**，
+        等于把 README 里写的「首次启动弹欢迎页」当场作废。
+      · _internal/config.json 是 spec 把工程根目录的 config.json 当"种子"烘进包的。
+        现在它恰好是空 Key，但**只要开发者哪天填了 Key 再打包，Key 就进了公开包**。
+        应用缺 config.json 是安全的（self.config = {} 起步，relay_url 另有 BUILTIN_RELAY 兜底），
+        所以这里直接剔除，首启由程序自己生成。
+      · saves/.trpg_lock.json 是跑团锁的运行时状态：随包发出去，新装用户一开就是"已锁定"。
+      · saves/backup/ 是 save_guard 给开发者自己的存档留的自动备份快照（实测里面躺着 42 个
+        测试卡的旧快照），属于开发痕迹，不该进发布包；目录会在运行时按需重建。
+      · 其余是个人数据（工坊配置里的 api_key / 生图预设 / 记忆归档 / 导出物）与开发日志。
+
+    ⚠ 注意 financial_history.json 只剔除【顶层】那一份 —— 它是开发者在打包目录里跑过一次后
+      留下的副本。包内 _internal/financial_history.json 是【必须留】的功能数据：
+      plugins/financial_plugin.py 的 _seed_history() 会从 _MEIPASS 读它，把金融史年表
+      1617-2026 播种进政策库；删了它，新装用户的年表就没了（而且不报错，只是静默少功能）。
+    """
+    print("== 4.5) 剔除开发者状态与个人数据（别随发布包发出去）==")
+    targets = [
+        "config.json", "_internal/config.json",
+        "workshop_config.json", "_internal/workshop_config.json",
+        "image_presets.json",
+        "financial_history.json",          # 只删顶层那份；包内的年表种子必须留（见上面的 ⚠）
+        "debug.log", "_internal/debug.log",
+        "saves/.trpg_lock.json", "_internal/saves/.trpg_lock.json",
+    ]
+    dirs = ["memory", "exports", "_internal/memory", "_internal/exports",
+            "saves/backup", "_internal/saves/backup"]
+    removed = 0
+    for rel in targets:
+        p = os.path.join(BUILD, rel)
+        if os.path.isfile(p):
+            os.remove(p)
+            print("   - %s" % rel)
+            removed += 1
+    for rel in dirs:
+        p = os.path.join(BUILD, rel)
+        if os.path.isdir(p) and os.listdir(p):
+            shutil.rmtree(p, ignore_errors=True)
+            print("   - %s/ （整目录）" % rel)
+            removed += 1
+    if not removed:
+        print("   （没有需要剔除的，包是干净的）")
+    return removed
+
+
 def main():
-    do_build = "--build" in sys.argv
+    global REL
+    argv = sys.argv[1:]
+    if "--out" in argv:
+        i = argv.index("--out")
+        if i + 1 < len(argv):
+            REL = os.path.abspath(argv[i + 1])
+            print("发布目录（--out）：%s" % REL)
+        else:
+            fail("--out 后面要跟目录")
+    do_build = "--build" in argv
     if not os.path.isdir(ROOT):
         fail("找不到工程目录")
     if not os.path.isdir(BUILD) and not do_build:
@@ -407,6 +500,7 @@ def main():
     step_postprocess()
     step_bundle_player()
     step_selfcheck()
+    step_scrub()
     zpath, size = step_zip()
     step_report()
     print("")

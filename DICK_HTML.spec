@@ -1,7 +1,12 @@
 # -*- mode: python ; coding: utf-8 -*-
 from PyInstaller.utils.hooks import collect_all
 
-datas = [('web', 'web'), ('plugins', 'plugins'), ('saves', 'saves'), ('worlds', 'worlds'), ('config.json', '.'),
+# 注意：这里【不要】再打包工程根的 config.json。
+# 它是开发者本机的配置（含 welcome_shown，将来可能含 API Key）——被当"种子"烘进包后：
+#   ① 下载者首启会跳过欢迎页与填 Key 引导（README 承诺的首启流程当场作废）；
+#   ② 一旦本机 config.json 里填了 Key，Key 就会进公开发布包。
+# 应用缺 config.json 是安全的：self.config 从 {} 起步、relay_url 另有 BUILTIN_RELAY 兜底。
+datas = [('web', 'web'), ('plugins', 'plugins'), ('saves', 'saves'), ('worlds', 'worlds'),
          ('prompt_presets', 'prompt_presets'), ('personas', 'personas'), ('quick_replies.json', '.'),
          ('web_fetch.py', '.'), ('stock_analysis.py', '.'), ('doc_layout.py', '.'),
          ('i18n.py', '.'), ('app_paths.py', '.'), ('card_compat.py', '.'),
