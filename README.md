@@ -4,6 +4,10 @@
 > **电脑**（Python + pywebview）· **手机**（Kotlin + Compose）· **原生播放器**（Compose Multiplatform）
 > 免费 · 离线优先 · 数据全在你自己机器上
 
+![主界面（OLED 主题 · 加密备份）](docs/screens/app-oled.png)
+
+![GAL 制作器：线-点-分支节点图编辑器](docs/screens/gal-editor.png)
+
 ---
 
 ## 这是什么
@@ -16,6 +20,21 @@
 两者角色卡互通：酒馆的卡（v1/v2/v3 / PNG 嵌卡）DICK 可直接导入，DICK 导出的卡（v2 JSON / PNG 嵌卡）酒馆可直接用。仓库自带酒馆安装器 `tavern-installer/`。
 
 > ⚠️ 互通边界：转换保留人设（描述/性格/台词/开场白）与世界书；DICK 独有的树状记忆、机制卡（好感/状态/战斗）是扩展字段，转入酒馆时会被剥离，转回来需重新配置。
+
+## 技术概览（给看代码的人）
+
+| 维度 | 事实 |
+|---|---|
+| **规模** | 源码约 **86k 行**（Python 160 文件 / 44,386 行；Kotlin 60 / 16,040；JS 71 / 17,224；HTML 4 / 8,502，均排除依赖与构建产物） |
+| **桌面端** | 单个 `HtmlApp` 类（6,659 行）对外暴露 **154 个 `api_*`**，经 pywebview js_api 桥接；前端是单页 `web/index.html`（8,119 行） |
+| **三端实现** | 桌面（Python + pywebview）· 安卓（Kotlin + Compose）· 原生播放器（Compose Multiplatform，EXE 与 APK 同源） |
+| **跨端一致性** | 120 个线性图标由 `web/index.html` 的 `ICONS` **单点生成** → `tools/gen_android_icons.py` → 108 个 Android VectorDrawable；两端各有防漂移测试（改一边忘了另一边会红） |
+| **测试** | `tests/` **64 个独立脚本 / 1,583 次断言** + Node 图标回归 + 安卓 kotlinc 自检；GitHub Actions 在 **Python 3.11 与 3.12** 矩阵上逐个跑，任一失败即红 |
+| **插件架构** | 22 个插件类（4 个默认关闭）；声明式 `settings_schema` / `ui_buttons` 自动生成界面；钩子 `on_load/on_unload/on_message_send/on_message_received/contextInjection/on_command`；另有子进程 JSON-RPC 协议插件 |
+| **安全与可靠** | 战斗公式走 **AST 白名单求值**（绝不 `eval`）；存档 **原子写 + 备份 + 校验自愈**；API Key 用 Windows DPAPI 加密落盘；加密备份容器 `.dickbackup` **配独立解密工具**（没有 DICK 也能开自己的档） |
+| **打包** | PyInstaller onedir + 自检流水线：包内 `web/index.html` 必须与源码一致且含 **16 个特征串**（专治打包缓存旧前端） |
+| **多厂商** | 内置 14 家 / 106 个模型，含免 Key 免费链与本地 Ollama；生图引擎四种后端（OpenAI 兼容 / Pollinations 免 Key / 本地 A1111 / 本地 ComfyUI） |
+| **文档** | 6 份使用与开发文档；其中《状态变量说明》与实现的一致性由测试锁定（改了代码不改文档会红） |
 
 ## 核心特性
 
@@ -90,8 +109,13 @@
 
 ### 从源码跑（电脑）
 ```bash
+pip install -r requirements.txt
 python "Direct-Interface Cork-bore Kit.py"
 ```
+
+> 需要 **Python 3.11 / 3.12**（CI 两个版本都跑；开发环境为 3.11）。依赖清单见 `requirements.txt`，
+> 其中 `flask` / `edge-tts` / `httpx` 是**可选**的（只影响侧车服务与日文 TTS，不装也能启动聊天）。
+> 跑测试：`pip install -r requirements-test.txt` 后 `python tests/test_*.py`。
 
 > `html_app.py` **不是入口**，它是 49 行的兼容垫片（供历史测试 `from html_app import HtmlApp` 用），直接运行它什么都不会发生。
 > 源码运行**不会自带 API Key**：Key 存在 `config.json`，而它默认不进版本库（见「数据与隐私」）。
