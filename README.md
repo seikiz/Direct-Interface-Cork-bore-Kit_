@@ -8,6 +8,28 @@
 
 ![GAL 制作器：线-点-分支节点图编辑器](docs/screens/gal-editor.png)
 
+## English (short)
+
+**DICK** (Direct-Interface Cork-bore Kit) is a **local-first AI roleplay / interactive-narrative platform** —
+a lightweight alternative in the same sandbox as SillyTavern, focused on turning character cards into
+playable things (choice-driven scenes, mechanics/affection systems, one-click story export).
+
+- **Three targets, one spec:** Python + pywebview desktop · Kotlin/Compose Android · Compose Multiplatform
+  native player (EXE & APK from the same codebase, not a web wrapper)
+- **~86k lines** of source · **22 plugins** (declarative settings/UI, lifecycle + context hooks) ·
+  **14 providers / 106 models** (incl. keyless & local Ollama) · **4 image-generation backends**
+  (OpenAI-compatible, keyless Pollinations, local A1111, local ComfyUI)
+- **Engineering discipline:** 64 test scripts / **1,583 assertions** run on Python 3.11 & 3.12 by GitHub
+  Actions; 120 icons code-generated from a single dictionary into Android VectorDrawables with drift tests;
+  battle formulas evaluated by an **AST whitelist (never `eval`)**; atomic-write save recovery; DPAPI-encrypted
+  keys; encrypted `.dickbackup` container with a **standalone decrypt tool**
+- **Runs from source:** `pip install -r requirements.txt` then `python "Direct-Interface Cork-bore Kit.py"`
+  (Python 3.11/3.12, Windows)
+- **Your data stays on your machine** · MIT licensed
+
+> UI and docs are Chinese-first; English documentation is not available yet.
+> Real-world feedback currently arrives over QQ rather than GitHub Issues — see the note near the bottom.
+
 ---
 
 ## 这是什么
