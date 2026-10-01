@@ -6336,6 +6336,114 @@ class HtmlApp:
         return {"ok": True, "msg": msg, "presets": image_gen.list_presets(
             image_gen.load_presets(self.base_dir))}
 
+    def _offline_key(self):
+        """离线推进按"这一局是谁"记账（按角色名，群聊就按集合）"""
+        try:
+            names = sorted([n for n in (self.selected_roles or []) if n])
+        except Exception:
+            names = []
+        return "、".join(names) or "default"
+
+    def _offline_plan(self):
+        """算一份离线推进方案（不修改任何状态）"""
+        import offline_advance
+        import time_scale
+        try:
+            tree = self.core.get_all_nodes_data()
+        except Exception:
+            tree = None
+        try:
+            scale = float(time_scale.load())
+        except Exception:
+            scale = 1.0
+        mech_cfg = getattr(self.core, "_mech_config", None)
+        try:
+            mech_state = self.core.mechanism_snapshot()
+        except Exception:
+            mech_state = None
+        dismissed = (self.config.get("offline_dismissed") or {}).get(self._offline_key())
+        try:
+            return offline_advance.plan(tree, mech_cfg, mech_state, scale=scale,
+                                        dismissed_ts=dismissed)
+        except Exception as e:
+            return {"ok": False, "skipped": "离线推进计算失败：" + str(e)[:120]}
+
+    def api_offline_peek(self):
+        """看看"你不在的时候世界走了多少" —— 只出方案，什么都不改。"""
+        p = self._offline_plan()
+        return {"ok": bool(p.get("ok")), "proposal": p, "key": self._offline_key()}
+
+    def api_offline_apply(self, accept=True):
+        """应用（accept=True）或忽略（False）刚算出的离线推进。
+
+        应用会改机制状态并往聊天里插一条系统消息（可读的时间说明）；
+        忽略则只记下"这段时间处理过了"，避免下次启动又弹一遍。
+        两条路都会更新记账点 —— 这是防重复提示的关键。
+        """
+        import offline_advance
+        try:
+            p = self._offline_plan()
+        except Exception as e:
+            return {"ok": False, "err": "计算失败：" + str(e)[:120]}
+        if not p.get("ok"):
+            return {"ok": False, "err": p.get("skipped") or "没有需要推进的时间"}
+        key = self._offline_key()
+        # 记账：无论应用还是忽略，都把这局的"已处理到"推进到这次的上次互动时间
+        try:
+            book = dict(self.config.get("offline_dismissed") or {})
+            book[key] = p.get("last_active")
+            self.config["offline_dismissed"] = book
+        except Exception:
+            pass
+        if not accept:
+            self._save_config()
+            return {"ok": True, "applied": False, "summary": p["summary"]}
+        undo = None
+        try:
+            undo = offline_advance.apply(p, self.core.mechanism_state)
+        except Exception as e:
+            return {"ok": False, "err": "应用失败：" + str(e)[:140]}
+        if not undo:
+            self._save_config()
+            return {"ok": True, "applied": False, "summary": p["summary"],
+                    "note": "这次没有数值变化，只推进了时间记账"}
+        # 进聊天记录：一条可读的时间说明（沿用生图那种系统消息写法）
+        try:
+            self.sys_msgs.append({"kind": "ai", "speaker": "🕰 离线推进",
+                                  "content": p["summary"], "node_id": None})
+            self._rebuild_messages()
+        except Exception:
+            pass
+        self._save_config()
+        self._persist_offline_undo(undo)
+        return {"ok": True, "applied": True, "summary": p["summary"],
+                "turns": p.get("turns", 0), "affection": p.get("affection"),
+                "status": p.get("status", []), "undo_saved": bool(undo)}
+
+    def _persist_offline_undo(self, undo):
+        """把 undo 记录暂存起来，供 api_offline_undo 撤销（一次会话内有效）"""
+        try:
+            self._offline_undo = undo
+        except Exception:
+            pass
+
+    def api_offline_undo(self):
+        """撤销上一次离线推进（状态回到应用前；聊天里那条说明留着，但会标注已撤销）"""
+        import offline_advance
+        undo = getattr(self, "_offline_undo", None)
+        if not undo:
+            return {"ok": False, "err": "没有可撤销的离线推进"}
+        ok = offline_advance.revert(undo, self.core.mechanism_state)
+        self._offline_undo = None
+        if ok:
+            try:
+                self.sys_msgs.append({"kind": "ai", "speaker": "🕰 离线推进",
+                                      "content": "（已撤销上一次离线结算）", "node_id": None})
+                self._rebuild_messages()
+            except Exception:
+                pass
+        return {"ok": bool(ok), "err": "" if ok else "撤销失败"}
+
     def api_codex_analyze(self, script_json, pkg_name=""):
         """剧本体检：对【编辑器里当前这份（可能还没保存的）剧本】做结构分析。
 

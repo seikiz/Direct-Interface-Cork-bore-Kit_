@@ -507,6 +507,19 @@ button .ic{ margin-right:2px; }
       <button class="btn2" id="genGo" style="width:auto;margin:0">✨ 生成</button>
     </div>  </div>
 </div>
+<!-- 离线推进模态：你不在的时候世界自己走了一小步（先看方案，再决定要不要应用） -->
+<div class="modal" id="offlineModal">
+  <div class="modal-box" style="width:460px">
+    <h3>🕰 你不在的时候</h3>
+    <div id="offlineSummary" style="font-size:13px;line-height:1.7;margin:6px 0 10px"></div>
+    <div id="offlineDetail" style="font-size:11px;color:var(--sub);line-height:1.6"></div>
+    <div class="row" style="margin-top:12px">
+      <button class="btn2 ghost" id="offlineIgnoreBtn">忽略</button>
+      <button class="btn2 ghost" id="offlineUndoBtn" style="display:none">↺ 撤销结算</button>
+      <button class="btn2" id="offlineApplyBtn" style="width:auto;margin:0">✅ 让它发生</button>
+    </div>
+  </div>
+</div>
 <!-- 头像裁剪模态 -->
 <div class="modal" id="cropModal">
   <div class="modal-box" style="width:420px">
@@ -2438,6 +2451,8 @@ function loadStateFill(s) {
     renderChoices(s.choices);
     renderMechanism(s.mechanism);
     renderBattle(s.battle);
+    // 离线推进：启动后问一次"你不在的时候世界走了多少"（只出方案，点了才应用）
+    setTimeout(function () { try { offlineCheck(); } catch (e) {} }, 900);
     // 系统权限：双击 .codex 文件启动 → 自动打开 CODEX 播放器
     if (s.codex_auto_open && !window.__codexAutoPlayed) {
       window.__codexAutoPlayed = true;
@@ -2763,6 +2778,68 @@ function genHintByBackend() {
     ? '免 Key 后端不支持负面提示词（填了会被忽略）；风格词建议写进「补充风格词」。'
     : (be === 'comfyui' ? '本地 ComfyUI：负面提示词会进 7 号节点；尺寸以 512 的倍数为佳。' : '');
 }
+// ---------- 离线推进（你不在的时候，世界自己走了一小步）----------
+// 后端只出"方案"，点了「让它发生」才改状态，并且可以撤销 —— 见 api_offline_peek/apply/undo
+var offlineProposal = null;
+function offlineCheck() {
+  pywebview.api.offline_peek().then(function (r) {
+    if (!r || !r.ok || !r.proposal) return;
+    offlineProposal = r.proposal;
+    var p = r.proposal;
+    var parts = [];
+    parts.push('<b>' + (p.summary || '') + '</b>');
+    var det = [];
+    det.push('现实 ' + Math.round((p.elapsed_real_sec || 0) / 60) + ' 分钟 × 时间流速 ' +
+             (p.scale || 1) + ' 倍 = 软件时间 ' + Math.round((p.elapsed_sw_sec || 0) / 3600) + ' 小时');
+    if (p.capped) det.push('已按上限计（离开太久，不按更长时间结算）');
+    det.push('应用后会有 ' + (p.turns || 0) + ' 个回合的推进（事件冷却据此前进）；不喜欢可以一键撤销');
+    document.getElementById('offlineSummary').innerHTML = parts.join('<br>');
+    document.getElementById('offlineDetail').innerHTML = det.join('<br>');
+    document.getElementById('offlineUndoBtn').style.display = 'none';
+    document.getElementById('offlineApplyBtn').style.display = '';
+    document.getElementById('offlineModal').classList.add('open');
+  }).catch(function () {});
+}
+document.getElementById('offlineApplyBtn').onclick = function () {
+  var b = this; b.disabled = true;
+  pywebview.api.offline_apply(true).then(function (r) {
+    b.disabled = false;
+    if (r && r.ok) {
+      // 弹窗不关："撤销"按钮要留在眼前，否则玩家看完提示就找不到反悔入口了
+      document.getElementById('offlineApplyBtn').style.display = 'none';
+      document.getElementById('offlineIgnoreBtn').textContent = '关闭';
+      document.getElementById('offlineUndoBtn').style.display = '';
+      document.getElementById('offlineDetail').innerHTML =
+        '已应用：' + (r.summary || '') + (r.undo_saved ? '<br>不满意可以点「↺ 撤销结算」把它退回去。' : '');
+    } else {
+      alert((r && r.err) || '应用失败');
+    }
+  }).catch(function () { b.disabled = false; });
+};
+document.getElementById('offlineIgnoreBtn').onclick = function () {
+  var label = this.textContent || '';
+  if (label === '关闭') {   // 已经应用过了：直接关，不要再调后端（否则会把它当"忽略"记账）
+    document.getElementById('offlineModal').classList.remove('open');
+    return;
+  }
+  pywebview.api.offline_apply(false).then(function () {
+    document.getElementById('offlineModal').classList.remove('open');
+  }).catch(function () {
+    document.getElementById('offlineModal').classList.remove('open');
+  });
+};
+document.getElementById('offlineUndoBtn').onclick = function () {
+  pywebview.api.offline_undo().then(function (r) {
+    if (r && r.ok) {
+      alert('↺ 已撤销上一次离线结算');
+      document.getElementById('offlineUndoBtn').style.display = 'none';
+      document.getElementById('offlineModal').classList.remove('open');
+    } else {
+      alert((r && r.err) || '撤销失败');
+    }
+  });
+};
+
 document.getElementById('input').addEventListener('keydown', function (e) {
   if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); }
 });
