@@ -80,6 +80,7 @@ import com.dick.core.ChatEngine
 import com.dick.core.ChatTree
 import com.dick.core.J
 import com.dick.core.JsonS
+import com.dick.core.Lanes
 import com.dick.core.MechanicsEngine
 import com.dick.core.TimeScale
 import com.dick.core.TreeStore
@@ -863,9 +864,10 @@ fun SettingsDialog(vm: ChatViewModel, deps: DialogDeps) {
                 engine.allowEmptyKey = PROVIDERS.firstOrNull { it.id == providerId }?.free == true
                 saveConfig()
                 val k = apiKey.trim()
-                Thread {
+                // 推送共享连接配置：网络活，走 net 线（原来是一个裸 Thread）
+                Lanes.on(Lanes.net, "推送连接配置") {
                     try { Workshop.pushApi(k, baseUrl.trim().ifBlank { "https://api.deepseek.com" }, model, providerId) } catch (_: Exception) {}
-                }.start()
+                }
                 vm.showApiSetup.value = false
             }) { Text(I18n.t("btn_save", "保存")) }
         },
@@ -987,11 +989,12 @@ fun SettingsDialog(vm: ChatViewModel, deps: DialogDeps) {
                 saveGlobalRegex(regexInput)
                 saveConfig()
                 val k = apiKey.trim()
-                Thread {
+                // 同上：推送共享连接配置走 net 线
+                Lanes.on(Lanes.net, "推送连接配置") {
                     try {
                         Workshop.pushApi(k, baseUrl.trim().ifBlank { "https://api.deepseek.com" }, model, providerId)
                     } catch (_: Exception) {}
-                }.start()
+                }
                 vm.showSettings.value = false
             }) { Text(I18n.t("btn_save", "保存")) }
         },

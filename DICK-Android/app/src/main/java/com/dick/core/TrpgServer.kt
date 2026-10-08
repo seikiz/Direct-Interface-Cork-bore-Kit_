@@ -41,6 +41,9 @@ class TrpgServer(private val engine: ChatEngine) {
     }
 
     fun start(listenPort: Int = 5080): Int {
+        // 这里（以及下面的 accept / handle）**故意**用裸线程，不走 Lanes：
+        // 它们是常驻的服务端循环（acceptLoop 一直阻塞在 accept 上，handle 陪一个客户端到最后），
+        // 不是"干完就完"的任务。放进分道的话，一条线的名额会被永久占住 —— 那是把线当线程池用错了。
         if (running) return port
         try {
             val s = ServerSocket(listenPort)

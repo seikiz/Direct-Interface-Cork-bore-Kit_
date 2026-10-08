@@ -48,10 +48,54 @@ VOICEVOX 可爱声线、Word/Excel 排版导出、创意工坊服务器、PNG �
     kotlinc -include-runtime -d check.jar app/src/main/java/com/dick/core/*.kt app/src/main/java/com/dick/plugins/*.kt app/src/main/java/com/dick/tools/*.kt
     java -Dfile.encoding=UTF-8 -jar check.jar --selftest
 
+> 上面的 `check.jar` 那条命令**已经跑不起来**了：core 需要 android.jar，plugins 需要 Compose runtime。
+> 能用的是 `selftest\run.ps1`（按依赖闭包分两个测试）：
+>
+>     powershell -ExecutionPolicy Bypass -File selftest\run.ps1
+>
+> `core` 现在有一个带第三方依赖的文件 —— `Lanes.kt`（分道执行，用 kotlinx-coroutines），
+> 脚本会自动从 Gradle 缓存里取 `kotlinx-coroutines-core-jvm-*.jar` 加进 classpath。
+
+## 分道执行（Lanes.kt）
+
+手机端原来到处是 `scope.launch(Dispatchers.IO) { …; launch(Main) { 更新界面 } }`：
+并发不受控、顺序没保证、出问题也看不出"现在在跑什么"；更要紧的是**保序类的重活压在主线**上 ——
+每落一条回复就要在主线程上序列化整棵树并写盘、写机制状态 JSON、跑插件钩子。
+
+现在按电脑端 `jobs.py` 的同一套想法分道（`core/Lanes.kt`）：
+
+| 线 | 并行度 | 跑什么 |
+| --- | --- | --- |
+| `io` | 1 | 存档落盘、机制状态落盘、角色卡导入/导出、工坊导出 |
+| `vision` | 1 | 图片理解（免费视觉链自己有速率限制） |
+| `plugin` | 1 | 插件钩子（同一插件要先看到前一条回复）—— 记忆链的落盘也在这条线上 |
+| `net` | 4 | 工坊同步、搜索、下载、局域网探测（请求彼此独立） |
+
+约定：**同线保序、跨线并行**；`Lanes.status()` 能看到每线在跑什么、完成/失败多少次；
+单条任务抛异常只记账，不会拖垮这条线。`App.kt` 与插件里的裸 `Thread { }` 已经清零。
+线只留真在用的四条 —— 声明了没人用的空线比缺一条更糟（读代码的人会以为它在跑东西）。
+
+`tests/test_android_lanes.py` 用结构断言盯着这些约定：重活不许回主线程、每条线都得有人用
+（空线是负债）、裸 `Thread { }` 只许出现在下面那两处被说明的文件里。它是**文本层面的**结构检查 ——
+证明"谁跑在哪条线上"，不证明运行时真的不卡（那个得在真机上量）。
+
+几个刻意留在原地的，都写在代码注释里存档：
+
+- **流式剥标签留在主线程**：`mech.stripTags()` 会写 mech 的 `state`（`apply=false` 时也可能新建
+  `status` 字段），多个线程同时碰就是数据竞争 —— 快不是这里的第一优先级。
+- **TTS 留在主线程**：系统 TTS 的调用本身要在主线程发起。
+- **`ChatEngine` 的流式工作线程**：要能 `interrupt` 停掉，也不能长期占住一条线的名额。
+- **`TrpgServer` 的 accept / handle 循环**：常驻服务端循环，不是"干完就完"的任务。
+
+"先在主线程取快照，再把写盘丢给 io 线"是这里的固定写法（`saveTree()`、`persistMechAsync()`）：
+序列化必须趁数据没被改完，写盘才可以慢慢来。
+
 ## 目录结构
 
     app/src/main/java/com/dick/
-      core/       Json / Model / ChatTree / ChatEngine(HttpURLConnection) / AppEnv
+      core/       Json / Model / ChatTree / ChatEngine(HttpURLConnection) / AppEnv / Lanes(分道执行)
       plugins/    Plugin 接口 + 注册表 + 6 个内置插件（含 WebFetch 抓取工具）
       app/        MainActivity + Compose 主界面（设置/角色/世界/分享/TTS）
+                  CardIo.kt 角色卡进出的"重活"（读 URI / 解析 PNG 嵌卡 / 写角色卡+世界卡），跑在 io 线上
       tools/      Check.kt 自检（含 Python 存档兼容）
+    selftest/     不依赖 Compose 的独立测试（TextGuard / 机制状态重置），run.ps1 一键跑

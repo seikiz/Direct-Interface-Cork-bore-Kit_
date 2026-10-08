@@ -3,6 +3,7 @@ package com.dick.plugins
 import com.dick.core.AppEnv
 import com.dick.core.J
 import com.dick.core.JsonS
+import com.dick.core.Lanes
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -261,7 +262,8 @@ class FinancialPlugin : Plugin {
 
     override fun onMessageSend(userInput: String): String? {
         if (autoRefreshHours > 0 && dbStale(autoRefreshHours)) {
-            Thread { refreshQuiet() }.apply { isDaemon = true }.start()
+            // 静默刷新要爬十几个源（里面还有 sleep 限速）—— 走 net 线，绝不占主线程
+            Lanes.on(Lanes.net, "财报库静默刷新") { refreshQuiet() }
         }
         autoInject(userInput)
         return userInput
@@ -270,7 +272,7 @@ class FinancialPlugin : Plugin {
     override fun onLoad() {
         seedHistory()
         if (autoRefreshHours > 0 && dbStale(autoRefreshHours)) {
-            Thread { refreshQuiet() }.apply { isDaemon = true }.start()
+            Lanes.on(Lanes.net, "财报库静默刷新") { refreshQuiet() }
         }
     }
 

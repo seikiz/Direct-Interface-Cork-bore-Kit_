@@ -220,18 +220,33 @@ class MechanicsEngine {
     }
 
     // ---------- 泛用变量检测存储（第三个文件夹 mech_state/） ----------
-    /** 外层存储：把当前机制状态实时写入 JSON（每次结算后调用，值变了才写） */
-    fun persistState() {
-        val file = stateFile ?: return
-        val s = state ?: return
+    /**
+     * 外层存储：算出「这一刻该写什么」，**不落盘**。
+     *
+     * 之所以拆成两步：序列化要在**调用线程**上做（否则交给别的线程序列化时 state 可能已经变了，
+     * 写下去的就是下一轮的状态），落盘才是可以丢给 io 线的重活。
+     * 调用方：`persistState()` 自己用；App 侧用 `pendingStateWrite()` + 异步 `flushState()`。
+     */
+    fun pendingStateWrite(): Pair<File, String>? {
+        val file = stateFile ?: return null
+        val s = state ?: return null
+        return try { file to JsonS.stringify(s, pretty = true) } catch (_: Exception) { null }
+    }
+
+    /** 只负责把这批内容写下去（内容没变不写盘，避免每轮空写）；不读 state，可在线程池里跑 */
+    fun flushState(file: File, json: String) {
         try {
             file.parentFile?.mkdirs()
-            val json = JsonS.stringify(s, pretty = true)
-            // 泛用检测：内容没变不写盘（避免每轮空写）
             val old = if (file.exists()) file.readText(Charsets.UTF_8) else ""
             if (old != json) file.writeText(json, Charsets.UTF_8)
         } catch (_: Exception) {
         }
+    }
+
+    /** 外层存储：把当前机制状态实时写入 JSON（每次结算后调用，值变了才写）；同步版 */
+    fun persistState() {
+        val p = pendingStateWrite() ?: return
+        flushState(p.first, p.second)
     }
 
     /** 外层存储：优先从 JSON 恢复状态（比树快照新、可靠）；文件不存在返回 null */

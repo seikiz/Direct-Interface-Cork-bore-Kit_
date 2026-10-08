@@ -94,6 +94,10 @@ def on_message_received(self, user_input, ai_reply):
 > · 需要"发出去之前必须生效"的逻辑请用 `contextInjection`（它在组装载荷时同步调用）
 > · 别在钩子里做重活（合成整段语音、拉大文件）：那是 `voice` / `net` 线该干的事，用
 >   `jobs.submit("voice", ...)` 自己投进去，钩子立刻返回
+>
+> **手机端同理**（2026-10 起）：Kotlin 侧 `registry.onMessageReceived(...)` 也走插件线
+> （`Lanes.on(Lanes.plugin, …)`，见 `DICK-Android/.../core/Lanes.kt`）—— 时序上的四条影响完全一样。
+> 手机端插件要投后台活时用 `Lanes.on(Lanes.net, "任务名") { … }`（线有 `io`/`vision`/`plugin`/`net`）。
 
 ---
 

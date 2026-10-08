@@ -101,12 +101,12 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.dick.core.AppConfig
 import com.dick.core.AppEnv
-import com.dick.core.CardCompat
 import com.dick.core.ChatEngine
 import com.dick.core.ChatTree
 import com.dick.core.EndingJudge
 import com.dick.core.J
 import com.dick.core.JsonS
+import com.dick.core.Lanes
 import com.dick.core.MessageNode
 import com.dick.core.MechanicsEngine
 import com.dick.core.TimeScale
@@ -290,151 +290,74 @@ fun App() {
     val tts = remember { TextToSpeech(context) { } }
 
 val importCardLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-        uri?.let { u ->
-            try {
-                val bytes = context.contentResolver.openInputStream(u)?.use { it.readBytes() }
-                if (bytes == null || bytes.isEmpty()) return@let
-                val mime = context.contentResolver.getType(u) ?: ""
-                val isImg = mime.startsWith("image/") || u.toString().lowercase().endsWith(".png") ||
-                    u.toString().lowercase().endsWith(".webp")
-                val parsed = if (isImg) CardCompat.pngExtractCard(bytes)
-                else (JsonS.parse(String(bytes, Charsets.UTF_8)) as? J.Obj)
-                val card = parsed?.let { CardCompat.toDick(it) }
-                if (card == null) {
-                    sysMsgs.add(ChatMsg("系统", I18n.t("card_import_fail", "⚠️ 无法识别的角色卡格式（需 v1/v2/v3 JSON 或 PNG 嵌卡）")))
-                    return@let
+        if (uri == null) return@rememberLauncherForActivityResult
+        // 界面列表只在主线程读一次当快照；重活（读卡/解析/落盘）全交给 IO 线程。
+        // 详见 CardIo.kt 顶部注释：原先这些活都在主线程上干，导大卡会卡一下。
+        val existing = roles.map { it.first }.toSet()
+        Lanes.on(Lanes.io, "导入角色卡") {
+            val outcome = try {
+                importCardHeavy(context, uri, existing)
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    sysMsgs.add(ChatMsg("系统", I18n.t("card_import_fail", "⚠️ 导入失败：") + (e.message ?: "")))
                 }
-                var name = card.name
-                var i = 2
-                while (roles.any { it.first == name }) { name = card.name + "_" + i; i++ }
-                val o = J.Obj()
-                o.fields["name"] = J.Str(name)
-                o.fields["system_prompt"] = J.Str(card.systemPrompt)
-                card.cardData?.let { o.fields["card_data"] = it }
-                // 开场白：从卡内提取到顶层，供 P0 作为固定首条消息显示（不再进人设提示/词闸参考）
-                (card.cardData as? J.Obj)?.let { cd ->
-                    val fm = (cd.fields["data"] as? J.Obj)?.fields?.get("first_mes")?.str()?.takeIf { it.isNotBlank() }
-                        ?: cd.fields["first_mes"]?.str()?.takeIf { it.isNotBlank() }
-                    if (fm != null) o.fields["first_mes"] = J.Str(fm)
-                }
-                File(AppEnv.savesDir(), name + ".json").writeText(JsonS.stringify(o, pretty = true), Charsets.UTF_8)
-                roles.add(name to card.systemPrompt)
-                if (isImg) {
-                    val dir = File(AppEnv.savesDir(), "avatars").apply { mkdirs() }
-                    File(dir, name + ".png").writeBytes(bytes)
-                    avatarCache.remove(name)
-                }
-                // 完全适配：酒馆 v2 内嵌世界书 → DICK 世界卡（与桌面版一致）
-                var worldNote = ""
-                if (card.worldEntries.isNotEmpty()) {
-                    try {
-                        val wn = name + " 的世界书"
-                        val wFile = File(AppEnv.worldsDir(), wn + ".json")
-                        val existing = try {
-                            (JsonS.parse(wFile.readText(Charsets.UTF_8)) as? J.Obj)?.fields?.get("entries") as? J.Arr
-                        } catch (_: Exception) { null }
-                        val entries = J.Arr()
-                        if (existing != null) {
-                            val existingIds = existing.items.mapNotNull { (it as? J.Obj)?.fields?.get("id")?.str() }.toSet()
-                            existing.items.forEach { entries.items.add(it) }
-                            card.worldEntries.forEach { e ->
-                                val id = e.fields["id"]?.str() ?: ""
-                                if (id !in existingIds) entries.items.add(e)
-                            }
-                        } else {
-                            card.worldEntries.forEach { entries.items.add(it) }
+                return@on
+            }
+            withContext(Dispatchers.Main) {
+                when (outcome) {
+                    is CardImport.Nothing -> Unit
+                    is CardImport.BadFormat -> sysMsgs.add(ChatMsg("系统",
+                        I18n.t("card_import_fail", "⚠️ 无法识别的角色卡格式（需 v1/v2/v3 JSON 或 PNG 嵌卡）")))
+                    is CardImport.Done -> {
+                        roles.add(outcome.name to outcome.systemPrompt)
+                        if (outcome.wroteAvatar) avatarCache.remove(outcome.name)
+                        for ((wn, desc) in outcome.worldPairs) {
+                            if (worlds.none { it.first == wn }) worlds.add(wn to desc)
                         }
-                        val w = J.Obj()
-                        w.fields["name"] = J.Str(wn)
-                        w.fields["description"] = J.Str("从角色卡「" + name + "」导入的酒馆世界书")
-                        w.fields["rules"] = J.Arr()
-                        w.fields["entries"] = entries
-                        w.fields["params"] = J.Obj()
-                        wFile.parentFile?.mkdirs()
-                        wFile.writeText(JsonS.stringify(w, pretty = true), Charsets.UTF_8)
-                        worldNote = "，世界书 " + card.worldEntries.size + " 条 → 世界卡「" + wn + "」"
-                        // 刷新世界列表
-                        val worldsDir = AppEnv.worldsDir()
-                        worldsDir.listFiles()?.filter { it.isFile && it.name.endsWith(".json") && !it.name.startsWith("_tree_") && !it.name.startsWith(".") }?.forEach { f ->
-                            try {
-                                val wo = JsonS.parse(f.readText(Charsets.UTF_8)) as? J.Obj ?: return@forEach
-                                val wn2 = wo.fields["name"]?.str() ?: f.nameWithoutExtension
-                                val wd = WorldData.fromJson(wo)
-                                val desc = renderWorldDesc(wd.description, wd.params)
-                                if (worlds.none { it.first == wn2 }) worlds.add(wn2 to desc)
-                            } catch (_: Exception) {}
-                        }
-                    } catch (e: Exception) {
-                        android.util.Log.w("DICK", "世界书写入失败: " + (e.message ?: ""))
+                        sysMsgs.add(ChatMsg("系统", I18n.t("card_import_ok", "已导入角色：") + outcome.name + outcome.worldNote))
+                        // 若在工坊里导入，同步刷新本地列表（角色卡/世界卡）—— 列表已在 IO 线程枚举好
+                        wsLocalRoles.clear(); wsLocalRoles.addAll(outcome.wsRoles)
+                        wsLocalWorlds.clear(); wsLocalWorlds.addAll(outcome.wsWorlds)
                     }
                 }
-                sysMsgs.add(ChatMsg("系统", I18n.t("card_import_ok", "已导入角色：") + name + worldNote))
-                // 若在工坊里导入，同步刷新本地列表（角色卡/世界卡）
-                runCatching {
-                    wsLocalRoles.clear(); wsLocalRoles.addAll(Workshop.localRoles())
-                    wsLocalWorlds.clear(); wsLocalWorlds.addAll(Workshop.localWorlds())
-                }
-            } catch (e: Exception) {
-                sysMsgs.add(ChatMsg("系统", I18n.t("card_import_fail", "⚠️ 导入失败：") + (e.message ?: "")))
             }
         }
     }
 
     val exportCardLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("*/*")) { uri ->
         val target = exportTarget
+        exportTarget = null
         if (target != null && uri != null) {
-            try {
-                val (name, fmt) = target
-                val roleFile = File(AppEnv.savesDir(), name + ".json")
-                val obj = if (roleFile.exists()) (JsonS.parse(roleFile.readText(Charsets.UTF_8)) as? J.Obj) ?: J.Obj() else J.Obj()
-                val prompt = obj.fields["system_prompt"]?.str() ?: ""
-                val cardData = obj.fields["card_data"] as? J.Obj
-                // 关联世界卡（`<角色名> 的世界书`）→ 导出时写回酒馆 extensions.world（无损反向）
-                val worldEntries = mutableListOf<J.Obj>()
-                try {
-                    val wFile = File(AppEnv.worldsDir(), name + " 的世界书.json")
-                    if (wFile.exists()) {
-                        val wo = JsonS.parse(wFile.readText(Charsets.UTF_8)) as? J.Obj
-                        val arr = wo?.fields?.get("entries") as? J.Arr
-                        arr?.items?.forEach { (it as? J.Obj)?.let { e -> worldEntries.add(e) } }
-                    }
-                } catch (_: Exception) {}
-                val v2 = CardCompat.dickToV2(name, prompt, cardData, worldEntries)
-                if (fmt == "json") {
-                    context.contentResolver.openOutputStream(uri)?.use {
-                        it.write(JsonS.stringify(v2, pretty = true).toByteArray(Charsets.UTF_8))
-                    }
-                } else {
-                    var png: ByteArray? = null
-                    val av = File(AppEnv.savesDir(), "avatars")
-                    for (ext in listOf("png", "jpg", "jpeg", "webp")) {
-                        val f = File(av, name + "." + ext)
-                        if (f.exists()) { png = f.readBytes(); break }
-                    }
-                    val base = png ?: CardCompat.placeholderPng(name)
-                    val out = CardCompat.pngEmbedCard(base, v2) ?: base
-                    context.contentResolver.openOutputStream(uri)?.use { it.write(out) }
+            val (name, fmt) = target
+            // 嵌卡导出要读头像、拼 PNG 块、写 URI —— 都是重活，交给 io 线（见 CardIo.kt）
+            Lanes.on(Lanes.io, "导出角色卡") {
+                val msg = try {
+                    exportCardHeavy(context, uri, name, fmt)
+                    "✅ " + I18n.t("btn_export_json", "导出完成") + "：" + name
+                } catch (e: Exception) {
+                    I18n.t("card_export_fail", "⚠️ 导出失败：") + (e.message ?: "")
                 }
-                sysMsgs.add(ChatMsg("系统", "✅ " + I18n.t("btn_export_json", "导出完成") + "：" + name))
-            } catch (e: Exception) {
-                sysMsgs.add(ChatMsg("系统", I18n.t("card_export_fail", "⚠️ 导出失败：") + (e.message ?: "")))
+                withContext(Dispatchers.Main) { sysMsgs.add(ChatMsg("系统", msg)) }
             }
         }
-        exportTarget = null
     }
 
-val wsExportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
+    val wsExportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
         val t = wsExportTarget
+        wsExportTarget = null
         if (t != null && uri != null) {
-            try {
-                val f = File(if (wsLocalType == "角色卡") AppEnv.savesDir() else AppEnv.worldsDir(), File(t).name)
-                context.contentResolver.openOutputStream(uri)?.use { it.write(f.readBytes()) }
-                wsStatus = "✅ 已导出"
-            } catch (e: Exception) {
-                wsStatus = "❌ " + (e.message ?: "")
+            val srcDir = if (wsLocalType == "角色卡") AppEnv.savesDir() else AppEnv.worldsDir()
+            val src = File(srcDir, File(t).name)
+            Lanes.on(Lanes.io, "工坊导出") {
+                val msg = try {
+                    copyFileToUri(context, uri, src)
+                    "✅ 已导出"
+                } catch (e: Exception) {
+                    "❌ " + (e.message ?: "")
+                }
+                withContext(Dispatchers.Main) { wsStatus = msg }
             }
         }
-        wsExportTarget = null
     }
 
     /** 头像裁剪：解码 → 居中正方形 → 256x256 PNG */
@@ -621,20 +544,43 @@ val wsExportLauncher = rememberLauncherForActivityResult(ActivityResultContracts
     }
 
     fun saveTree() {
-        try {
-            val sf = SaveFile("_tree", "", tree.toData(), treeTs = utcNowIso())
-            TreeStore.save(treeFileFor(), sf)
+        // 关键：整棵树的序列化 + 写盘是重活，不该占着主线程（调用点大多在主线程上：
+        // landAssistantReply / clearHistory / 导入卡片…）。
+        // 做法：**在主线程取快照**（避免 IO 线程序列化时树正被改），再交给 io 线写盘。
+        val snapshot = try {
+            SaveFile("_tree", "", tree.toData(), treeTs = utcNowIso())
         } catch (_: Exception) {
+            return
         }
-        // 进度同步：后台线程推到工坊服务器（不阻塞保存）
-        if (Workshop.syncEnabled()) {
-            val cardId = syncCardId()
+        val path = treeFileFor()
+        Lanes.on(Lanes.io, "存档落盘") {
             try {
-                val treeJson = tree.toData().toJson()
-                Thread {
-                    try { Workshop.pushSave(cardId, treeJson) } catch (_: Exception) {}
-                }.start()
-            } catch (_: Exception) {}
+                TreeStore.save(path, snapshot)
+            } catch (_: Exception) {
+            }
+        }
+        // 进度同步：走 net 线（原来是 new 一个裸 Thread —— 同样的事，但至少归线管、看得见）
+        if (Workshop.syncEnabled()) {
+            try {
+                val cardId = syncCardId()
+                val treeJson = snapshot.historyTree.toJson()
+                Lanes.on(Lanes.net, "推工坊同步") {
+                    try {
+                        Workshop.pushSave(cardId, treeJson)
+                    } catch (_: Exception) {
+                    }
+                }
+            } catch (_: Exception) {
+            }
+        }
+    }
+
+    /** 机制状态落盘：**在主线程取快照**（这一刻的 state），写盘丢给 io 线。
+     *  和 saveTree() 同一个道理 —— 序列化要趁数据没被改完，写盘可以慢慢来。 */
+    fun persistMechAsync() {
+        val pending = try { mech.pendingStateWrite() } catch (_: Exception) { null } ?: return
+        Lanes.on(Lanes.io, "机制状态落盘") {
+            try { mech.flushState(pending.first, pending.second) } catch (_: Exception) {}
         }
     }
 
@@ -832,7 +778,7 @@ val wsExportLauncher = rememberLauncherForActivityResult(ActivityResultContracts
             saveTree()
         } catch (_: Exception) {
         }
-        mech.persistState()  // 同时落第三个文件夹 JSON（与树双写，双保险）
+        persistMechAsync()  // 同时落第三个文件夹 JSON（与树双写，双保险）
         mechTick++
     }
 
@@ -1101,8 +1047,8 @@ val wsExportLauncher = rememberLauncherForActivityResult(ActivityResultContracts
         engine.stopSequences = parseStops(stopInput)
         engine.temperature = tempInput.toFloatOrNull()
         engine.topP = topPInput.toFloatOrNull()
-        // 探测本地 Ollama（真机 127.0.0.1；模拟器 10.0.2.2 映射宿主机）
-        Thread {
+        // 探测本地 Ollama（真机 127.0.0.1；模拟器 10.0.2.2 映射宿主机）—— 走 net 线，别自己开裸线程
+        Lanes.on(Lanes.net, "探测本地 Ollama") {
             val targets = listOf("http://127.0.0.1:11434/v1/models", "http://10.0.2.2:11434/v1/models")
             for (t in targets) {
                 try {
@@ -1110,13 +1056,13 @@ val wsExportLauncher = rememberLauncherForActivityResult(ActivityResultContracts
                     c.connectTimeout = 2000
                     c.readTimeout = 2000
                     if (c.responseCode < 500) {
-                        scope.launch(Dispatchers.Main) { ollamaOnline = true }
+                        withContext(Dispatchers.Main) { ollamaOnline = true }
                         break
                     }
                 } catch (_: Exception) {
                 }
             }
-        }.apply { isDaemon = true }.start()
+        }
         if (language.isBlank()) language = I18n.detect()
         I18n.lang = language
         // 种子数据
@@ -1233,17 +1179,17 @@ val wsExportLauncher = rememberLauncherForActivityResult(ActivityResultContracts
         Workshop.primeDiscovery()
         // 进度同步：后台拉取服务器最新树，若比本地新则载入（内部探测配置/局域网/隧道；无则静默跳过）
         val cardId = syncCardId()
-        Thread {
+        Lanes.on(Lanes.net, "拉取服务器树") {
             try {
-                val fetched = Workshop.fetchSave(cardId) ?: return@Thread
+                val fetched = Workshop.fetchSave(cardId) ?: return@on
                 val serverTs = fetched.first
                 val serverTree = fetched.second
                 if (serverTs.isNotEmpty()) {
-                    android.os.Handler(android.os.Looper.getMainLooper()).post {
+                    withContext(Dispatchers.Main) {
                         // 生成中：不覆盖，避免撤回刚生成的回复
-                        if (busy) return@post
+                        if (busy) return@withContext
                         // 已切别的角色：这条 fetch 是对旧卡的，丢弃，避免把旧树套到新卡上
-                        if (syncCardId() != cardId) return@post
+                        if (syncCardId() != cardId) return@withContext
                         // 关键：用「当前」本地 ts 再比对（可能已被用户新回复推进），而不用启动时
                         // 定格的旧 localTreeTs —— 否则慢网络拉取会在回复之后落地，把整树回滚成旧版
                         val curTs = try { TreeStore.load(treeFileFor()).treeTs } catch (_: Exception) { localTreeTs }
@@ -1256,14 +1202,14 @@ val wsExportLauncher = rememberLauncherForActivityResult(ActivityResultContracts
                     }
                 }
             } catch (_: Exception) {}
-        }.start()
+        }
         // 进度同步：后台拉取共享的模型连接配置（API 码，主线程应用）
-        Thread {
+        Lanes.on(Lanes.net, "拉取共享连接配置") {
             try {
-                val api = Workshop.fetchApi() ?: return@Thread
+                val api = Workshop.fetchApi() ?: return@on
                 val key = (api.fields["api_key"] as? J.Str)?.v?.trim() ?: ""
-                if (key.isEmpty()) return@Thread
-                android.os.Handler(android.os.Looper.getMainLooper()).post {
+                if (key.isEmpty()) return@on
+                withContext(Dispatchers.Main) {
                     val pid = (api.fields["provider"] as? J.Str)?.v?.takeIf { it.isNotBlank() } ?: providerId
                     apiKey = key
                     apiKeysMap[pid] = key
@@ -1275,7 +1221,7 @@ val wsExportLauncher = rememberLauncherForActivityResult(ActivityResultContracts
                     engine.baseUrl = baseUrl
                 }
             } catch (_: Exception) {}
-        }.start()
+        }
         // 机制/战斗初始化（防御：任何数据异常不得阻断启动）
         try {
             mech.stateFile = stateFileFor()  // 第三个文件夹：机制状态 JSON（与树解耦）
@@ -1449,12 +1395,13 @@ val wsExportLauncher = rememberLauncherForActivityResult(ActivityResultContracts
             busy = true
             input = ""
             streaming = ""
-            Thread {
+            // 图片理解是网络 + 大字节的活（原来又是裸 Thread），走 vision 线：一次一张，看得见
+            Lanes.on(Lanes.vision, "图片描述") {
                 val desc = VisionHelper.describe(
                     img.bytes, img.mime,
                     "请用中文详细描述这张图片的内容（包括文字、物体、场景、数据，如有表格请逐项列出）。",
                 )
-                scope.launch(Dispatchers.Main) {
+                withContext(Dispatchers.Main) {
                     if (desc == null) {
                         busy = false
                         sysMsgs.add(ChatMsg("系统", I18n.t("vision_fail", "⚠️ 图片识别失败（免费视觉链被限流或网络问题），请稍后重试")))
@@ -1463,7 +1410,7 @@ val wsExportLauncher = rememberLauncherForActivityResult(ActivityResultContracts
                         doSend(text, img.bmp, "【图片描述】" + desc)
                     }
                 }
-            }.apply { isDaemon = true }.start()
+            }
             return
         }
         doSend(text, null, null)
@@ -1505,7 +1452,7 @@ val wsExportLauncher = rememberLauncherForActivityResult(ActivityResultContracts
             // 无机制效果的选项：暴击/失败不空转提示
         }
         mech.applyEffect(aff, item.st, forceRelative = true)  // GAL 选项：int 强制累加（无符号也按 +N）
-        mech.persistState()  // GAL 选项结算后实时落盘（否则重启从旧 JSON 恢复 → 看似"从0加"）
+        persistMechAsync()  // GAL 选项结算后实时落盘（否则重启从旧 JSON 恢复 → 看似"从0加"）
         mechTick++
         if (kind == "rare") {
             mech.pendingEvent = J.Obj().apply {
@@ -1572,7 +1519,8 @@ val wsExportLauncher = rememberLauncherForActivityResult(ActivityResultContracts
         var finalReply = parsed.second
         val stripped = mech.stripTags(parsed.second, apply = true)
         // 里层结算完成 → 外层泛用变量检测存储：实时落盘第三个文件夹 JSON
-        mech.persistState()
+        // （走 io 线：这是文件写，原来在主线程上做）
+        persistMechAsync()
         // 正则管道（ai 作用域）：标签剥离后、写入树前应用
         val regexed = applyRegex(stripped, "ai")
         if (mech.state != null) {
@@ -1592,7 +1540,8 @@ val wsExportLauncher = rememberLauncherForActivityResult(ActivityResultContracts
         checkEnding()  // 结局达成检测：命中→弹结局横幅+注入收束（不打扰当前回复）
         streaming = ""
         busy = false
-        registry.onMessageReceived(userText, finalReply)
+        // 插件钩子在 plugin 线上跑：慢插件（联网/合成）不再挡着"回复已显示"这一步
+        Lanes.on(Lanes.plugin, "插件钩子") { try { registry.onMessageReceived(userText, finalReply) } catch (_: Exception) {} }
         if (speakReplies) speak(tts, finalReply)
     }
 
@@ -1637,6 +1586,9 @@ val wsExportLauncher = rememberLauncherForActivityResult(ActivityResultContracts
                     chain = engineChain(),
                     systemPrompt = sys,
                     onStream = { full ->
+                        // 这块看着像"该丢到后台去"，但它不能搬：stripTags 会写 mech 的 state
+                        // （apply=false 也会新建 status 字段），多个线程同时碰就是数据竞争。
+                        // 所以流式剥标签留在主线程串行做 —— 快不是这里的第一优先级。
                         scope.launch(Dispatchers.Main) {
                             streaming = mech.stripTags(full, apply = false)
                         }
@@ -1702,6 +1654,7 @@ val wsExportLauncher = rememberLauncherForActivityResult(ActivityResultContracts
         engine.send(
             chain = engineChain(),
             systemPrompt = sys,
+            // 与开局处同一个取舍：stripTags 会写 mech state，只能主线程串行（见上面的长注释）
             onStream = { full -> scope.launch(Dispatchers.Main) { streaming = mech.stripTags(full, apply = false) } },
             onResponse = { reply, _ ->
                 scope.launch(Dispatchers.Main) {

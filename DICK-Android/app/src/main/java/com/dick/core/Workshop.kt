@@ -327,12 +327,12 @@ object Workshop {
 
     // ============ 树存档同步（聊天进度互通） ============
 
-    /** 后台预热局域网发现（避免在主线程做 UDP/超时导致 ANR）。 */
+    /** 后台预热局域网发现（避免在主线程做 UDP/超时导致 ANR）。走 net 线，别自己开裸线程。 */
     fun primeDiscovery() {
         try {
-            Thread {
+            Lanes.on(Lanes.net, "预热局域网发现") {
                 try { discoverCached() } catch (_: Exception) {}
-            }.start()
+            }
         } catch (_: Exception) {}
     }
 

@@ -16,7 +16,14 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
 sys.path.insert(0, ROOT)
 
-TMP = tempfile.mkdtemp(prefix="dick_player_test_")
+TMP_ROOT = tempfile.mkdtemp(prefix="dick_player_test_")
+# 数据目录再往下套两层，而不是直接用 mkdtemp 的返回值：
+# `_find_player_dir()` 会往 base_dir 的**上两层**找播放器（打包版 DICK 的兜底逻辑），
+# 而有些 Python 环境里 `tempfile.gettempdir()` 会退化成"当前工作目录" —— 那上两层正好是
+# 工程根，于是它会找到真的构建产物，「还没构建时探测结果是 None」这条就直接红了
+# （本机 venv 的 3.11 就是这样：TEMP 在它的应用程序容器里不可写 → 退化成 cwd）。
+TMP = os.path.join(TMP_ROOT, "inner", "data")
+os.makedirs(TMP, exist_ok=True)
 
 import html_app
 html_app.BASE_DIR = TMP          # 数据目录重定向到临时目录
@@ -161,7 +168,7 @@ check(not os.path.exists(os.path.join(DEST, "旧文件.txt")),
       "再次导出会重建目录（不留上次的残留）")
 check(os.path.isfile(os.path.join(DEST, "story", "codex.json")), "重建后故事仍在")
 
-shutil.rmtree(TMP, ignore_errors=True)
+shutil.rmtree(TMP_ROOT, ignore_errors=True)
 print("")
 print("通过 %d 项，失败 %d 项" % (ok, bad))
 sys.exit(1 if bad else 0)

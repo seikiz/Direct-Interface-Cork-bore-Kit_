@@ -8,6 +8,7 @@ import com.dick.core.ChatEngine
 import com.dick.core.ChatTree
 import com.dick.core.J
 import com.dick.core.JsonS
+import com.dick.core.Lanes
 import com.dick.core.MessageNode
 
 /**
@@ -149,11 +150,12 @@ class GalgamePlugin : Plugin {
         }
         // 生成时定格叶子（该 AI 回复节点），选项生成后写到它上面，回档到它能复原
         val targetNode = tree?.currentLeafId
-        Thread {
+        // 生成一次要等模型回一整个 JSON 数组 —— 网络活，走 net 线（原来是一个裸 Thread）
+        Lanes.on(Lanes.net, "生成 GAL 选项") {
             val e = engine
             if (e == null) {
                 synchronized(this) { loading = false; error = "引擎未就绪" }
-                return@Thread
+                return@on
             }
             val n = maxOf(2, minOf(4, count))
             // 机制卡：若启用好感/状态，选项需附带机制效果（前端小字展示）
@@ -213,7 +215,7 @@ class GalgamePlugin : Plugin {
                 }
                 loading = false
             }
-        }.apply { isDaemon = true }.start()
+        }
     }
 
     private fun buildTranscript(): String {

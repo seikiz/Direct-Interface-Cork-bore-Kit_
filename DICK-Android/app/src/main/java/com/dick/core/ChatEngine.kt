@@ -175,6 +175,10 @@ class ChatEngine(
             return
         }
         isProcessing = true
+        // 这一条**故意**是裸线程，不走 Lanes：它是流式读取的专用工作线程 ——
+        // 里面是阻塞的 HttpURLConnection 读循环，还要能被 stop() 随时打断（interrupt）。
+        // 丢进分道的话，一次生成就会长期占住一条线的名额，其它任务全排在后面；
+        // 而且 stops 的语义需要拿到这个 Thread 引用。别的活该走线就走线。
         val worker = Thread {
             try {
                 var result = post(buildBody(chain, systemPrompt, true, true))
