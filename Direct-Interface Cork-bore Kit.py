@@ -612,6 +612,16 @@ class HtmlApp:
         self.font_size = int(self.config.get("ui_font", 0) or 0)
         self.loaded_document = None  # {"name","chars"}
         self._lock = threading.Lock()
+        # 模块分道执行：每个模块一条自己的运行线（见 jobs.py）。
+        # 现在的慢活儿之所以互相拖，是因为全挤在"一个 busy + 一堆裸线程"上；
+        # 这里先把线建起来，随后按模块把活儿搬进去（网络/视觉/语音/生图/记忆/插件/落盘）。
+        try:
+            import jobs
+            jobs.start()
+            self._jobs_seq = 0
+        except Exception as e:
+            print("[jobs] 分道初始化失败（不影响主流程）：%s" % str(e)[:120])
+            self._jobs_seq = 0
         self.ollama_online = False   # 本地 Ollama 是否可用（后台探测）
         self.codex_auto_open = None  # 双击 .codex 文件启动时，待自动打开的包名
         self.codex_volume = 100      # CODEX 播放器音量 0-100
@@ -1087,6 +1097,25 @@ class HtmlApp:
                 "codex_auto_open": self.codex_auto_open,
             }
 
+    def api_jobs_status(self):
+        """分道执行状态：每条线在跑什么、队列多长、最近耗时/错误。"""
+        try:
+            import jobs
+            return {"ok": True, **jobs.status()}
+        except Exception as e:
+            return {"ok": False, "err": str(e)[:120]}
+
+    def _jobs_delta(self):
+        """取分道结果流的增量（供 poll 带走）。没有 jobs 模块时安静返回空。"""
+        try:
+            import jobs
+            evs = jobs.drain(getattr(self, "_jobs_seq", 0))
+            if evs:
+                self._jobs_seq = evs[-1]["seq"]
+            return evs
+        except Exception:
+            return []
+
     def api_poll(self, last_seq):
         with self._lock:
             items = [m for m in self.messages if m["seq"] > last_seq]
@@ -1096,7 +1125,10 @@ class HtmlApp:
                     "choices": self._choices_state(),
                     "mechanism": {"config": getattr(self.core, "_mech_config", None),
                                   "state": self.core.mechanism_snapshot()},
-                    "battle": self.core.battle_ui_state()}
+                    "battle": self.core.battle_ui_state(),
+                    # 分道执行的结果流：异步任务（工坊/语音/记忆…）干完了从这里回来，
+                    # 前端不需要为它们额外开通道，坐着现有的 poll 就行。
+                    "jobs": self._jobs_delta()}
 
     def _roll_option(self, item):
         """点选项时按配置概率表 ROLL（百分比可配：机制卡 mechanics.roll，默认
@@ -6906,6 +6938,12 @@ def main():
         "Direct-Interface Cork-bore Kit v2.0", html_path, js_api=app,
         width=1060, height=820, min_size=(860, 640), background_color="#0f1115")
     webview.start()
+    # 窗口关掉之后收线：别再让分道线程拖着进程
+    try:
+        import jobs
+        jobs.shutdown()
+    except Exception:
+        pass
 
 
 if __name__ == "__main__":
