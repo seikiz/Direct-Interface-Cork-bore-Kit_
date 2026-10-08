@@ -11,12 +11,10 @@ datas = [('web', 'web'), ('plugins', 'plugins'), ('saves', 'saves'), ('worlds', 
          ('web_fetch.py', '.'), ('stock_analysis.py', '.'), ('doc_layout.py', '.'),
          ('i18n.py', '.'), ('app_paths.py', '.'), ('card_compat.py', '.'),
          # 插件 import 的根模块：PyInstaller 只分析入口脚本，插件是数据文件、
-         # 它的 import 不会被跟进 → 这两个漏了就会让 6 个插件加载失败
-         ('ui_fonts.py', '.'), ('plugin_base.py', '.'),
+         # 它的 import 不会被跟进 → 这几个漏了就会让插件加载失败
+         ('plugin_base.py', '.'), ('host_ui.py', '.'),
          # 围棋规则引擎（主程序 import，显式列出更保险）
          ('go_engine.py', '.'),
-         # 插件共用的隐藏 Tk 根窗口（避免插件冒出空的可见 TK 窗口）
-         ('ui_root.py', '.'),
          ('text_guard.py', '.'),
          # 树权重/剪枝：DICK_core 和主程序都是【函数内部】才 import，
          # PyInstaller 静态分析看不到 —— 漏了就是本地能打分、打包版报「缺少模块」。
@@ -56,12 +54,10 @@ hiddenimports = ['openai', 'PIL', 'requests', 'flask', 'openpyxl', 'docx', 'edge
                  'webview', 'webview.platforms.edgechromium', 'webview.platforms.winforms',
                  'clr_loader', 'pythonnet', 'bottle',
                  'voice_engine', 'plugins.jp_patch_plugin', 'voicebank_importer', 'image_gen',
-                 # 插件是懒加载 tkinter，PyInstaller 静态分析看不到 → 必须显式声明，
-                 # 否则打包版里 modern_ui / image_upload / worldbook_editor 三个插件全部加载失败
-                 'tkinter', 'tkinter.filedialog', 'tkinter.messagebox', 'tkinter.ttk',
-                 'tkinter.colorchooser', 'tkinter.simpledialog', 'tkinter.font',
-                 # 三个插件（现代界面/图片上传/世界书编辑器）用的是 customtkinter
-                 'customtkinter', 'darkdetect',
+                 # Tk 时代结束（2026-10）：插件要界面改走 host_ui（宿主的 pywebview 对话框/提示）。
+                 # 原来这里显式声明 tkinter.* / customtkinter 是为了让三个 Tk 插件能在打包版里加载；
+                 # 那三个插件（现代界面/图片上传/世界书编辑器）已连同 ui_root/ui_fonts 一起退役，
+                 # 现在改成在 excludes 里【显式排除】Tcl/Tk —— 每次发布省 3.5 MB，也少一类窗口级故障。
                  # UTAU 进程内合成（用户无需安装 utau_env）
                  'putao', 'putao.core', 'putao.utau', 'putao.model', 'putao.exceptions', 'putao.utils',
                  'jaconv', 'mido', 'pykakasi', 'pypinyin', 'pydub', 'numpy', 'plugins.utau_speak',
@@ -74,12 +70,12 @@ hiddenimports = ['openai', 'PIL', 'requests', 'flask', 'openpyxl', 'docx', 'edge
                  'cryptography.hazmat.bindings._rust']
 
 # UTAU 进程内合成：从 3.11 utau_env 收集 putao 及其依赖（numpy 等编译扩展必须走 binaries）
-# customtkinter 也放这里：它带 assets/themes/*.json 和字体，必须连数据文件一起收
+# 注意：customtkinter 已不再收集（随 Tk 插件一起退役）
 import os as _os
 _UTAU_SP = 'C:/Users/seiki/Desktop/dist/utau_env/Lib/site-packages'
 if _os.path.isdir(_UTAU_SP):
     for _pkg in ('putao', 'numpy', 'pykakasi', 'pypinyin', 'pydub', 'jaconv', 'mido',
-                 'customtkinter', 'cryptography'):
+                 'cryptography'):
         try:
             _tmp = collect_all(_pkg)
             datas += _tmp[0]; binaries += _tmp[1]; hiddenimports += _tmp[2]
@@ -97,7 +93,10 @@ a = Analysis(
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
-    excludes=[],
+    # 显式排除 Tcl/Tk：不排除的话，PyInstaller 会因为别处间接引用把
+    # tcl86t.dll + tk86t.dll（3.5 MB）继续打进每次发布。
+    excludes=['tkinter', '_tkinter', 'customtkinter', 'darkdetect', 'PIL.ImageTk', 'turtle',
+              'turtledemo', 'idlelib', 'lib2to3'],
     noarchive=False,
     optimize=0,
 )

@@ -52,9 +52,9 @@ playable things (choice-driven scenes, mechanics/affection systems, one-click st
 | **三端实现** | 桌面（Python + pywebview）· 安卓（Kotlin + Compose）· 原生播放器（Compose Multiplatform，EXE 与 APK 同源） |
 | **跨端一致性** | 120 个线性图标由 `web/index.html` 的 `ICONS` **单点生成** → `tools/gen_android_icons.py` → 108 个 Android VectorDrawable；两端各有防漂移测试（改一边忘了另一边会红） |
 | **测试** | `tests/` **64 个独立脚本 / 1,583 次断言** + Node 图标回归 + 安卓 kotlinc 自检；GitHub Actions 在 **Python 3.11 与 3.12** 矩阵上逐个跑，任一失败即红 |
-| **插件架构** | 22 个插件类（4 个默认关闭）；声明式 `settings_schema` / `ui_buttons` 自动生成界面；钩子 `on_load/on_unload/on_message_send/on_message_received/contextInjection/on_command`；另有子进程 JSON-RPC 协议插件 |
+| **插件架构** | 20 个插件类（4 个默认关闭，含 1 个协议示例）；声明式 `settings_schema` / `ui_buttons` 自动生成界面；钩子 `on_load/on_unload/on_message_send/on_message_received/contextInjection/on_command`；另有子进程 JSON-RPC 协议插件。**插件要界面走 `host_ui`**（宿主的原生文件对话框 + 聊天内提示），不许自带 GUI 库 |
 | **安全与可靠** | 战斗公式走 **AST 白名单求值**（绝不 `eval`）；存档 **原子写 + 备份 + 校验自愈**；API Key 用 Windows DPAPI 加密落盘；加密备份容器 `.dickbackup` **配独立解密工具**（没有 DICK 也能开自己的档） |
-| **打包** | PyInstaller onedir + 自检流水线：包内 `web/index.html` 必须与源码一致且含 **16 个特征串**（专治打包缓存旧前端） |
+| **打包** | PyInstaller onedir + 自检流水线：包内 `web/index.html` 必须与源码一致且含 **16 个特征串**（专治打包缓存旧前端）；**不打包 Tcl/Tk**（Tk 时代遗产已清，每次发布少 ~3.5 MB 与一类窗口级故障） |
 | **多厂商** | 内置 14 家 / 106 个模型，含免 Key 免费链与本地 Ollama；生图引擎四种后端（OpenAI 兼容 / Pollinations 免 Key / 本地 A1111 / 本地 ComfyUI） |
 | **文档** | 6 份使用与开发文档；其中《状态变量说明》与实现的一致性由测试锁定（改了代码不改文档会红） |
 
@@ -100,7 +100,7 @@ playable things (choice-driven scenes, mechanics/affection systems, one-click st
 - 免 Key 免费档的实测边界：**右下角带 pollinations.ai 水印**（`nologo=true` 去不掉），请求 1024 也可能只回 768 —— 要干净大图就填 Key 或走本地 SD
 
 ### 其他
-- **插件系统**：23 个内置插件（Python 后端），`.py` 丢进 `plugins/` 即用，无商店无审核；**声明式**设置与界面按钮（写 `settings_schema` / `ui_buttons` 就自动生成 UI）。标准见 `PLUGIN_DEV.md`；另有子进程 JSON-RPC 协议插件
+- **插件系统**：20 个内置插件（Python 后端，含 1 个协议示例），`.py` 丢进 `plugins/` 即用，无商店无审核；**声明式**设置与界面按钮（写 `settings_schema` / `ui_buttons` 就自动生成 UI）；要文件对话框/提示就调 **`host_ui`**（宿主提供，插件不必自带 GUI 库）。标准见 `PLUGIN_DEV.md`；另有子进程 JSON-RPC 协议插件
 - 正则管道（ai/user 作用域）、去 AI 味、文本/风格闸门（零宽字符防线）
 - 财报助手（10 个官方政策源深爬 + 本地政策库 + 49 条金融史年表 1617–2026）、A 股技术面分析、联网搜索、日中互译、骰子、文档读写（Word/Excel）
 - **多厂商**：内置 **14 家 / 106 个模型**（DeepSeek、OVH 免 Key 免费链、阿里百炼、智谱、硅基流动、Moonshot、火山方舟、百度千帆、MiniMax、阶跃星辰、OpenAI、Anthropic、Gemini、Ollama 本地），可自定义 base_url 与模型名；支持代理与中转
@@ -162,7 +162,7 @@ node install.js     # 或双击 install.bat
 | `DICK_core.py` | 聊天核心：树状记忆、上下文裁剪、群聊隔离、机制/战斗结算的胶水层 |
 | `image_gen.py` | 生图引擎：四种后端（OpenAI 兼容 / Pollinations 免 Key / 本地 SD / 本地 ComfyUI）+ 预设覆盖层 + seed |
 | `codex_core.py` | CODEX 成作引擎（剧本解析 → 校验 → 独立 HTML / EXE / `.codex` 包） |
-| `plugins/` | 23 个插件 + `protocol/` 协议插件 |
+| `plugins/` | 19 个插件 + `protocol/` 协议插件（共 20 个）；插件要界面统一走 `host_ui.py` |
 | `DICK-Android/` | 安卓端（Compose）：`core` / `app` / `plugins` / `tools` 四层 |
 | `DICK-Narrative/` | Compose Multiplatform 原生 GALGAME 播放器（EXE + APK），故事格式见其 README |
 | `tests/` | 60 个 Python 测试脚本（逐个独立运行）+ JS 图标回归 |

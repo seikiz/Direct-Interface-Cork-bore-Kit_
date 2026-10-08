@@ -519,7 +519,8 @@ def _seed_defaults(base_dir):
 
 class HtmlApp:
     # 已并入核心（底层）的 UI 插件：不再作为可开关插件出现，也不可被禁用
-    CORE_UI_PLUGINS = ("现代界面", "Live2D 看板娘")
+    # （Tk 时代的「现代界面」已随 Tk 一起退役 —— HTML 版的主题由前端自己管）
+    CORE_UI_PLUGINS = ("Live2D 看板娘",)
 
     def __init__(self):
         # 运行时可重定向：优先 app_paths.get_base_dir()（测试/自定义数据目录可直接
@@ -581,6 +582,9 @@ class HtmlApp:
         self.core.set_rolling_summary_enabled(bool(self.config.get("rolling_summary", True)))
 
         self.plugin_manager = PluginManager(self.core, config_file=self.config_file)
+        # 插件要界面（选文件/提示）走宿主这条通道；必须在 load_plugins 之前接上，
+        # 否则插件 on_load 里想弹提示就只能退回自己拉 GUI 库（Tk 时代就是这么背上的）。
+        self._install_host_ui()
         self.plugin_manager.load_plugins()
         for p in self.plugin_manager.get_all_plugins():
             states = self.config.get("plugin_states", {})
@@ -6335,6 +6339,72 @@ class HtmlApp:
             return {"ok": False, "err": msg}
         return {"ok": True, "msg": msg, "presets": image_gen.list_presets(
             image_gen.load_presets(self.base_dir))}
+
+    # ---------- 插件要界面：走 host_ui 这条唯一通道（别让插件自己拉 GUI 库） ----------
+    def _install_host_ui(self):
+        """把宿主的对话框与提示接给插件（见 host_ui.py 的说明）。"""
+        try:
+            import host_ui
+            host_ui.set_ui(ask_file=self._host_ask_file, ask_save=self._host_ask_save,
+                           notify=self._host_notify)
+            return True
+        except Exception as e:
+            print("[host_ui] 接入失败：%s" % str(e)[:120])
+            return False
+
+    def _host_window(self):
+        try:
+            import webview
+            return webview.windows[0] if getattr(webview, "windows", None) else None
+        except Exception:
+            return None
+
+    def _host_ask_file(self, title="选择文件", types=(), multiple=False):
+        """宿主侧实现：走 pywebview 的原生文件对话框（跨平台、不引入 Tk）。"""
+        win = self._host_window()
+        if win is None:
+            return None
+        import webview
+        is_folder = types and types[0] == "__folder__"
+        try:
+            if is_folder:
+                res = win.create_file_dialog(webview.FileDialog.FOLDER)
+            else:
+                res = win.create_file_dialog(
+                    webview.FileDialog.OPEN, allow_multiple=bool(multiple),
+                    file_types=tuple(types) if types else ("All files (*.*)",))
+        except Exception as e:
+            print("[host_ui] 打开对话框失败：%s" % str(e)[:120])
+            return None
+        if not res:
+            return None
+        if multiple:
+            return list(res)
+        return res[0]
+
+    def _host_ask_save(self, title="保存到", default_name="", types=()):
+        win = self._host_window()
+        if win is None:
+            return None
+        import webview
+        try:
+            res = win.create_file_dialog(webview.FileDialog.SAVE,
+                                         save_filename=default_name or "untitled",
+                                         file_types=tuple(types) if types else ("All files (*.*)",))
+        except Exception as e:
+            print("[host_ui] 保存对话框失败：%s" % str(e)[:120])
+            return None
+        return res[0] if res else None
+
+    def _host_notify(self, text, speaker="插件", level="info"):
+        """宿主侧实现：插进聊天记录的一条系统消息（前端本来就会渲染系统消息）。"""
+        icon = {"info": "ℹ️", "warn": "⚠️", "error": "⛔"}.get(level, "ℹ️")
+        try:
+            self.sys_msgs.append({"kind": "ai", "speaker": "%s %s" % (icon, speaker),
+                                  "content": str(text), "node_id": None})
+            self._rebuild_messages()
+        except Exception:
+            print("[host_ui] %s: %s" % (speaker, text))
 
     def _offline_key(self):
         """离线推进按"这一局是谁"记账（按角色名，群聊就按集合）"""

@@ -68,14 +68,10 @@ class L2DPlugin(PluginBase):
                 return c
         return cand[0]
 
-    # ---------- 插件坞按钮动作（Tk 端） ----------
+    # ---------- 插件坞按钮动作 ----------
     def toggle_display(self):
-        """Tk 端没有前端渲染，给出提示"""
-        try:
-            from tkinter import messagebox
-            messagebox.showinfo(
-                "Live2D 看板娘",
-                "请在 HTML 界面启用：⚙️ 设置 → 插件 → 勾选「Live2D 看板娘」\n\n"
-                "模型目录：web/live2d/models/（放置 .model3.json 文件）")
-        except Exception:
-            pass
+        """给出启用提示（走宿主通道，不再依赖 Tk 的 messagebox）"""
+        import host_ui
+        host_ui.notify("请在 HTML 界面启用：⚙️ 设置 → 插件 → 勾选「Live2D 看板娘」\n"
+                       "模型目录：web/live2d/models/（放置 .model3.json 文件）",
+                       speaker="Live2D 看板娘")

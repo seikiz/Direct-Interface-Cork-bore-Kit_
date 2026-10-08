@@ -3,6 +3,11 @@
 > DICK 的插件是 **Python 后端插件**（`plugins/*.py`）——与酒馆（SillyTavern）的前端 JS extension 不同：
 > 酒馆插件操作界面，DICK 插件挂接**引擎能力**（模型通道 / 文件系统 / 网络 / 机制卡 / 战斗 / CODEX）。
 > 本文档是编写插件必须遵守的标准。
+>
+> ⚠️ **插件不许自带 GUI 库**（`tkinter` / `customtkinter` / PyQt…）。要文件对话框、提示、确认，一律调
+> **`host_ui`**（见 §五之二）：它是宿主的界面通道，跨平台、不引入额外依赖。历史教训：以前插件图方便
+> `from tkinter import filedialog`，结果整个应用被迫背着 Tcl/Tk（每次发布 3.5 MB），还得在启动时建一个
+> 隐藏 Tk 根窗口 —— 而那个窗口被关掉会**连带整个程序退出**。`tests/test_no_tk.py` 现在会拦住这种事。
 
 ---
 
@@ -192,6 +197,40 @@ def on_command(self, command, args):
         aff = st.get("affection")
         return f"❤️ 当前好感：{aff}", False
 ```
+
+---
+
+## 九之二、要界面就调 host_ui（别自带 GUI 库）
+
+插件需要"选个文件""提示一句"时，调宿主通道 `host_ui`（`host_ui.py`，随包分发）：
+
+```python
+import host_ui
+
+path = host_ui.ask_file("选择酒馆卡 (PNG/JSON)",
+                        types=("卡片文件 (*.png;*.json)", "所有文件 (*.*)"))
+if not path:
+    return "已取消（或当前环境没有对话框）", False      # 无界面环境返回 None，插件要能降级
+
+save_to = host_ui.ask_save("导出到", default_name="角色卡.json", types=("JSON (*.json)",))
+folder  = host_ui.ask_folder("选择模型目录")            # 选目录
+host_ui.notify("导入完成：3 张角色卡、1 张世界卡", speaker="酒馆卡片导入")
+host_ui.notify("这个文件解析不了", level="warn")        # level: info / warn / error
+```
+
+规则与语义：
+
+| 事项 | 说明 |
+|---|---|
+| **不要** | `import tkinter` / `customtkinter` / PyQt…（`tests/test_no_tk.py` 会红，打包也会被迫背上 Tcl/Tk） |
+| 返回 None | 表示"用户取消"**或**"当前环境没有界面"（手机端/服务端/测试）——插件必须把它当正常分支处理 |
+| `notify` 去哪 | 作为一条系统消息进聊天记录（前端本来就会渲染系统消息） |
+| 可选能力 | `host_ui.capabilities()` 返回 `{"ask_file":bool,"ask_save":bool,"notify":bool}`，可据此决定要不要给按钮 |
+| 参数形式 | `types` 用 pywebview 的写法：`"说明 (*.png;*.jpg)"`；不传就 `All files (*.*)` |
+| 宿主没接上 | 不会抛异常：`ask_*` 返 None、`notify` 打到 `debug.log` |
+
+> 一句话：**插件只挂引擎能力，界面一律向宿主要** —— 这样插件在电脑版/手机版都能用，也不用为了一个文件框
+> 让整个应用背一整套 GUI 库。
 
 ---
 

@@ -324,8 +324,8 @@ def step_selfcheck():
         ("dick_backup_tool.py", "独立解密工具：缺了加密备份就绑死在 DICK 上"),
         ("go_engine.py", "围棋规则引擎"),
         ("text_guard.py", "零宽字符防线"),
-        ("ui_root.py", "插件共用隐藏 Tk 根窗口"),
-        ("ui_fonts.py", "插件字体"),
+        # Tk 时代结束：ui_root/ui_fonts 随三个 Tk 插件一起退役；插件要界面走 host_ui
+        ("host_ui.py", "插件向宿主要界面的通道：缺了插件的选文件/提示全失效"),
         ("gothic_frame.html", "哥特边框前端"),
     ]
     bad2 = 0

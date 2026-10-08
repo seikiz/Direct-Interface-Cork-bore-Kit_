@@ -17,9 +17,9 @@ import uuid
 import base64
 import re
 from datetime import datetime
-from tkinter import filedialog
 from plugin_base import PluginBase
 import app_paths
+import host_ui
 
 # 可选解析库
 try:
@@ -103,12 +103,14 @@ class ImportTavernCard(PluginBase):
     # 核心导入入口
     # ============================================================
     def _import_card(self):
-        file_path = filedialog.askopenfilename(
-            title="选择酒馆卡 (PNG/JSON)",
-            filetypes=[("卡片文件", "*.png *.json"), ("PNG图片", "*.png"), ("JSON文件", "*.json"), ("所有文件", "*.*")]
-        )
+        # 界面走宿主通道（host_ui），不再 import tkinter —— 那是 Tk 时代的欠债：
+        # 为了几个文件框，整个应用要背 Tcl/Tk（3.5 MB），还要建隐藏 Tk 根窗口。
+        file_path = host_ui.ask_file(
+            "选择酒馆卡 (PNG/JSON)",
+            types=("卡片文件 (*.png;*.json)", "PNG图片 (*.png)", "JSON文件 (*.json)",
+                   "所有文件 (*.*)"))
         if not file_path:
-            return "已取消", False
+            return "已取消（或当前环境没有文件对话框）", False
 
         try:
             if PARSER_AVAILABLE:

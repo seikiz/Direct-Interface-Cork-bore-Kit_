@@ -66,14 +66,11 @@ class PluginManager:
         self.unload_plugins()
         sys.path.insert(0, os.path.abspath("."))
         sys.path.insert(0, app_paths.get_base_dir())
-        # 先把隐藏的 Tk 根窗口建好再加载插件：
-        # 否则插件里 CTkToplevel()（无 master）会让 tkinter 自作主张造一个
-        # **可见的空窗口**，而且它被关掉会连带整个程序退出。
-        try:
-            import ui_root
-            ui_root.ensure_root()
-        except Exception as e:
-            print(f"[PluginManager] UI 根窗口创建失败（插件窗口可能异常）: {e}")
+        # Tk 时代结束（2026-10）：这里原来会先建一个"隐藏的 Tk 根窗口"，
+        # 因为插件里 CTkToplevel()（无 master）会让 tkinter 造出可见空窗口、
+        # 而且那个窗口被关掉会连带整个程序退出 —— 一个纯粹的 GUI 库副作用。
+        # 三个 Tk 插件（现代界面/图片上传/世界书编辑器）已退役，
+        # 插件要界面改走 host_ui（宿主的 pywebview 对话框 + 聊天内提示），这里不再需要任何 Tk。
         states = self._load_states()
 
         # 依次扫描所有插件目录：内置目录在前，用户目录在后（可覆盖内置同名插件）
