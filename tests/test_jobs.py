@@ -149,6 +149,29 @@ def main():
     n_before = threading.active_count()
     check(u"没有留下跑着的分道线程", n_before <= 3, u"活跃线程 %d" % n_before)
 
+    print(u"\n== ⑩ 多工作线程的线（互不依赖的活儿才允许）==")
+    jobs.start()
+    st = jobs.status()
+    check(u"net 线报告 3 个工作线程", st["lanes"]["net"]["workers"] == 3,
+          str(st["lanes"]["net"]))
+    check(u"plugin/io 线仍是 1（保序：钩子与落盘不能乱序）",
+          st["lanes"]["plugin"]["workers"] == 1 and st["lanes"]["io"]["workers"] == 1,
+          str({k: st["lanes"][k]["workers"] for k in ("plugin", "io")}))
+    # net 线有 3 个工作线程 → 两个任务应当能同时在跑（用会合点证明，而不是靠 sleep 猜）
+    marks2 = []
+    barrier2 = threading.Barrier(2, timeout=3)
+
+    def rendezvous2(tag):
+        barrier2.wait()
+        marks2.append(tag)
+        return tag
+    jobs.submit("net", rendezvous2, "a", name="net-a")
+    jobs.submit("net", rendezvous2, "b", name="net-b")
+    jobs.wait_idle("net", timeout=5)
+    check(u"net 线的两个任务同时进入会合点（多工作线程真并行）",
+          sorted(marks2) == ["a", "b"], str(marks2))
+
+    jobs.shutdown(timeout=3)
     print("\n" + "=" * 62)
     print(u"通过 %d / 失败 %d" % (PASS, FAIL))
     if not FAIL:

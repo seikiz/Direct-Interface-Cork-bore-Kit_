@@ -51,6 +51,13 @@ def choices_state():
     return app.api_state()["choices"]
 
 def wait_idle():
+    # 2026-10 起插件钩子跑在「plugin 线」上（回复不再被慢插件挡住）——
+    # 所以先等这条线排空，再等插件自己的 loading 标志。
+    try:
+        import jobs
+        jobs.wait_idle("plugin", timeout=10)
+    except Exception:
+        pass
     deadline = time.time() + 10
     while plug.choices_loading and time.time() < deadline:
         time.sleep(0.05)
@@ -111,7 +118,7 @@ st = choices_state()
 check([x["text"] for x in st["items"]] == ["轻轻敲门", "转身离开", "直接推门而入"], "自动生成进入 state: %r" % st["items"])
 # 同一回合再回调（滑条候选）→ 不重复生成
 app._on_response("另一版回复", None)
-time.sleep(0.3)
+wait_idle()          # 同样要等 plugin 线（钩子是异步完成的）
 check(choices_state()["items"] == st["items"], "滑条候选不重复生成")
 plug.set_setting("auto", False)
 

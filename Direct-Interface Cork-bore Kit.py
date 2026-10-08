@@ -742,11 +742,17 @@ class HtmlApp:
                 "stream": False,
             }
             try:
-                r = requests.post(ds_base.rstrip("/") + "/chat/completions",
-                                  json=body,
-                                  headers={"Content-Type": "application/json",
-                                           "Authorization": "Bearer " + ds_key},
-                                  timeout=90, proxies=proxies)
+                # 走 vision 线：并发有上限（不会一次堆十个看图请求）、耗时可见、超时可控
+                import jobs as _jobs
+                _ok, r, _err = _jobs.run("vision", requests.post,
+                                         ds_base.rstrip("/") + "/chat/completions",
+                                         timeout=95, name="看图描述",
+                                         json=body,
+                                         headers={"Content-Type": "application/json",
+                                                  "Authorization": "Bearer " + ds_key},
+                                         proxies=proxies)
+                if not _ok or r is None:
+                    raise RuntimeError(_err or "看图请求失败")
                 if r.status_code < 400:
                     content = ((r.json().get("choices") or [{}])[0].get("message") or {}).get("content")
                     if isinstance(content, str) and content.strip():
@@ -842,8 +848,11 @@ class HtmlApp:
             self.messages = msgs
             self.render_epoch += 1
 
-    def _save_tree(self):
-        """把当前聊天树写回第一个选中角色的文件（保留 name/system_prompt/card_data）"""
+    def _save_tree(self, wait=True):
+        """把当前聊天树写回第一个选中角色的文件（保留 name/system_prompt/card_data）
+
+        wait=False：自动落盘走 io 线（见下），界面不必等磁盘。
+        """
         if not self.selected_roles:
             return
         # 跑团会期锁定：被锁卡不可被当前会话清写/推送记忆树（防导入存档与跑团混淆）
@@ -874,8 +883,17 @@ class HtmlApp:
                     pass
                 try:
                     # 存档守护：覆盖前留底 + 原子写入（写一半崩溃也不会截断存档）
-                    save_guard.backup_file(os.path.join(self.save_dir, r["file"]))
-                    save_guard.atomic_write_json(os.path.join(self.save_dir, r["file"]), data)
+                    # 自动落盘（wait=False）走 io 线：整棵树可能几百 KB，写盘不该挡着界面刷新；
+                    # 显式保存/备份/退出仍走同步（wait=True）—— 那几处必须确保真的落盘了。
+                    _path = os.path.join(self.save_dir, r["file"])
+                    if wait:
+                        save_guard.backup_file(_path)
+                        save_guard.atomic_write_json(_path, data)
+                    else:
+                        import jobs as _jobs
+                        _jobs.submit("io", save_guard.atomic_write_json, _path, data,
+                                     name="自动落盘：" + str(r["name"]),
+                                     on_done=lambda _r, _e: None)
                 except Exception:
                     pass
                 # 同步内存快照：勾选/取消勾选切换时 _activate_core 从
@@ -1096,6 +1114,40 @@ class HtmlApp:
                 "battle": self.core.battle_ui_state(),
                 "codex_auto_open": self.codex_auto_open,
             }
+
+    # ---------- 分道执行：通用异步通道 ----------
+    # 前端调 api_job_submit(kind, args) → 立刻拿到 job id；干完的结果从 poll 的 jobs 流回去。
+    # 这样慢活儿（工坊网络/看图/插件钩子）不再占着一次 js_api 调用等在那儿。
+    #
+    # 任务体直接复用现成的 api_* 实现（不另写一份）—— 名字映射，避免出现第二套逻辑。
+    JOB_KINDS = {
+        # kind                           线         现成的实现
+        "workshop.test": ("net", "workshop_test"),
+        "workshop.list": ("net", "workshop_list"),
+        "workshop.search": ("net", "workshop_search"),
+        "workshop.download": ("net", "workshop_download"),
+        "workshop.like": ("net", "workshop_like"),
+        "workshop.upload": ("net", "workshop_upload"),
+        "workshop.plugins": ("net", "workshop_plugins"),
+        "workshop.install_plugin": ("net", "workshop_install_plugin"),
+    }
+
+    def api_job_submit(self, kind, args=None):
+        """投一个异步任务。返回 {ok, job} —— 结果稍后从 poll 的 jobs 里回来。"""
+        import jobs
+        spec = self.JOB_KINDS.get(str(kind or ""))
+        if not spec:
+            return {"ok": False, "err": "未知任务类型：" + str(kind)[:40]}
+        lane, api_name = spec
+        fn = getattr(self, "api_" + api_name, None)
+        if not callable(fn):
+            return {"ok": False, "err": "任务实现缺失：api_" + api_name}
+        argv = args if isinstance(args, (list, tuple)) else []
+        jid = jobs.submit(lane, fn, *argv, name=kind)
+        if jid is None:
+            # 线满了：明确告诉前端（它可以退化成同步调用），而不是悄悄不动
+            return {"ok": False, "err": "任务队列已满（%s）" % lane, "busy_lane": lane}
+        return {"ok": True, "job": jid, "lane": lane}
 
     def api_jobs_status(self):
         """分道执行状态：每条线在跑什么、队列多长、最近耗时/错误。"""
@@ -1644,14 +1696,21 @@ class HtmlApp:
             except Exception:
                 pass
             self._present_ending()
-            self._save_tree()
+            self._save_tree(wait=False)  # 自动落盘：走 io 线，别挡界面
             self._rebuild_messages()
             self.streaming = ""
             self.busy = False
             for p in self.plugin_manager.get_all_plugins():
                 if p.enabled:
+                    # 走 plugin 线 + 超时：插件钩子只是**通知**，不需要挡着回复；
+                    # 某个插件卡住时（网络/弹窗/死循环）只会让它自己记一笔超时，
+                    # 回复照常结束 —— 单线程时代这里是直接串在回复路径上的。
                     try:
-                        p.on_message_received(getattr(self, "_last_user", ""), clean)
+                        import jobs as _jobs
+                        _jobs.submit("plugin", p.on_message_received,
+                                     getattr(self, "_last_user", ""), clean,
+                                     name="插件钩子：" + str(getattr(p, "name", "?")),
+                                     timeout=15)
                     except Exception:
                         pass
         except Exception as e:
@@ -1807,7 +1866,7 @@ class HtmlApp:
                 self._append_sys("🌐 已穿越到世界线「" + str(sw) + "」")
         except Exception:
             pass
-        self._save_tree()
+        self._save_tree(wait=False)  # 自动落盘：走 io 线，别挡界面
         self._rebuild_messages()
         self.streaming = ""
         self.busy = False
@@ -1815,8 +1874,13 @@ class HtmlApp:
             self._maybe_auto_turn(2)
         for p in self.plugin_manager.get_all_plugins():
             if p.enabled:
+                # 同上：钩子不挡回复（plugin 线 + 单任务 15 秒超时）
                 try:
-                    p.on_message_received(getattr(self, "_last_user", ""), ai_reply)
+                    import jobs as _jobs
+                    _jobs.submit("plugin", p.on_message_received,
+                                 getattr(self, "_last_user", ""), ai_reply,
+                                 name="插件钩子：" + str(getattr(p, "name", "?")),
+                                 timeout=15)
                 except Exception:
                     pass
         # 围棋：从模型回复里解析落子（引擎校验；非法/找不到就驳回重选或兜底）
@@ -1830,7 +1894,7 @@ class HtmlApp:
         self.streaming = ""
         self.busy = False
         self.opening_loading = False     # 出错也要收掉开场加载态，否则会一直转圈
-        self._save_tree()
+        self._save_tree(wait=False)  # 自动落盘：走 io 线，别挡界面
         # 商业化质量的错误提示：把裸异常转成"用户能行动"的指引
         msg = str(err_msg or "")
         low = msg.lower()

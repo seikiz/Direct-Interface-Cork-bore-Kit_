@@ -34,29 +34,34 @@ import time
 import traceback
 
 DEFAULT_LANES = (
-    # 线名      队列上限  说明
-    ("talk", 8),      # 主对话生成：保序，必须串行
-    ("net", 32),      # 网络请求（工坊、搜索、下载）
-    ("vision", 4),    # 看图描述（LLM 调用，慢）
-    ("voice", 16),    # TTS / UTAU 合成与播放
-    ("image", 8),     # 生图
-    ("memory", 8),    # 摘要 / 记忆归档 / 剪枝
-    ("plugin", 32),   # 插件钩子与命令
-    ("io", 16),       # 落盘 / 导出 / 备份
+    # 线名         队列上限  工作线程  说明
+    ("talk", 8, 1),      # 主对话生成：保序，必须串行
+    ("net", 32, 3),      # 网络请求（工坊、搜索、下载）：彼此独立 → 可以并行
+    ("vision", 4, 2),    # 看图描述（LLM 调用，慢）
+    ("voice", 16, 1),    # TTS / UTAU 合成与播放：设备是独占的，串行
+    ("image", 8, 1),     # 生图：后端本身排队，这里串行即可
+    ("memory", 8, 1),    # 摘要 / 记忆归档 / 剪枝：改同一份数据，必须串行
+    ("plugin", 32, 1),   # 插件钩子：**保序**（同一个插件要先看到前一条回复）
+    ("io", 16, 1),       # 落盘 / 导出 / 备份：保序
 )
+# 注意：workers > 1 的线【不保证 FIFO】—— 只给互不依赖的活儿用（网络请求、看图）。
+# 对话、插件钩子、落盘必须留在 1 工作线程的线上，否则会出现"先发的后到"。
 
 
 class _Lane:
-    def __init__(self, name, cap):
+    def __init__(self, name, cap, workers=1):
         self.name = name
+        self.workers = max(1, int(workers or 1))
         self.q = queue.Queue(maxsize=cap)
-        self.thread = None
+        self.threads = []
+        self.thread = None          # 兼容旧字段：指向第一条线程
         self.busy = False
         self.current = None
         self.started = 0
         self.done = 0
         self.failed = 0
         self.dropped = 0
+        self.timed_out = 0
         self.last_error = ""
         self.last_ms = 0.0
         self._stop = threading.Event()
@@ -71,17 +76,41 @@ class _Lane:
                 continue
             if task is None:            # 收线信号
                 break
-            jid, fn, args, kw, on_done, label = task
+            jid, fn, args, kw, on_done, label, timeout = task
             with self._lock:
                 self.busy = True
                 self.current = label
                 self._mark_running(jid)
             t0 = time.time()
             ok, result, err = True, None, ""
-            try:
-                result = fn(*args, **kw)
-            except Exception as e:
-                ok, err = False, "%s: %s" % (type(e).__name__, str(e)[:200])
+            if timeout and timeout > 0:
+                # 带超时：丢进子线程等它 —— Python 杀不掉线程，但**这条线可以不等它，继续往下走**。
+                # 这正是"一个卡死的插件不该堵住整条线"的落点：超时记一笔，线继续。
+                box = {}
+
+                def _target():
+                    try:
+                        box["r"] = fn(*args, **kw)
+                    except Exception as e:
+                        box["e"] = "%s: %s" % (type(e).__name__, str(e)[:200])
+
+                th = threading.Thread(target=_target, name="dick-%s-task" % self.name, daemon=True)
+                th.start()
+                th.join(timeout)
+                if th.is_alive():
+                    ok = False
+                    err = "超时（>%gs）：已放弃等待，任务仍在后台跑" % timeout
+                    self.timed_out += 1
+                elif "e" in box:
+                    ok, err = False, box["e"]
+                else:
+                    result = box.get("r")
+            else:
+                try:
+                    result = fn(*args, **kw)
+                except Exception as e:
+                    ok, err = False, "%s: %s" % (type(e).__name__, str(e)[:200])
+            if not ok and not err.startswith("超时"):
                 self.last_error = err
                 try:
                     traceback.print_exc()
@@ -163,19 +192,32 @@ def start(lanes=DEFAULT_LANES):
     with _lock:
         if _STARTED:
             return
-        for name, cap in lanes:
-            ln = _Lane(name, cap)
-            ln.thread = threading.Thread(target=ln._run, name="dick-" + name, daemon=True)
-            ln.thread.start()
+        for spec in lanes:
+            name, cap = spec[0], spec[1]
+            workers = spec[2] if len(spec) > 2 else 1
+            ln = _Lane(name, cap, workers)
+            for k in range(ln.workers):
+                th = threading.Thread(target=ln._run, name="dick-%s-%d" % (name, k), daemon=True)
+                th.start()
+                ln.threads.append(th)
+            ln.thread = ln.threads[0] if ln.threads else None
             _LANES[name] = ln
         _STARTED = True
 
 
 def submit(lane, fn, *args, **kw):
-    """往某条线投一个任务。返回 job id；线满/线不存在时返回 None（调用方可降级为同步执行）。"""
+    """往某条线投一个任务。返回 job id；线满/线不存在时返回 None（调用方可降级为同步执行）。
+
+    kw 里两个保留键：
+      name      —— 显示名（界面/poll 里看得到"现在在跑什么"）
+      on_done   —— 回调 (result_or_None, err)
+      timeout   —— 秒；超过就放弃等待、把该任务记为超时，**这条线继续往下走**
+                   （Python 杀不掉线程，卡住的任务只会在后台结束）
+    """
     start()
     label = kw.pop("name", "") or getattr(fn, "__name__", "task")
     on_done = kw.pop("on_done", None)
+    timeout = kw.pop("timeout", None)
     ln = _LANES.get(lane)
     if ln is None:
         return None
@@ -187,7 +229,7 @@ def submit(lane, fn, *args, **kw):
             for k in [k for k, v in _JOBS.items() if v.get("state") in ("done", "error")][:200]:
                 _JOBS.pop(k, None)
     try:
-        ln.q.put_nowait((jid, fn, args, kw, on_done, label))
+        ln.q.put_nowait((jid, fn, args, kw, on_done, label, timeout))
     except queue.Full:
         with _lock:
             ln.dropped += 1
@@ -197,6 +239,34 @@ def submit(lane, fn, *args, **kw):
                 j["err"] = "该条线的队列已满（%s）" % lane
         return None
     return jid
+
+
+def run(lane, fn, *args, timeout=30.0, name="", **kw):
+    """同步跑一个任务（但要它走某条线的排队与状态记录）。
+
+    给"结果必须马上拿到"的调用方用 —— 例如发消息路径上的看图描述：
+    它挡着这条请求的线程，但走 vision 线能保证**并发有上限、耗时可见、超时可控**。
+    返回 (ok, result, err)。
+    """
+    box = {}
+    ev = threading.Event()
+
+    def _done(r, e):
+        box["r"], box["e"] = r, e
+        ev.set()
+
+    jid = submit(lane, fn, *args, name=name or getattr(fn, "__name__", "task"),
+                 on_done=_done, timeout=timeout, **kw)
+    if jid is None:                     # 线不可用（或满了）：调用方自己兜底同步跑
+        try:
+            return True, fn(*args, **kw), ""
+        except Exception as e:
+            return False, None, "%s: %s" % (type(e).__name__, str(e)[:200])
+    if not ev.wait(timeout + 5.0):
+        return False, None, "等待 %s 线超时" % lane
+    if box.get("e"):
+        return False, None, box["e"]
+    return True, box.get("r"), ""
 
 
 def job(jid):
@@ -213,8 +283,10 @@ def status():
     with _lock:
         lanes = {}
         for name, ln in _LANES.items():
-            lanes[name] = {"busy": ln.busy, "current": ln.current, "queued": ln.q.qsize(),
+            lanes[name] = {"workers": ln.workers,
+                           "busy": ln.busy, "current": ln.current, "queued": ln.q.qsize(),
                            "done": ln.done, "failed": ln.failed, "dropped": ln.dropped,
+                           "timed_out": ln.timed_out,
                            "last_ms": round(ln.last_ms, 1), "last_error": ln.last_error}
         running = [dict(v) for v in _JOBS.values() if v.get("state") in ("queued", "running")]
         return {"lanes": lanes, "running": running[:40], "seq": _seq,
@@ -249,19 +321,20 @@ def wait_idle(lane=None, timeout=10.0):
 
 
 def shutdown(timeout=3.0):
-    """收线：投 None 信号并等线程结束。"""
+    """收线：给每个工作线程投一个 None 信号并等它们结束（多工作线程的线全都要收）。"""
     global _STARTED
     with _lock:
         lanes = list(_LANES.values())
     for ln in lanes:
-        try:
-            ln._stop.set()
-            ln.q.put_nowait(None)
-        except Exception:
-            pass
+        for _ in range(max(1, ln.workers)):
+            try:
+                ln.q.put_nowait(None)
+            except Exception:
+                pass
+        ln._stop.set()
     for ln in lanes:
-        if ln.thread:
-            ln.thread.join(timeout=timeout)
+        for th in (ln.threads or ([ln.thread] if ln.thread else [])):
+            th.join(timeout=timeout)
     with _lock:
         _LANES.clear()
         _STARTED = False

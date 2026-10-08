@@ -2179,6 +2179,8 @@ function poll() {
       renderChoices(res.choices);
       renderMechanism(res.mechanism);
       renderBattle(res.battle);
+      // 分道执行的异步结果从这里回来（jobWait 的 Promise 在这一刻 resolve）
+      jobResolveEvents(res.jobs);
     }).catch(function () {});
   } catch (e) {}
 }
@@ -2839,6 +2841,40 @@ document.getElementById('offlineUndoBtn').onclick = function () {
     }
   });
 };
+
+// ---------- 分道执行：把后端异步任务包成 Promise ----------
+// 后端现在按"一个模块一条运行线"干活（见 jobs.py）：慢活儿（工坊网络/看图/插件钩子）
+// 不再占着一次 js_api 调用干等。这里让调用方**几乎不用改**——
+// 把「api 名字加括号」那套换成 jobWait('kind', [参数])，拿到的还是 Promise。
+// 注意：注释里别写出真实的「pywebview.api.方法名(」形式 —— tests/test_js_api_binding.py
+// 是按原文扫"前端调了哪些接口"的，注释里的例子会被当成一次调用（这次就踩了）。
+var _jobWaiters = {};       // jobId -> {resolve, reject, timer}
+function jobWait(kind, args, timeoutMs) {
+  return new Promise(function (resolve, reject) {
+    pywebview.api.job_submit(kind, args || []).then(function (r) {
+      if (!r || !r.ok) { reject(new Error((r && r.err) || '任务提交失败')); return; }
+      var jid = r.job;
+      var timer = setTimeout(function () {
+        if (_jobWaiters[jid]) {
+          delete _jobWaiters[jid];
+          reject(new Error('任务超时（' + kind + '）'));
+        }
+      }, timeoutMs || 60000);
+      _jobWaiters[jid] = { resolve: resolve, reject: reject, timer: timer };
+    }).catch(reject);
+  });
+}
+function jobResolveEvents(events) {
+  (events || []).forEach(function (e) {
+    if (!e || e.type !== 'job') return;
+    var w = _jobWaiters[e.id];
+    if (!w) return;
+    delete _jobWaiters[e.id];
+    clearTimeout(w.timer);
+    if (e.ok) w.resolve(e.result);
+    else w.reject(new Error(e.err || '任务失败'));
+  });
+}
 
 document.getElementById('input').addEventListener('keydown', function (e) {
   if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); }
@@ -5258,7 +5294,7 @@ function wsSetPluginStatus(t) { document.getElementById('wsPluginStatus').textCo
 
 function wsRefreshPlugins() {
   wsSetPluginStatus('加载中...');
-  pywebview.api.workshop_plugins().then(function (r) {
+  jobWait('workshop.plugins', []).then(function (r) {
     if (!r || !r.ok) {
       wsSetPluginStatus('❌ ' + ((r && r.err) || '加载失败'));
       return;
@@ -5290,7 +5326,7 @@ function wsRefreshPlugins() {
         btn.onclick = function () {
           btn.disabled = true;
           btn.textContent = '⏳ 安装中...';
-          pywebview.api.workshop_install_plugin(p.id).then(function (rr) {
+          jobWait('workshop.install_plugin', [p.id]).then(function (rr) {
             if (rr && rr.ok) {
               btn.outerHTML = '<span style="font-size:11px;color:#4ade80;padding:3px 4px">✅ 已安装 ' + escapeHtml(rr.name || '') + '</span>';
               wsSetPluginStatus('✅ 安装成功：' + (rr.name || ''));
@@ -5319,7 +5355,7 @@ document.getElementById('wsPluginOpen').onclick = function () {
 
 function wsRefreshOnline() {
   wsSetStatus('加载中...');
-  pywebview.api.workshop_list().then(function (r) {
+  jobWait('workshop.list', []).then(function (r) {
     if (r && r.ok) {
       var cards = (r.cards || []).map(function (x) { return { id: x.id, name: x.name, author: x.author, downloads: x.downloads, likes: x.likes, tags: x.tags, type: '角色卡', original_name: x.original_name }; });
       var worlds = (r.worlds || []).map(function (x) { return { id: x.id, name: x.name, author: x.author, downloads: x.downloads, likes: x.likes, tags: x.tags, type: '世界卡', original_name: x.original_name }; });
@@ -7888,7 +7924,7 @@ document.getElementById('wsTestBtn').onclick = function () {
   pywebview.api.workshop_save_conn('', key, proxy).then(function () {
     wsRefreshAuto();
   });
-  pywebview.api.workshop_test().then(function (r) {
+  jobWait('workshop.test', []).then(function (r) {
     if (r && r.ok) {
       var st = r.stats || {};
       wsSetStatus('✅ 已连接（认证: ' + ((r.health && r.health.auth) || 'open') + ' · 下载 ' + (st.downloads || 0) + ' · 点赞 ' + (st.likes || 0) + '）');
@@ -7899,7 +7935,7 @@ document.getElementById('wsAllBtn').onclick = function () { wsRefreshOnline(); }
 document.getElementById('wsSearchBtn').onclick = function () {
   var q = document.getElementById('wsSearchInput').value.trim();
   wsSetStatus('搜索中...');
-  pywebview.api.workshop_search(q, '').then(function (r) {
+  jobWait('workshop.search', [q, '']).then(function (r) {
     if (r && r.ok) {
       wsFillOnline((r.results || []).map(function (x) { return { id: x.id, name: x.name, author: x.author, downloads: x.downloads, likes: x.likes, tags: x.tags, type: x.type || '角色卡', original_name: x.original_name }; }));
       wsSetStatus('找到 ' + (r.results || []).length + ' 个');
@@ -7909,7 +7945,7 @@ document.getElementById('wsSearchBtn').onclick = function () {
 document.getElementById('wsDownloadBtn').onclick = function () {
   if (!wsCurOnline) { alert('先在列表里选一个作品'); return; }
   wsSetStatus('下载中...');
-  pywebview.api.workshop_download(wsCurOnline.id, wsCurOnline.type, wsCurOnline.original_name || (wsCurOnline.name + '.json')).then(function (r) {
+  jobWait('workshop.download', [wsCurOnline.id, wsCurOnline.type, wsCurOnline.original_name || (wsCurOnline.name + '.json')]).then(function (r) {
     if (r && r.ok) {
       wsSetStatus('✅ 已下载：' + r.file);
       wsLoadLocal();
@@ -7920,7 +7956,7 @@ document.getElementById('wsDownloadBtn').onclick = function () {
 };
 document.getElementById('wsLikeBtn').onclick = function () {
   if (!wsCurOnline) { alert('先选一个作品'); return; }
-  pywebview.api.workshop_like(wsCurOnline.id, wsCurOnline.type).then(function (r) {
+  jobWait('workshop.like', [wsCurOnline.id, wsCurOnline.type]).then(function (r) {
     wsSetStatus(r && r.ok ? '✅ 已点赞' : '❌ ' + ((r && r.err) || '失败'));
   });
 };
@@ -7928,7 +7964,7 @@ document.getElementById('wsUploadBtn').onclick = function () {
   if (!wsCurLocal) { alert('先在「本地」页选一个要上传的文件'); return; }
   var name = wsCurLocal.filename.replace('.json', '');
   wsSetStatus('上传中...');
-  pywebview.api.workshop_upload(wsCurLocal.rtype, name).then(function (r) {
+  jobWait('workshop.upload', [wsCurLocal.rtype, name]).then(function (r) {
     wsSetStatus(r && r.ok ? '✅ 上传成功' : '❌ ' + ((r && r.err) || '上传失败'));
   });
 };
