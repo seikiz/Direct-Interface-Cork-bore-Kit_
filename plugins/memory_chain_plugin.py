@@ -22,6 +22,8 @@ from datetime import datetime
 
 from plugin_base import PluginBase
 import app_paths
+import shutil
+import mem_isolate
 
 
 def _atomic_write_json(path, data):
@@ -70,11 +72,79 @@ class MemoryChainPlugin(PluginBase):
         self.save_dir = os.path.join(base, "saves")
         self.memory_dir = os.path.join(base, "memory")
         os.makedirs(self.memory_dir, exist_ok=True)
-        self.chain_file = os.path.join(self.memory_dir, "chain.json")
+        # 人物专属 + 世界共享（2026-10）：
+        #   memory/<角色>/chain.json        该角色自己的归档索引（索引不再全局混装）
+        #   memory/<角色>/<角色>.partN.json 该角色的原文归档
+        #   memory/_world/                  世界记忆（所有角色共享，可同时演进）
+        # 老布局（memory/chain.json 一份混装所有角色 + 归档散在根目录）会在首次加载时按 key 迁移。
+        self.world_dir = os.path.join(self.memory_dir, mem_isolate.WORLD_DIR_NAME)
+        os.makedirs(self.world_dir, exist_ok=True)
+        self.chain_file = os.path.join(self.memory_dir, "chain.json")   # 老路径（仅迁移用）
         self.pending_recall = []   # 待回溯的历史消息 [(role, content), ...]
+
+    # ---------- 人物专属 / 世界共享 的路径 ----------
+    def _role_dir(self, role):
+        d = os.path.join(self.memory_dir, str(role or "未命名"))
+        os.makedirs(d, exist_ok=True)
+        return d
+
+    def _chain_path(self, role):
+        return os.path.join(self._role_dir(role), "chain.json")
+
+    def migrate_legacy(self):
+        """把老布局的全局 chain.json 按 key 拆到各角色目录，并把归档文件搬进去。
+
+        返回 (moved_parts, roles)。只搬不删；搬完把老 chain 改名备份（.migrated），
+        这样出问题还能回退 —— 记忆是全项目最不可替代的数据，迁移必须可逆。
+        """
+        moved, roles = 0, []
+        legacy = self.chain_file
+        if not os.path.isfile(legacy):
+            return moved, roles
+        try:
+            with open(legacy, "r", encoding="utf-8") as f:
+                chain = json.load(f)
+        except Exception:
+            return moved, roles
+        if not isinstance(chain, dict) or len(chain) <= 1:
+            return moved, roles          # 只有一个角色：不动，等它自己写新布局
+        for role, parts in chain.items():
+            role = str(role)
+            roles.append(role)
+            own = []
+            for part in (parts or []):
+                pname = str((part or {}).get("path") or "")
+                if not pname:
+                    continue
+                src = os.path.join(self.memory_dir, pname)
+                dst = os.path.join(self._role_dir(role), pname)
+                try:
+                    if os.path.isfile(src) and not os.path.exists(dst):
+                        shutil.move(src, dst)
+                        moved += 1
+                    own.append(part)
+                except Exception as e:
+                    print("[记忆链扩容] 迁移 %s 失败：%s" % (pname, str(e)[:80]))
+            try:
+                with open(self._chain_path(role), "w", encoding="utf-8") as f:
+                    json.dump({role: own}, f, ensure_ascii=False, indent=2)
+            except Exception as e:
+                print("[记忆链扩容] 写角色索引失败：%s" % str(e)[:80])
+        try:
+            os.replace(legacy, legacy + ".migrated")
+        except Exception:
+            pass
+        if moved or roles:
+            print("[记忆链扩容] 🔀 已迁移到人物专属目录：%d 个归档 / %d 个角色（老索引留了 .migrated）"
+                  % (moved, len(roles)))
+        return moved, roles
 
     def on_load(self):
         print("[记忆链扩容] 已加载：存档超过 %.1fMB 自动归档并生成压缩记忆" % (self.MAX_BYTES / 1_000_000))
+        try:
+            self.migrate_legacy()
+        except Exception as e:
+            print("[记忆链扩容] 老布局迁移出错（不影响使用）：%s" % str(e)[:120])
 
     # ============================================================
     # 基础工具
@@ -90,18 +160,29 @@ class MemoryChainPlugin(PluginBase):
     def _stem(self, path):
         return os.path.splitext(os.path.basename(path))[0]
 
-    def _load_chain(self):
+    def _load_chain(self, role=None):
+        """读某个角色自己的索引；role 为空时退回老路径（迁移期兼容）。"""
+        path = self._chain_path(role) if role else self.chain_file
         try:
-            with open(self.chain_file, "r", encoding="utf-8") as f:
+            with open(path, "r", encoding="utf-8") as f:
                 return json.load(f)
         except Exception:
+            if role:                      # 角色目录里还没有 → 试老布局（迁移前）
+                try:
+                    with open(self.chain_file, "r", encoding="utf-8") as f:
+                        old = json.load(f)
+                    return {role: old.get(role, [])} if isinstance(old, dict) else {}
+                except Exception:
+                    return {}
             return {}
 
-    def _save_chain(self, chain):
-        tmp = self.chain_file + ".tmp"
+    def _save_chain(self, chain, role=None):
+        """写回某个角色自己的索引（原子写）。角色目录里的索引只含该角色一个 key。"""
+        path = self._chain_path(role) if role else self.chain_file
+        tmp = path + ".tmp"
         with open(tmp, "w", encoding="utf-8") as f:
             json.dump(chain, f, ensure_ascii=False, indent=2)
-        os.replace(tmp, self.chain_file)
+        os.replace(tmp, path)
 
     def _safe_stem(self, stem):
         return re.sub(r'[\\/:*?"<>|]', "_", stem)
@@ -137,10 +218,10 @@ class MemoryChainPlugin(PluginBase):
         #    中间那段时间里存档只剩一份，而且重写用的是 open(path,"w") 非原子写 ——
         #    写一半失败，原件已不在原地、新文件还是坏的，就是「写炸」。
         #    改成：先落归档副本 → 再精简 → 再原子写回。任何时刻都至少有一份完整数据。
-        chain = self._load_chain()
+        chain = self._load_chain(stem)
         parts = chain.setdefault(safe, [])
         seq = len(parts) + 1
-        archive_path = os.path.join(self.memory_dir, f"{safe}.part{seq}.json")
+        archive_path = os.path.join(self._role_dir(stem), f"{safe}.part{seq}.json")
         _atomic_write_json(archive_path, data)
         parts.append({
             "part": seq,
@@ -149,7 +230,7 @@ class MemoryChainPlugin(PluginBase):
             "size": os.path.getsize(archive_path),
             "time": datetime.now().isoformat(),
         })
-        self._save_chain(chain)
+        self._save_chain(chain, stem)
 
         # 2. 精简内存树：只保留最近 KEEP_NODES 个节点 + 系统节点
         kept = self._trim_tree(keep=self.KEEP_NODES)
@@ -251,7 +332,7 @@ class MemoryChainPlugin(PluginBase):
             summary = self._ask_llm(text) or self._fallback_summary(messages)
             if not summary:
                 return
-            summary_path = os.path.join(self.memory_dir, f"{safe}.summary.json")
+            summary_path = os.path.join(self._role_dir(stem), f"{safe}.summary.json")
             _atomic_write_json(summary_path, {
                 "stem": stem,
                 "summary": summary,
@@ -262,10 +343,16 @@ class MemoryChainPlugin(PluginBase):
         except Exception as e:
             print(f"[记忆链扩容] 摘要后台任务失败: {e}")
 
+    def _summary_path(self, safe):
+        """摘要按角色分目录存放；老布局放在 memory/ 根目录（迁移期两种都认）"""
+        p = os.path.join(self.memory_dir, safe, f"{safe}.summary.json")
+        if os.path.isfile(p):
+            return p
+        return os.path.join(self.memory_dir, f"{safe}.summary.json")
+
     def _latest_summary(self, safe):
         try:
-            with open(os.path.join(self.memory_dir, f"{safe}.summary.json"),
-                      "r", encoding="utf-8") as f:
+            with open(self._summary_path(safe), "r", encoding="utf-8") as f:
                 return json.load(f)
         except Exception:
             return None
@@ -350,7 +437,7 @@ class MemoryChainPlugin(PluginBase):
         stem = self._stem(path)
         safe = self._safe_stem(stem)
         size_kb = os.path.getsize(path) / 1024 if os.path.exists(path) else 0
-        chain = self._load_chain().get(safe, [])
+        chain = self._load_chain(stem).get(safe, [])
         total_nodes = sum(p.get("nodes", 0) for p in chain)
         lines = [
             f"📁 当前存档：{os.path.basename(path)}（{size_kb:.0f} KB）",
@@ -370,8 +457,9 @@ class MemoryChainPlugin(PluginBase):
         path = self._active_save()
         if not path:
             return "📭 尚未发现存档文件"
-        safe = self._safe_stem(self._stem(path))
-        chain = self._load_chain().get(safe, [])
+        stem = self._stem(path)
+        safe = self._safe_stem(stem)
+        chain = self._load_chain(stem).get(safe, [])
         if not chain:
             return "🔗 记忆链为空，还没有归档的历史"
         try:
@@ -382,7 +470,9 @@ class MemoryChainPlugin(PluginBase):
         messages = []
         # 从最新的归档往前找，直到凑够 n 条
         for part in reversed(chain):
-            ap = os.path.join(self.memory_dir, part["path"])
+            ap = os.path.join(self._role_dir(stem), part["path"])
+            if not os.path.isfile(ap):        # 迁移前的老归档还散在 memory/ 根
+                ap = os.path.join(self.memory_dir, part["path"])
             msgs = self._archive_chain_messages(ap)
             messages = msgs + messages
             if len(messages) >= n:

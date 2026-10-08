@@ -13,6 +13,10 @@ datas = [('web', 'web'), ('plugins', 'plugins'), ('saves', 'saves'), ('worlds', 
          # 插件 import 的根模块：PyInstaller 只分析入口脚本，插件是数据文件、
          # 它的 import 不会被跟进 → 这几个漏了就会让插件加载失败
          ('plugin_base.py', '.'), ('host_ui.py', '.'),
+         # 函数内部才 import 的根模块（PyInstaller 静态分析看不到 → 打包版会 ImportError）：
+         #   jobs.py       模块分道执行（入口/插件都用）
+         #   mem_isolate.py 记忆隔离检测（记忆链插件用）
+         ('jobs.py', '.'), ('mem_isolate.py', '.'),
          # 围棋规则引擎（主程序 import，显式列出更保险）
          ('go_engine.py', '.'),
          ('text_guard.py', '.'),

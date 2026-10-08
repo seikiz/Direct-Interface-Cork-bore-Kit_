@@ -326,6 +326,8 @@ def step_selfcheck():
         ("text_guard.py", "零宽字符防线"),
         # Tk 时代结束：ui_root/ui_fonts 随三个 Tk 插件一起退役；插件要界面走 host_ui
         ("host_ui.py", "插件向宿主要界面的通道：缺了插件的选文件/提示全失效"),
+        ("jobs.py", "模块分道执行：缺了入口/插件里的 jobs.submit 全报错"),
+        ("mem_isolate.py", "记忆隔离检测：记忆链插件 import 它，缺了插件加载失败"),
         ("gothic_frame.html", "哥特边框前端"),
     ]
     bad2 = 0

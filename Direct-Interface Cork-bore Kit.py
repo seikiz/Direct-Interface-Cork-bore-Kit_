@@ -1149,6 +1149,35 @@ class HtmlApp:
             return {"ok": False, "err": "任务队列已满（%s）" % lane, "busy_lane": lane}
         return {"ok": True, "job": jid, "lane": lane}
 
+    def api_memory_audit(self):
+        """记忆隔离体检：人物专属记忆里有没有混进别人、世界记忆是否独立。
+
+        返回 {ok, verdict, report(人话), problems, legacy, warnings, migration(迁移计划), stats}
+        """
+        import mem_isolate
+        try:
+            names = [r.get("name") for r in (self.roles or []) if r.get("name")]
+        except Exception:
+            names = []
+        mem_dir = os.path.join(self.base_dir, "memory")
+        try:
+            rep = mem_isolate.audit(mem_dir, role_names=names)
+        except Exception as e:
+            return {"ok": False, "err": "体检失败：" + str(e)[:140]}
+        out = {"ok": True, "verdict": rep.get("verdict"),
+               "report": mem_isolate.render_report(rep),
+               "problems": rep.get("problems") or [],
+               "legacy": rep.get("legacy") or [],
+               "warnings": rep.get("warnings") or [],
+               "stats": rep.get("stats") or {},
+               "path": mem_dir}
+        if rep.get("verdict") in ("legacy", "leaky"):
+            try:
+                out["migration"] = mem_isolate.plan_migration(mem_dir, role_names=names)
+            except Exception:
+                out["migration"] = []
+        return out
+
     def api_jobs_status(self):
         """分道执行状态：每条线在跑什么、队列多长、最近耗时/错误。"""
         try:
