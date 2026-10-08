@@ -886,7 +886,7 @@ class ChatCore:
         """设置文档上下文；append=True 时追加到已有内容（20000 字符截断）"""
         new = (text or "").strip()
         if append and self.document_context:
-            merged = (self.document_context + "${BS}n${BS}n" + new).strip()
+            merged = (self.document_context + "\n\n" + new).strip()
             if len(merged) > 20000:
                 merged = merged[-20000:]
             self.document_context = merged or None

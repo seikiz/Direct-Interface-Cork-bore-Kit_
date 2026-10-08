@@ -143,7 +143,7 @@ def find_pagination(html_text, base_url, current_url="", limit=5):
         abs_url = _abs(href, base_url)
         if not abs_url or abs_url == cur or abs_url in seen:
             continue
-        is_next = (anchor and any(k in anchor.lower() for k in _PAGE_ANCHOR_KW)) or re.search(r"index[_-]{BS}d+", href, re.I)
+        is_next = (anchor and any(k in anchor.lower() for k in _PAGE_ANCHOR_KW)) or re.search(r"index[_-]\d+", href, re.I)
         if not is_next:
             continue
         seen.add(abs_url)
