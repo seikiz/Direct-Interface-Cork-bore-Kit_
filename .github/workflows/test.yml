@@ -51,10 +51,17 @@ jobs:
           FAILED=""
           for t in tests/test_*.py; do
             echo "== $t =="
-            if ! python "$t"; then
+            LOG="$(mktemp)"
+            # 每个失败脚本的**末尾几行**会被打成一条注解。
+            # 为什么这么做：job 日志要仓库 admin 权限才能下载，注解不用登录就能读 ——
+            # 2026-10 那次排查就是因为拿不到日志，只能靠本地猜。
+            if ! python "$t" 2>&1 | tee "$LOG"; then
               FAIL=1
               FAILED="$FAILED $t"
+              TAIL="$(tail -n 8 "$LOG" | sed 's/%/%25/g; s/\r//g' | awk '{printf "%s%%0A", $0}')"
+              echo "::error file=$t::$(basename "$t") 失败：$TAIL"
             fi
+            rm -f "$LOG"
           done
           if [ -n "$FAILED" ]; then
             echo "::error::失败的脚本：$FAILED"

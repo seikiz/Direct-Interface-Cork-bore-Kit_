@@ -4,12 +4,32 @@
 这一步和单元测试的区别：
   单元测试用的是工作区里的源文件；这里用的是【用户实际拿到的那两个文件】。
   打包漏文件、版本不一致、路径不对，都只会在这一步暴露。
+
+**没有发布包就跳过**（打印一行 SKIP 后 exit 0）：这个 zip 是 135 MB、不进仓库，
+CI（Ubuntu）上必然不存在。以前这里写死了 Windows 绝对路径，于是 CI 上直接
+FileNotFoundError —— 那是"本地专用测试在 CI 上必红"的一类问题，不该拿失败来报。
+跑得起来的条件（按顺序找）：
+    $DICK_RELEASE_ZIP → 工程上一级/DICK-发布/DICK-电脑版.zip → 工程内 _release_out/
 """
 import io, os, subprocess, sys, tempfile, zipfile
 
-ZIP = os.path.abspath(r"C:\Users\seiki\Desktop\DICK-发布\DICK-电脑版.zip")
-PY = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "utau_env", "Scripts", "python.exe")
-PY = os.path.abspath(PY)
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+
+def find_zip():
+    cands = [os.environ.get("DICK_RELEASE_ZIP"),
+             os.path.join(os.path.dirname(ROOT), "DICK-发布", "DICK-电脑版.zip"),
+             os.path.join(ROOT, "_release_out", "DICK-电脑版.zip"),
+             os.path.join(ROOT, "DICK-电脑版.zip")]
+    for c in cands:
+        if c and os.path.isfile(c):
+            return c
+    return None
+
+
+ZIP = find_zip()
+# 用当前解释器：以前写死 utau_env/Scripts/python.exe（Windows 专有路径）
+PY = sys.executable
 
 PASS = FAIL = 0
 def check(name, cond, detail=""):
@@ -24,6 +44,14 @@ def main():
     print("=" * 60)
     print("发布包内加密备份链路演练")
     print("=" * 60)
+
+    if ZIP is None:
+        print("SKIP：找不到发布包（DICK-电脑版.zip）。")
+        print("      这是**本地专用**测试：它要的是打包产物，CI 上没有（zip 不进仓库）。")
+        print("      想跑就先用 build_release.py 打出包，或设 DICK_RELEASE_ZIP 指过去。")
+        print("RELEASE_BACKUP_E2E_SKIPPED")
+        return 0
+    print("发布包：%s（%.1f MB）" % (ZIP, os.path.getsize(ZIP) / 1048576.0))
 
     z = zipfile.ZipFile(ZIP)
     names = [n.replace("\\", "/") for n in z.namelist()]
