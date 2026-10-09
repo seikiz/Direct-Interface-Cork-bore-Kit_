@@ -1,4 +1,4 @@
-$ErrorActionPreference = "Stop"
+﻿$ErrorActionPreference = "Stop"
 $ver = "8.10.2"
 $tools = Join-Path $env:USERPROFILE "kotlin-tools"
 New-Item -ItemType Directory -Force -Path $tools | Out-Null

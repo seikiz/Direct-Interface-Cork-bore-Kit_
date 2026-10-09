@@ -1,4 +1,4 @@
-$dist = Split-Path -Parent $MyInvocation.MyCommand.Path
+﻿$dist = Split-Path -Parent $MyInvocation.MyCommand.Path
 $py = "python"
 foreach ($s in @("net.py", "trpg_server.py")) {
   $run = $false

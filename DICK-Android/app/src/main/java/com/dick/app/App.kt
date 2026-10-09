@@ -101,6 +101,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.dick.core.AppConfig
 import com.dick.core.AppEnv
+import com.dick.core.ChatBridge
 import com.dick.core.ChatEngine
 import com.dick.core.ChatTree
 import com.dick.core.EndingJudge
@@ -114,6 +115,7 @@ import com.dick.core.RegexEngine
 import com.dick.core.RoleSaves
 import com.dick.core.SaveFile
 import com.dick.core.SaveSlot
+import com.dick.core.SpaceCore
 import com.dick.core.StyleGuard
 import com.dick.core.TextGuard
 import com.dick.core.TreeData
@@ -121,11 +123,13 @@ import com.dick.core.TreeStore
 import com.dick.core.WorldBook
 import com.dick.core.WorldData
 import com.dick.core.WorldEntry
+import com.dick.core.WorldPacks
 import com.dick.core.Workshop
 import com.dick.plugins.DicePlugin
 import com.dick.plugins.FinancialPlugin
 import com.dick.plugins.GalgamePlugin
 import com.dick.plugins.JpPlugin
+import com.dick.plugins.LifeSpacePlugin
 import com.dick.plugins.MathPlugin
 import com.dick.plugins.MemoryPlugin
 import com.dick.plugins.PluginRegistry
@@ -150,6 +154,9 @@ fun App() {
     val engine = remember { ChatEngine() }
     val registry = remember { PluginRegistry() }
     val tree = remember { ChatTree() }
+    // 世界卡的**原始 JSON**（按名字存）：生活层/空间层要读 params（年代、地图），
+    // 而界面上那份 `worlds` 只是"名字 → 渲染好的说明"，params 已经丢了。
+    val worldCards = remember { mutableStateMapOf<String, J.Obj>() }
     val dice = remember { DicePlugin() }
     val memory = remember { MemoryPlugin() }
     val swipe = remember { SwipePlugin() }
@@ -1047,6 +1054,8 @@ val importCardLauncher = rememberLauncherForActivityResult(ActivityResultContrac
         engine.stopSequences = parseStops(stopInput)
         engine.temperature = tempInput.toFloatOrNull()
         engine.topP = topPInput.toFloatOrNull()
+        // 生活层/空间层的每轮注入 → ChatBridge（钩子在 engineChain 之后挂好）
+        engine.contextProvider = { ChatBridge.injections() }
         // 探测本地 Ollama（真机 127.0.0.1；模拟器 10.0.2.2 映射宿主机）—— 走 net 线，别自己开裸线程
         Lanes.on(Lanes.net, "探测本地 Ollama") {
             val targets = listOf("http://127.0.0.1:11434/v1/models", "http://10.0.2.2:11434/v1/models")
@@ -1104,6 +1113,14 @@ val importCardLauncher = rememberLauncherForActivityResult(ActivityResultContrac
             }
         }
         val worldsDir = AppEnv.worldsDir()
+        // 世界卡库：把 APK 里附带的卡包释放到 world_packs/（只补缺，不覆盖用户改过的）。
+        // 读 assets + 写盘 → 走 io 线；`/世界包 装 <名字>` 从这里取卡。
+        Lanes.on(Lanes.io, "释放世界卡包") {
+            try {
+                WorldPacks.seedFromAssets(context.assets)
+            } catch (_: Exception) {
+            }
+        }
         if (worldsDir.listFiles().isNullOrEmpty()) {
             for ((n, d) in SAMPLE_WORLDS) {
                 val o = J.Obj()
@@ -1118,6 +1135,7 @@ val importCardLauncher = rememberLauncherForActivityResult(ActivityResultContrac
             try {
                 val o = JsonS.parse(f.readText(Charsets.UTF_8)) as? J.Obj ?: return@forEach
                 val n = o.fields["name"]?.str() ?: f.nameWithoutExtension
+                worldCards[n] = o
                 val wd = WorldData.fromJson(o)
                 val d = renderWorldDesc(wd.description, wd.params)
                 if (worlds.none { it.first == n }) worlds.add(n to d)
@@ -1260,6 +1278,8 @@ val importCardLauncher = rememberLauncherForActivityResult(ActivityResultContrac
         registry.register(gal)
         registry.register(MathPlugin())
         registry.register(UtauPlugin(context))
+        // 生活层 / 空间层 / 世界卡库（/生活、/在哪、/世界包）——与电脑端同名同义
+        registry.register(LifeSpacePlugin())
         memory.load()
         swipe.engine = engine
         jp.engine = engine
@@ -1335,6 +1355,55 @@ val importCardLauncher = rememberLauncherForActivityResult(ActivityResultContrac
             } else n
         }
     }
+
+    // ============================================================
+    //  生活层 / 空间层：把界面状态接到 core 的钩子上（ChatBridge）
+    // ============================================================
+    // 世界卡 JSON：空间层要从 params 里读年代与地图（世界卡默认**替换**年代地图，
+    // 想叠加得在 space 里写 "merge": true —— 与电脑端同一条规矩）。
+    fun currentWorldJson(): String? {
+        val n = currentWorld.takeIf { it.isNotBlank() }
+            ?: selectedWorlds.firstOrNull() ?: return null
+        val o = worldCards[n] ?: return null
+        return JsonS.stringify(o)
+    }
+
+    // 角色卡 JSON：生活层读 advanced.life（年代/口味/忌口），空间层读 advanced.space。
+    fun currentRoleJson(): String? {
+        val n = lastSpeaker?.takeIf { selectedRoles.size > 1 && it.isNotBlank() }
+            ?: selectedRoles.firstOrNull() ?: return null
+        val o = J.Obj()
+        o.fields["name"] = J.Str(n)
+        advancedByRole[n]?.let { o.fields["advanced"] = it }
+        return JsonS.stringify(o)
+    }
+
+    fun currentSpeaker(): String = lastSpeaker?.takeIf { selectedRoles.size > 1 && it.isNotBlank() }
+        ?: selectedRoles.firstOrNull() ?: ""
+
+    /** 剥掉 [loc:…]/[ploc:…] 并记账；返回可直接显示/入树的文本。记账交给 io 线（写盘）。 */
+    fun consumeSpaceMoves(text: String, who: String, note: Boolean = true): String {
+        val (clean, moves) = ChatBridge.takeMoves(text)
+        if (moves.isNotEmpty() && note) {
+            Lanes.on(Lanes.io, "空间位置记账") {
+                val lines = ChatBridge.applyMoves(moves, who)
+                if (lines.isNotEmpty()) {
+                    withContext(Dispatchers.Main) {
+                        lines.forEach { sysMsgs.add(ChatMsg("空间", it)) }
+                    }
+                }
+            }
+        }
+        return clean
+    }
+
+    ChatBridge.chainProvider = { engineChain() }
+    ChatBridge.roleNameProvider = { currentSpeaker() }
+    ChatBridge.roleJsonProvider = { currentRoleJson() }
+    ChatBridge.worldJsonProvider = { currentWorldJson() }
+    // 空间层的"没显式给倍率时用哪一档"：手机端没有 time_scale.json 的读取逻辑，
+    // 这里接到界面上那份（与电脑端读 time_scale 等价）。
+    SpaceCore.scaleProvider = { TimeScale.current }
 
     var doSend: (String, ImageBitmap?, String?) -> Unit = { _, _, _ -> }
     var showQuickPanel by vm.showQuickPanel
@@ -1518,13 +1587,19 @@ val importCardLauncher = rememberLauncherForActivityResult(ActivityResultContrac
         val parsed = parseSpeaker(raw, selectedRoles)
         var finalReply = parsed.second
         val stripped = mech.stripTags(parsed.second, apply = true)
+        // 位置标注先收掉（[loc:学校|骑车]）：显示与入树都不该带它，
+        // 同时把它记成"她此刻在哪"。剥离必须同步——文本马上要上屏；记账走 io 线。
+        val spaceWho = currentSpeaker().ifBlank { "她" }
+        val despaced = consumeSpaceMoves(stripped, spaceWho)
         // 里层结算完成 → 外层泛用变量检测存储：实时落盘第三个文件夹 JSON
         // （走 io 线：这是文件写，原来在主线程上做）
         persistMechAsync()
         // 正则管道（ai 作用域）：标签剥离后、写入树前应用
-        val regexed = applyRegex(stripped, "ai")
+        val regexed = applyRegex(despaced, "ai")
+        // 顺序要紧：先"剥位置标签"（无论有没有机制卡都算），再叠上正则管道的结果
+        if (despaced != parsed.second) finalReply = despaced
         if (mech.state != null) {
-            if (regexed != parsed.second) finalReply = regexed
+            if (regexed != despaced) finalReply = regexed
             val ev = mech.checkEvents(userText)
             if (ev != null) mech.pendingEvent = ev
         }
@@ -1590,7 +1665,7 @@ val importCardLauncher = rememberLauncherForActivityResult(ActivityResultContrac
                         // （apply=false 也会新建 status 字段），多个线程同时碰就是数据竞争。
                         // 所以流式剥标签留在主线程串行做 —— 快不是这里的第一优先级。
                         scope.launch(Dispatchers.Main) {
-                            streaming = mech.stripTags(full, apply = false)
+                            streaming = ChatBridge.takeMoves(mech.stripTags(full, apply = false)).first
                         }
                     },
                     onResponse = { reply, _ ->
@@ -1629,7 +1704,9 @@ val importCardLauncher = rememberLauncherForActivityResult(ActivityResultContrac
         val expanded = expandMacros(cleanText, userDisplayName(), selectedRoles.firstOrNull() ?: "AI", currentWorld)
         val processed = registry.onMessageSend(expanded) ?: return@doSend
         // 正则管道（user 作用域）：存储前应用 → 树里存转换后文本
-        val sent = applyRegex(processed, "user")
+        // 位置标注（[ploc:家/厨房]）在入树前收掉：它是"你到哪了"，不该显示给玩家，
+        // 但要记进空间状态（玩家位置也一样会算路费）。
+        val sent = consumeSpaceMoves(applyRegex(processed, "user"), currentSpeaker().ifBlank { "她" })
         input = ""
         busy = true
         streaming = ""
@@ -1655,7 +1732,7 @@ val importCardLauncher = rememberLauncherForActivityResult(ActivityResultContrac
             chain = engineChain(),
             systemPrompt = sys,
             // 与开局处同一个取舍：stripTags 会写 mech state，只能主线程串行（见上面的长注释）
-            onStream = { full -> scope.launch(Dispatchers.Main) { streaming = mech.stripTags(full, apply = false) } },
+            onStream = { full -> scope.launch(Dispatchers.Main) { streaming = ChatBridge.takeMoves(mech.stripTags(full, apply = false)).first } },
             onResponse = { reply, _ ->
                 scope.launch(Dispatchers.Main) {
                     // 落地逻辑与「开局演出」共用同一个函数，避免两处走偏
@@ -1673,13 +1750,15 @@ val importCardLauncher = rememberLauncherForActivityResult(ActivityResultContrac
                             scope.launch(Dispatchers.Main) {
                                 if (!extra.isNullOrBlank()) {
                                     val p2 = parseSpeaker(extra, selectedRoles)
+                                    // 群聊自动接话的第二条回复同样要收位置标注（否则标签会漏到界面上）
+                                    val p2clean = consumeSpaceMoves(p2.second, currentSpeaker().ifBlank { "她" })
                                     val m3 = J.Obj()
                                     m3.fields["speaker"] = resolveSpeaker(p2.first)?.let { J.Str(it) } ?: J.Null
-                                    tree.addNode("assistant", StyleGuard.guard(p2.second, styleGuard, styleGuardLong), parentId, m3)
+                                    tree.addNode("assistant", StyleGuard.guard(p2clean, styleGuard, styleGuardLong), parentId, m3)
                                     saveTree()
                                     refreshChain()
                                     checkEnding()  // autoTurn 第二条回复后也判结局
-                                    if (speakReplies) speak(tts, p2.second)
+                                    if (speakReplies) speak(tts, p2clean)
                                 }
                             }
                         }
@@ -1812,6 +1891,7 @@ fun wsRefreshLocal() {
             try {
                 val o = JsonS.parse(f.readText(Charsets.UTF_8)) as? J.Obj ?: return@forEach
                 val n = o.fields["name"]?.str() ?: f.nameWithoutExtension
+                worldCards[n] = o
                 val wd = WorldData.fromJson(o)
                 val d = renderWorldDesc(wd.description, wd.params)
                 if (worlds.none { it.first == n }) worlds.add(n to d)
@@ -1822,6 +1902,9 @@ fun wsRefreshLocal() {
         selectedWorlds = selectedWorlds.filter { n -> worlds.any { it.first == n } }.toSet()
         if (currentWorld !in selectedWorlds) currentWorld = selectedWorlds.firstOrNull() ?: ""
     }
+
+    // 装了世界卡包以后让界面重扫（插件在 io 线上跑命令，界面更新回主线程）
+    ChatBridge.worldsChanged = { scope.launch(Dispatchers.Main) { reloadWorldsFromDisk() } }
 
     fun wsLoadOnline() {
         wsStatus = "加载中..."

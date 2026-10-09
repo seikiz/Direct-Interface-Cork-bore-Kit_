@@ -24,6 +24,10 @@ Python 桌面版的功能移植到 Android。核心层（JSON/对话树/引擎�
 - 日文翻译 /jp /zh
 - 系统 TTS 朗读 AI 回复（日文自动切日语语音引擎，需手机装有对应语音包）
 - 聊天记录一键分享（系统分享面板）
+- 生活层（吃饭）：世界时钟 + 厨具历史库 + 食材/做法库 —— `/生活` 看状态，每轮注入【生活·那边】
+- 空间层（不能瞬移）：年代地图 + 路费 + 屋里走动 —— `/在哪` 看位置/记位置，`[loc:地名|骑车]` 自己交代怎么去的
+- 世界卡库：6 张随 APK 附带的成套世界卡（现代都市/明末江南/仙侠/末世/校园/赛博港区），
+  `/世界包` 列表、`/世界包 装 <名字>` 一键装进 `worlds/`（带年代与地图，生活层/空间层跟着换口径）
 
 ## PC 版专属（APK 暂不含）
 
@@ -49,12 +53,43 @@ VOICEVOX 可爱声线、Word/Excel 排版导出、创意工坊服务器、PNG �
     java -Dfile.encoding=UTF-8 -jar check.jar --selftest
 
 > 上面的 `check.jar` 那条命令**已经跑不起来**了：core 需要 android.jar，plugins 需要 Compose runtime。
-> 能用的是 `selftest\run.ps1`（按依赖闭包分两个测试）：
+> 能用的是 `selftest\run.ps1`（按依赖闭包分三个测试）：
 >
 >     powershell -ExecutionPolicy Bypass -File selftest\run.ps1
 >
+> ① TextGuard（零宽字符防线）　② 机制状态全量重置　③ 生活层/空间层对拍（见下）
+>
 > `core` 现在有一个带第三方依赖的文件 —— `Lanes.kt`（分道执行，用 kotlinx-coroutines），
 > 脚本会自动从 Gradle 缓存里取 `kotlinx-coroutines-core-jvm-*.jar` 加进 classpath。
+>
+> ⚠ `selftest\run.ps1` **必须带 UTF-8 BOM**：`powershell -File`（Windows PowerShell 5.1）在没有 BOM
+> 时按 ANSI/GBK 读脚本，中文注释的字节会成对吃掉行尾换行 → 注释行合并 → 函数定义被注释吞掉，
+> 报一句跟原因差好几行的「意外的标记 }」。`tests/test_ps1_encoding.py` 盯着这条。
+
+## 生活层 / 空间层：为什么手机端要和电脑端"对拍"
+
+这两层在电脑端（`life_core.py` / `space_core.py`）已经跑了一阵：她有几点了、今天吃了什么、
+手边有什么家伙、此刻在哪、这段时间够去哪。手机端原来一样都没有 —— 同一个角色在电脑上
+"唐宋的江南，早上小米粥"，换手机就变成没有日子、能瞬移。
+
+补的时候最容易出的错**不是崩溃，是"漂"**：手机端自己抄一份年代表，电脑端改了"辣椒明末才传入"，
+两边就吃出两套餐；或者换个随机数发生器，同一顿饭变成两道菜。这种问题不会报错，只会让人觉得
+"她今天好像不太一样"。所以这里定了两条规矩：
+
+1. **表只有一份真相**：Kotlin 的 `core/Tables.kt` 由 `python tools/gen_parity.py` 从 Python
+   那几张表生成（年代、厨具、食材、做法、地点、交通、屋里格局）。手改会被
+   `python tools/gen_parity.py --check` 判过期 —— CI 上跑的就是这条检查（CI 没有 kotlinc）。
+2. **行为要对拍**：同一个脚本把电脑端算出来的结果冻成 `selftest/ParityGoldens.kt` ——
+   9 组用例：认年代、一日三餐（含 720× 与史前）、每轮注入文本、地图快照、路费、够去哪、
+   营业时间、位置标签解析、空间注入（含地图外、穿帮提醒两次、凌晨的茶肆）。
+   手机端用同样的输入算一遍，**逐字比对**。
+
+菜单能对拍是因为它是**确定性抽样**（种子 = `角色｜世界第几天｜哪一餐`）。为了这条承诺，
+`core/PyRandom.kt` 把 CPython 的 `random.Random(字符串)` 逐位复刻了：种子走
+`sha512` 拼接 → MT19937 的 `init_by_array` → `getrandbits` 的拒绝采样 → `random()`。
+（顺带一个坑：key 数组是**低位在前**，搞反过一次，表现就是"菜单全都不一样"。）
+
+本机实跑：生活层对拍 **45 条**、空间层对拍 **277 条**，全过（`selftest\run.ps1` 第 3 步）。
 
 ## 分道执行（Lanes.kt）
 
@@ -66,7 +101,7 @@ VOICEVOX 可爱声线、Word/Excel 排版导出、创意工坊服务器、PNG �
 
 | 线 | 并行度 | 跑什么 |
 | --- | --- | --- |
-| `io` | 1 | 存档落盘、机制状态落盘、角色卡导入/导出、工坊导出 |
+| `io` | 1 | 存档落盘、机制状态落盘、角色卡导入/导出、工坊导出、空间位置记账、释放世界卡包 |
 | `vision` | 1 | 图片理解（免费视觉链自己有速率限制） |
 | `plugin` | 1 | 插件钩子（同一插件要先看到前一条回复）—— 记忆链的落盘也在这条线上 |
 | `net` | 4 | 工坊同步、搜索、下载、局域网探测（请求彼此独立） |
@@ -94,8 +129,11 @@ VOICEVOX 可爱声线、Word/Excel 排版导出、创意工坊服务器、PNG �
 
     app/src/main/java/com/dick/
       core/       Json / Model / ChatTree / ChatEngine(HttpURLConnection) / AppEnv / Lanes(分道执行)
-      plugins/    Plugin 接口 + 注册表 + 6 个内置插件（含 WebFetch 抓取工具）
+                  PyRandom(CPython 同款随机数) / Tables(生成的表) / TableTypes(数据契约)
+                  Commonsense(年代→地点/交通/屋里) / LifeCore(吃饭) / SpaceCore(不能瞬移)
+                  WorldPacks(世界卡库) / ChatBridge(界面 ↔ 两层的钩子)
+      plugins/    Plugin 接口 + 注册表 + 7 个内置插件（含 WebFetch 抓取工具、生活/空间/世界卡库）
       app/        MainActivity + Compose 主界面（设置/角色/世界/分享/TTS）
                   CardIo.kt 角色卡进出的"重活"（读 URI / 解析 PNG 嵌卡 / 写角色卡+世界卡），跑在 io 线上
       tools/      Check.kt 自检（含 Python 存档兼容）
-    selftest/     不依赖 Compose 的独立测试（TextGuard / 机制状态重置），run.ps1 一键跑
+    selftest/     不依赖 Compose 的独立测试（TextGuard / 机制状态重置 / 生活+空间对拍），run.ps1 一键跑

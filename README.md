@@ -51,13 +51,14 @@ playable things (choice-driven scenes, mechanics/affection systems, one-click st
 | **桌面端** | 单个 `HtmlApp` 类（6,659 行）对外暴露 **154 个 `api_*`**，经 pywebview js_api 桥接；前端是单页 `web/index.html`（8,119 行） |
 | **三端实现** | 桌面（Python + pywebview）· 安卓（Kotlin + Compose）· 原生播放器（Compose Multiplatform，EXE 与 APK 同源） |
 | **跨端一致性** | 120 个线性图标由 `web/index.html` 的 `ICONS` **单点生成** → `tools/gen_android_icons.py` → 108 个 Android VectorDrawable；两端各有防漂移测试（改一边忘了另一边会红） |
-| **测试** | `tests/` **72 个独立脚本 / 1,800+ 次断言**（实跑汇总，2026-10）+ Node 图标回归 + 安卓 kotlinc 自检（`DICK-Android/selftest/run.ps1`）+ 安卓分道执行的结构检查（`test_android_lanes.py`）；GitHub Actions 跑 **三个作业：Linux(3.11/3.12) + Windows(3.12)**，任一失败即红。环境写进文件而不是靠记忆：`Dockerfile`/`.devcontainer`（本机一条命令跑 Linux 全套）、`tools/env_report.py`（一条命令看清跑测试的是哪套环境）、`tools/ci_dep_check.py`（装完自检，失败直接点名缺哪个包） |
+| **测试** | `tests/` **76 个独立脚本 / 2,133 次断言**（实跑汇总，2026-10）+ Node 图标回归 + 安卓 kotlinc 自检（`DICK-Android/selftest/run.ps1`：TextGuard + 机制重置 + 生活/空间对拍 45+277 条）+ 安卓分道执行的结构检查（`test_android_lanes.py`）+ 跨端对拍前置检查（`test_android_parity.py`：表是否最新 / 基准有没有被用到 / 接线有没有断）；GitHub Actions 跑 **三个作业：Linux(3.11/3.12) + Windows(3.12)**，任一失败即红。环境写进文件而不是靠记忆：`Dockerfile`/`.devcontainer`（本机一条命令跑 Linux 全套）、`tools/env_report.py`（一条命令看清跑测试的是哪套环境）、`tools/ci_dep_check.py`（装完自检，失败直接点名缺哪个包） |
 | **插件架构** | 23 个插件类（4 个默认关闭，含 1 个协议示例）；声明式 `settings_schema` / `ui_buttons` 自动生成界面；钩子 `on_load/on_unload/on_message_send/on_message_received/contextInjection/on_command`；另有子进程 JSON-RPC 协议插件。**插件要界面走 `host_ui`**（宿主的原生文件对话框 + 聊天内提示），不许自带 GUI 库 |
 | **生活层（吃饭）** | `life_core.py`：**世界时钟**（系统时间 = 1× 起源，累加虚拟秒）+ **厨具历史库**（10 个年代的工具表，卡住做法：史前没甑不能蒸、没铁锅不能炒）+ **食材/做法库**（辣椒番茄土豆玉米明末才传入）。菜单是确定性抽样（种子 = 角色\|世界第几天\|哪一餐）→ 重启/回档/换端一致，不需新增存档；每轮只注入 ≤240 字，角色卡 `advanced.life` 可单独覆盖年代/地域/口味/忌口 |
 | **空间层（不能瞬移）** | `space_core.py`：**轮辐地图**（家为圆心，A→B 按经过家估，偏保守；`links` 可精确覆盖）+ 交通方式系数（走路 1.0 / 骑车 0.4 / 打车 0.35 / 高铁 0.06）+ **营业时间** + **家屋室内**（卧室/厨房… 0.5 分钟，不算赶路）。世界时间决定"来不来得及"：路费 > 那之后过去的世界时间就判穿帮，**照样记下新位置**、下一轮注入点名要求补交代（最多两次）。位置由模型用 `[loc:地名]` 标注（标签从显示文本剥掉，没机制卡也能用），另有 `/在哪`、`/空间` 命令与卡内 `advanced.space` 自定义地图 |
 | **世界卡库 + 常识库** | `world_packs/`（受版本控制，`worlds/` 是被忽略的运行时目录）+ `commonsense.py`：**6 张成套世界卡**（现代都市/江南水乡·明末/仙侠·云梦宗/末世·废土/校园日常/赛博港区），每张带自己的地图、屋里格局、交通与年代参数；**12 种年代口径**（史前→现代 + 仙侠/末世）各有地点/交通/屋型表，与生活层的厨具食材年代表**同一批 key**（有测试断言不许漂移）。卡包**同名不覆盖**、覆盖前留备份；`/世界包` 列出/查看/装入 |
 | **安全与可靠** | 战斗公式走 **AST 白名单求值**（绝不 `eval`）；存档 **原子写 + 备份 + 校验自愈**；API Key 用 Windows DPAPI 加密落盘；加密备份容器 `.dickbackup` **配独立解密工具**（没有 DICK 也能开自己的档） |
 | **打包** | PyInstaller onedir + 自检流水线：包内 `web/index.html` 必须与源码一致且含 **16 个特征串**（专治打包缓存旧前端）；**不打包 Tcl/Tk**（Tk 时代遗产已清，每次发布少 ~3.5 MB 与一类窗口级故障） |
+| **手机端对齐（生活 / 空间 / 世界卡库）** | 手机版原来只有聊天：同一个角色在电脑上"唐宋的江南、早上小米粥、骑车去码头"，换手机就变成没有日子、能瞬移、默认现代都市。现在这三层补齐了（`core/LifeCore.kt`、`SpaceCore.kt`、`WorldPacks.kt` + `/生活`、`/在哪`、`/世界包`）。**表只有一份真相**：`core/Tables.kt` 由 `tools/gen_parity.py` 从 Python 那几张表生成，手改/忘生成会被 `--check` 判过期（CI 跑这条）；**行为逐字对拍**：同一个脚本把电脑端结果冻成 `selftest/ParityGoldens.kt`（9 组、几十条：认年代、三餐含 720×、注入文本、地图快照、路费、够去哪、营业时间、标签解析、空间注入），`selftest/run.ps1` 第 3 步逐条比对。菜单能对拍是因为它确定性抽样 —— 为此 `core/PyRandom.kt` 逐位复刻了 CPython 的 `random.Random(字符串)`（含"key 数组低位在前"那个坑）。配置/状态文件名与字段和电脑端一致，数据目录可互读 |
 | **并发模型** | **模块分道执行**：电脑端 `jobs.py`（一个模块一条运行线 —— 对话/插件钩子/落盘保序（1 工作线程），网络 3 条、看图 2 条可并行；队列有上限（满了明确拒绝而不是堆内存），任务级超时、耗时与错误全部可见；异步结果走现有 poll 回前端，工坊那 8 个 `api_*` 已从"同步等"改为异步）；**手机端同一套想法**在 `Lanes.kt`（`io`/`vision`/`plugin` 各 1、`net` 4），主线程只负责"取快照"，整树序列化、机制状态、角色卡进出的写盘全在线里 |
 | **多厂商** | 内置 14 家 / 106 个模型，含免 Key 免费链与本地 Ollama；生图引擎四种后端（OpenAI 兼容 / Pollinations 免 Key / 本地 A1111 / 本地 ComfyUI） |
 | **文档** | 6 份使用与开发文档；其中《状态变量说明》与实现的一致性由测试锁定（改了代码不改文档会红） |
@@ -169,7 +170,7 @@ node install.js     # 或双击 install.bat
 | `plugins/` | 19 个插件 + `protocol/` 协议插件（共 20 个）；插件要界面统一走 `host_ui.py` |
 | `DICK-Android/` | 安卓端（Compose）：`core` / `app` / `plugins` / `tools` 四层 |
 | `DICK-Narrative/` | Compose Multiplatform 原生 GALGAME 播放器（EXE + APK），故事格式见其 README |
-| `tests/` | 60 个 Python 测试脚本（逐个独立运行）+ JS 图标回归 |
+| `tests/` | 76 个 Python 测试脚本（逐个独立运行）+ JS 图标回归 |
 | `tools/` | `gen_android_icons.py`（图标 → VectorDrawable）、`gen_icon_preview.py`（图标总览页）、存档同步 |
 | `tree_weight.py` `salience.py` `lookahead.py` `ranker.py` `rubric.py` | 记忆权重与剪枝 / 有损遗忘曲线 / 前瞻展开 / 排序器 / 价值判据 |
 | `save_guard.py` `crypto_core.py` `dick_backup_tool.py` | 原子写+备份+校验自愈 / 加密备份容器 / 独立解密工具 |
@@ -187,7 +188,8 @@ python build_release.py                             # 已打包过：只做后�
 # 测试
 python tests/test_*.py                              # 逐个跑（60 个脚本）
 node tests/test_icons.js                            # 前端图标系统回归（需 Node）
-powershell -File DICK-Android/selftest/run.ps1      # 安卓自检（TextGuard + 机制状态重置）
+powershell -File DICK-Android/selftest/run.ps1      # 安卓自检（TextGuard + 机制状态重置 + 生活/空间对拍）
+python tools/gen_parity.py --check                 # 手机端的表/对拍基准是不是最新的（CI 也跑这条）
 
 # 手机
 cd DICK-Android && gradle :app:assembleDebug        # → app/build/outputs/apk/debug/
@@ -206,7 +208,7 @@ python tools/gen_icon_preview.py                    # → _icons_preview.html，
 
 ### 测试与 CI
 
-`.github/workflows/test.yml`：push / PR 时在 **Python 3.11 与 3.12** 上逐个运行 `tests/test_*.py`，并跑一次 **Node 图标回归**；任一失败即红。安卓侧另有 `DICK-Android/selftest/`（kotlinc 直跑，不需要 Android SDK；路径写在该脚本顶部）。
+`.github/workflows/test.yml`：push / PR 时在 **Python 3.11 与 3.12** 上逐个运行 `tests/test_*.py`，并跑一次 **Node 图标回归**；任一失败即红。安卓侧另有 `DICK-Android/selftest/`（kotlinc 直跑，不需要 Android SDK；路径写在该脚本顶部）—— 那份对拍需要 Kotlin 工具链，所以 CI 上跑的是它的**前置检查**：`tools/gen_parity.py --check`（表/基准是否与 Python 一致）+ `tests/test_android_parity.py`（基准有没有被真的用到、接线有没有断）。
 
 ## 数据与隐私
 

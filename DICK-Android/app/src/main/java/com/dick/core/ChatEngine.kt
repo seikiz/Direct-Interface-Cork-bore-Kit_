@@ -48,6 +48,16 @@ class ChatEngine(
     @Volatile
     var topP: Float? = null
 
+    /**
+     * 每轮的额外上下文（生活层【生活·那边】/ 空间层【空间】）。
+     *
+     * 为什么不写死在引擎里：这两层要读"当前角色/当前世界卡/现在几点"，那是 UI 侧的状态，
+     * 引擎不该反过来依赖 App。做成一个返回字符串的钩子，插在【时间】后面 ——
+     * 与电脑端 `_fetch_response` 的注入顺序一致（世界 → 时间 → 生活 → 空间 → 状态）。
+     */
+    @Volatile
+    var contextProvider: (() -> List<String>)? = null
+
     @Volatile
     var isProcessing: Boolean = false
         private set
@@ -71,6 +81,15 @@ class ChatEngine(
         // 这就是"两条纸带粘一起"——一条记内容，一条记间隔。
         TimeContext.build(chain, TimeScale.current)?.let {
             messages.items.add(role("system", it))
+        }
+        // 生活层 / 空间层：同样粘在历史之前。注入里带"那边现在几点、她今天吃了什么、
+        // 她此刻在哪、这段时间够去哪" —— 都是**当轮才算得出来**的东西，不能进 system 缓存。
+        try {
+            contextProvider?.invoke()?.forEach { part ->
+                if (part.isNotBlank()) messages.items.add(role("system", part))
+            }
+        } catch (_: Exception) {
+            // 上下文算不出来（没时间戳/没选角色）就不注入，别把整轮请求带崩
         }
         for (node in chain) {
             if (node.content.isNotBlank()) messages.items.add(role(node.role, node.content))
