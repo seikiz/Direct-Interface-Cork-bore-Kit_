@@ -502,16 +502,24 @@ def method_ok(method, tools, era_year):
 
 
 def detect_era(world):
-    """从世界卡里认年代；认不出就现代（不猜错比猜洋气重要）"""
+    """从世界卡里认年代；认不出就现代（不猜错比猜洋气重要）
+
+    顺序：卡里**显式写**的 `params.era` / `params.era_kind` 最优先（世界卡包就靠这个），
+    其次才按关键词猜 —— 显式写的东西不该被关键词盖掉。
+    """
     text = ""
     if isinstance(world, dict):
-        parts = [world.get("name"), world.get("description"), world.get("rules")]
-        for p in parts:
-            if isinstance(p, str):
-                text += p
         params = world.get("params")
         if isinstance(params, dict):
+            explicit = str(params.get("era_kind") or params.get("era") or "").strip()
+            if explicit in ERA_BY_KEY:
+                return explicit
+            if explicit:
+                text += explicit
             text += " ".join(str(v) for v in params.values())
+        for p in (world.get("name"), world.get("description"), world.get("rules")):
+            if isinstance(p, str):
+                text += p
     elif isinstance(world, str):
         text = world
     for key, hints in ERA_HINTS:

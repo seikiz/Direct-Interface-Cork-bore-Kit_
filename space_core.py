@@ -52,39 +52,43 @@ except Exception:         # pragma: no cover - 极端情况下退化成普通写
     save_guard = None
 
 # ==============================<seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌==============================
-#  一、地图（内置默认；角色卡 / 世界卡可覆盖）
+#  一、地图（年代常识库提供默认；角色卡 / 世界卡可覆盖）
 # ============================================================
 HUB = "家"
 
-# minutes 取值口径：步行/常规交通，从家出发单程
-DEFAULT_PLACES = [
-    {"name": "家", "minutes": 0, "open": None, "note": "她的据点"},
-    {"name": "楼下", "minutes": 2, "open": None},
-    {"name": "小区门口", "minutes": 3, "open": None},
-    {"name": "便利店", "minutes": 6, "open": (7, 23)},
-    {"name": "公交站", "minutes": 8, "open": (5, 23)},
-    {"name": "菜市场", "minutes": 10, "open": (6, 19)},
-    {"name": "超市", "minutes": 12, "open": (8, 22)},
-    {"name": "公园", "minutes": 15, "open": (5, 22)},
-    {"name": "餐厅", "minutes": 15, "open": (10, 22)},
-    {"name": "咖啡馆", "minutes": 18, "open": (8, 22)},
-    {"name": "医院", "minutes": 20, "open": (0, 24)},
-    {"name": "学校", "minutes": 25, "open": (7, 21)},
-    {"name": "朋友家", "minutes": 25, "open": None},
-    {"name": "电影院", "minutes": 30, "open": (10, 24)},
-    {"name": "公司", "minutes": 35, "open": (9, 18)},
-    {"name": "火车站", "minutes": 40, "open": (5, 23)},
-    {"name": "邻近城市", "minutes": 180, "open": None, "kind": "city"},
-    {"name": "远方（省外）", "minutes": 600, "open": None, "kind": "far"},
-]
+# 年代常识库（commonsense.py）：地点 / 交通 / 屋里格局都由它给 ——
+# 这样"大明"不会出现地铁、"仙侠"能用御剑。**表只有一份**，这里不再抄一遍。
+try:
+    import commonsense as _cs
+except Exception as e:              # 极端情况下退化成最小地图（并明确警告，不静默）
+    _cs = None
+    print("[space] 常识库 commonsense.py 没加载上（%s）—— 地图退化成 家/楼下" % e)
 
-# 交通方式速度系数（乘在分钟数上）
+_FALLBACK_PLACES = [("家", 0), ("楼下", 2)]
+_FALLBACK_TRANSPORT = {"走路": 1.0, "步行": 1.0}
+
+
+def _era_places(era):
+    return list(_cs.places(era)) if _cs is not None else list(_FALLBACK_PLACES)
+
+
+def _era_rooms(era):
+    return list(_cs.rooms(era)) if _cs is not None else ["卧室", "客厅", "厨房"]
+
+
+def _era_transports(era):
+    return dict(_cs.transports(era)) if _cs is not None else dict(_FALLBACK_TRANSPORT)
+
+
+# 交通系数：年代表打底，这里再补几个跨年代的通用写法
 TRANSPORT = {
     "走路": 1.0, "步行": 1.0, "骑车": 0.4, "自行车": 0.4, "公交": 0.5, "地铁": 0.45,
     "打车": 0.35, "开车": 0.3, "自驾": 0.3, "高铁": 0.06, "飞机": 0.05,
 }
 DEFAULT_TRANSPORT = "走路"
+DEFAULT_ERA_FALLBACK = "现代"   # 常识库认不出年代时的口径
 MAX_MINUTES = 60 * 24 * 30      # 超过一个月的"移动"没有意义（倍率很高时会出现）
+ROOM_MINUTES = 0.5              # 屋里走动：家门口 → 任一房间（同屋不算"赶路"）
 
 DEFAULTS = {
     "enabled": True,
@@ -235,22 +239,59 @@ def world_minutes_since(ts, scale=None, now=None):
 # ============================================================
 #  三、地图：地点 / 路费 / 开门时间
 # ============================================================
-def map_for(role=None, world=None, cfg=None):
-    """地图 = 内置默认 + 世界卡里的 space 覆盖 + 角色卡里的 space 覆盖。
+def map_for(role=None, world=None, cfg=None, era=None):
+    """地图 = 年代常识（默认）+ 世界卡 space 覆盖 + 角色卡 space 覆盖。
+
+    年代从哪里来：卡里显式写 → 世界卡关键词（复用 life_core 的表）→ 现代。
+    仙侠/末世这类"设定类型"优先于年代（它们的地图差别更大）。
 
     卡里怎么写（world.params.space 或 role.advanced.space 都行，两种写法等价）：
         {"places": [{"name": "学校", "minutes": 20},
                     {"name": "码头", "minutes": 45, "open": [6, 20]}],
          "links":  {"学校|码头": 30},          # 精确两地耗时，覆盖估算
-         "transport": {"骑车": 0.4}}
+         "transport": {"骑车": 0.4},
+         "rooms":  ["卧房", "灶房"]}           # 只覆盖屋里格局也行
     """
-    places, links, transport = {}, {}, dict(TRANSPORT)
-    for p in DEFAULT_PLACES:
-        places[p["name"]] = dict(p)
+    era_key = era or (_cs.effective_era(world, role) if _cs is not None else DEFAULT_ERA_FALLBACK)
+    places, links = {}, {}
+    home = HUB
+    # 交通方式以**年代**为准：唐宋不该有地铁/高铁。
+    # 模块级的 TRANSPORT 只当"认不出名字时的通用系数"用（见 _factor），不并进这张表。
+    transport = dict(_era_transports(era_key))
+    transport.setdefault("走路", 1.0)
+    transport.setdefault("步行", 1.0)
 
-    def merge(spec):
+    for name, minutes in _era_places(era_key):
+        places[name] = {"name": name, "minutes": minutes}
+    places.setdefault(HUB, {"name": HUB, "minutes": 0})
+    if HUB in places:
+        places[HUB]["minutes"] = 0
+    # 屋里：都从家门口算（ROOM_MINUTES），并打上 room 标记 ——
+    # 这样"够去哪"的列表不会被子分钟的卧室/厨房挤满（它们在屋里，本来就走得到）
+    rooms = _era_rooms(era_key)
+
+    def merge(spec, replace=False):
+        """把卡里的 space 并进地图。
+
+        replace=True（**世界卡默认**）：卡里给了 places/transport/rooms 就整张换掉年代默认 ——
+          世界卡定义的是"一个设定"，不该被现代都市的便利店/地铁站混进来。
+          想叠加就写 `"merge": true`。
+        replace=False（**角色卡默认**）：只叠加（她自己的几个地方/一间屋），不动大格局。
+        """
+        nonlocal rooms, home
         if not isinstance(spec, dict):
             return
+        if replace and isinstance(spec.get("places"), list) and spec["places"]:
+            places.clear()
+            places[HUB] = {"name": HUB, "minutes": 0}
+        if replace and isinstance(spec.get("transport"), dict) and spec["transport"]:
+            transport.clear()
+            transport.setdefault("走路", 1.0)
+            transport.setdefault("步行", 1.0)
+        # 卡可以给"家"起自己的名字（宿舍/洞府/据点/公寓…）：它就是圆心，
+        # 省得地图里同时躺着"家"和"宿舍"两个 0 分钟的点，读起来像两个地方。
+        if str(spec.get("home") or "").strip():
+            home = str(spec["home"]).strip()
         for p in spec.get("places") or []:
             if isinstance(p, dict) and p.get("name"):
                 item = dict(p)
@@ -266,7 +307,8 @@ def map_for(role=None, world=None, cfg=None):
                 transport[str(k)] = float(v)
             except (TypeError, ValueError):
                 pass
-
+        if isinstance(spec.get("rooms"), list):
+            rooms = [str(r) for r in spec["rooms"] if str(r).strip()]
     # 世界卡：params.space 里放 JSON 字符串，或直接放 dict
     if isinstance(world, dict):
         sp = world.get("space")
@@ -277,18 +319,51 @@ def map_for(role=None, world=None, cfg=None):
                 sp = json.loads(sp)
             except Exception:
                 sp = None
-        merge(sp)
+        if isinstance(sp, dict):
+            merge(sp, replace=not sp.get("merge"))
     if isinstance(role, dict):
         adv = role.get("advanced")
         if isinstance(adv, dict):
-            merge(adv.get("space"))
-    return {"places": places, "links": links, "transport": transport}
+            merge(adv.get("space"), replace=False)
+    # 卡自己起的"家"，若没在 places 里就补一个 0 分钟的点；原来的合成"家"删掉，
+    # 免得地图里同时有两个"住在哪儿"的点。
+    if home != HUB:
+        places.setdefault(home, {"name": home, "minutes": 0})
+        places[home]["minutes"] = 0
+        places.pop(HUB, None)
+    else:
+        places.setdefault(HUB, {"name": HUB, "minutes": 0})
+        places[HUB]["minutes"] = 0
+    for r in rooms:
+        if r and r != home:
+            places.setdefault(r, {"name": r, "minutes": ROOM_MINUTES, "room": True,
+                                  "parent": home})
+    return {"places": places, "links": links, "transport": transport,
+            "era": era_key, "home": home, "rooms": [r for r in rooms if r in places]}
 
 
 def _factor(transport, by):
+    """交通方式 → 耗时系数。
+
+    先查这张地图的（年代）表；表里没有就退回模块级通用表（打车/高铁…这类跨年代写法）。
+    两边都没有 → 1.0（按走路算，宁慢不快）。
+    """
     if not by:
         return 1.0
-    return float(transport.get(str(by).strip(), 1.0) or 1.0)
+    name = str(by).strip()
+    if name in (transport or {}):
+        return float(transport[name] or 1.0)
+    return float(TRANSPORT.get(name, 1.0) or 1.0)
+
+
+def transport_options(mp):
+    """这张地图（这个年代）可选的交通方式 → [(名字, 系数)]，快的在前。
+
+    给别人看的列表要用这个，不要用模块级的 TRANSPORT —— 那是"跨年代通用写法"，
+    列出来会让唐宋看上去像有地铁。
+    """
+    t = (mp or {}).get("transport") or {}
+    return sorted(((str(k), float(v)) for k, v in t.items()), key=lambda kv: (kv[1], kv[0]))
 
 
 def travel_minutes(mp, a, b, by=None):
@@ -306,19 +381,51 @@ def travel_minutes(mp, a, b, by=None):
     return max(0.0, raw * _factor(mp.get("transport"), by))
 
 
-def reachable(mp, frm, minutes, limit=None, by=None):
-    """这段时间从 frm 能到哪些地方（按耗时升序）"""
+def reachable(mp, frm, minutes, limit=None, by=None, include_rooms=False):
+    """这段时间从 frm 能到哪些地方（按耗时升序）
+
+    默认**不列屋里**：卧室/厨房只有 0.5 分钟，会把"够去哪"的列表挤满 ——
+    而它们本来就走得到（同一间屋子），不需要列出来提醒。
+    """
     out = []
     if minutes is None:
         return out
-    for name in (mp.get("places") or {}):
+    places = mp.get("places") or {}
+    for name in places:
         if name == frm:
+            continue
+        if not include_rooms and (places.get(name) or {}).get("room"):
             continue
         need = travel_minutes(mp, frm, name, by)
         if need <= minutes:
             out.append((name, need))
     out.sort(key=lambda kv: (kv[1], kv[0]))
     return out[:int(limit)] if limit else out
+
+
+def resolve_place(mp, name):
+    """把标签里的地名落到地图上的一个地点。
+
+    支持三种写法：
+        学校            → 直接命中
+        家/厨房         → 命中"厨房"（屋里路径）
+        厨房            → 命中屋里那一间（若地图里有）
+    认不出就返回原名（当"编外地点"处理：照记，但提醒里会说明地图上没有它）。
+    """
+    name = str(name or "").strip()
+    if not name:
+        return name
+    places = mp.get("places") or {}
+    if name in places:
+        return name
+    if "/" in name or "／" in name:
+        tail = re.split(r"[/／]", name)[-1].strip()
+        if tail in places:
+            return tail
+    for cand in places:
+        if cand != name and (cand in name or name in cand):
+            return cand
+    return name
 
 
 def open_now(place_meta, world_dt):
@@ -350,13 +457,18 @@ MOVE_TAG = re.compile(r"\[\s*(loc|ploc|位置|地点)\s*[:：]\s*([^\[\]]+?)\s*\
 
 
 def parse_move(text):
-    """从回复里抽出位置标签 → [(是不是玩家, 地点, 交通方式), ...]"""
+    """从回复里抽出位置标签 → [(是不是玩家, 地点, 交通方式), ...]
+
+    交通方式**只用竖线**分隔（`[loc:学校|骑车]`）：
+    斜线留给屋里路径（`[loc:家/厨房]`），逗号和空格留给地名本身（"朝阳, 北京"）。
+    这个约定写在说明书 §8.6.3 里。
+    """
     out = []
     for m in MOVE_TAG.finditer(text or ""):
         key = m.group(1).lower()
         body = m.group(2).strip()
         by = ""
-        for sep in ("|", "/", "，", ",", " "):
+        for sep in ("|", "｜"):
             if sep in body:
                 head, _, tail = body.partition(sep)
                 if tail.strip():
@@ -384,9 +496,12 @@ def note_move(role, place, by="", scale=None, now=None, mp=None, player=False, c
     slots = ("player_place", "player_since", "player_prev") if player else \
             ("place", "since", "prev")
     key, since_key, prev_key = slots
-    frm = st.get(key) or (HUB if not player else "")
-    have = world_minutes_since(st.get(since_key), scale, now) if st.get(since_key) else None
     mp = mp or map_for(None, None, cfg)
+    # 地名落到地图上（家/厨房 → 厨房；认不出就按原名当"编外地点"）
+    place = resolve_place(mp, place)
+    frm = st.get(key) or ((mp.get("home") or HUB) if not player else "")
+    frm = resolve_place(mp, frm) if frm else frm
+    have = world_minutes_since(st.get(since_key), scale, now) if st.get(since_key) else None
     need = travel_minutes(mp, frm, place, by or cfg.get("default_transport")) if frm else 0.0
     ok = True
     why = ""
@@ -396,6 +511,10 @@ def note_move(role, place, by="", scale=None, now=None, mp=None, player=False, c
             why = "从%s到%s要 %.0f 分钟，这段时间只过了 %.0f 分钟" % (frm, place, need, have)
     elif frm and frm != place and have is None:
         why = "不知道上次是什么时候到的%s（没有时间戳），按「能到」处理" % frm
+    if place not in (mp.get("places") or {}):
+        st["offmap"] = place          # 地图上没有这个地方：记住，并在注入里提一句
+    else:
+        st.pop("offmap", None)
     st[prev_key] = frm
     st[key] = place
     st[since_key] = now.isoformat()
@@ -459,15 +578,30 @@ def injection_text(role=None, world=None, scale=None, cfg=None, now=None, name=N
         except Exception:
             world_dt = None
 
-    place = st.get("place") or HUB
+    place = st.get("place") or (mp.get("home") or HUB)
     have = world_minutes_since(st.get("since"), scale, now) if st.get("since") else None
+    places = mp.get("places") or {}
+    meta = places.get(place) or {}
     lines = []
     head = "【空间】%s 现在：%s" % (who, place)
+    if meta.get("room"):
+        head += "（在家里）"
     if have is not None:
         head += "（%.0f 分钟前到，%s）" % (have, st.get("by") or cfg.get("default_transport"))
     lines.append(head)
+
+    # 屋里格局：她在家时给一句"有哪些屋"（同屋走动 1 分钟内，不算赶路）。
+    # 不在家就不提，省字数。
+    rooms = [r for r in (mp.get("rooms") or []) if r != place]
+    at_home = place == (mp.get("home") or HUB) or meta.get("room")
+    if at_home and rooms:
+        lines.append("屋里：" + "、".join(rooms) + "（都在 1 分钟内）")
+    if st.get("offmap"):
+        lines.append("⚠ %s 不在地图上 —— 按你说的记下了，但这地方之后要算路费就只能按邻近代估。"
+                     % st["offmap"])
+
     if world_dt is not None:
-        ok, why = open_now((mp.get("places") or {}).get(place), world_dt)
+        ok, why = open_now(meta, world_dt)
         if not ok:
             lines.append("⚠ " + why + " —— 这个点她不该在那儿，给个由头或换个地方。")
 
@@ -484,9 +618,11 @@ def injection_text(role=None, world=None, scale=None, cfg=None, now=None, name=N
         elif budget >= 1:
             lines.append("这%.0f分钟哪儿都去不了（最近的也要 %.0f 分钟）"
                          % (budget, min([travel_minutes(mp, place, n, by)
-                                         for n in (mp.get("places") or {}) if n != place] or [0])))
+                                         for n in (mp.get("places") or {})
+                                         if n != place and not (places.get(n) or {}).get("room")]
+                                        or [0])))
 
-    pplace = st.get("player_place")
+    pplace = resolve_place(mp, st.get("player_place")) if st.get("player_place") else ""
     if pplace:
         need = travel_minutes(mp, pplace, place, cfg.get("default_transport"))
         lines.append("你在%s，到这儿要 %.0f 分钟" % (pplace, need))
@@ -505,8 +641,10 @@ def injection_text(role=None, world=None, scale=None, cfg=None, now=None, name=N
 
     text = "\n".join(lines)
     room = int(cfg.get("max_chars") or DEFAULTS["max_chars"])
-    if len(text) + len(GUIDE) > room:
-        text = text[:max(0, room - len(GUIDE) - 1)].rstrip("、，。 ") + "…"
+    # 截断的算术要连"换行 + 省略号"一起算进去，否则会差一个字（测试逮到过一次：241 > 240）
+    if len(text) + 1 + len(GUIDE) > room:
+        keep = max(0, room - len(GUIDE) - 2)
+        text = text[:keep].rstrip("、，。 ") + "…"
     return text + "\n" + GUIDE
 
 
@@ -518,11 +656,11 @@ def describe(role=None, world=None, scale=None, cfg=None, now=None, name=None):
     mp = map_for(role, world, cfg)
     st = load_state(who, cfg)
     out = ["空间层：%s" % ("开" if cfg.get("enabled") else "关")]
-    place = st.get("place") or HUB
+    place = st.get("place") or (mp.get("home") or HUB)
     have = world_minutes_since(st.get("since"), scale, now) if st.get("since") else None
     out.append("%s 现在：%s%s" % (who, place,
                                  ("（%.0f 分钟前到，%s）" % (have, st.get("by") or "走路"))
-                                 if have is not None else "（还没记过位置，按家算）"))
+                                 if have is not None else "（还没记过位置，按%s算）" % (mp.get("home") or HUB)))
     if st.get("player_place"):
         out.append("你 现在：%s" % st["player_place"])
     if isinstance(st.get("violation"), dict):

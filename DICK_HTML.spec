@@ -7,6 +7,7 @@ from PyInstaller.utils.hooks import collect_all
 #   ② 一旦本机 config.json 里填了 Key，Key 就会进公开发布包。
 # 应用缺 config.json 是安全的：self.config 从 {} 起步、relay_url 另有 BUILTIN_RELAY 兜底。
 datas = [('web', 'web'), ('plugins', 'plugins'), ('saves', 'saves'), ('worlds', 'worlds'),
+         ('world_packs', 'world_packs'),
          ('prompt_presets', 'prompt_presets'), ('personas', 'personas'), ('quick_replies.json', '.'),
          ('web_fetch.py', '.'), ('stock_analysis.py', '.'), ('doc_layout.py', '.'),
          ('i18n.py', '.'), ('app_paths.py', '.'), ('card_compat.py', '.'),
@@ -18,7 +19,10 @@ datas = [('web', 'web'), ('plugins', 'plugins'), ('saves', 'saves'), ('worlds', 
          #   mem_isolate.py 记忆隔离检测（记忆链插件用）
          #   life_core.py  生活层（DICK_core 每轮注入 + 生活插件用）
          #   space_core.py 空间层（不能瞬移；DICK_core 每轮注入 + 空间插件用）
+         #   commonsense.py 常识库（年代 → 地点/交通/屋里格局；空间层用）
+         #   world_packs.py 世界卡库装载（/世界包 命令用）
          ('jobs.py', '.'), ('mem_isolate.py', '.'), ('life_core.py', '.'), ('space_core.py', '.'),
+         ('commonsense.py', '.'), ('world_packs.py', '.'),
          # 围棋规则引擎（主程序 import，显式列出更保险）
          ('go_engine.py', '.'),
          ('text_guard.py', '.'),

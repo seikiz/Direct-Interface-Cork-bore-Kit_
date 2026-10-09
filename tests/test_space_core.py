@@ -24,6 +24,8 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
 sys.path.insert(0, ROOT)
 
+sys.stdout.reconfigure(encoding="utf-8")   # 控制台是 GBK 时 ⑩⑪⑫ 这类字符会直接抛 UnicodeEncodeError
+
 import app_paths  # noqa: E402
 import space_core as S  # noqa: E402
 
@@ -135,11 +137,14 @@ def test_tags():
     print("\n== ⑤ 位置标签：解析与剥离 ==")
     check("解析 loc + ploc", S.parse_move("她进来。[loc:学校] 你点头。[ploc:公司]")
           == [(False, "学校", ""), (True, "公司", "")])
-    check("带交通方式（竖线）", S.parse_move("[loc:学校|骑车]") == [(False, "学校", "骑车")])
-    check("带交通方式（斜杠/逗号/空格）",
-          S.parse_move("[loc:学校/骑车]")[0][2] == "骑车"
-          and S.parse_move("[loc:学校,骑车]")[0][2] == "骑车"
-          and S.parse_move("[loc:学校 骑车]")[0][2] == "骑车")
+    check("带交通方式（竖线，全角也行）",
+          S.parse_move("[loc:学校|骑车]") == [(False, "学校", "骑车")]
+          and S.parse_move("[loc:学校｜骑车]") == [(False, "学校", "骑车")])
+    # 约定：竖线 = 交通方式；斜线 = 屋里路径；逗号/空格属于地名本身
+    check("斜线留给屋里路径（不当交通方式切）",
+          S.parse_move("[loc:家/厨房]") == [(False, "家/厨房", "")])
+    check("逗号/空格留给地名本身",
+          S.parse_move("[loc:朝阳, 北京]") == [(False, "朝阳, 北京", "")])
     check("中文键名也认", S.parse_move("[位置：学校]") == [(False, "学校", "")])
     check("全角冒号也认", S.parse_move("[loc：学校]") == [(False, "学校", "")])
     check("没标签 → 空", S.parse_move("她推门进来。") == [])
@@ -199,8 +204,9 @@ def test_injection():
         check("带使用说明（标签写法）", "[loc:地名]" in t and "不会显示给玩家" in t, t)
         check("长度受控", len(t) <= int(cfg["max_chars"]), str(len(t)))
 
-        # 世界过了 400 分钟（1 倍）→ 学校/邻近城市够去，远方（600 分）不够
-        cfg_wide = dict(cfg, reachable_limit=20)
+        # 世界过了 400 分钟（1 倍）→ 学校/邻近城市够去，远方（600 分）不够。
+        # max_chars 放大到 600：默认 240 会在列完最近的几个之后就把 学校 截掉（那也对，只是测不到）。
+        cfg_wide = dict(cfg, reachable_limit=20, max_chars=600)
         chain_long = [{"role": "assistant", "timestamp": (NOW - timedelta(minutes=400)).isoformat()}]
         t2 = S.injection_text(ROLE, scale=1, cfg=cfg_wide, now=NOW, chain=chain_long)
         check("预算大时列出更远的可达地点", "学校" in t2, t2.replace("\n", "｜")[:200])
@@ -208,6 +214,9 @@ def test_injection():
               "远方" not in t2.split("（换地方")[0], t2[:200])
         check("默认 limit 只列最近的几个",
               len(S.reachable(S.map_for(), "家", 600, limit=cfg["reachable_limit"])) == 4)
+        check("默认 240 字上限会把长列表截掉（不会把预算吃光）",
+              len(S.injection_text(ROLE, scale=1, cfg=dict(cfg, reachable_limit=20),
+                                   now=NOW, chain=chain_long)) <= 240)
 
         # 穿帮提醒最多两次
         S.note_move("薇拉", "学校", scale=1, now=NOW)
@@ -264,7 +273,8 @@ def test_config_and_command():
         r3 = p.on_command("在哪", "我=公司")
         check("能设玩家位置", "公司" in r3 and S.load_state("薇拉").get("player_place") == "公司", r3)
         check("交通方式能认", "已设为" in p.on_command("空间", "交通 打车"))
-        check("交通方式认不出会提示", "认不出" in p.on_command("空间", "交通 飞船"))
+        check("这个年代没有的交通方式会点名（唐宋没有打车）",
+              "没有这种交通方式" in p.on_command("空间", "交通 飞船"))
         check("可达开关能关", "不再" in p.on_command("空间", "可达"))
         check("条数要数字", "数字" in p.on_command("空间", "条数 abc"))
         check("长度有上下限", "80" in p.on_command("空间", "长 10") or "1200" in p.on_command("空间", "长 99999"))
@@ -310,6 +320,116 @@ def test_core_integration():
     with_tmp(body)
 
 
+def test_era_commonsense():
+    print("\n== ⑩ 年代常识：地图/交通跟着年代走（不是现代都市套一切）==")
+    import commonsense as C
+    import life_core as L
+
+    check("常识库的年代 key 与生活层一致（两张表不许漂移）",
+          set(L.ERA_BY_KEY.keys()) <= set(C.era_keys()),
+          "生活层有而空间层缺：%s" % sorted(set(L.ERA_BY_KEY.keys()) - set(C.era_keys())))
+
+    tang = S.map_for(None, None, None, "唐宋")
+    check("唐宋没有地铁/高铁（年代表说了算）",
+          "地铁" not in tang["transport"] and "高铁" not in tang["transport"],
+          str(sorted(tang["transport"])))
+    check("唐宋有轿子/渡船/骑马",
+          all(k in tang["transport"] for k in ("轿子", "渡船", "骑马")),
+          str(sorted(tang["transport"])))
+    check("唐宋的地点里有茶肆/衙门，而不是便利店/地铁站",
+          "茶肆" in tang["places"] and "衙门" in tang["places"]
+          and "便利店" not in tang["places"], "、".join(list(tang["places"])[:8]))
+
+    modern = S.map_for(None, None, None, "现代")
+    check("现代有地铁", "地铁" in modern["transport"])
+
+    xian = S.map_for(None, None, None, "仙侠")
+    check("仙侠用御剑而不是打车",
+          "御剑" in xian["transport"] and "打车" not in xian["transport"])
+
+    check("卡里显式写 era 最优先",
+          C.detect_era({"name": "某地", "params": {"era": "明清"}}) == "明清")
+    check("设定类型优先于年代（明朝背景的仙侠，地图仍按仙侠）",
+          C.effective_era({"name": "云梦宗",
+                           "params": {"era": "明清", "era_kind": "仙侠"}}) == "仙侠")
+    check("世界卡关键词也能认（复用生活层的表）",
+          C.detect_era({"name": "大明万历", "description": "江南小镇"}) == "明清")
+    check("认不出 → 现代", C.detect_era({"name": "某个地方"}) == "现代")
+    check("交通方式列表按年代给（唐宋不列地铁）",
+          all(n != "地铁" for n, _ in S.transport_options(tang)))
+    check("认不出的交通方式按走路算（1.0）",
+          abs(S.travel_minutes(tang, "自家宅院", "码头", "飞船") - 40) < 0.01)
+
+
+def test_home_rooms():
+    print("\n== ⑪ 家屋（室内）：同一间屋子不算赶路 ==")
+    mp = S.map_for(None, None, None, "现代")
+    home = mp["home"]
+    check("现代地图有屋（卧室/厨房/卫生间…）",
+          all(r in mp["places"] for r in ("卧室", "厨房", "卫生间")),
+          str(sorted(mp["rooms"])))
+    check("屋里的点都带 room 标记", (mp["places"].get("厨房") or {}).get("room") is True)
+    check("屋里走动 ≤1 分钟",
+          S.travel_minutes(mp, "卧室", "厨房") < 1.0001,
+          str(S.travel_minutes(mp, "卧室", "厨房")))
+    check("从屋里出门 = 屋到门口 + 门口到目的地",
+          abs(S.travel_minutes(mp, "卧室", "学校") - (S.ROOM_MINUTES + 25)) < 0.01)
+    check("home/房间 路径能解析", S.resolve_place(mp, home + "/厨房") == "厨房")
+    check("直接写房间名也能解析", S.resolve_place(mp, "厨房") == "厨房")
+    check("认不出的地名按原名（当编外地点）", S.resolve_place(mp, "火星") == "火星")
+    check("「够去哪」默认不列屋里（否则会被 0.5 分钟的房间挤满）",
+          all(not (mp["places"].get(n) or {}).get("room")
+              for n, _ in S.reachable(mp, "家", 30)),
+          str(S.reachable(mp, "家", 30)))
+    check("想看屋里可以显式要", any((mp["places"].get(n) or {}).get("room")
+                                    for n, _ in S.reachable(mp, "家", 30, include_rooms=True)))
+
+    def body(tmp):
+        S.note_move("薇拉", "厨房", scale=1, now=NOW - timedelta(minutes=30))
+        st = S.load_state("薇拉")
+        check("位置可以是屋里的一间", st.get("place") == "厨房", str(st))
+        t = S.injection_text(ROLE, scale=1, cfg=dict(S.DEFAULTS), now=NOW,
+                             chain=[{"role": "assistant",
+                                     "timestamp": (NOW - timedelta(minutes=10)).isoformat()}])
+        check("注入里报出她在屋里（并写明在家里）",
+              "厨房" in t and "在家里" in t, t.replace("\n", "｜")[:120])
+        check("注入里给一句屋里格局", "屋里：" in t, t.replace("\n", "｜")[:160])
+    with_tmp(body)
+
+
+def test_pack_map_integration():
+    print("\n== ⑫ 世界卡包 → 地图：整张换掉年代默认 ==")
+    import json as _json
+    import world_packs as W
+    pack = W.find_pack("江南水乡·明末")
+    check("找得到卡包", pack is not None)
+    if not pack:
+        return
+    with io.open(pack["path"], encoding="utf-8") as f:
+        card = _json.load(f)
+    mp = S.map_for(None, card)
+    check("卡包的地图整张覆盖年代默认（没有现代都市的便利店/地铁站）",
+          "便利店" not in mp["places"] and "地铁站" not in mp["places"],
+          "、".join(list(mp["places"])[:8]))
+    check("卡包自己的家（自家宅院）成为圆心", mp["home"] == "自家宅院", str(mp["home"]))
+    check("屋里格局也按卡包（灶房/绣楼）",
+          "灶房" in mp["rooms"] and "绣楼" in mp["rooms"], str(mp["rooms"]))
+    check("卡包的交通表覆盖现代（没有地铁）", "地铁" not in mp["transport"])
+
+    merged = _json.loads(_json.dumps(card, ensure_ascii=False))
+    sp = _json.loads(merged["params"]["space"])
+    sp["merge"] = True
+    merged["params"]["space"] = _json.dumps(sp, ensure_ascii=False)
+    mp2 = S.map_for(None, merged)
+    # merge 的底是**那个年代的**默认（明清），所以两边并集里应当同时有
+    # 卡包自带的地点（茶馆）与明清年代表里的地点（县衙）—— 而现代独有的便利店仍不该出现。
+    check("写 merge: true 才和年代默认叠加（卡包的茶馆 + 明清的县衙并存）",
+          "茶馆" in mp2["places"] and "县衙" in mp2["places"], "、".join(list(mp2["places"])[:10]))
+    check("叠加也不会把现代的地点带进来（年代口径没被破坏）",
+          "便利店" not in mp2["places"] and "地铁站" not in mp2["places"],
+          "、".join(list(mp2["places"])[:10]))
+
+
 if __name__ == "__main__":
     print("=" * 62)
     print(u"空间层（不能瞬移）测试")
@@ -323,6 +443,9 @@ if __name__ == "__main__":
     test_injection()
     test_config_and_command()
     test_core_integration()
+    test_era_commonsense()
+    test_home_rooms()
+    test_pack_map_integration()
     print("\n" + "=" * 62)
     print(u"通过 %d / 失败 %d" % (PASS, FAIL))
     if not FAIL:

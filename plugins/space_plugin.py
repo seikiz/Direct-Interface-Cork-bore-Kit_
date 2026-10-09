@@ -73,14 +73,19 @@ class SpacePlugin(PluginBase):
             space_core.save_config(cfg)
             return "空间层已关闭"
         if head_low in ("交通", "方式", "transport"):
+            mp = space_core.map_for(role, world, cfg)
+            opts = space_core.transport_options(mp)
+            names = [n for n, _ in opts]
             if not tail:
-                return "交通方式可选：" + "、".join(sorted(space_core.TRANSPORT))
-            if tail not in space_core.TRANSPORT:
-                return "认不出这个交通方式：%s\n可选：%s" % (
-                    tail, "、".join(sorted(space_core.TRANSPORT)))
+                return ("这个年代（%s）的交通方式：%s\n用法：/空间 交通 <名字>"
+                        % (mp.get("era") or "现代",
+                           "、".join("%s(%.2f)" % (n, f) for n, f in opts)))
+            if tail not in names:
+                return "这个年代没有这种交通方式：%s\n可选：%s" % (tail, "、".join(names))
             cfg["default_transport"] = tail
             space_core.save_config(cfg)
-            return "默认交通方式已设为：%s（耗时系数 %.2f）" % (tail, space_core.TRANSPORT[tail])
+            return "默认交通方式已设为：%s（耗时系数 %.2f）" % (
+                tail, dict(opts).get(tail, 1.0))
         if head_low in ("可达", "列表", "reachable"):
             cfg["show_reachable"] = not bool(cfg.get("show_reachable"))
             space_core.save_config(cfg)

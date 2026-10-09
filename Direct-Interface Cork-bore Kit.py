@@ -494,7 +494,7 @@ def _seed_defaults(base_dir):
     if not bundled:
         return
     import shutil
-    for name in ("prompt_presets", "personas", "worlds", "saves"):
+    for name in ("prompt_presets", "personas", "worlds", "saves", "world_packs"):
         src = os.path.join(bundled, name)
         if not os.path.isdir(src):
             continue
@@ -508,6 +508,8 @@ def _seed_defaults(base_dir):
                     shutil.copy2(s, d)
                 except OSError:
                     pass
+    # 世界卡库（world_packs/）只释放卡包本身，**不**自动装进 worlds/ ——
+    # 装哪几张是用户的选择（/世界包 装 <名字>）；否则世界列表会被塞满。
     cfg_src = os.path.join(bundled, "config.json")
     cfg_dst = os.path.join(base_dir, "config.json")
     if os.path.isfile(cfg_src) and not os.path.exists(cfg_dst):
