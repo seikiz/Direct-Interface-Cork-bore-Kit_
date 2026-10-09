@@ -95,6 +95,13 @@ def third_party_imports(files):
         for fn in os.listdir(pdir):
             if fn.endswith(".py"):
                 local.add(fn[:-3])
+    # tests/ 里的辅助模块同理（测试互相 import，比如 test_time_context → probe_payload）
+    tdir = os.path.join(ROOT, "tests")
+    local.add("tests")
+    if os.path.isdir(tdir):
+        for fn in os.listdir(tdir):
+            if fn.endswith(".py"):
+                local.add(fn[:-3])
     found = {}
     for p in files:
         try:

@@ -237,10 +237,12 @@ def test_injected_into_payload():
     # 不重构生产代码，改用桩 + 假 _stream_create 把真实载荷截下来。
     # 桩必须齐：_fetch_response 依赖 22 个 self 属性，缺一个就抛
     # AttributeError 并被 except 吞掉，表现成"载荷截不到"，极难查。
-    # 完整的桩清单见 _probe_payload.py（那段代码 grep 出来的依赖）。
+    # 完整的桩清单见 tests/probe_payload.py（那段代码 grep 出来的依赖）。
+    # 注意：辅助模块必须放在 tests/ 里 —— 工程根的 `_*.py` 被 .gitignore 忽略，
+    # CI 上不存在，import 会直接 ModuleNotFoundError（2026-10 红过一次）。
     import threading
-    sys.path.insert(0, ROOT)
-    from _probe_payload import make_probe
+    sys.path.insert(0, HERE)
+    from probe_payload import make_probe
     Probe, captured = make_probe()
     p = Probe()
     uid = p.tree.add_node("user", "你好")

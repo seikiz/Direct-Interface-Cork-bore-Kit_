@@ -26,11 +26,20 @@ class ProtocolPlugin(PluginBase):
 
     def _start(self):
         try:
+            # 协议约定是 UTF-8。Python 子进程的 stdin/stdout 默认跟 locale 走
+            # （Windows 上就是 GBK），所以这里替它把环境钉死：
+            #   PYTHONIOENCODING / PYTHONUTF8 只影响 Python 子进程，别的语言自己忽略。
+            # 子进程自己也该 reconfigure（见 plugins/protocol/roll_plugin.py），
+            # 两头都管住才不会再出现"中文被按 GBK 解成乱码"这种事。
+            env = dict(os.environ)
+            env["PYTHONIOENCODING"] = "utf-8"
+            env["PYTHONUTF8"] = "1"
             self._p = subprocess.Popen(
                 [self._cmd] + self._args,
                 stdin=subprocess.PIPE, stdout=subprocess.PIPE,
                 stderr=subprocess.DEVNULL,
                 text=True, encoding="utf-8", errors="replace", bufsize=1,
+                env=env,
             )
             meta = self._call({"hook": "get_meta"})
             if meta and isinstance(meta.get("result"), dict):

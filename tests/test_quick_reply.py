@@ -50,13 +50,23 @@ check(r.get("ok") is True, "发送成功")
 msgs = [m for m in app.api_state()["messages"] if m["kind"] == "user"]
 check(msgs and msgs[-1]["content"] == "我叫主角，你叫咲", "发送时宏已展开: %r" % (msgs[-1]["content"] if msgs else None))
 
-# 3) quick_replies 接口（把项目根默认文件拷进临时目录模拟打包环境）
+# 3) quick_replies 接口（自己造一份放进临时目录）
+# 原来这里是"把项目根的 quick_replies.json 拷过去"，但那个文件是**用户运行时状态**
+# （.gitignore 里有它，build_release 还会从发布包里剔掉），仓库里根本没有 →
+# CI（干净检出）上 shutil.copy 直接 FileNotFoundError。测试要断言的接口行为与
+# 那份内容无关，自己写一份即可。
 import shutil as _sh
-shutil.copy(os.path.join(ROOT, "quick_replies.json"), os.path.join(tmp, "quick_replies.json"))
+_qr = [{"label": "打招呼", "text": "你好呀"},
+       {"label": "夸夸她", "text": "今天真好看"},
+       {"label": "道别", "text": "我先走啦"},
+       {"label": "没标签的脏数据", "text": "应当被忽略"}]
+_qr[3].pop("label")          # 少 label 的条目要被 api_quick_replies 过滤掉
+with open(os.path.join(tmp, "quick_replies.json"), "w", encoding="utf-8") as f:
+    json.dump(_qr, f, ensure_ascii=False)
 qr = app.api_quick_replies()
-check(isinstance(qr, list) and len(qr) >= 4, "默认 quick_replies 加载: %d 条" % len(qr))
+check(isinstance(qr, list) and len(qr) == 3, "quick_replies 加载并过滤脏条目: %d 条" % len(qr))
 check(qr[0]["label"] and qr[0]["text"], "条目含 label/text")
-# 文件缺失 → 空列表
+# 文件缺失 → 空列表（打包版与 scrub 之后就是这种状态，不能崩）
 os.remove(os.path.join(tmp, "quick_replies.json"))
 check(app.api_quick_replies() == [], "文件缺失返回空列表")
 

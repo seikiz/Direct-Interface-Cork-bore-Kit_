@@ -28,6 +28,9 @@ VALID_ROLES = ("system", "user", "assistant")
 BACKUP_SUBDIR = "backup"
 BACKUP_KEEP = 20          # 每个存档保留的备份份数
 BACKUP_THROTTLE_S = 300   # 覆盖前备份的节流秒数（同一存档 5 分钟内不重复备份）
+# sweep 清理原子写入残留时的"陈旧阈值"：比这新的 tmp 文件一律不动
+# （它可能正在被写；顺手的清理不该把一次正常存档搅黄，见 sweep 里的长注释）
+TMP_STALE_S = 600
 
 
 # ============================================================
@@ -444,9 +447,18 @@ def sweep(data_dir, include_worlds=True, include_memory=True, do_repair=True, do
                 continue
             # 崩溃/并发残留的唯一临时文件（*.json.tmp.<pid>_<ms>_<tid>）：
             # 先于 .json 过滤处理（它们不以 .json 结尾）。
+            #
+            # ⚠ 只清**陈旧的**：这个 sweep 跑在后台线程（sweep_async），而写盘随时可能正在进行。
+            # 一个正在写的 tmp 文件被删掉，紧接着的 os.replace 就会 ENOENT，那一次存档直接失败。
+            # Windows 上恰好没事 —— 打开着的文件删不掉，所以这个竞态一直没暴露；
+            # Linux/macOS 上 unlink 对打开的文件是允许的，于是 CI 上就红了（真事，2026-10）。
+            # 判据用 mtime：正常写入的 tmp 只存在毫秒级，超过 10 分钟的铁定是崩溃残留。
             if ".tmp." in fn:
                 p = os.path.join(d, fn)
                 try:
+                    if time.time() - os.path.getmtime(p) < TMP_STALE_S:
+                        summary["skipped"] += 1
+                        continue
                     os.remove(p)
                     summary["skipped"] += 1
                 except Exception as e:

@@ -55,11 +55,17 @@ def handle(req):
 
 
 def main():
-    try:
-        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
-        sys.stderr.reconfigure(encoding="utf-8", errors="replace")
-    except Exception:
-        pass
+    # 三根管子都要显式 UTF-8 —— **stdin 最容易漏**：
+    # Python 子进程的 stdin/stdout 默认跟着 locale 走，Windows 上是 GBK/CP936。
+    # 宿主人那边已经按 UTF-8 收发（protocol_plugin.py 里 encoding="utf-8"），
+    # 子进程这边若只改 stdout，读进来的中文就被按 GBK 解成乱码（还带 `?` 丢字节），
+    # 再回给宿主 —— 用户自己发的那句话就变成"鎴戝彨…"。
+    # Linux 默认就是 UTF-8，所以这个坑只在 Windows 上炸（2026-10 在本地测试里抓到）。
+    for stream in (sys.stdin, sys.stdout, sys.stderr):
+        try:
+            stream.reconfigure(encoding="utf-8", errors="replace")
+        except Exception:
+            pass
     for line in sys.stdin:
         line = line.strip()
         if not line:

@@ -46,6 +46,15 @@ check("协议插件" in pl.contextInjection(), "contextInjection 返回注入文
 # --- on_message_send 透传 ---
 check(pl.on_message_send("hi") == "hi", "on_message_send 原样透传")
 
+# --- 中文必须原样回来（这条是 2026-10 补的回归）---
+# 起因：roll_plugin.py 只把 stdout/stderr 改成了 UTF-8，**漏了 stdin**。
+# Python 子进程的 stdin 默认跟 locale 走，Windows 上是 GBK → 宿主的 UTF-8 字节被按 GBK 解，
+# 用户自己发的那句话在落盘时就变成"鎴戝彨涓昏?掞紝浣犲彨鍜?"（还带 `?` 丢字节）。
+# Linux 默认 UTF-8，所以 CI 上看不出来 —— 只有本机（Windows）跑这条才会红。
+zh = "我叫主角，你叫咲；顺便记一下：香菜不要，谢谢！"
+check(pl.on_message_send(zh) == zh, "中文消息原样透传（子进程 stdin 必须是 UTF-8）")
+check(pl.contextInjection().count("协议插件") >= 1, "中文注入文本没被破坏")
+
 # --- on_message_send 拦截（block）---
 # 注入一个"block"命令的请求不便，这里用 roll 插件的默认（不拦截）即可，
 # 拦截逻辑由协议应答 block=true 触发，已在 test_plugin_protocol 的协议层验证。
