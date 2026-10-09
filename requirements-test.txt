@@ -1,7 +1,24 @@
 # 测试依赖（requirements-test.txt）
 # CI 用：安装跑完整套 python 测试所需的最小依赖。
-flask>=3.0
-requests>=2.31
-openai>=1.0
-Pillow>=10.0
-pywebview>=5.0
+#
+# 这份清单 2026-10 补过一次：当时 CI 连续 6 次全红，但红的不是 Node，而是
+# **有 5 个测试脚本 ModuleNotFoundError**：
+#   test_ranker（numpy）/ test_novel_export（python-docx）/
+#   test_backup_encrypted + test_backup_entries + test_release_backup_e2e（cryptography）
+# 本机开发环境里这些包都在，所以本地全绿、CI 全红 —— 典型的"环境差"型红灯。
+# 教训：往测试里加第三方 import 时**同步往这里加一行**，否则 CI 会以"全套失败"的形式报警，
+# 而真正的错因只有翻日志才看得到。tests/test_ci_deps.py 现在会盯着这件事。
+
+# ---- 测试直接使用的 ----
+flask>=3.0            # test_trpg_server / test_save_sync_* ：起本地服务 + werkzeug 测试客户端
+requests>=2.31        # 联网抓取相关测试
+openai>=1.0           # DICK_core 的 OpenAI 兼容客户端
+Pillow>=10.0          # 角色卡 PNG 嵌卡（card_compat / import_tavern_card）
+pywebview>=5.0        # 入口模块在 main() 里 import webview
+numpy>=1.26           # test_ranker + ranker.py（排序器就是纯 numpy）
+cryptography>=41.0    # 加密备份容器（crypto_core.encrypt/decrypt → AES-GCM）
+python-docx>=1.1      # test_novel_export：导出 .docx 并读回来校验（会带上 lxml）
+werkzeug>=3.0         # 测试里直接 from werkzeug.serving import make_server（flask 也会带，钉住更保险）
+
+# ---- 由上面传递带来，不单独钉版本 ----
+# lxml（python-docx 的依赖；仓库里没有任何地方直接 import 它）

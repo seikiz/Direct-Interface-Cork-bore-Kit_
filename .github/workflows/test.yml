@@ -1,5 +1,13 @@
 # GitHub Actions —— DICK 全量测试矩阵（商业化质量的测试纪律）
 # 每次 push / PR 跑一遍全套测试，防回归；失败即红。
+#
+# 2026-10 复盘：连续 6 次"全红"其实只有一类原因 —— requirements-test.txt 少了
+# cryptography / numpy / python-docx，五个脚本 ModuleNotFoundError（本机有、CI 没有）。
+# 唯一那条 Node 相关输出是**警告**（actions 跑在 Node 24 上，Node 20 已弃用），不是失败。
+# 所以这次改了三处：
+#   ① actions 升到 Node 24 世代（checkout@v5 / setup-python@v6），警告消失
+#   ② 图标回归那步加 if: always()：Python 挂了它也照跑，"Node 有没有事"一眼可辨
+#   ③ 汇总时把失败的脚本名打成 ::error，红叉点得准，不用翻日志找错因
 name: test
 
 on:
@@ -17,10 +25,10 @@ jobs:
         python-version: [ "3.11", "3.12" ]
     steps:
       - name: 检出
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: 配置 Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
 
@@ -28,6 +36,10 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements-test.txt
+          # 装完先自报一句：这几个包缺一个就会有几个脚本莫名红。
+          # 用 find_spec 而不是 import —— import webview 在无显示器的 Linux 上会去碰 GTK/QT，
+          # 我们只需要确认"装上了"，不需要真的把它导进来。
+          python -c "import importlib.util as u, sys; need=('flask','requests','openai','PIL','webview','numpy','cryptography','docx'); miss=[m for m in need if u.find_spec(m) is None]; print('测试依赖就绪' if not miss else '缺少依赖: '+','.join(miss)); sys.exit(1 if miss else 0)"
 
       - name: 运行全量测试
         env:
@@ -36,10 +48,17 @@ jobs:
         run: |
           set -o pipefail
           FAIL=0
+          FAILED=""
           for t in tests/test_*.py; do
             echo "== $t =="
-            python "$t" || FAIL=1
+            if ! python "$t"; then
+              FAIL=1
+              FAILED="$FAILED $t"
+            fi
           done
+          if [ -n "$FAILED" ]; then
+            echo "::error::失败的脚本：$FAILED"
+          fi
           exit $FAIL
 
       - name: 汇总
@@ -48,5 +67,10 @@ jobs:
 
       # 图标系统是纯前端逻辑，Python 套件扫不到它 —— 之前它红了很久没人发现。
       # 只依赖 Node（runner 自带），不用装任何包。
+      # if: always()：Python 那步挂了也要跑 —— 否则"Node 到底有没有事"永远看不出来
+      # （2026-10 那几次红灯里，这一步一直是 skipped，却被人当成 Node 的问题）。
       - name: 图标系统回归（Node）
-        run: node tests/test_icons.js
+        if: always()
+        run: |
+          node --version
+          node tests/test_icons.js
