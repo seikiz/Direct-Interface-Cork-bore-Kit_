@@ -314,9 +314,24 @@ def test_config_and_command():
         p = LifePlugin(core)
         check("非本插件命令 → None", p.on_command("dice", "2d6") is None)
         st = p.on_command("生活", "")
-        check("默认给状态（含世界时钟/年代/家伙/今天）",
-              "世界时钟" in st and "年代" in st and "手边家伙" in st and "今天吃过" in st, st[:60])
-        check("状态里写明年代来自角色卡（不然用户以为命令没生效）", "来自角色卡" in st, st[:200])
+        flat = st.replace("\n", "｜")      # 断言详情压成一行：多行详情在 CI 注解里只能看到第一行
+        # 逐条断言（别用 and 串起来）：红了要一眼看出**缺哪个**，
+        # 否则详情被新行截断，只能看到一个"生活层：开"，白跑一轮 CI。
+        check("状态含世界时钟", "世界时钟" in st, flat[:150])
+        check("状态含年代", "年代" in st, flat[:150])
+        check("状态含手边家伙", "手边家伙" in st, flat[:150])
+        # "今天吃过"那一段是跟**世界时钟**走的：那边若是清早，就会显示"今天还没吃饭点"。
+        # 也就是说插件状态里的这一行本来就随"现在几点"变 —— 直接断言它必然存在，
+        # 等于把测试绑在跑测试的钟点上（CI 上就这么红过一次）。两种状态都算对：
+        check("状态里的吃食那段二选一（今天吃过 / 今天还没吃饭点）",
+              ("今天吃过" in st) or ("今天还没吃饭点" in st), flat[:150])
+        # 要吃食清单本身，就用固定时刻直接测 describe（确定性，不碰挂钟）
+        _fixed = L.describe(chain(30, 1), 720,
+                            role={"name": "薇拉", "advanced": {"life": {"era": "明清"}}},
+                            world={"name": "大明"}, cfg=dict(L.DEFAULTS), now=NOW)
+        check("固定时刻下能列出今天吃过什么", "今天吃过" in _fixed,
+              _fixed.replace("\n", "｜")[:150])
+        check("状态里写明年代来自角色卡（不然用户以为命令没生效）", "来自角色卡" in st, flat[:200])
         check("改年代：能认", "唐宋" in p.on_command("生活", "年代 唐宋"))
         check("改年代：认不出会提示", "认不出" in p.on_command("生活", "年代 赛博朋克"))
         check("改忌口：能设", "忌口" in p.on_command("生活", "忌口 香菜"))
