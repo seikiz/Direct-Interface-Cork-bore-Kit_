@@ -17,7 +17,8 @@ datas = [('web', 'web'), ('plugins', 'plugins'), ('saves', 'saves'), ('worlds', 
          #   jobs.py       模块分道执行（入口/插件都用）
          #   mem_isolate.py 记忆隔离检测（记忆链插件用）
          #   life_core.py  生活层（DICK_core 每轮注入 + 生活插件用）
-         ('jobs.py', '.'), ('mem_isolate.py', '.'), ('life_core.py', '.'),
+         #   space_core.py 空间层（不能瞬移；DICK_core 每轮注入 + 空间插件用）
+         ('jobs.py', '.'), ('mem_isolate.py', '.'), ('life_core.py', '.'), ('space_core.py', '.'),
          # 围棋规则引擎（主程序 import，显式列出更保险）
          ('go_engine.py', '.'),
          ('text_guard.py', '.'),

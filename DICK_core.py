@@ -1275,8 +1275,69 @@ class ChatCore:
             guard += 1
         self._init_mechanisms_from_tree()
 
-    def strip_mechanism_tags(self, text, apply=True):
-        """解析机制标签：apply=True 时更新状态并剥离；apply=False 仅做显示剥离（流式）"""
+    # ---------- 空间层（不能瞬移）：位置标签 + 每轮注入 ----------
+    def _space_role(self, speaker=None):
+        roles = self.active_roles or []
+        if not roles:
+            return {}
+        if speaker:
+            for r in roles:
+                if isinstance(r, dict) and r.get("name") == speaker:
+                    return r
+        return roles[0] if isinstance(roles[0], dict) else {}
+
+    def _consume_space_tags(self, text, apply=True, speaker=None):
+        """吃掉 [loc:地名] / [ploc:地名]（顺带记下她在哪）。
+
+        为什么单独做、不塞进 strip_mechanism_tags 的主循环：那里面一开头就要求
+        `self.mechanism_state` 与机制卡 —— 没有机制卡的角色也该能记位置。
+        位置标签必须**永远**从显示文本里剥掉（玩家不该看到 [loc:学校]）。
+        """
+        if not text:
+            return text
+        try:
+            import space_core as _sp
+        except Exception as e:
+            print("[space] 空间层加载失败: %s" % e)
+            return text
+        if not _sp.enabled():
+            return _sp.strip_move_tags(text)
+        moves = _sp.parse_move(text)
+        if moves and apply:
+            role = self._space_role(speaker)
+            who = str(role.get("name") or "她")
+            scale = self._time_scale()
+            mp = _sp.map_for(role, self._life_world())
+            for is_player, place, by in moves:
+                try:
+                    if is_player:
+                        _sp.note_player_move(who, place, by=by, scale=scale, mp=mp)
+                    else:
+                        _sp.note_move(who, place, by=by, scale=scale, mp=mp)
+                except Exception as e:
+                    print("[space] 记位置失败（%s）: %s" % (place, e))
+        return _sp.strip_move_tags(text)
+
+    def _space_injection(self, chain=None, speaker=None):
+        """每轮注入的【空间】。关掉 / 出错 → ""。"""
+        try:
+            import space_core as _sp
+            if not _sp.enabled():
+                return ""
+            role = self._space_role(speaker)
+            return _sp.injection_text(role, world=self._life_world(),
+                                      scale=self._time_scale(), chain=chain,
+                                      name=str(role.get("name") or "她"))
+        except Exception as e:
+            print("[space] 空间层注入失败: %s" % e)
+            return ""
+
+    def strip_mechanism_tags(self, text, apply=True, speaker=None):
+        """解析机制标签：apply=True 时更新状态并剥离；apply=False 仅做显示剥离（流式）
+
+        空间层的位置标签先处理（它不依赖机制卡），speaker 用来把群聊里的位置记到正确的人身上。
+        """
+        text = self._consume_space_tags(text, apply=apply, speaker=speaker)
         if not text or not self.mechanism_state:
             return text
         cfg = self._mech_config
@@ -2614,6 +2675,12 @@ class ChatCore:
             _life_txt = self._life_injection(chain, speaker)
             if _life_txt:
                 messages.append({"role": "system", "content": _life_txt})
+
+            # 空间层：她在哪、这段时间够去哪、上一跳有没有穿帮（见 space_core.py）。
+            # 与时间纸带同源：世界过了多久 → 决定"移动合不合理"。
+            _space_txt = self._space_injection(chain, speaker)
+            if _space_txt:
+                messages.append({"role": "system", "content": _space_txt})
             for msg in chain:
                 if msg['role'] == 'system':
                     continue

@@ -217,6 +217,15 @@ def test_container_and_env_tooling():
     check("CI 调的是这个脚本，不是内联 python -c（内联的抛异常就白红）",
           "tools/ci_dep_check.py --github" in yml)
     check("锁文件生成工具存在", os.path.isfile(os.path.join(ROOT, "tools", "lock_requirements.py")))
+    # 每加一个"函数内部 import 的根模块"，spec 的 datas 与打包自检清单都得跟上，
+    # 否则打包版里那个功能静默消失（2026-10 jobs.py / mem_isolate.py 就这么漏过）
+    spec = os.path.join(ROOT, "DICK_HTML.spec")
+    spec_txt = read(spec) if os.path.isfile(spec) else ""
+    br = os.path.join(ROOT, "build_release.py")
+    br_txt = read(br) if os.path.isfile(br) else ""
+    for mod in ("jobs.py", "mem_isolate.py", "life_core.py", "space_core.py"):
+        check("%s 在 spec 的 datas 里" % mod, ("('%s', '.')" % mod) in spec_txt)
+        check("%s 在打包自检清单里" % mod, ('("%s",' % mod) in br_txt)
     # 故意**不**要求仓库里有 requirements-lock.txt：见 tools/lock_requirements.py 顶部的说明
     # （轮子可用性是"平台 × 版本"两个维度，手写一份跨平台锁文件只会制造新的环境坑）
 

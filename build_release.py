@@ -329,6 +329,7 @@ def step_selfcheck():
         ("jobs.py", "模块分道执行：缺了入口/插件里的 jobs.submit 全报错"),
         ("mem_isolate.py", "记忆隔离检测：记忆链插件 import 它，缺了插件加载失败"),
         ("life_core.py", "生活层（吃饭）：缺了每轮的【生活·那边】注入静默消失，/生活 命令也废"),
+        ("space_core.py", "空间层（不能瞬移）：缺了每轮的【空间】注入静默消失，/在哪 命令也废"),
         ("gothic_frame.html", "哥特边框前端"),
     ]
     bad2 = 0
