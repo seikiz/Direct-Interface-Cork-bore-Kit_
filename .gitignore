@@ -10,6 +10,9 @@ quick_replies.json
 financial_history.json
 # 用户自定义生图预设（内置预设写死在 image_gen.py，这个是用户覆盖层）
 image_presets.json
+# 运行时设置：时间流速 / 生活层（跟 exe 或工程根走，属于本机状态，不进仓库）
+time_scale.json
+life_config.json
 
 # API Key / 密钥（任何地方）
 *.key

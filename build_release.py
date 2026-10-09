@@ -328,6 +328,7 @@ def step_selfcheck():
         ("host_ui.py", "插件向宿主要界面的通道：缺了插件的选文件/提示全失效"),
         ("jobs.py", "模块分道执行：缺了入口/插件里的 jobs.submit 全报错"),
         ("mem_isolate.py", "记忆隔离检测：记忆链插件 import 它，缺了插件加载失败"),
+        ("life_core.py", "生活层（吃饭）：缺了每轮的【生活·那边】注入静默消失，/生活 命令也废"),
         ("gothic_frame.html", "哥特边框前端"),
     ]
     bad2 = 0
@@ -461,6 +462,11 @@ def step_scrub():
         "financial_history.json",          # 只删顶层那份；包内的年表种子必须留（见上面的 ⚠）
         "debug.log", "_internal/debug.log",
         "saves/.trpg_lock.json", "_internal/saves/.trpg_lock.json",
+        # 运行时设置：开发者在本机跑打包版时会写进包里（时间流速 / 生活层的年代口味忌口）。
+        # 它们和 config.json 一类：属于"我这台机器的状态"，不该随包发出去 ——
+        # 否则下载者一开就是开发者调过的倍率与忌口（而且他不知道为什么）。
+        "time_scale.json", "_internal/time_scale.json",
+        "life_config.json", "_internal/life_config.json",
     ]
     dirs = ["memory", "exports", "_internal/memory", "_internal/exports",
             "saves/backup", "_internal/saves/backup"]

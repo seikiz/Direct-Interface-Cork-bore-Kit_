@@ -881,6 +881,42 @@ class ChatCore:
         except Exception:
             return 1.0
 
+    # ---------- 生活层（吃饭）：世界时钟 + 厨具历史库 + 食材库 ----------
+    def _life_role(self, speaker=None):
+        """这一轮在演谁：单角色就是她；群聊按 @ 到的那个（认不出就用第一个）"""
+        roles = self.active_roles or []
+        if not roles:
+            return None
+        if speaker:
+            for r in roles:
+                if isinstance(r, dict) and r.get("name") == speaker:
+                    return r
+        return roles[0] if len(roles) == 1 else ({"name": speaker} if speaker else roles[0])
+
+    def _life_world(self):
+        """当前世界卡；没初始化好就当没有 —— 少一张世界卡不该把整段生活层弄没"""
+        try:
+            return self.world_data
+        except Exception:
+            return None
+
+    def _life_injection(self, chain, speaker=None):
+        """生活层注入文本。关掉了 / 没有时间戳 / 出错，都返回 ""。
+
+        出错只打印不抛：这里是每轮回复的必经之路，为一个"生活细节"把整条回复弄挂不值当；
+        但**不静默**——日志里看得见（以前插件钩子那种 `except: pass` 就是坑）。
+        """
+        try:
+            import life_core as _life
+            if not _life.enabled():
+                return ""
+            return _life.injection_text(chain, self._time_scale(),
+                                        role=self._life_role(speaker),
+                                        world=self._life_world())
+        except Exception as e:
+            print("[life] 生活层注入失败: %s" % e)
+            return ""
+
     # ---------- 文档上下文（读入的 Word/Excel） ----------
     def set_document_context(self, text: str, append: bool = False):
         """设置文档上下文；append=True 时追加到已有内容（20000 字符截断）"""
@@ -2572,6 +2608,12 @@ class ChatCore:
             _tc = time_context_for(chain, self._time_scale())
             if _tc:
                 messages.append({"role": "system", "content": _tc})
+
+            # 生活层：那边现在几点、今天吃了什么、手边有什么家伙（见 life_core.py）。
+            # 紧挨着时间纸带放 —— 一个说"隔了多久"，一个说"那边此刻是什么日子"。
+            _life_txt = self._life_injection(chain, speaker)
+            if _life_txt:
+                messages.append({"role": "system", "content": _life_txt})
             for msg in chain:
                 if msg['role'] == 'system':
                     continue

@@ -16,7 +16,8 @@ datas = [('web', 'web'), ('plugins', 'plugins'), ('saves', 'saves'), ('worlds', 
          # 函数内部才 import 的根模块（PyInstaller 静态分析看不到 → 打包版会 ImportError）：
          #   jobs.py       模块分道执行（入口/插件都用）
          #   mem_isolate.py 记忆隔离检测（记忆链插件用）
-         ('jobs.py', '.'), ('mem_isolate.py', '.'),
+         #   life_core.py  生活层（DICK_core 每轮注入 + 生活插件用）
+         ('jobs.py', '.'), ('mem_isolate.py', '.'), ('life_core.py', '.'),
          # 围棋规则引擎（主程序 import，显式列出更保险）
          ('go_engine.py', '.'),
          ('text_guard.py', '.'),
