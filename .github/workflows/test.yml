@@ -53,7 +53,9 @@ jobs:
             exit 1
           fi
           echo "::notice::requirements-test.txt 装完"
-          python -c "import importlib.util as u, sys; need=('flask','requests','openai','PIL','webview','numpy','cryptography','docx'); miss=[m for m in need if u.find_spec(m) is None]; print('::error::缺少依赖: '+','.join(miss) if miss else '::notice::测试依赖就绪'); sys.exit(1 if miss else 0)"
+          # 自检放进脚本（tools/ci_dep_check.py）：内联 python -c 一旦自己抛异常，
+          # 就既没有 notice 也没有 error，注解区只剩"exit code 1" —— 白红一次。
+          python tools/ci_dep_check.py --github
 
       - name: 环境报告（贴日志里，省得以后猜"CI 上是什么环境"）
         run: python tools/env_report.py
@@ -135,9 +137,9 @@ jobs:
             exit 1
           fi
           echo "::notice::requirements-test.txt 装完：$(grep -c . "$LOG") 行输出"
-          # 自检也走注解：缺哪个包直接点名（find_spec 不 import —— 无显示器的 Linux 上
-          # import webview 会去碰 GTK/QT）
-          python -c "import importlib.util as u, sys; need=('flask','requests','openai','PIL','webview','numpy','cryptography','docx'); miss=[m for m in need if u.find_spec(m) is None]; print('::error::缺少依赖: '+','.join(miss) if miss else '::notice::测试依赖就绪'); sys.exit(1 if miss else 0)"
+          # 自检放进脚本（tools/ci_dep_check.py）：内联 python -c 自己抛异常时
+          # 既没有 notice 也没有 error，注解区只剩"exit code 1" —— 2026-10 就这么白红过。
+          python tools/ci_dep_check.py --github
 
       - name: 环境报告
         shell: bash

@@ -210,6 +210,10 @@ def test_container_and_env_tooling():
     check("devcontainer 存在（Codespaces / VS Code 能直接用）",
           os.path.isfile(os.path.join(ROOT, ".devcontainer", "devcontainer.json")))
     check("env_report 工具存在", os.path.isfile(os.path.join(ROOT, "tools", "env_report.py")))
+    check("依赖自检脚本存在（装完由它自己报缺哪个包）",
+          os.path.isfile(os.path.join(ROOT, "tools", "ci_dep_check.py")))
+    check("CI 调的是这个脚本，不是内联 python -c（内联的抛异常就白红）",
+          "tools/ci_dep_check.py --github" in yml)
     check("锁文件生成工具存在", os.path.isfile(os.path.join(ROOT, "tools", "lock_requirements.py")))
     # 故意**不**要求仓库里有 requirements-lock.txt：见 tools/lock_requirements.py 顶部的说明
     # （轮子可用性是"平台 × 版本"两个维度，手写一份跨平台锁文件只会制造新的环境坑）
