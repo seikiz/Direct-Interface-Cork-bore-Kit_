@@ -200,6 +200,8 @@ def test_two_platform_jobs():
 
 def test_container_and_env_tooling():
     print("\n== ⑦ 容器与工具：环境要能「照着文件重建」，不是靠记忆 ==")
+    wf = os.path.join(ROOT, ".github", "workflows", "test.yml")
+    yml = read(wf) if os.path.isfile(wf) else ""
     df = os.path.join(ROOT, "Dockerfile")
     check("Dockerfile 存在（本机没 Linux 时用它复现 CI）", os.path.isfile(df))
     if os.path.isfile(df):
