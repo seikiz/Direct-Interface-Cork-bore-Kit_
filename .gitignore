@@ -134,3 +134,6 @@ _phone/
 # ä¸´æ—¶å¯¼å‡ºçš„å°è¯´æ ·æœ¬ï¼ˆéªŒè¯ EPUB/Word å¯¼å‡ºï¼‰
 /_*.epub
 /_*.docx
+
+# pip ½âÎöÒÀÀµÊ±µÄÁÙÊ±±¨¸æ£¨tools/lock_requirements.py ÓÃ£»Òì³£ÍË³ö¿ÉÄÜÁôÏÂ£©
+dick_lock_*.json
