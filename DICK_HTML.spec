@@ -21,8 +21,9 @@ datas = [('web', 'web'), ('plugins', 'plugins'), ('saves', 'saves'), ('worlds', 
          #   space_core.py 空间层（不能瞬移；DICK_core 每轮注入 + 空间插件用）
          #   commonsense.py 常识库（年代 → 地点/交通/屋里格局；空间层用）
          #   world_packs.py 世界卡库装载（/世界包 命令用）
+         #   world_memory.py 世界记忆演化（DICK_core 每轮注入 + 世界记忆插件用）
          ('jobs.py', '.'), ('mem_isolate.py', '.'), ('life_core.py', '.'), ('space_core.py', '.'),
-         ('commonsense.py', '.'), ('world_packs.py', '.'),
+         ('commonsense.py', '.'), ('world_packs.py', '.'), ('world_memory.py', '.'),
          # 围棋规则引擎（主程序 import，显式列出更保险）
          ('go_engine.py', '.'),
          ('text_guard.py', '.'),

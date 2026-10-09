@@ -66,6 +66,8 @@ class ChatViewModel : ViewModel() {
     var showSettings = mutableStateOf(false)
     /** ⏳ 时间流速独立面板（不再塞在设置弹窗里 —— 见 Dialogs.kt 的 TimeScalePanel） */
     var showTimeDial = mutableStateOf(false)
+    /** 生活 / 空间 / 世界卡库设置面板（见 LifeSpaceSettings.kt） */
+    var showLifeSpace = mutableStateOf(false)
     var showApiSetup = mutableStateOf(false)
     var showTrpg = mutableStateOf(false)
     var showCardFace = mutableStateOf(false)

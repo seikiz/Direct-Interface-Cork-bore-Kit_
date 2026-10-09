@@ -480,6 +480,9 @@ class DialogDeps(
     val personaFields: () -> Map<String, String>,
     val personaDisplayName: () -> String,
     val userDisplayName: () -> String,
+    // 生活层/空间层要读"当前角色卡 / 当前世界卡"（年代、地图、口味、忌口都在卡里）
+    val roleJsonFor: (String?) -> String?,
+    val worldJsonFor: () -> String?,
     val treeFileFor: () -> File,
     val stateFileFor: () -> File,
     val listRoleSaves: (String) -> List<J.Obj>,
@@ -909,6 +912,14 @@ fun SettingsDialog(vm: ChatViewModel, deps: DialogDeps) {
                     modifier = Modifier.fillMaxWidth(),
                 ) {
                     IconText("⏳ 时间流速　" + TimeScale.describe(vm.timeScale.value), fontSize = 13.sp)
+                }
+                Spacer(Modifier.height(6.dp))
+                // 生活层 / 空间层 / 世界卡库：三层合成一个面板（都是"世界的物质常识"）
+                OutlinedButton(
+                    onClick = { vm.showLifeSpace.value = true },
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    IconText("生活 / 空间 / 世界卡库（吃饭 · 不能瞬移 · 卡包）", fontSize = 13.sp)
                 }
                 Spacer(Modifier.height(6.dp))
                 OutlinedButton(onClick = { appIconPicker.launch("image/*") }, modifier = Modifier.fillMaxWidth()) {

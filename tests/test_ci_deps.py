@@ -224,7 +224,7 @@ def test_container_and_env_tooling():
     br = os.path.join(ROOT, "build_release.py")
     br_txt = read(br) if os.path.isfile(br) else ""
     for mod in ("jobs.py", "mem_isolate.py", "life_core.py", "space_core.py",
-                "commonsense.py", "world_packs.py"):
+                "commonsense.py", "world_packs.py", "world_memory.py"):
         check("%s 在 spec 的 datas 里" % mod, ("('%s', '.')" % mod) in spec_txt)
         check("%s 在打包自检清单里" % mod, ('("%s",' % mod) in br_txt)
     check("世界卡包目录也随包（world_packs/）", "('world_packs', 'world_packs')" in spec_txt)

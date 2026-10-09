@@ -917,6 +917,27 @@ class ChatCore:
             print("[life] 生活层注入失败: %s" % e)
             return ""
 
+    # ---------- 世界记忆（演化）：这个世界现在是什么样 ----------
+    def _world_memory_injection(self, chain, speaker=None, user_input=""):
+        """每轮注入的【世界·演化】。关掉 / 没有值得提醒的事实 / 出错，都返回 ""。
+
+        与生活层/空间层同一套写法：出错只打印不抛（这是每轮回复的必经之路），
+        但不静默 —— 日志里看得见。写入不在这里，而在一轮结束后的插件钩子里
+        （注入必须只读，重试/重放不该把强度刷上去）。
+        """
+        try:
+            import world_memory as _wm
+            if not _wm.enabled():
+                return ""
+            role = self._life_role(speaker)
+            return _wm.injection_text(chain, scale=self._time_scale(),
+                                      world=self._life_world(),
+                                      name=str((role or {}).get("name") or "她"),
+                                      focus=user_input)
+        except Exception as e:
+            print("[world_memory] 世界记忆注入失败: %s" % e)
+            return ""
+
     # ---------- 文档上下文（读入的 Word/Excel） ----------
     def set_document_context(self, text: str, append: bool = False):
         """设置文档上下文；append=True 时追加到已有内容（20000 字符截断）"""
@@ -2681,6 +2702,12 @@ class ChatCore:
             _space_txt = self._space_injection(chain, speaker)
             if _space_txt:
                 messages.append({"role": "system", "content": _space_txt})
+
+            # 世界记忆（演化）：这个世界已经发生过的事（见 world_memory.py）。
+            # 放在空间层之后 —— 先"她在哪"，再"这个世界现在是什么样"。
+            _wm_txt = self._world_memory_injection(chain, speaker, user_input)
+            if _wm_txt:
+                messages.append({"role": "system", "content": _wm_txt})
             for msg in chain:
                 if msg['role'] == 'system':
                     continue

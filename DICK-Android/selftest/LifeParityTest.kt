@@ -10,11 +10,16 @@
 // 用法：powershell -ExecutionPolicy Bypass -File selftest\run.ps1
 package com.dick.parity.life
 
+import com.dick.core.AppEnv
+import com.dick.core.LifeConfig
 import com.dick.core.LifeCore
 import com.dick.core.LifeTables
 import com.dick.core.Commonsense
 import com.dick.core.MessageNode
+import com.dick.core.SpaceConfig
+import com.dick.core.SpaceCore
 import com.dick.parity.Goldens
+import java.io.File
 import java.time.LocalDateTime
 
 var ok = 0
@@ -113,6 +118,53 @@ fun main() {
         }
     }
     println("  共 " + Goldens.lifeDescribeCases.size + " 组面板")
+
+    // ⑤ 不是黄金值：设置面板落盘的那两份文件能不能原样读回来。
+    //    面板（LifeSpaceSettings.kt）开关一拨就调 saveConfig，字段名必须与电脑端一致
+    //    （life_config.json / space_config.json 的 snake_case），否则"数据目录两端可互读"是空话。
+    println("\n-- ⑤ 配置落盘/读回（设置面板写的就是这两份文件） --")
+    val tmp = File(System.getProperty("java.io.tmpdir"), "dick_cfg_rt_" + System.nanoTime())
+    tmp.mkdirs()
+    AppEnv.dataRoot = tmp
+
+    val wantLife = LifeConfig(enabled = false, era = "明清", region = "粤", taste = "清淡",
+        avoid = "香菜,海鲜", showMeals = false, maxChars = 321, location = "宿舍")
+    LifeCore.saveConfig(wantLife)
+    LifeCore.resetConfigCache()
+    val gotLife = LifeCore.loadConfig()
+    ck(gotLife == wantLife, "生活层配置原样读回（得到 " + gotLife + "）")
+    ck(LifeCore.configPath().name == "life_config.json", "生活层配置文件名与电脑端一致")
+    val lifeText = try {
+        LifeCore.configPath().readText(Charsets.UTF_8)
+    } catch (e: Exception) {
+        ""
+    }
+    ck(lifeText.contains("\"show_meals\"") && lifeText.contains("\"max_chars\""),
+        "生活层落盘字段名与电脑端一致（show_meals / max_chars）")
+
+    val wantSpace = SpaceConfig(enabled = false, maxChars = 333, showReachable = false,
+        reachableLimit = 7, defaultTransport = "骑车", warnWhenImpossible = false, stateDir = "space")
+    SpaceCore.saveConfig(wantSpace)
+    SpaceCore.resetConfigCache()
+    val gotSpace = SpaceCore.loadConfig()
+    ck(gotSpace == wantSpace, "空间层配置原样读回（得到 " + gotSpace + "）")
+    ck(SpaceCore.configPath().name == "space_config.json", "空间层配置文件名与电脑端一致")
+    val spaceText = try {
+        SpaceCore.configPath().readText(Charsets.UTF_8)
+    } catch (e: Exception) {
+        ""
+    }
+    val keys = listOf("show_reachable", "reachable_limit", "default_transport",
+        "warn_when_impossible", "state_dir", "max_chars")
+    val missing = keys.filter { !spaceText.contains("\"" + it + "\"") }
+    ck(missing.isEmpty(), "空间层落盘字段名齐全（缺：" + missing + "）")
+    // 面板列交通方式用的是"这张地图真有的"那张表：唐宋不该有地铁
+    val mingMap = SpaceCore.mapFor(roleJson = null, worldJson = "{\"params\": {\"era\": \"唐宋\"}}")
+    val mingNames = SpaceCore.transportOptions(mingMap).map { it.first }
+    ck(!mingNames.contains("地铁") && !mingNames.contains("高铁"),
+        "年代地图的交通方式里没有地铁/高铁（得到 " + mingNames + "）")
+    ck(SpaceCore.transportOptions(SpaceCore.mapFor(roleJson = null, worldJson = null))
+        .map { it.first }.contains("地铁"), "现代地图里确实有地铁（对照）")
 
     println("\n通过 " + ok + " / 失败 " + bad)
     if (bad > 0) {

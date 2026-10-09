@@ -1369,14 +1369,17 @@ val importCardLauncher = rememberLauncherForActivityResult(ActivityResultContrac
     }
 
     // 角色卡 JSON：生活层读 advanced.life（年代/口味/忌口），空间层读 advanced.space。
-    fun currentRoleJson(): String? {
-        val n = lastSpeaker?.takeIf { selectedRoles.size > 1 && it.isNotBlank() }
+    fun roleJsonOf(name: String?): String? {
+        val n = name?.takeIf { it.isNotBlank() }
+            ?: lastSpeaker?.takeIf { selectedRoles.size > 1 && it.isNotBlank() }
             ?: selectedRoles.firstOrNull() ?: return null
         val o = J.Obj()
         o.fields["name"] = J.Str(n)
         advancedByRole[n]?.let { o.fields["advanced"] = it }
         return JsonS.stringify(o)
     }
+
+    fun currentRoleJson(): String? = roleJsonOf(null)
 
     fun currentSpeaker(): String = lastSpeaker?.takeIf { selectedRoles.size > 1 && it.isNotBlank() }
         ?: selectedRoles.firstOrNull() ?: ""
@@ -2188,6 +2191,8 @@ fun wsRefreshLocal() {
         personaFields = { personaFields() },
         personaDisplayName = { personaDisplayName() },
         userDisplayName = { userDisplayName() },
+        roleJsonFor = { roleJsonOf(it) },
+        worldJsonFor = { currentWorldJson() },
         treeFileFor = { treeFileFor() },
         stateFileFor = { stateFileFor() },
         listRoleSaves = { listRoleSaves(it) },
@@ -2674,6 +2679,7 @@ fun wsRefreshLocal() {
     // ---------- 对话框（已迁至 Dialogs.kt，全体认 vm + deps 协议） ----------
     SettingsDialog(vm, deps)
     TimeScalePanel(vm, deps)   // ⏳ 时间流速：独立展开面板（自托管，读 vm.showTimeDial）
+    LifeSpaceSettingsPanel(vm, deps)   // 生活 / 空间 / 世界卡库（自托管，读 vm.showLifeSpace）
     TrpgDialog(vm, deps)
     CardFaceDialog(vm, theme.muted)
     RolesDialog(vm, deps)
