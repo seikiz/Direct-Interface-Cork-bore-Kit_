@@ -1,13 +1,18 @@
 # GitHub Actions —— DICK 全量测试矩阵（商业化质量的测试纪律）
 # 每次 push / PR 跑一遍全套测试，防回归；失败即红。
 #
-# 2026-10 复盘：连续 6 次"全红"其实只有一类原因 —— requirements-test.txt 少了
-# cryptography / numpy / python-docx，五个脚本 ModuleNotFoundError（本机有、CI 没有）。
-# 唯一那条 Node 相关输出是**警告**（actions 跑在 Node 24 上，Node 20 已弃用），不是失败。
-# 所以这次改了三处：
-#   ① actions 升到 Node 24 世代（checkout@v5 / setup-python@v6），警告消失
-#   ② 图标回归那步加 if: always()：Python 挂了它也照跑，"Node 有没有事"一眼可辨
-#   ③ 汇总时把失败的脚本名打成 ::error，红叉点得准，不用翻日志找错因
+# 2026-10 复盘（两次，共六个真问题）：
+#   ① 连续 6 次"全红"其实只有一类原因 —— requirements-test.txt 少了
+#      cryptography / numpy / python-docx，五个脚本 ModuleNotFoundError（本机有、CI 没有）。
+#      唯一那条 Node 相关输出是**警告**（actions 跑在 Node 24 上，Node 20 已弃用），不是失败。
+#   ② 补齐依赖后又冒出四个"Linux 才炸"的：工程根的测试桩被 .gitignore 忽略、
+#      测试依赖用户运行时文件、写死 Windows 发布包路径、以及一个真 bug
+#      （save_guard 的后台清理会删掉正在写入的临时文件 → Linux 上 os.replace ENOENT）。
+#   ③ 反方向也有：Windows 独有的 GBK 坑（协议插件子进程漏配 stdin）Linux 看不见。
+# 所以现在：
+#   · 两个作业：linux（3.11/3.12 矩阵）+ windows（单版本）—— 平台差异两边都盯
+#   · 失败脚本的 [FAIL] 行与末尾几行打成 ::error 注解（job 日志 API 要 admin，注解不用）
+#   · 图标回归（Node）那步 if: always()：Python 挂了它也照跑，"Node 有没有事"一眼可辨
 name: test
 
 on:
@@ -17,7 +22,8 @@ on:
   workflow_dispatch:
 
 jobs:
-  test:
+  linux:
+    name: linux (py${{ matrix.python-version }})
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -41,6 +47,9 @@ jobs:
           # 我们只需要确认"装上了"，不需要真的把它导进来。
           python -c "import importlib.util as u, sys; need=('flask','requests','openai','PIL','webview','numpy','cryptography','docx'); miss=[m for m in need if u.find_spec(m) is None]; print('测试依赖就绪' if not miss else '缺少依赖: '+','.join(miss)); sys.exit(1 if miss else 0)"
 
+      - name: 环境报告（贴日志里，省得以后猜"CI 上是什么环境"）
+        run: python tools/env_report.py
+
       - name: 运行全量测试
         env:
           PYTHONIOENCODING: utf-8
@@ -52,9 +61,6 @@ jobs:
           for t in tests/test_*.py; do
             echo "== $t =="
             LOG="$(mktemp)"
-            # 每个失败脚本的**末尾几行**会被打成一条注解。
-            # 为什么这么做：job 日志要仓库 admin 权限才能下载，注解不用登录就能读 ——
-            # 2026-10 那次排查就是因为拿不到日志，只能靠本地猜。
             if ! python "$t" 2>&1 | tee "$LOG"; then
               FAIL=1
               FAILED="$FAILED $t"
@@ -79,6 +85,71 @@ jobs:
       # 只依赖 Node（runner 自带），不用装任何包。
       # if: always()：Python 那步挂了也要跑 —— 否则"Node 到底有没有事"永远看不出来
       # （2026-10 那几次红灯里，这一步一直是 skipped，却被人当成 Node 的问题）。
+      - name: 图标系统回归（Node）
+        if: always()
+        run: |
+          node --version
+          node tests/test_icons.js
+
+  # 反方向的护栏：Windows 独有的坑（GBK/stdin 编码、路径大小写、DPAPI 行为）
+  # 在 Linux 上永远看不见 —— 2026-10 就漏过一个：协议插件子进程没配 stdin 编码，
+  # 中文消息被按 GBK 解成乱码，只有 Windows 会炸。
+  # 用 shell: bash（runner 自带 Git Bash），与 linux 作业跑**同一段脚本**，避免两套逻辑漂移。
+  windows:
+    name: windows (py3.12)
+    runs-on: windows-latest
+    steps:
+      - name: 检出
+        uses: actions/checkout@v5
+
+      - name: 配置 Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: 安装测试依赖
+        shell: bash
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-test.txt
+          python -c "import importlib.util as u, sys; need=('flask','requests','openai','PIL','webview','numpy','cryptography','docx'); miss=[m for m in need if u.find_spec(m) is None]; print('测试依赖就绪' if not miss else '缺少依赖: '+','.join(miss)); sys.exit(1 if miss else 0)"
+
+      - name: 环境报告
+        shell: bash
+        run: python tools/env_report.py
+
+      - name: 运行全量测试
+        shell: bash
+        env:
+          PYTHONIOENCODING: utf-8
+          PYTHONPATH: ${{ github.workspace }}
+        run: |
+          set -o pipefail
+          FAIL=0
+          FAILED=""
+          for t in tests/test_*.py; do
+            echo "== $t =="
+            LOG="$(mktemp)"
+            if ! python "$t" 2>&1 | tee "$LOG"; then
+              FAIL=1
+              FAILED="$FAILED $t"
+              FAILS="$(grep -m 6 '\[FAIL\]' "$LOG" | sed 's/%/%25/g; s/\r//g' | awk '{printf "%s%%0A", $0}')"
+              TAIL="$(tail -n 6 "$LOG" | sed 's/%/%25/g; s/\r//g' | awk '{printf "%s%%0A", $0}')"
+              echo "::error file=$t::$(basename "$t") 失败：%0A$FAILS%0A--- 末尾 ---%0A$TAIL"
+            fi
+            rm -f "$LOG"
+          done
+          if [ -n "$FAILED" ]; then
+            echo "::error::失败的脚本：$FAILED"
+          fi
+          exit $FAIL
+
+      - name: 汇总
+        if: always()
+        run: echo "测试结束（检查上方是否有 FAIL）"
+
+      # Windows 也跑一遍图标回归：它读 web/index.html 与 Android drawable，
+      # 顺便验证"在 Windows 的换行/编码下，那套解析不炸"。
       - name: 图标系统回归（Node）
         if: always()
         run: |

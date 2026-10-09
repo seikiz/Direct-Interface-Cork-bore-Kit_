@@ -1,0 +1,11 @@
+{
+  "name": "DICK 测试环境（Linux，与 CI 同构）",
+  "build": { "dockerfile": "../Dockerfile", "context": ".." },
+  "customizations": {
+    "vscode": {
+      "extensions": ["ms-python.python"]
+    }
+  },
+  "postCreateCommand": "python tools/env_report.py || true",
+  "remoteUser": "root"
+}

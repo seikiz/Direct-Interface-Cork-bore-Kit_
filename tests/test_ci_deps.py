@@ -185,6 +185,36 @@ def test_no_node_red_herring():
               "actions/checkout@v5" in yml and "actions/setup-python@v6" in yml)
 
 
+def test_two_platform_jobs():
+    print("\n== ⑥ 两个平台都跑：Windows 独有的坑 Linux 看不见，反之亦然 ==")
+    p = os.path.join(ROOT, ".github", "workflows", "test.yml")
+    yml = read(p) if os.path.isfile(p) else ""
+    check("有 linux 作业", "runs-on: ubuntu-latest" in yml)
+    check("有 windows 作业（2026-10 漏过 GBK/stdin 那种只有 Windows 才炸的问题）",
+          "runs-on: windows-latest" in yml)
+    check("Windows 作业用 shell: bash 跑同一段脚本（两套逻辑迟早漂移）",
+          "shell: bash" in yml)
+    check("跑测试前先打一份环境报告（省得以后猜 CI 上是什么环境）",
+          "tools/env_report.py" in yml)
+
+
+def test_container_and_env_tooling():
+    print("\n== ⑦ 容器与工具：环境要能「照着文件重建」，不是靠记忆 ==")
+    df = os.path.join(ROOT, "Dockerfile")
+    check("Dockerfile 存在（本机没 Linux 时用它复现 CI）", os.path.isfile(df))
+    if os.path.isfile(df):
+        txt = read(df)
+        check("容器里装的就是 requirements-test.txt（跟 CI 同一个源）",
+              "requirements-test.txt" in txt)
+        check("容器里显式钉 UTF-8（免得再踩 GBK）", "PYTHONIOENCODING" in txt)
+    check("devcontainer 存在（Codespaces / VS Code 能直接用）",
+          os.path.isfile(os.path.join(ROOT, ".devcontainer", "devcontainer.json")))
+    check("env_report 工具存在", os.path.isfile(os.path.join(ROOT, "tools", "env_report.py")))
+    check("锁文件生成工具存在", os.path.isfile(os.path.join(ROOT, "tools", "lock_requirements.py")))
+    # 故意**不**要求仓库里有 requirements-lock.txt：见 tools/lock_requirements.py 顶部的说明
+    # （轮子可用性是"平台 × 版本"两个维度，手写一份跨平台锁文件只会制造新的环境坑）
+
+
 if __name__ == "__main__":
     print("=" * 62)
     print(u"CI 依赖守卫（测试要的包，requirements-test.txt 里有没有）")
@@ -194,6 +224,8 @@ if __name__ == "__main__":
     test_transitive_pinned()
     test_the_five_that_broke_ci()
     test_no_node_red_herring()
+    test_two_platform_jobs()
+    test_container_and_env_tooling()
     print("\n" + "=" * 62)
     print(u"通过 %d / 失败 %d" % (PASS, FAIL))
     if not FAIL:
