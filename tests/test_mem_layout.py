@@ -22,6 +22,10 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
 sys.path.insert(0, ROOT)
 sys.path.insert(0, os.path.join(ROOT, "plugins"))
+# 这个脚本会打印 ✅/⚠ 之类的符号：GBK 控制台下直接 UnicodeEncodeError 变红，
+# 于是"测试失败"其实只是控制台编码问题。显式把 stdout 拧成 UTF-8。
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8")
 
 import mem_isolate as MI  # noqa: E402
 
