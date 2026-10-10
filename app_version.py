@@ -13,7 +13,8 @@
   · `tools/bump_version.py` 是唯一改它的手；
   · `tests/test_version_consistency.py` 盯着"谁还在自己写版号"。
 
-四段号的用法（用户定调）：`主.次.补.构建`；**一次架构大更新把最后一段 +1**（手动）。
+四段号的用法（用户定调）：`主.次.补.实验`；**前两位不变 = 兼容**，无法兼容直接进 2.0；
+大功能涨次位、**补位只用来标记「加了官方可选插件」**、第四位是实验性版本；纯修补不涨号。
 Android 的 versionCode 由四段算出来：`主*10^6 + 次*10^4 + 补*10^2 + 构建`（1.0.0.1 → 1000001）。
 """
 import json
@@ -81,10 +82,19 @@ def display():
     return "v" + VERSION
 
 
+def compat_line(version=None):
+    """兼容线 = 前两位（`1.0`）。**同一条线内互相兼容**，换线就是换承诺。"""
+    a, b = parts(version)[:2]
+    return "%d.%d" % (a, b)
+
+
 def full():
-    """`DICK v1.0.0.1（代号 v2.0）` —— 用在欢迎语这类要报全名的地方。"""
-    tail = ("（代号 %s）" % GENERATION) if GENERATION else ""
-    return "%s %s%s" % (NAME, display(), tail)
+    """`DICK v1.0.0.1（兼容线 1.0）` —— 用在欢迎语这类要报全名的地方。
+
+    注意**不显示 generation（产品代 v2.0）**：那是"代"，跟"2.0 = 下一个不兼容纪元"
+    撞号，两个数字并排出现只会让人以为是同一个东西。
+    """
+    return "%s %s（兼容线 %s）" % (NAME, display(), compat_line())
 
 
 if __name__ == "__main__":

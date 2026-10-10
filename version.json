@@ -3,7 +3,7 @@
   "version": "1.0.0.1",
   "code": 1000001,
   "generation": "v2.0",
-  "scheme": "四段：主.次.补.构建。一次架构大更新把最后一段 +1（手动跑 tools/bump_version.py）",
+  "scheme": "四段：主.次.补.实验。前两位不变 = 兼容；无法兼容直接进 2.0（主+1、低位归零）；大功能涨次位；补位只用来标记「加了官方可选插件」；第四位是实验性版本；纯修补不涨号。",
   "updated": "2026-10-10",
-  "note": "整个仓库的版号唯一真相。桌面端运行时读它显示；安卓/播放器在 Gradle 构建时读它；改动只走 tools/bump_version.py，别手改到别处。"
+  "note": "整个仓库的版号唯一真相。桌面端运行时读它显示；安卓/播放器在 Gradle 构建时读它；涨号只走 tools/bump_version.py（major/minor/patch/exp），别手改到别处。generation 是产品代（v2.0），不是版号 —— 两者别混。"
 }

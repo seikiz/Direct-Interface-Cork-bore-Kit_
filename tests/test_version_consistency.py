@@ -66,17 +66,31 @@ def main():
     data = json.loads(read(vp))
     ver = str(data.get("version") or "")
 
-    print(u"\n-- ① 四段号本身 --")
-    check(u"版号是四段数字（主.次.补.构建）", bool(re.match(r"^\d+\.\d+\.\d+\.\d+$", ver)), ver)
-    check(u"写明了涨号口径（一次架构大更新 +1）", bool(str(data.get("scheme") or "").strip()))
+    print(u"\n-- ① 四段号与涨号口径 --")
+    check(u"版号是四段数字（主.次.补.实验）", bool(re.match(r"^\d+\.\d+\.\d+\.\d+$", ver)), ver)
+    check(u"写明了涨号口径", bool(str(data.get("scheme") or "").strip()))
+    check(u"口径里写了「前两位不变 = 兼容」", u"兼容" in str(data.get("scheme") or ""))
     check(u"有 versionCode", isinstance(data.get("code"), int), str(data.get("code")))
 
     bv = load(os.path.join(ROOT, "tools", "bump_version.py"), "bump_version")
     check(u"code 与四段号算出来的一致", int(data.get("code")) == bv.code_of(ver),
           u"%s vs %s" % (data.get("code"), bv.code_of(ver)))
     check(u"1.0.0.1 → 1000001 的映射没变", bv.code_of("1.0.0.1") == 1000001, str(bv.code_of("1.0.0.1")))
-    check(u"+1 只动最后一段", bv.bump_last("1.0.0.1") == "1.0.0.2", bv.bump_last("1.0.0.1"))
-    check(u"进位不会串段（1.0.0.99 → 1.0.0.100）", bv.bump_last("1.0.0.99") == "1.0.0.100")
+
+    # 涨号四类的语义（用户定调）：大功能→次位，加官方可选插件→补位，
+    # 不兼容→直接进 2.0（低位归零），实验性→只动第四位
+    check(u"大功能涨次位、低位归零", bv.bump("1.0.3.2", "minor") == "1.1.0.0", bv.bump("1.0.3.2", "minor"))
+    check(u"加官方可选插件涨补位、实验位归零",
+          bv.bump("1.0.0.7", "patch") == "1.0.1.0", bv.bump("1.0.0.7", "patch"))
+    check(u"不兼容直接进 2.0（低位全归零）",
+          bv.bump("1.4.2.9", "major") == "2.0.0.0", bv.bump("1.4.2.9", "major"))
+    check(u"实验性只动第四位", bv.bump("1.0.1.0", "exp") == "1.0.1.1", bv.bump("1.0.1.0", "exp"))
+
+    # 兼容线：前两位相同即兼容
+    check(u"同一条线内兼容（1.0.0.1 ↔ 1.0.9.9）", bv.compatible("1.0.0.1", "1.0.9.9"))
+    check(u"换次位就不兼容（1.0.0.1 ↔ 1.1.0.0）", not bv.compatible("1.0.0.1", "1.1.0.0"))
+    check(u"换主位更不兼容（1.0.0.1 ↔ 2.0.0.0）", not bv.compatible("1.0.0.1", "2.0.0.0"))
+    check(u"兼容线就是前两位", bv.compat_line("1.0.0.1") == "1.0", bv.compat_line("1.0.0.1"))
 
     print(u"\n-- ② 全仓没有第二处写死（bump_version --check） --")
     problems = bv.cmd_check(quiet=True)
