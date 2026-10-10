@@ -1,5 +1,16 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
+// 版号的唯一真相是仓库根目录的 version.json（电脑端读同一份，见 app_version.py）。
+// 这里在配置阶段把它读出来：versionCode 也用四段号算（1.0.0.1 → 1000001），
+// 免得"改了三端里的一处"这种老毛病。别在下面写死字符串。
+val versionJson: String = rootProject.file("../version.json").readText()
+fun verStr(key: String): String =
+    Regex("\"" + key + "\"\\s*:\\s*\"([^\"]+)\"").find(versionJson)!!.groupValues[1]
+fun verInt(key: String): Int =
+    Regex("\"" + key + "\"\\s*:\\s*(\\d+)").find(versionJson)!!.groupValues[1].toInt()
+val dickVersionName: String = verStr("version")
+val dickVersionCode: Int = verInt("code")
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
@@ -14,8 +25,8 @@ android {
         applicationId = "com.dick.app"
         minSdk = 26
         targetSdk = 35
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = dickVersionCode
+        versionName = dickVersionName
     }
 
     buildTypes {

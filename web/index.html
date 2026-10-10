@@ -1281,7 +1281,8 @@ button .ic{ margin-right:2px; }
   <div class="onb-box">
     <div class="onb-steps">
       <div class="onb-step" data-onb="0"><h3>👋 欢迎使用 DICK</h3>
-        <p>装好即聊的角色扮演聊天室：<b>电脑 / 手机进度互通</b>，支持角色卡、世界书、树状回溯、内置游戏。</p></div>
+        <p>装好即聊的角色扮演聊天室：<b>电脑 / 手机进度互通</b>，支持角色卡、世界书、树状回溯、内置游戏。</p>
+        <p style="margin-top:8px;color:var(--sub);font-size:12px" id="onbVersion">版号读取中…</p></div>
       <div class="onb-step" data-onb="1"><h3>⚙️ 第一步：配置模型</h3>
         <p>点右上角「⚙️ 设置」→ 填 <b>API Key</b>、选模型商（DeepSeek 官方 / 免费链 / Ollama 本地等）。<br>
         免费链可留空 Key 直接聊；直连不通会自动走内置代理。</p>
@@ -2369,6 +2370,16 @@ window.addEventListener('resize', function () {
 function loadState() {
   pywebview.api.state().then(function (s) {
     if (!s) return;
+    // 版号从后端来（唯一真相 = version.json）：欢迎页显示一行，控制台补一行
+    try {
+      var vEl = document.getElementById('onbVersion');
+      if (vEl && s.version) vEl.textContent = s.version_full || ('DICK ' + s.version);
+      if (s.version && window.__dickVerLogged !== s.version) {
+        window.__dickVerLogged = s.version;
+        console.log("%c" + (s.version_full || ("DICK " + s.version)),
+          "color:#f59e0b;font-weight:bold");
+      }
+    } catch (e) {}
     try {
     loadStateFill(s);
     } catch (e) {}
@@ -8289,8 +8300,9 @@ var L2D = {
 
 /* ================= 架构级水印（隐蔽，反抄袭溯源） ================= */
 (function () {
-  // 1) 控制台标识（开发者可见，用户无感）
-  try { console.log("%cDICK v2.0 %cCODEX engine — 本产品由 DICK 架构驱动", "color:#f59e0b;font-weight:bold", "color:#888"); } catch (e) {}
+  // 1) 控制台标识（开发者可见，用户无感）。版号不写死：由 state() 带回
+  //    （唯一真相在仓库根目录 version.json），拿到后补一行带版号的。
+  try { console.log("%cDICK %cCODEX engine — 本产品由 DICK 架构驱动", "color:#f59e0b;font-weight:bold", "color:#888"); } catch (e) {}
   // 2) DOM 属性标记（抄界面 DOM 即带走）
   try {
     var root = document.documentElement;

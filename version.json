@@ -1,0 +1,9 @@
+{
+  "name": "DICK",
+  "version": "1.0.0.1",
+  "code": 1000001,
+  "generation": "v2.0",
+  "scheme": "四段：主.次.补.构建。一次架构大更新把最后一段 +1（手动跑 tools/bump_version.py）",
+  "updated": "2026-10-10",
+  "note": "整个仓库的版号唯一真相。桌面端运行时读它显示；安卓/播放器在 Gradle 构建时读它；改动只走 tools/bump_version.py，别手改到别处。"
+}

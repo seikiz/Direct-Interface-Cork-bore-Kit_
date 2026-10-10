@@ -48,8 +48,13 @@ android {
         applicationId = "com.dick.narrative"
         minSdk = 26
         targetSdk = 35
-        versionCode = 1
-        versionName = "1.0"
+        // 版号唯一真相 = 仓库根目录 version.json（与电脑端/安卓端同一份）。
+        // 播放器发的是同一个产品的一部分，版号跟着走，别在这里写死。
+        val vJson = rootProject.file("../../version.json").readText()
+        fun vStr(k: String) = Regex("\"" + k + "\"\\s*:\\s*\"([^\"]+)\"").find(vJson)!!.groupValues[1]
+        fun vInt(k: String) = Regex("\"" + k + "\"\\s*:\\s*(\\d+)").find(vJson)!!.groupValues[1].toInt()
+        versionCode = vInt("code")
+        versionName = vStr("version")
     }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17

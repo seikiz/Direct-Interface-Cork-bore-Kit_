@@ -334,6 +334,8 @@ def step_selfcheck():
         ("world_packs.py", "世界卡库装载：/世界包 命令会直接报错，卡包装不进 worlds/"),
         ("world_memory.py", "世界记忆演化：缺了每轮的【世界·演化】注入静默消失，/世界记忆 命令也废"),
         ("world_packs", "世界卡包目录：缺了 /世界包 列表为空，也没有内置世界可装"),
+        ("app_version.py", "版号读取：缺了窗口标题/欢迎语退回兜底版号（与 version.json 不一致）"),
+        ("version.json", "版号的唯一真相：缺了 app_version 读不到号"),
         ("gothic_frame.html", "哥特边框前端"),
     ]
     bad2 = 0

@@ -22,8 +22,11 @@ datas = [('web', 'web'), ('plugins', 'plugins'), ('saves', 'saves'), ('worlds', 
          #   commonsense.py 常识库（年代 → 地点/交通/屋里格局；空间层用）
          #   world_packs.py 世界卡库装载（/世界包 命令用）
          #   world_memory.py 世界记忆演化（DICK_core 每轮注入 + 世界记忆插件用）
+         #   app_version.py 版号读取（唯一真相是根目录 version.json，必须一起随包，
+         #                  否则冻结版读不到号、窗口标题会退回兜底值）
          ('jobs.py', '.'), ('mem_isolate.py', '.'), ('life_core.py', '.'), ('space_core.py', '.'),
          ('commonsense.py', '.'), ('world_packs.py', '.'), ('world_memory.py', '.'),
+         ('app_version.py', '.'), ('version.json', '.'),
          # 围棋规则引擎（主程序 import，显式列出更保险）
          ('go_engine.py', '.'),
          ('text_guard.py', '.'),

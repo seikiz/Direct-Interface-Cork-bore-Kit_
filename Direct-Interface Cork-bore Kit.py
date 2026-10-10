@@ -34,6 +34,7 @@ if sys.stdout is None or sys.stderr is None:
         pass
 
 import app_paths
+import app_version
 import i18n
 import card_compat
 import save_guard
@@ -634,7 +635,7 @@ class HtmlApp:
         self._load_worlds()
         self.current_world = self.config.get("current_world") or ""
         self.core.world_max_entries = int(self.config.get("world_max_entries") or 3)
-        self._append_sys(i18n.t("welcome1", "👋 欢迎使用 Direct-Interface Cork-bore Kit v2.0！"))
+        self._append_sys(i18n.t("welcome1", "👋 欢迎使用 " + app_version.full() + "！"))
         self._append_sys(i18n.t("welcome2", "多角色模式：输入 @角色名 内容 来指定说话者。"))
         # 启动即恢复上次会话：激活上次选中的角色（机制卡/恋爱条/战斗随启动初始化，
         # 与 Android 端一致——否则恋爱条要手动保存一遍角色才出现）
@@ -1055,6 +1056,10 @@ class HtmlApp:
         with self._lock:
             return {
                 "lang": self.language,
+                # 版号：唯一真相是根目录 version.json（见 app_version.py）。
+                # 前端拿它打控制台横幅 / 关于区，不再自己写死一个号。
+                "version": app_version.display(),
+                "version_full": app_version.full(),
                 "roles": [r["name"] for r in self.roles],
                 "role_unlocked": {r["name"]: bool(r.get("unlocked", False)) for r in self.roles},
                 "worlds": [w.get("name", "") for w in self.worlds],
@@ -7041,7 +7046,7 @@ def main():
                 print(f"[CODEX] 打开失败: {e}")
     html_path = os.path.join(_web_root(), "index.html")
     window = webview.create_window(
-        "Direct-Interface Cork-bore Kit v2.0", html_path, js_api=app,
+        "Direct-Interface Cork-bore Kit " + app_version.display(), html_path, js_api=app,
         width=1060, height=820, min_size=(860, 640), background_color="#0f1115")
     webview.start()
     # 窗口关掉之后收线：别再让分道线程拖着进程
