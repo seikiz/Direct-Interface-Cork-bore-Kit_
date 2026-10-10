@@ -155,6 +155,20 @@ _ADV_TAIL = re.compile(u"(又|也|还|再|就|才|已经|刚刚|刚才|突然|�
                        u"终于|果然|竟然|居然|还是|一直|正在|马上)+$")
 
 
+def _as_int(v, default):
+    """把配置里的数值键安全地转成 int：坏值（None/""/"abc"/对象）退回 default。
+
+    兼容线内"老程序读新文件"和"用户手改配置文件"都允许发生；类型不对时**不能**让
+    整个注入那一轮静默变空（审计里那条"不炸但静默降级"），退回默认值继续跑更合理。
+    """
+    try:
+        if v is None or (isinstance(v, str) and not v.strip()):
+            return int(default)
+        return int(v)
+    except (TypeError, ValueError):
+        return int(default)
+
+
 def config_path():
     try:
         base = app_paths.get_base_dir() if app_paths else None
@@ -184,10 +198,28 @@ def load_config():
     return data
 
 
+def _unknown_on_disk():
+    """磁盘上不属于本版 DEFAULTS 的键（更新的版本写的 / 用户手加的）。
+
+    兼容线内"老程序读新文件"是允许的（用户回退一次）：写回时按 DEFAULTS 重建、
+    把不认识的键丢掉 = 回退一次永久丢配置，属于破坏性改动，得等换线。
+    """
+    try:
+        with io.open(config_path(), "r", encoding="utf-8") as f:
+            got = json.load(f)
+        if isinstance(got, dict):
+            return {k: v for k, v in got.items() if k not in DEFAULTS}
+    except Exception:
+        pass
+    return {}
+
+
 def save_config(cfg):
     global _cache
     data = dict(DEFAULTS)
     data.update({k: v for k, v in (cfg or {}).items() if k in DEFAULTS})
+    for k, v in _unknown_on_disk().items():
+        data.setdefault(k, v)
     with _lock:
         _cache = dict(data)
     try:
@@ -816,7 +848,7 @@ def injection_text(chain=None, scale=None, world=None, cfg=None, now=None, focus
                             _age_note(f, scale, now, cfg))
         items.append((line, i < 2))     # 前两条必须留
     try:
-        room_total = int(cfg.get("max_chars") or DEFAULTS["max_chars"])
+        room_total = _as_int(cfg.get("max_chars"), DEFAULTS["max_chars"])
     except (TypeError, ValueError):
         room_total = DEFAULTS["max_chars"]
     room = max(60, room_total - len(head) - len(GUIDE) - 2)

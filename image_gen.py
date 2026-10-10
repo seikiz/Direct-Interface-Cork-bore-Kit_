@@ -159,12 +159,31 @@ def load_presets(base_dir=None):
 
 
 def save_presets(base_dir, obj):
-    """写用户覆盖文件。返回 (ok, 消息)。传 {} 即恢复内置默认。"""
+    """写用户覆盖文件。返回 (ok, 消息)。传 {} 即恢复内置默认。
+
+    兼容线内"老程序读新文件"是允许发生的（用户回退一次），所以写回时**保留不认识的键**：
+      · 下划线开头的顶层键（用户手写的注释）原样留着；
+      · 预设对象里本版不认识的字段（将来版本加的、或用户手加的）原样留着。
+    否则回退一次就永久丢掉 —— 与三层配置、世界记忆那几处是同一类问题。
+    """
     if not isinstance(obj, dict):
         return False, "预设必须是一个 JSON 对象"
+    # 磁盘上那一份：用来把"本版不认识的东西"带回去。
+    # 注意要点：调用方通常是 `load_presets()` 的**合并视图**（只有 label/prompt/desc/custom），
+    # 所以不认识的键在到达这里之前就已经被它滤掉了 —— 只靠 obj 保留不住，
+    # 必须从磁盘原件补回来（与三层配置、世界记忆那几处同一类问题）。
+    disk = {}
+    try:
+        with open(presets_path(base_dir), encoding="utf-8") as f:
+            got = json.load(f)
+        if isinstance(got, dict):
+            disk = got
+    except Exception:
+        disk = {}
     clean = {}
     for k, v in obj.items():
         if str(k).startswith("_"):
+            clean[k] = v          # 注释键：不当预设，也不许丢
             continue
         if isinstance(v, str):
             if not v.strip():
@@ -177,9 +196,19 @@ def save_presets(base_dir, obj):
             for f in ("label", "desc"):
                 if v.get(f):
                     item[f] = v[f]
+            old = disk.get(k)
+            for f, fv in (old if isinstance(old, dict) else {}).items():
+                if f not in item:              # 磁盘原件里本版不认识的字段
+                    item[f] = fv
+            for f, fv in v.items():            # 调用方多给的字段（也不许丢）
+                if f not in item:
+                    item[f] = fv
             clean[k] = item
         else:
             return False, "预设「%s」的格式不对（应为字符串或对象）" % k
+    for k, v in disk.items():                  # 顶层注释键：磁盘上有就带走
+        if str(k).startswith("_") and k not in clean:
+            clean[k] = v
     try:
         with open(presets_path(base_dir), "w", encoding="utf-8") as f:
             json.dump(clean, f, ensure_ascii=False, indent=2)

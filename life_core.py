@@ -299,6 +299,20 @@ _cache = None
 # ============================================================
 #  二、配置（跟 time_scale.json 一个规矩：自己的文件，自己的缓存）
 # ============================================================
+def _as_int(v, default):
+    """把配置里的数值键安全地转成 int：坏值（None/""/"abc"/对象）退回 default。
+
+    兼容线内"老程序读新文件"和"用户手改配置文件"都允许发生；类型不对时**不能**让
+    整个注入那一轮静默变空（审计里那条"不炸但静默降级"），退回默认值继续跑更合理。
+    """
+    try:
+        if v is None or (isinstance(v, str) and not v.strip()):
+            return int(default)
+        return int(v)
+    except (TypeError, ValueError):
+        return int(default)
+
+
 def config_path():
     try:
         base = app_paths.get_base_dir()
@@ -327,10 +341,29 @@ def load_config():
     return data
 
 
+def _unknown_on_disk():
+    """磁盘上那些**不属于本版 DEFAULTS** 的键（更新的版本写进来的、或用户手加的）。
+
+    为什么留着：兼容线内"老程序读新文件"是允许发生的（用户回退一次）。
+    如果写回时按 DEFAULTS 重建、把不认识的键丢掉，那么回退一次就永久丢配置 ——
+    这属于破坏老数据的改动，得等换线（1.1 / 2.0）才允许。
+    """
+    try:
+        with open(config_path(), "r", encoding="utf-8") as f:
+            got = json.load(f)
+        if isinstance(got, dict):
+            return {k: v for k, v in got.items() if k not in DEFAULTS}
+    except Exception:
+        pass
+    return {}
+
+
 def save_config(cfg):
     global _cache
     data = dict(DEFAULTS)
     data.update({k: v for k, v in (cfg or {}).items() if k in DEFAULTS})
+    for k, v in _unknown_on_disk().items():
+        data.setdefault(k, v)
     with _lock:
         _cache = dict(data)
     try:
@@ -571,7 +604,7 @@ def profile_for(role=None, cfg=None, world=None):
         "skill": str(life.get("skill") or ""),
         "location": str(life.get("location") or cfg.get("location") or "家"),
         "show_meals": bool(cfg.get("show_meals")),
-        "max_chars": int(cfg.get("max_chars") or DEFAULTS["max_chars"]),
+        "max_chars": _as_int(cfg.get("max_chars"), DEFAULTS["max_chars"]),
     }
 
 

@@ -347,6 +347,18 @@ def assemble_role_prompt(name, fields, legacy):
     return chr(10) + chr(10).join(parts) if len(parts) > 1 else (parts[0] if parts else "")
 
 
+def tree_ts_of(data):
+    """存档里的「进度时间戳」—— 同一件东西，两端键名不一样：
+         电脑端写 `_tree_ts`，安卓端写 `tree_ts`（见 DICK-Android 的 Model.kt）。
+    跨设备"后写胜"要拿它比新旧，所以**两边都得认**：只认自己那一个键的话，
+    从另一端同步/导入过来的存档会被当成"没有进度"，于是随便一个更旧的服务器版本都能盖上去。
+    读取侧兼容两种键（不新增/不改写任何字段）；写回时仍按各自的老键写。
+    """
+    if not isinstance(data, dict):
+        return ""
+    return str(data.get("_tree_ts") or data.get("tree_ts") or "")
+
+
 def role_prompt_from_card(name, data):
     """由角色卡数据算出真正要用的系统提示，返回 (prompt, fields, legacy)。
 
@@ -3878,7 +3890,9 @@ class HtmlApp:
         for r in self.roles:
             if r["name"] == role_name:
                 data = dict(r.get("data") or {})
-                local_ts = str(data.get("_tree_ts") or "")
+                # 进度时间戳：本机那份可能是安卓端写的（键名 tree_ts），两种都要认，
+                # 否则"本地有更新"看不出来 → 被更旧的服务器版本盖掉。
+                local_ts = tree_ts_of(data)
                 if server_ts <= local_ts:
                     return False
                 data["history_tree"] = server_tree

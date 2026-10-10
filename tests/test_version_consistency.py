@@ -21,7 +21,9 @@ import io
 import json
 import os
 import re
+import shutil
 import sys
+import tempfile
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
@@ -126,6 +128,23 @@ def main():
     spec = read(os.path.join(ROOT, "DICK_HTML.spec"))
     check(u"spec 随包 version.json", "('version.json', '.')" in spec)
     check(u"spec 随包 app_version.py", "('app_version.py', '.')" in spec)
+
+    print(u"\n-- ⑤ 兼容性：没有 version.json 时不许炸 --")
+    # 老用户升级/回退、或者有人只拷了 exe：读不到号必须退回兜底四段号，
+    # 不能因为少一个文件就起不来（这是 1.0 线内的兼容承诺）。
+    tmp = tempfile.mkdtemp(prefix="dick_ver_")
+    try:
+        shutil.copy(os.path.join(ROOT, "app_version.py"), os.path.join(tmp, "app_version.py"))
+        bare = load(os.path.join(tmp, "app_version.py"), "app_version_nofile")
+        check(u"缺 version.json → 退回兜底号",
+              bare.VERSION == bare.FALLBACK, u"%s vs %s" % (bare.VERSION, bare.FALLBACK))
+        check(u"兜底号本身是四段", bool(re.match(r"^\d+\.\d+\.\d+\.\d+$", bare.FALLBACK)), bare.FALLBACK)
+        check(u"缺文件时 display()/full() 照常给串",
+              bare.display().startswith("v") and u"兼容线" in bare.full(), bare.full())
+        check(u"缺文件时 versionCode 也算得出来", bare.CODE == bv.code_of(bare.FALLBACK),
+              u"%s vs %s" % (bare.CODE, bv.code_of(bare.FALLBACK)))
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
 
     print("\n" + "=" * 58)
     print(u"通过 %d / 失败 %d" % (PASS, FAIL))

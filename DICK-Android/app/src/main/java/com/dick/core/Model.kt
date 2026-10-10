@@ -97,7 +97,11 @@ class SaveFile(
             systemPrompt = (o.fields["system_prompt"] as? J.Str)?.v,
             historyTree = (o.fields["history_tree"] as? J.Obj)?.let { TreeData.fromJson(it) } ?: TreeData(),
             cardData = o.fields["card_data"] as? J.Obj,
-            treeTs = (o.fields["tree_ts"] as? J.Str)?.v,
+            // 进度时间戳：同一件东西两端键名不一样 —— 安卓写 `tree_ts`，电脑端写 `_tree_ts`。
+            // 只认自己那一个的话，从电脑端同步/导入来的存档会被当成"没有进度"，
+            // 于是随便一个更旧的服务器版本都能盖上去（与电脑端 tree_ts_of() 对称的读侧兼容；
+            // 写回仍按各自的老键写，不动存档结构）。
+            treeTs = ((o.fields["tree_ts"] ?: o.fields["_tree_ts"]) as? J.Str)?.v,
         )
     }
 }

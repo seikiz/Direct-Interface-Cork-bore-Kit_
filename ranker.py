@@ -229,8 +229,14 @@ def load(path: str) -> Optional[Dict]:
     try:
         with open(path, "r", encoding="utf-8") as f:
             m = json.load(f)
-        if isinstance(m, dict) and m.get("w") and len(m["w"]) == len(FEATURE_NAMES):
-            return m
+        if not isinstance(m, dict) or not m.get("w") or len(m["w"]) != len(FEATURE_NAMES):
+            return None
+        # 模型里本来就写了 version（MODEL_VERSION），但以前**不看它** —— 于是"特征数一样、
+        # 含义变了"的模型会被当成好的用（排序结果悄悄失真）。缺 version 的老模型按 1 收下
+        # （兼容线内认老数据），显式写了别的版本才拒绝。
+        if m.get("version") not in (None, MODEL_VERSION):
+            return None
+        return m
     except Exception:
         pass
     return None

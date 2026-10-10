@@ -68,6 +68,20 @@ _FALLBACK_PLACES = [("家", 0), ("楼下", 2)]
 _FALLBACK_TRANSPORT = {"走路": 1.0, "步行": 1.0}
 
 
+def _as_int(v, default):
+    """把配置里的数值键安全地转成 int：坏值（None/""/"abc"/对象）退回 default。
+
+    兼容线内"老程序读新文件"和"用户手改配置文件"都允许发生；类型不对时**不能**让
+    整个注入那一轮静默变空（审计里那条"不炸但静默降级"），退回默认值继续跑更合理。
+    """
+    try:
+        if v is None or (isinstance(v, str) and not v.strip()):
+            return int(default)
+        return int(v)
+    except (TypeError, ValueError):
+        return int(default)
+
+
 def _era_places(era):
     return list(_cs.places(era)) if _cs is not None else list(_FALLBACK_PLACES)
 
@@ -137,9 +151,27 @@ def load_config():
     return data
 
 
+def _unknown_on_disk():
+    """磁盘上不属于本版 DEFAULTS 的键（更新的版本写的 / 用户手加的）。
+
+    兼容线内"老程序读新文件"是允许发生的（用户回退一次）：写回时按 DEFAULTS 重建、
+    把不认识的键丢掉，就等于回退一次永久丢配置 —— 那是破坏性改动，得等换线。
+    """
+    try:
+        with open(config_path(), "r", encoding="utf-8") as f:
+            got = json.load(f)
+        if isinstance(got, dict):
+            return {k: v for k, v in got.items() if k not in DEFAULTS}
+    except Exception:
+        pass
+    return {}
+
+
 def save_config(cfg):
     data = dict(DEFAULTS)
     data.update({k: v for k, v in (cfg or {}).items() if k in DEFAULTS})
+    for k, v in _unknown_on_disk().items():
+        data.setdefault(k, v)
     with _Cfg._lock:
         _Cfg._cache = dict(data)
     try:
@@ -640,7 +672,7 @@ def injection_text(role=None, world=None, scale=None, cfg=None, now=None, name=N
                                             v.get("why") or ""))
 
     text = "\n".join(lines)
-    room = int(cfg.get("max_chars") or DEFAULTS["max_chars"])
+    room = _as_int(cfg.get("max_chars"), DEFAULTS["max_chars"])
     # 截断的算术要连"换行 + 省略号"一起算进去，否则会差一个字（测试逮到过一次：241 > 240）
     if len(text) + 1 + len(GUIDE) > room:
         keep = max(0, room - len(GUIDE) - 2)
