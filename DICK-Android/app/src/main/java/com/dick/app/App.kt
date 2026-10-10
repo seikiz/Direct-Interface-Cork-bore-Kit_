@@ -1552,7 +1552,9 @@ val importCardLauncher = rememberLauncherForActivityResult(ActivityResultContrac
             sysMsgs.add(ChatMsg("系统", note))
         }
         gal.clearChoices()
-        doSend(item.text, null, null)
+        // 选项是按钮上的短标签；真正发言用 say（生成时补全好的玩家台词）。
+        // 没有 say（旧选项、模型没给）就退回标签 —— 行为与以前一致。
+        doSend(item.say?.takeIf { it.isNotBlank() } ?: item.text, null, null)
     }
 
     /** 战斗：玩家出招 → 引擎结算 → 结算横幅 + 行动发出（AI 演出） */

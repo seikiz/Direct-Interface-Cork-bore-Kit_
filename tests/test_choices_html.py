@@ -122,6 +122,43 @@ wait_idle()          # 同样要等 plugin 线（钩子是异步完成的）
 check(choices_state()["items"] == st["items"], "滑条候选不重复生成")
 plug.set_setting("auto", False)
 
+print("== ⑧ 选项补全成说话（say） ==")
+# 生成时每个选项会多带一个 say：按钮上仍是短标签，点下去发的是补全好的玩家台词。
+SAY = "「你今天脸色不太好，先坐下歇会儿。」我把热水推到她手边。"
+plug.clear_choices()
+plug.choices = [{"text": "温柔关心她", "say": SAY, "result": "她可能会心头一暖", "aff": 1}]
+app._start_fetch = lambda node_id: None
+r = app.api_pick_choice("温柔关心她")
+check(r["ok"] is True, "带 say 的选项点选成功")
+msgs = [m for m in app.api_state()["messages"] if m["kind"] in ("user", "ai")]
+check(msgs and msgs[-1]["content"] == SAY, "发出去的是补全后的台词（不是标签）")
+
+# 关掉开关 → 退回旧行为（原样发标签）
+plug.set_setting("use_say", False)
+plug.clear_choices()
+plug.choices = [{"text": "温柔关心她", "say": SAY}]
+r = app.api_pick_choice("温柔关心她")
+msgs = [m for m in app.api_state()["messages"] if m["kind"] in ("user", "ai")]
+check(msgs and msgs[-1]["content"] == "温柔关心她", "关掉 use_say 后原样发标签")
+plug.set_setting("use_say", True)
+
+# 没有 say 的旧选项 / 解析规则
+plug.clear_choices()
+plug.choices = [{"text": "转身离开"}]
+r = app.api_pick_choice("转身离开")
+msgs = [m for m in app.api_state()["messages"] if m["kind"] in ("user", "ai")]
+check(msgs and msgs[-1]["content"] == "转身离开", "没有 say 时退回标签（旧选项不炸）")
+
+cleaned = plug._clean([
+    {"text": "一样的话", "say": "一样的话"},          # say == text：等于没补全，丢掉
+    {"text": "太长", "say": "x" * 300},               # 散文/跑题：丢掉
+    {"text": "敲门", "say": "我抬手敲了两下：「在吗？」"},
+], 5)
+by_text = {c["text"]: c for c in cleaned}
+check("say" not in by_text.get("一样的话", {}), "say 与 text 相同 → 不保留")
+check("say" not in by_text.get("太长", {}), "say 过长 → 不保留")
+check(by_text.get("敲门", {}).get("say") == "我抬手敲了两下：「在吗？」", "正常 say 被保留")
+
 shutil.rmtree(tmp, ignore_errors=True)
 print("结果：%d 通过, %d 失败" % (ok, bad))
 sys.exit(1 if bad else 0)

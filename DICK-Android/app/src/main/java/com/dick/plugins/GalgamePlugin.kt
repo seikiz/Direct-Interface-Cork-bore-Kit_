@@ -24,7 +24,9 @@ class GalgamePlugin : Plugin {
     override var enabled = false
 
     /** 选项：文本 + 事件结果提示 + 机制效果（aff=好感度变化，st=状态变化） */
-    data class ChoiceItem(val text: String, val result: String?, val aff: Int?, val st: Map<String, String>?)
+    data class ChoiceItem(val text: String, val result: String?, val aff: Int?, val st: Map<String, String>?,
+                          /** 点下去真正入戏的那句（生成时补全的玩家台词）；按钮上仍显示 text。 */
+                          val say: String? = null)
 
     /** 由宿主注入 */
     var engine: ChatEngine? = null
@@ -182,6 +184,9 @@ class GalgamePlugin : Plugin {
                 append("要求：每个选项不超过 18 个字，口语化，贴合当前角色性格与剧情走向；不要剧透后续剧情，不要输出编号或'选项一'这类前缀。")
                 append("每个选项 text 末尾请用一个贴合语气的句末标点：陈述用「。」、疑问用「？」、意味深长/悬而未决用「…」、感叹用「！」；不要用冒号、分号或括号做解释。")
                 append("每个选项必须带 \"result\"：一句事件结果提示（≤12 字，模糊、不剧透具体数值，如 \"她可能会心头一暖\" / \"气氛可能会尴尬\"）。")
+                // 选项是**按钮上的短标签**；点下去真正入戏的是 "say" ——
+                // 否则记录里玩家那句会是"温柔关心她"这种舞台指示，不像人说的话
+                append("每个选项还必须带 \"say\"：把这个选项补全成玩家（第一人称）真正会说的话与动作，1~2 句、可直接入戏；不要复述 text，不要替角色说话，不要写选项编号。")
                 // 结合当前触发事件：选项围绕事件展开
                 mechEventProvider?.invoke()?.let { ev ->
                     val evName = ev.fields["name"]?.str() ?: ev.fields["id"]?.str() ?: return@let
@@ -192,12 +197,12 @@ class GalgamePlugin : Plugin {
                 }
                 if (effectFmt.isNotEmpty()) {
                     append("当前角色卡启用了机制（好感度/状态），每个选项还必须附带机制效果标签：")
-                    append("只输出 JSON 数组，每项为 {\"text\": \"选项文本\", \"result\": \"结果提示\", ").append(effectFmt.joinToString(", ")).append("}。")
+                    append("只输出 JSON 数组，每项为 {\"text\": \"选项文本\", \"say\": \"玩家台词\", \"result\": \"结果提示\", ").append(effectFmt.joinToString(", ")).append("}。")
                     append("text 不超过 18 字；效果要贴合该选项的后果（可能为正、负或无），")
-                    append("例如：[{\"text\":\"温柔关心她\",\"result\":\"她可能会心头一暖\",\"aff\":+3},{\"text\":\"冷嘲热讽\",\"result\":\"可能会惹她生气\",\"aff\":-5,\"st\":{\"心情\":\"生气\"}}]")
+                    append("例如：[{\"text\":\"温柔关心她\",\"say\":\"「你今天脸色不太好，先坐下歇会儿。」我把热水推到她手边。\",\"result\":\"她可能会心头一暖\",\"aff\":+3},{\"text\":\"冷嘲热讽\",\"say\":\"「就这点本事？」我笑了一声。\",\"result\":\"可能会惹她生气\",\"aff\":-5,\"st\":{\"心情\":\"生气\"}}]")
                 } else {
-                    append("只输出 JSON 数组，每项为 {\"text\": \"选项文本\", \"result\": \"结果提示\"}，")
-                    append("例如：[{\"text\":\"轻轻敲门\",\"result\":\"屋里人可能会回应\"},{\"text\":\"转身离开\",\"result\":\"可能会就此错过\"}]")
+                    append("只输出 JSON 数组，每项为 {\"text\": \"选项文本\", \"say\": \"玩家台词\", \"result\": \"结果提示\"}，")
+                    append("例如：[{\"text\":\"轻轻敲门\",\"say\":\"我抬手敲了两下：「在吗？我进来了。」\",\"result\":\"屋里人可能会回应\"},{\"text\":\"转身离开\",\"say\":\"我在门口站了一会儿，还是转身走了。\",\"result\":\"可能会就此错过\"}]")
                 }
             }
             val reply = e.complete(listOf(MessageNode(role = "user", content = buildTranscript())), system)
@@ -308,12 +313,15 @@ class GalgamePlugin : Plugin {
         for (x in raw) {
             var s: String
             var result: String? = null
+            var say: String? = null
             var aff: Int? = null
             var st: Map<String, String>? = null
             val obj = x as? J.Obj
             if (obj != null) {
                 s = obj.fields["text"]?.str() ?: ""
                 result = obj.fields["result"]?.str()?.takeIf { it.isNotBlank() }?.take(20)
+                say = obj.fields["say"]?.str()?.trim()?.trim('"')?.trim('\'')
+                    ?.takeIf { it.isNotBlank() && it.length <= 200 }
                 aff = (obj.fields["aff"] as? J.Num)?.v?.toInt()
                 val stObj = obj.fields["st"] as? J.Obj
                 if (stObj != null) {
@@ -334,7 +342,9 @@ class GalgamePlugin : Plugin {
             if (s.isNotEmpty() && !Regex("[。！？…?!]$").containsMatchIn(s)) s += "。"
             if (s.isEmpty() || s.length > 50 || s in seen) continue
             seen.add(s)
-            out.add(ChoiceItem(s, result, aff, st))
+            // say 与 text 相同等于没补全 —— 丢掉，点选时自然退回标签
+            val sayFinal = say?.takeIf { it != s }
+            out.add(ChoiceItem(s, result, aff, st, sayFinal))
             if (out.size >= count) break
         }
         return out

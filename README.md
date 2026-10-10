@@ -51,7 +51,7 @@ playable things (choice-driven scenes, mechanics/affection systems, one-click st
 | **桌面端** | 单个 `HtmlApp` 类（6,659 行）对外暴露 **154 个 `api_*`**，经 pywebview js_api 桥接；前端是单页 `web/index.html`（8,119 行） |
 | **三端实现** | 桌面（Python + pywebview）· 安卓（Kotlin + Compose）· 原生播放器（Compose Multiplatform，EXE 与 APK 同源） |
 | **跨端一致性** | 120 个线性图标由 `web/index.html` 的 `ICONS` **单点生成** → `tools/gen_android_icons.py` → 108 个 Android VectorDrawable；两端各有防漂移测试（改一边忘了另一边会红） |
-| **测试** | `tests/` **77 个独立脚本 / 2,226 次断言**（实跑汇总，2026-10）+ Node 图标回归 + 安卓 kotlinc 自检（`DICK-Android/selftest/run.ps1`：TextGuard + 机制重置 + 生活/空间对拍 45+277 条）+ 安卓分道执行的结构检查（`test_android_lanes.py`）+ 跨端对拍前置检查（`test_android_parity.py`：表是否最新 / 基准有没有被用到 / 接线有没有断）；GitHub Actions 跑 **三个作业：Linux(3.11/3.12) + Windows(3.12)**，任一失败即红。环境写进文件而不是靠记忆：`Dockerfile`/`.devcontainer`（本机一条命令跑 Linux 全套）、`tools/env_report.py`（一条命令看清跑测试的是哪套环境）、`tools/ci_dep_check.py`（装完自检，失败直接点名缺哪个包） |
+| **测试** | `tests/` **77 个独立脚本 / 2,233 次断言**（实跑汇总，2026-10）+ Node 图标回归 + 安卓 kotlinc 自检（`DICK-Android/selftest/run.ps1`：TextGuard + 机制重置 + 生活/空间对拍 45+277 条）+ 安卓分道执行的结构检查（`test_android_lanes.py`）+ 跨端对拍前置检查（`test_android_parity.py`：表是否最新 / 基准有没有被用到 / 接线有没有断）；GitHub Actions 跑 **三个作业：Linux(3.11/3.12) + Windows(3.12)**，任一失败即红。环境写进文件而不是靠记忆：`Dockerfile`/`.devcontainer`（本机一条命令跑 Linux 全套）、`tools/env_report.py`（一条命令看清跑测试的是哪套环境）、`tools/ci_dep_check.py`（装完自检，失败直接点名缺哪个包） |
 | **插件架构** | 23 个插件类（4 个默认关闭，含 1 个协议示例）；声明式 `settings_schema` / `ui_buttons` 自动生成界面；钩子 `on_load/on_unload/on_message_send/on_message_received/contextInjection/on_command`；另有子进程 JSON-RPC 协议插件。**插件要界面走 `host_ui`**（宿主的原生文件对话框 + 聊天内提示），不许自带 GUI 库 |
 | **生活层（吃饭）** | `life_core.py`：**世界时钟**（系统时间 = 1× 起源，累加虚拟秒）+ **厨具历史库**（10 个年代的工具表，卡住做法：史前没甑不能蒸、没铁锅不能炒）+ **食材/做法库**（辣椒番茄土豆玉米明末才传入）。菜单是确定性抽样（种子 = 角色\|世界第几天\|哪一餐）→ 重启/回档/换端一致，不需新增存档；每轮只注入 ≤240 字，角色卡 `advanced.life` 可单独覆盖年代/地域/口味/忌口 |
 | **空间层（不能瞬移）** | `space_core.py`：**轮辐地图**（家为圆心，A→B 按经过家估，偏保守；`links` 可精确覆盖）+ 交通方式系数（走路 1.0 / 骑车 0.4 / 打车 0.35 / 高铁 0.06）+ **营业时间** + **家屋室内**（卧室/厨房… 0.5 分钟，不算赶路）。世界时间决定"来不来得及"：路费 > 那之后过去的世界时间就判穿帮，**照样记下新位置**、下一轮注入点名要求补交代（最多两次）。位置由模型用 `[loc:地名]` 标注（标签从显示文本剥掉，没机制卡也能用），另有 `/在哪`、`/空间` 命令与卡内 `advanced.space` 自定义地图 |
@@ -77,7 +77,10 @@ playable things (choice-driven scenes, mechanics/affection systems, one-click st
 ### 玩法
 - **机制卡**：好感度（百分比制）/ 状态字段（int、enum）/ 事件触发（含冷却、次数、结局链）
 - **战斗系统**：伤害公式走 AST 白名单求值（绝不 eval）、招式、buff，玩家与角色同规格
-- **GAL 选项**：AI 生成剧情选项 + 隐藏 ROLL（坍缩 / 天选 / 暴击 / 稀有 / 大失败）
+- **GAL 选项**：AI 生成剧情选项 + 隐藏 ROLL（坍缩 / 天选 / 暴击 / 稀有 / 大失败）。
+  选项是按钮上的**短标签**，点下去发出去的是同一趟生成好的 **`say`**（补全成玩家第一人称的台词与动作）——
+  记录里那句才像人说的话，而不是"温柔关心她"这种舞台指示；旧选项 / 模型没给 `say` 时自动退回标签
+  （开关在插件设置里：`use_say`，默认开；两端同一套）
 - **软件时间流速**：世界那边比现实快多少倍（对数表盘，10 ~ 1000 万倍），影响模型看到的时间上下文
 - **UTAU 语音**：`[ja]` 日文配音（电脑端完整版 / 手机端系统 TTS）；UTAU 环境已内置，声库自备（`/voicebank` 导入，见 `声库安装说明.txt`）
 

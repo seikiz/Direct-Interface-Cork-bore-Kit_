@@ -1323,8 +1323,19 @@ class HtmlApp:
             self._append_sys(note)
         # 世界线切换（B）：隐藏 ROLL 命中预设世界线时自动跳线（如坍缩→黑化线）
         self._maybe_world_line_on(kind)
+        # 选项是按钮上的短标签；真正发言用 "say"（生成时补全好的玩家台词）。
+        # 没有 say（旧存档、模型没给、或用户关掉了这个开关）就退回标签 —— 行为与以前一致。
+        say = ""
+        if isinstance(item, dict):
+            say = str(item.get("say") or "").strip()
+        if say and p is not None:
+            try:
+                if not p.get_setting("use_say", True):
+                    say = ""
+            except Exception:
+                pass
         self._clear_choices()
-        self._send_text(text, None, None, is_choice=True)
+        self._send_text(say or text, None, None, is_choice=True)
         return {"ok": True}
 
     def api_cyoa(self):

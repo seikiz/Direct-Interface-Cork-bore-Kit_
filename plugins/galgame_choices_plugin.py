@@ -9,12 +9,14 @@
 #     /cyoa show      查看当前已生成的选项
 #
 #   设置（⚙️ 设置 → 插件 → Galgame 选项）：
-#     count  每轮选项数量（2-4，默认 3）
-#     auto   每轮 AI 回复后自动生成（默认开）
+#     count   每轮选项数量（2-4，默认 3）
+#     auto    每轮 AI 回复后自动生成（默认开）
+#     use_say 点选项时发送补全后的台词（默认开；关掉=原样发选项标签）
 #
 #   联动：html_app 把选项状态透传给前端（api_state/api_poll 的
-#   "choices" 字段），前端渲染按钮；api_pick_choice 以选项内容
-#   作为玩家输入发送；api_cyoa 手动触发。
+#   "choices" 字段），前端渲染按钮；api_pick_choice 以选项的 **say**
+#   （生成时补全好的玩家台词）作为玩家输入发送，没有 say 就退回标签；
+#   api_cyoa 手动触发。
 # ============================================================
 
 import json
@@ -41,6 +43,8 @@ class GalgameChoicesPlugin(PluginBase):
          "default": 3, "min": 2, "max": 4},
         {"key": "auto", "label": "AI 回复后自动生成选项", "type": "bool",
          "default": True},
+        {"key": "use_say", "label": "点选项时发送补全后的台词（关掉=原样发送选项标签）",
+         "type": "bool", "default": True},
     ]
 
     def __init__(self, core):
@@ -82,9 +86,11 @@ class GalgameChoicesPlugin(PluginBase):
                 items = list(self.choices)
             if not items:
                 return "🎮 还没有选项，先输入 /cyoa 生成", False
-            lines = "\n".join(f"{i}. " + (t.get("text") if isinstance(t, dict) else str(t))
-                              for i, t in enumerate(items, 1))
-            return f"🎮 当前选项：\n{lines}", False
+            lines = "\n".join(
+                f"{i}. " + (t.get("text") if isinstance(t, dict) else str(t))
+                + (("　→ " + str(t.get("say"))) if isinstance(t, dict) and t.get("say") else "")
+                for i, t in enumerate(items, 1))
+            return f"🎮 当前选项（左边是按钮、→ 后面是点下去真正说的）：\n{lines}", False
         ok, msg = self.manual_generate()
         return msg, False
 
@@ -171,23 +177,33 @@ class GalgameChoicesPlugin(PluginBase):
                 "不要剧透后续剧情，不要输出编号或'选项一'这类前缀。"
                 '每个选项必须带 "result"：一句事件结果提示（≤12 字，模糊、不剧透具体数值，'
                 '如 "她可能会心头一暖" / "气氛可能会尴尬"）。'
+                # 选项是**按钮上的短标签**；点下去真正入戏的是 "say" ——
+                # 否则记录里玩家那句会是"温柔关心她"这种舞台指示，不像人说的话。
+                '每个选项还必须带 "say"：把这个选项补全成玩家（第一人称）真正会说的话与动作，'
+                "1~2 句、可直接入戏；不要复述 text，不要替角色说话，不要写选项编号。"
                 "选项应针对当前局面推进剧情——若存在【当前剧情事件】，选项应围绕该事件的走向；"
                 "若无特定事件，则自然延续最近对话氛围。"
             )
             if effect_fmt:
                 system += (
                     "当前角色卡启用了机制（好感度/状态），每个选项还必须附带机制效果标签："
-                    '只输出 JSON 数组，每项为 {"text": "选项文本", "result": "结果提示", '
+                    '只输出 JSON 数组，每项为 {"text": "选项文本", "say": "玩家台词", '
+                    '"result": "结果提示", '
                     + ", ".join(effect_fmt) + '}。'
                     'text 不超过 18 字；效果要贴合该选项的后果（可能为正、负或无），'
-                    '例如：[{"text":"温柔关心她","result":"她可能会心头一暖","aff":+3},'
-                    '{"text":"冷嘲热讽","result":"可能会惹她生气","aff":-5,"st":{"心情":"生气"}}]'
+                    '例如：[{"text":"温柔关心她","say":"「你今天脸色不太好，先坐下歇会儿。」'
+                    '我把热水推到她手边。","result":"她可能会心头一暖","aff":+3},'
+                    '{"text":"冷嘲热讽","say":"「就这点本事？」我笑了一声。",'
+                    '"result":"可能会惹她生气","aff":-5,"st":{"心情":"生气"}}]'
                 )
             else:
                 system += (
-                    '只输出 JSON 数组，每项为 {"text": "选项文本", "result": "结果提示"}，'
-                    '例如：[{"text":"轻轻敲门","result":"屋里人可能会回应"},'
-                    '{"text":"转身离开","result":"可能会就此错过"}]'
+                    '只输出 JSON 数组，每项为 {"text": "选项文本", "say": "玩家台词", '
+                    '"result": "结果提示"}，'
+                    '例如：[{"text":"轻轻敲门","say":"我抬手敲了两下：「在吗？我进来了。」",'
+                    '"result":"屋里人可能会回应"},'
+                    '{"text":"转身离开","say":"我在门口站了一会儿，还是转身走了。",'
+                    '"result":"可能会就此错过"}]'
                 )
             resp = self.core.client.chat.completions.create(
                 model=self.core.model,
@@ -330,6 +346,7 @@ class GalgameChoicesPlugin(PluginBase):
         for x in raw_items:
             if isinstance(x, dict):
                 s = str(x.get("text") or "").strip()
+                say = x.get("say")
                 aff = x.get("aff")
                 st = x.get("st")
                 result = x.get("result")
@@ -341,8 +358,11 @@ class GalgameChoicesPlugin(PluginBase):
                     st = None
                 if not isinstance(result, str):
                     result = None
+                if not isinstance(say, str):
+                    say = None
             else:
                 s = str(x).strip()
+                say = None
                 aff = None
                 st = None
                 result = None
@@ -356,6 +376,12 @@ class GalgameChoicesPlugin(PluginBase):
                 continue
             seen.add(s)
             item = {"text": s}
+            # say = 点下去真正入戏的那句（按钮上仍显示 text）。
+            # 与 text 相同、或长得离谱的都不要（前者等于没补全，后者是模型跑题写散文）。
+            if say:
+                say = say.strip().strip('"').strip("'").strip()
+                if say and say != s and len(say) <= 200:
+                    item["say"] = say
             if result:
                 item["result"] = str(result).strip()[:20]
             if aff is not None:
