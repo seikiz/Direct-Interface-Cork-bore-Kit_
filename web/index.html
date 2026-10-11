@@ -923,8 +923,12 @@ button .ic{ margin-right:2px; }
         <div style="font-size:11px;color:var(--sub)">把 .model3.json 放入 web/live2d/models/ 即生效；渲染库放 web/live2d/vendor/。</div>
       </div>
     </div>
-    <div class="field"><label id="stLang">语言 / Language</label>
-      <button class="btn" style="width:auto" id="stLangBtn">切换语言</button>
+    <div class="field"><label id="stLang">语言 / Language / 言語</label>
+      <select id="stLangSel" title="界面语言 / UI language / 表示言語">
+        <option value="zh">中文</option>
+        <option value="en">English</option>
+        <option value="ja">日本語</option>
+      </select>
     </div>
     <div class="field"><label id="stBudget">🧮 上下文预算</label>
       <button class="btn" style="width:auto" id="stBudgetBtn">预算：不限</button>
@@ -1667,8 +1671,40 @@ var accentIdx = 0;
 var T = {};
 
 function setT(l) {
+  // 三档：zh / en / ja。认不出的值退回中文（与后端 i18n.set_lang 同一条规矩）。
+  if (l !== 'en' && l !== 'ja') l = 'zh';
   lang = l;
-  if (l === 'en') {
+  if (l === 'ja') {
+    T = { sidebar:'キャラとワールド', roles:'📂 アーカイブ', worlds:'🌍 ワールド（複数選択 = 並行世界）',
+      newRole:'➕ 新規キャラ', persona:'🧑 プレイヤー設定', editPersona:'⚙️ プレイヤー設定を編集',
+      settings:'⚙️ 設定', placeholder:'メッセージを入力...（@名前 で発言者を指定）',
+      send:'送信', remove:'✕ 削除', image:'📷 画像', imgAttached:'画像を選択済み',
+      preset:'プリセット：', apiKey:'API Key', baseUrl:'プロバイダ Base URL', model:'モデル',
+      theme:'テーマ', accent:'アクセント：', langBtn:'言語', cancel:'キャンセル', save:'保存',
+      name:'名前', prompt:'設定（性格・背景）', title:'Direct-Interface Cork-bore Kit · 設定',
+      newRoleTitle:'新規キャラ', done:'完了', newWorld:'➕ 新規ワールド', wmTitle:'新規ワールド',
+      wmName:'名前', wmDesc:'背景', wmRules:'ルール（1 行に 1 つ）', aiDraft:'✨ AI 下書き',
+      importCard:'📥 カードを読み込み', editMsg:'メッセージを編集', branchTitle:'ブランチ', treeTitle:'巻き戻し',
+      weEntries:'ワールドブック項目（キーワードで発動）', weKeywords:'キーワード（カンマ区切り）',
+      weContent:'内容', weEnabled:'有効', weConst:'常時', weWeight:'重み',
+      weProb:'確率 %', weDepth:'深度', addEntry:'＋ 項目を追加',
+      stProvider:'プロバイダ', stBuy:'🔑 公式サイト（登録 / チャージ）',
+      nrLegacy:'完全設定（旧版の原文・空欄可）', nrAppearance:'外見', nrPersonality:'性格',
+      nrBackground:'過去の経験', nrSpeech:'話し方（口調・口癖）', nrFirstMes:'挨拶',
+      nrMesExample:'会話例', nrNotes:'メモ',
+      wmParams:'ワールドパラメータ（物理法則など）',
+      param_tech_level:'技術水準', param_supernatural:'超自然設定', param_physics:'物理法則',
+      param_time_flow:'時間の流れ', param_climate:'気候', param_geography:'地理',
+      param_politics:'政治', param_economy:'経済',
+      btnWorkshop:'🧰 ワークショップ', wsTitle:'🧰 ワークショップ', wsLocal:'📂 ローカル', wsOnline:'🌐 オンライン',
+      wsPrev:'プレビュー', wsServer:'🔗 サーバー URL', wsProxy:'🛰️ プロキシ（任意）', wsKey:'🔑 Key（任意）', wsClose:'閉じる',
+      wsConn:'💾 接続を保存', wsTest:'🔌 テスト', wsDownload:'⬇️ ダウンロード', wsLike:'❤️ いいね',
+      wsUpload:'📤 ローカルを送信', wsDel:'🗑️ 削除', wsExport:'📤 ファイルを書き出し', wsOpen:'📂 フォルダを開く',
+      stBudget:'🧮 コンテキスト予算', stAuto:'🤖 自動応答', stAutoHint:'グループチャットで他のキャラが続ける（1 ターン最大 2 回）',
+      stFont:'🔤 文字サイズ', stPlugins:'🔌 プラグイン', qcRead:'📄 資料を読む', qcClearDoc:'🧹 資料をクリア',
+      qcExport:'💾 Word を書き出し', qcNovel:'📖 小説を書き出し（EPUB）', qcTheme:'🎨 テーマ', budgetUnlimited:'無制限',
+      chLoading:'⏳ 選択肢を生成中…' };
+  } else if (l === 'en') {
     T = { sidebar:'Roles & Worlds', roles:'📂 Archives', worlds:'🌍 Worlds (multi-select = parallel worlds)',
       newRole:'➕ New Role', persona:'🧑 Player Persona', editPersona:'⚙️ Edit Player Persona',
       settings:'⚙️ Settings', placeholder:'Type a message... (use @name to target a speaker)',
@@ -1746,8 +1782,9 @@ function setT(l) {
   document.getElementById('stBase').textContent = T.baseUrl;
   document.getElementById('stModel').textContent = T.model;
   document.getElementById('stTheme').textContent = T.theme;
-  document.getElementById('stLang').textContent = '语言 / Language';
-  document.getElementById('stLangBtn').textContent = T.langBtn;
+  document.getElementById('stLang').textContent = '语言 / Language / 言語';
+  var sel = document.getElementById('stLangSel');
+  if (sel) sel.value = lang;
   document.getElementById('stCancel').textContent = T.cancel;
   document.getElementById('stSave').textContent = T.save;
   document.getElementById('nrTitle').textContent = T.newRoleTitle;
@@ -1857,8 +1894,8 @@ function escapeHtml(s) {
 
 function displayName(speaker, kind) {
   // 用户消息：显示玩家卡名字（与头像文件名一致），无名字时显示「你」
-  if (kind === 'user') return speaker || (lang === 'en' ? 'You' : '你');
-  if (kind === 'sys') return lang === 'en' ? 'System' : '系统';
+  if (kind === 'user') return speaker || (lang === 'en' ? 'You' : (lang === 'ja' ? 'あなた' : '你'));
+  if (kind === 'sys') return lang === 'en' ? 'System' : (lang === 'ja' ? 'システム' : '系统');
   return speaker || 'AI';
 }
 
@@ -4951,10 +4988,12 @@ document.getElementById('stL2dPos').addEventListener('change', function () { set
 document.getElementById('stL2dOpacity').addEventListener('change', function () { setL2dSetting('opacity', parseInt(this.value, 10) || 95); });
 document.getElementById('stL2dDrag').addEventListener('change', function () { setL2dSetting('draggable', this.checked); });
 document.getElementById('stL2dBreath').addEventListener('change', function () { setL2dSetting('breath', this.checked); });
-document.getElementById('stLangBtn').onclick = function () {
-  pywebview.api.toggle_language().then(function (r) {
-    if (r && r.ok) setT(r.lang);
-  });
+document.getElementById('stLangSel').onchange = function () {
+  // 三选一：中文 / English / 日本語 —— 选完立刻落盘（后端写 config.json 的 language）
+  var want = this.value;
+  pywebview.api.set_language(want).then(function (r) {
+    if (r && r.ok) setT(r.lang); else setT(want);
+  }).catch(function () {});
 };
 // ---- 世界卡撰写 ----
 document.getElementById('btnNewWorld').onclick = function () {

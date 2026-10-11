@@ -1072,7 +1072,9 @@ val importCardLauncher = rememberLauncherForActivityResult(ActivityResultContrac
                 }
             }
         }
-        if (language.isBlank()) language = I18n.detect()
+        // 界面语言：配置里有就用配置的；没有就按系统判定（中文→zh、日文→ja、英文→en）；
+        // 认不出的值一律当 zh（与 I18n.normalize / 桌面端 i18n.set_lang 同一条规矩）
+        language = I18n.normalize(language.ifBlank { I18n.detect() })
         I18n.lang = language
         // 种子数据
         val savesDir = AppEnv.savesDir()

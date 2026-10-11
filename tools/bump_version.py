@@ -197,6 +197,30 @@ def cmd_check(quiet=False):
     for m in re.finditer(r"\bv\d+\.\d+\.\d+\.\d+\b", h):
         problems.append("web/index.html 里写死了版号：%s" % m.group(0))
 
+    # 全仓扫一遍**代码**（不看文档）：产品名后面跟版号/产品代，一律算写死。
+    # 这条是补出来的：i18n.py 的英文欢迎语里藏着 "…Cork-bore Kit v2.0!"，
+    # 英文模式下欢迎语会显示旧版号，而当时只扫了主程序 —— 漏了。
+    # 文档（.md/.txt）不扫：里面本来就要写"代号 v2.0""1.0.0.1"这类说明。
+    # 版号模块自己也不扫：app_version.py 的 docstring 里要举 `DICK v1.0.0.1` 这种例子。
+    CODE_EXT = (".py", ".kt", ".kts", ".html", ".js")
+    SKIP_DIRS = ("node_modules", ".git", ".gradle", "build", ".kotlin", "utau_env",
+                 "tavern-installer", "site-packages", "_internal")
+    SKIP_FILES = ("bump_version.py", "app_version.py")
+    pat = re.compile(r"(?:Cork-bore Kit|DICK)\s+v\d+\.\d+(?:\.\d+)*")
+    for dirpath, dirnames, filenames in os.walk(ROOT):
+        dirnames[:] = [d for d in dirnames if d not in SKIP_DIRS]
+        for fn in filenames:
+            if not fn.endswith(CODE_EXT) or fn in SKIP_FILES:
+                continue
+            p = os.path.join(dirpath, fn)
+            try:
+                t = read_text(p)
+            except Exception:
+                continue
+            for m in pat.finditer(t):
+                problems.append("%s 里写死了版本串：%r"
+                                % (os.path.relpath(p, ROOT), m.group(0)))
+
     # 打包清单：冻结版必须能找到 version.json
     if os.path.isfile(SPEC) and "version.json" not in read_text(SPEC):
         problems.append("DICK_HTML.spec 没有随包 version.json（冻结版会读不到号）")

@@ -566,9 +566,11 @@ class HtmlApp:
         except Exception:
             pass
 
-        lang = self.config.get("language") or ("en" if i18n.detect_english_system() else "zh")
+        # 界面语言：配置里有就用配置的；没有就按系统判定
+        # （中文 → zh、日文 → ja、英文 → en、认不出 → zh，见 i18n.detect_system_lang）
+        lang = self.config.get("language") or i18n.detect_system_lang()
         i18n.set_lang(lang)
-        self.language = lang
+        self.language = i18n.lang()
 
         self.core = ChatCore()
         self.core.humanize = bool(self.config.get("humanize", True))
@@ -647,7 +649,8 @@ class HtmlApp:
         self._load_worlds()
         self.current_world = self.config.get("current_world") or ""
         self.core.world_max_entries = int(self.config.get("world_max_entries") or 3)
-        self._append_sys(i18n.t("welcome1", "👋 欢迎使用 " + app_version.full() + "！"))
+        # 版号只有 version.json 一个来源：措辞归 i18n.welcome()，号由 app_version 给
+        self._append_sys(i18n.welcome(app_version.full()))
         self._append_sys(i18n.t("welcome2", "多角色模式：输入 @角色名 内容 来指定说话者。"))
         # 启动即恢复上次会话：激活上次选中的角色（机制卡/恋爱条/战斗随启动初始化，
         # 与 Android 端一致——否则恋爱条要手动保存一遍角色才出现）
@@ -6872,9 +6875,10 @@ class HtmlApp:
         self.busy = False
         self.streaming = ""
 
-    def api_toggle_language(self):
-        self.language = "en" if self.language == "zh" else "zh"
-        i18n.set_lang(self.language)
+    def api_set_language(self, lang):
+        """切换界面语言：zh / en / ja（认不出的值退回中文，与 i18n.set_lang 一致）"""
+        i18n.set_lang(lang)
+        self.language = i18n.lang()
         self.config["language"] = self.language
         self._save_config()
         return {"ok": True, "lang": self.language}

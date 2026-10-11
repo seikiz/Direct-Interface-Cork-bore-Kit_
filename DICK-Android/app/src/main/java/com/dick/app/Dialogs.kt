@@ -896,10 +896,28 @@ fun SettingsDialog(vm: ChatViewModel, deps: DialogDeps) {
                         label = { Text("top_p（留空=默认）") }, singleLine = true, modifier = Modifier.weight(1f))
                 }
                 Spacer(Modifier.height(6.dp))
-                Button(onClick = {
-                    language = if (language == "en") "zh" else "en"
-                    I18n.lang = language
-                }) { Text(I18n.t("lang_title", "语言") + "：" + (if (language == "en") "English" else "中文")) }
+                // 界面语言：三选一（中文 / English / 日本語）。当前那档是实心按钮，
+                // 点别的档立刻生效并落盘（config.json 的 language）。
+                Text(I18n.t("lang_title", "语言"), fontSize = 13.sp, color = theme.muted)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    for (code in I18n.LANGS) {
+                        val label = I18n.langName(code)
+                        if (code == language) {
+                            Button(onClick = { }, modifier = Modifier.heightIn(min = 34.dp)) {
+                                Text(label, fontSize = 12.sp)
+                            }
+                        } else {
+                            TextButton(onClick = {
+                                language = code
+                                I18n.lang = code
+                                saveConfig()
+                            }, modifier = Modifier.heightIn(min = 34.dp)) {
+                                Text(label, fontSize = 12.sp)
+                            }
+                        }
+                        Spacer(Modifier.width(4.dp))
+                    }
+                }
                 Spacer(Modifier.height(6.dp))
                 Button(onClick = { presetIdx = (presetIdx + 1) % PRESETS.size }) { Text(I18n.t("lbl_preset", "预设：") + PRESETS[presetIdx].name) }
                 Spacer(Modifier.height(6.dp))
