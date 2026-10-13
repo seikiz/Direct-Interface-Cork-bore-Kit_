@@ -336,6 +336,8 @@ def step_selfcheck():
         ("world_packs", "世界卡包目录：缺了 /世界包 列表为空，也没有内置世界可装"),
         ("app_version.py", "版号读取：缺了窗口标题/欢迎语退回兜底版号（与 version.json 不一致）"),
         ("version.json", "版号的唯一真相：缺了 app_version 读不到号"),
+        ("strings.json", "界面文案唯一真相（lang/strings.json）：缺了三语全部退回中文"),
+        ("i18n.js", "生成的界面文案表（web/i18n.js）：缺了三语全部退回中文"),
         ("gothic_frame.html", "哥特边框前端"),
     ]
     bad2 = 0

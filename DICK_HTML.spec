@@ -27,6 +27,10 @@ datas = [('web', 'web'), ('plugins', 'plugins'), ('saves', 'saves'), ('worlds', 
          ('jobs.py', '.'), ('mem_isolate.py', '.'), ('life_core.py', '.'), ('space_core.py', '.'),
          ('commonsense.py', '.'), ('world_packs.py', '.'), ('world_memory.py', '.'),
          ('app_version.py', '.'), ('version.json', '.'),
+         # 界面文案唯一真相：i18n.py 运行时读 lang/strings.json；
+         # web/i18n.js 与安卓 I18nStrings.kt 都是 tools/gen_i18n.py 从它生成的。
+         # 缺了它，三语一律退回调用点给的中文（不炸，但那三语就白做了）。
+         ('lang', 'lang'),
          # 围棋规则引擎（主程序 import，显式列出更保险）
          ('go_engine.py', '.'),
          ('text_guard.py', '.'),

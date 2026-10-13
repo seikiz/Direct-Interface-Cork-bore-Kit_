@@ -98,6 +98,14 @@ def third_party_imports(files):
     # tests/ 里的辅助模块同理（测试互相 import，比如 test_time_context → probe_payload）
     tdir = os.path.join(ROOT, "tests")
     local.add("tests")
+    # tools/ 里的模块也是本工程（测试会 import gen_i18n：文案生成器/校验器，
+    # 那是"唯一那份谁在用哪个键"的实现，测试直接调它，别当成 PyPI 包）
+    local.add("tools")
+    tdir_tools = os.path.join(ROOT, "tools")
+    if os.path.isdir(tdir_tools):
+        for fn in os.listdir(tdir_tools):
+            if fn.endswith(".py"):
+                local.add(fn[:-3])
     if os.path.isdir(tdir):
         for fn in os.listdir(tdir):
             if fn.endswith(".py"):
@@ -232,6 +240,10 @@ def test_container_and_env_tooling():
     # 版号：唯一真相随包，否则冻结版读不到号（窗口标题会退回兜底值）
     check("version.json 随包", "('version.json', '.')" in spec_txt)
     check("version.json 在打包自检清单里", '("version.json",' in br_txt)
+    # 界面文案：唯一真相随包，网页那份是生成的（web/ 整目录本来就随包）
+    check("lang/strings.json 随包", "('lang', 'lang')" in spec_txt)
+    check("lang/strings.json 在打包自检清单里", '("strings.json",' in br_txt)
+    check("生成的 web/i18n.js 随包", "('web', 'web')" in spec_txt)
     # 故意**不**要求仓库里有 requirements-lock.txt：见 tools/lock_requirements.py 顶部的说明
     # （轮子可用性是"平台 × 版本"两个维度，手写一份跨平台锁文件只会制造新的环境坑）
 

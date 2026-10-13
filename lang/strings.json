@@ -1,0 +1,1849 @@
+{
+  "_note": "界面文案唯一真相（三语）。改文案只改这里：桌面 web/i18n.js、i18n.py 运行时读它、安卓 I18nStrings.kt 由 tools/gen_i18n.py 生成。used_by 取值：desktop_web / desktop_py / android。 `_same_as_zh_ok` 是同形汉字/同串白名单：列进去的键允许与 zh 完全相同（校验器不再当漏译）。",
+  "langs": [
+    "zh",
+    "en",
+    "ja"
+  ],
+  "keys": {
+    "accent": {
+      "zh": "强调色：",
+      "en": "Accent: ",
+      "ja": "アクセント：",
+      "used_by": [
+        "desktop_web"
+      ]
+    },
+    "addEntry": {
+      "zh": "＋ 添加条目",
+      "en": "＋ Add Entry",
+      "ja": "＋ 項目を追加",
+      "used_by": [
+        "desktop_web"
+      ]
+    },
+    "aiDraft": {
+      "zh": "✨ AI 起草",
+      "en": "✨ AI Draft",
+      "ja": "✨ AI 下書き",
+      "used_by": [
+        "desktop_web"
+      ]
+    },
+    "apiKey": {
+      "zh": "API Key",
+      "en": "API Key",
+      "ja": "API Key",
+      "used_by": [
+        "desktop_web"
+      ]
+    },
+    "baseUrl": {
+      "zh": "服务商 Base URL",
+      "en": "Provider Base URL",
+      "ja": "プロバイダ Base URL",
+      "used_by": [
+        "desktop_web"
+      ]
+    },
+    "btnWorkshop": {
+      "zh": "🧰 创意工坊",
+      "en": "🧰 Workshop",
+      "ja": "🧰 ワークショップ",
+      "used_by": [
+        "desktop_web"
+      ]
+    },
+    "btn_add_entry": {
+      "zh": "＋ 添加条目",
+      "en": "＋ Add Entry",
+      "ja": "＋ 項目を追加",
+      "used_by": [
+        "android"
+      ]
+    },
+    "btn_avatar_persona": {
+      "zh": "🧑 玩家头像",
+      "en": "🧑 Player Avatar",
+      "ja": "🧑 プレイヤーアイコン",
+      "used_by": [
+        "android"
+      ]
+    },
+    "btn_branch": {
+      "zh": "🌿 回档",
+      "en": "🌿",
+      "ja": "🌿",
+      "used_by": [
+        "android"
+      ]
+    },
+    "btn_buy": {
+      "zh": "🔑 去官网注册/充值",
+      "en": "🔑 Official site (sign up / top up)",
+      "ja": "🔑 公式サイト（登録 / チャージ）",
+      "used_by": [
+        "android"
+      ]
+    },
+    "btn_cancel": {
+      "zh": "取消",
+      "en": "Cancel",
+      "ja": "キャンセル",
+      "used_by": [
+        "android"
+      ]
+    },
+    "btn_delete": {
+      "zh": "删除",
+      "en": "Delete",
+      "ja": "削除",
+      "used_by": [
+        "android"
+      ]
+    },
+    "btn_done": {
+      "zh": "关闭",
+      "en": "Done",
+      "ja": "完了",
+      "used_by": [
+        "android"
+      ]
+    },
+    "btn_edit": {
+      "zh": "✏️",
+      "en": "✏️",
+      "ja": "✏️",
+      "used_by": [
+        "android"
+      ]
+    },
+    "btn_edit_msg": {
+      "zh": "✏️",
+      "en": "✏️",
+      "ja": "✏️",
+      "used_by": [
+        "android"
+      ]
+    },
+    "btn_export_json": {
+      "zh": "导出完成",
+      "en": "⬇️ JSON",
+      "ja": "⬇️ JSON",
+      "used_by": [
+        "android"
+      ]
+    },
+    "btn_import_card": {
+      "zh": "📥 导入角色卡",
+      "en": "📥 Import",
+      "ja": "📥 読み込み",
+      "used_by": [
+        "android"
+      ]
+    },
+    "btn_new_role": {
+      "zh": "➕ 新建角色",
+      "en": "➕ New Role",
+      "ja": "➕ 新規キャラ",
+      "used_by": [
+        "android"
+      ]
+    },
+    "btn_new_world": {
+      "zh": "➕ 新建世界",
+      "en": "➕ New World",
+      "ja": "➕ 新規ワールド",
+      "used_by": [
+        "android"
+      ]
+    },
+    "btn_persona_card": {
+      "zh": "玩家角色卡",
+      "en": "Player Card",
+      "ja": "プレイヤーカード",
+      "used_by": [
+        "android"
+      ]
+    },
+    "btn_regenerate": {
+      "zh": "↻",
+      "en": "↻",
+      "ja": "↻",
+      "used_by": [
+        "android"
+      ]
+    },
+    "btn_remove": {
+      "zh": "✕ 移除",
+      "en": "✕ Remove",
+      "ja": "✕ 削除",
+      "used_by": [
+        "android"
+      ]
+    },
+    "btn_save": {
+      "zh": "保存",
+      "en": "Save",
+      "ja": "保存",
+      "used_by": [
+        "android"
+      ]
+    },
+    "btn_send": {
+      "zh": "发送",
+      "en": "Send",
+      "ja": "送信",
+      "used_by": [
+        "android"
+      ]
+    },
+    "btn_workshop": {
+      "zh": "🧰 创意工坊",
+      "en": "🧰 Workshop",
+      "ja": "🧰 ワークショップ",
+      "used_by": [
+        "android"
+      ]
+    },
+    "budgetUnlimited": {
+      "zh": "不限",
+      "en": "Unlimited",
+      "ja": "無制限",
+      "used_by": [
+        "desktop_web"
+      ]
+    },
+    "budget_prefix": {
+      "zh": "预算：",
+      "en": "Budget: ",
+      "ja": "予算： ",
+      "used_by": [
+        "android"
+      ]
+    },
+    "budget_unlimited": {
+      "zh": "不限",
+      "en": "Unlimited",
+      "ja": "無制限",
+      "used_by": [
+        "android"
+      ]
+    },
+    "cancel": {
+      "zh": "取消",
+      "en": "Cancel",
+      "ja": "キャンセル",
+      "used_by": [
+        "desktop_web"
+      ]
+    },
+    "card_export_fail": {
+      "zh": "⚠️ 导出失败：",
+      "en": "⚠️ Export failed",
+      "ja": "⚠️ 書き出しに失敗",
+      "used_by": [
+        "android"
+      ]
+    },
+    "card_import_fail": {
+      "zh": "⚠️ 导入失败：",
+      "en": "⚠️ Unrecognized character card format",
+      "ja": "⚠️ 認識できないキャラカード形式",
+      "used_by": [
+        "android"
+      ]
+    },
+    "card_import_ok": {
+      "zh": "已导入角色：",
+      "en": "Imported character: ",
+      "ja": "キャラを読み込みました：",
+      "used_by": [
+        "android"
+      ]
+    },
+    "chLoading": {
+      "zh": "⏳ 正在生成选项…",
+      "en": "⏳ Generating options…",
+      "ja": "⏳ 選択肢を生成中…",
+      "used_by": [
+        "desktop_web"
+      ]
+    },
+    "chk_auto": {
+      "zh": "🤖 自动接话（群聊时其他角色自动跟进）",
+      "en": "🤖 Auto Reply (other roles follow up in group chat)",
+      "ja": "🤖 自動応答（グループチャットで他のキャラが続ける）",
+      "used_by": [
+        "android"
+      ]
+    },
+    "chk_tts": {
+      "zh": "朗读 AI 回复（系统 TTS）",
+      "en": "Read AI replies aloud (system TTS)",
+      "ja": "AI の返答を読み上げ（システム TTS）",
+      "used_by": [
+        "android"
+      ]
+    },
+    "dlg_roles": {
+      "zh": "选择角色（多选=群聊）",
+      "en": "Select Roles (multi-select = group chat)",
+      "ja": "キャラを選択（複数選択 = グループチャット）",
+      "used_by": [
+        "android"
+      ]
+    },
+    "dlg_settings": {
+      "zh": "DICK · 设置",
+      "en": "DICK · Settings",
+      "ja": "DICK · 設定",
+      "used_by": [
+        "android"
+      ]
+    },
+    "dlg_world_edit": {
+      "zh": "编辑世界卡",
+      "en": "Edit World Card",
+      "ja": "ワールドカードを編集",
+      "used_by": [
+        "android"
+      ]
+    },
+    "dlg_worlds": {
+      "zh": "选择世界（多选=平行世界）",
+      "en": "Select Worlds (multi-select = parallel worlds)",
+      "ja": "ワールドを選択（複数選択 = 並行世界）",
+      "used_by": [
+        "android"
+      ]
+    },
+    "editMsg": {
+      "zh": "编辑消息",
+      "en": "Edit Message",
+      "ja": "メッセージを編集",
+      "used_by": [
+        "desktop_web"
+      ]
+    },
+    "editPersona": {
+      "zh": "⚙️ 编辑玩家角色",
+      "en": "⚙️ Edit Player Persona",
+      "ja": "⚙️ プレイヤー設定を編集",
+      "used_by": [
+        "desktop_web"
+      ]
+    },
+    "edit_ai_hint": {
+      "zh": "原地修改这条 AI 回复",
+      "en": "Edit this AI reply in place.",
+      "ja": "この AI の返答をその場で編集します。",
+      "used_by": [
+        "android"
+      ]
+    },
+    "edit_title": {
+      "zh": "编辑消息",
+      "en": "Edit Message",
+      "ja": "メッセージを編集",
+      "used_by": [
+        "android"
+      ]
+    },
+    "edit_user_hint": {
+      "zh": "编辑后重新生成回复（保留旧分支）",
+      "en": "Edit this message and regenerate a reply (old branch is kept).",
+      "ja": "メッセージを編集して返答を再生成します（元のブランチは保持）。",
+      "used_by": [
+        "android"
+      ]
+    },
+    "entry_constant": {
+      "zh": "常驻",
+      "en": "Constant",
+      "ja": "常時",
+      "used_by": [
+        "android"
+      ]
+    },
+    "entry_content": {
+      "zh": "内容",
+      "en": "Content",
+      "ja": "内容",
+      "used_by": [
+        "android"
+      ]
+    },
+    "entry_delete": {
+      "zh": "✕",
+      "en": "✕",
+      "ja": "✕",
+      "used_by": [
+        "android"
+      ]
+    },
+    "entry_depth": {
+      "zh": "深度",
+      "en": "Depth",
+      "ja": "深度",
+      "used_by": [
+        "android"
+      ]
+    },
+    "entry_enabled": {
+      "zh": "启用",
+      "en": "Enabled",
+      "ja": "有効",
+      "used_by": [
+        "android"
+      ]
+    },
+    "entry_keywords": {
+      "zh": "关键词（逗号分隔）",
+      "en": "Keywords (comma separated)",
+      "ja": "キーワード（カンマ区切り）",
+      "used_by": [
+        "android"
+      ]
+    },
+    "entry_match": {
+      "zh": "匹配",
+      "en": "Match",
+      "ja": "一致",
+      "used_by": [
+        "android"
+      ]
+    },
+    "entry_probability": {
+      "zh": "概率%",
+      "en": "Prob %",
+      "ja": "確率 %",
+      "used_by": [
+        "android"
+      ]
+    },
+    "entry_weight": {
+      "zh": "权重",
+      "en": "Weight",
+      "ja": "重み",
+      "used_by": [
+        "android"
+      ]
+    },
+    "group_other": {
+      "zh": "其它项目",
+      "en": "Other",
+      "ja": "その他",
+      "used_by": [
+        "android"
+      ]
+    },
+    "image": {
+      "zh": "📷 图片",
+      "en": "📷 Image",
+      "ja": "📷 画像",
+      "used_by": [
+        "desktop_web"
+      ]
+    },
+    "imgAttached": {
+      "zh": "已选图片",
+      "en": "Image attached",
+      "ja": "画像を選択済み",
+      "used_by": [
+        "desktop_web"
+      ]
+    },
+    "img_selected": {
+      "zh": "已选图片",
+      "en": "Image attached",
+      "ja": "画像を選択済み",
+      "used_by": [
+        "android"
+      ]
+    },
+    "importCard": {
+      "zh": "📥 导入角色卡",
+      "en": "📥 Import Card",
+      "ja": "📥 カードを読み込み",
+      "used_by": [
+        "desktop_web"
+      ]
+    },
+    "input_label": {
+      "zh": "输入消息（/ 开头为命令）",
+      "en": "Message (start with / for commands)",
+      "ja": "メッセージ（/ で始めるとコマンド）",
+      "used_by": [
+        "android"
+      ]
+    },
+    "item_api": {
+      "zh": "🔑 API 配置",
+      "en": "🔑 API Settings",
+      "ja": "🔑 API 設定",
+      "used_by": [
+        "android"
+      ]
+    },
+    "item_settings": {
+      "zh": "设置",
+      "en": "Settings",
+      "ja": "設定",
+      "used_by": [
+        "android"
+      ]
+    },
+    "item_share": {
+      "zh": "分享聊天记录",
+      "en": "Share Chat Log",
+      "ja": "チャット履歴を共有",
+      "used_by": [
+        "android"
+      ]
+    },
+    "lang_title": {
+      "zh": "提示",
+      "en": "Language",
+      "ja": "言語",
+      "used_by": [
+        "android"
+      ]
+    },
+    "lbl_accent": {
+      "zh": "强调色：",
+      "en": "Accent: ",
+      "ja": "アクセント： ",
+      "used_by": [
+        "android"
+      ]
+    },
+    "lbl_name": {
+      "zh": "名字",
+      "en": "Name",
+      "ja": "名前",
+      "used_by": [
+        "android"
+      ]
+    },
+    "lbl_preset": {
+      "zh": "预设：",
+      "en": "Preset:",
+      "ja": "プリセット：",
+      "used_by": [
+        "android"
+      ]
+    },
+    "lbl_theme": {
+      "zh": "主题：",
+      "en": "Theme: ",
+      "ja": "テーマ： ",
+      "used_by": [
+        "android"
+      ]
+    },
+    "lbl_world_desc": {
+      "zh": "背景描述",
+      "en": "Description",
+      "ja": "説明",
+      "used_by": [
+        "android"
+      ]
+    },
+    "lbl_world_name": {
+      "zh": "名字",
+      "en": "Name",
+      "ja": "名前",
+      "used_by": [
+        "android"
+      ]
+    },
+    "lbl_world_rules": {
+      "zh": "规则（每行一条）",
+      "en": "Rules (one per line)",
+      "ja": "ルール（1 行に 1 つ）",
+      "used_by": [
+        "android"
+      ]
+    },
+    "match_all": {
+      "zh": "all",
+      "en": "all",
+      "ja": "すべて",
+      "used_by": [
+        "android"
+      ]
+    },
+    "match_any": {
+      "zh": "any",
+      "en": "any",
+      "ja": "いずれか",
+      "used_by": [
+        "android"
+      ]
+    },
+    "match_regex": {
+      "zh": "regex",
+      "en": "regex",
+      "ja": "正規表現",
+      "used_by": [
+        "android"
+      ]
+    },
+    "model": {
+      "zh": "模型",
+      "en": "Model",
+      "ja": "モデル",
+      "used_by": [
+        "desktop_web"
+      ]
+    },
+    "name": {
+      "zh": "名字",
+      "en": "Name",
+      "ja": "名前",
+      "used_by": [
+        "desktop_web"
+      ]
+    },
+    "newRole": {
+      "zh": "➕ 新建角色",
+      "en": "➕ New Role",
+      "ja": "➕ 新規キャラ",
+      "used_by": [
+        "desktop_web"
+      ]
+    },
+    "newRoleTitle": {
+      "zh": "新建角色",
+      "en": "New Role",
+      "ja": "新規キャラ",
+      "used_by": [
+        "desktop_web"
+      ]
+    },
+    "newWorld": {
+      "zh": "➕ 新建世界",
+      "en": "➕ New World",
+      "ja": "➕ 新規ワールド",
+      "used_by": [
+        "desktop_web"
+      ]
+    },
+    "nrAppearance": {
+      "zh": "外貌",
+      "en": "Appearance",
+      "ja": "外見",
+      "used_by": [
+        "desktop_web"
+      ]
+    },
+    "nrBackground": {
+      "zh": "过去经历",
+      "en": "Past experiences",
+      "ja": "過去の経験",
+      "used_by": [
+        "desktop_web"
+      ]
+    },
+    "nrFirstMes": {
+      "zh": "开场白",
+      "en": "Greeting",
+      "ja": "挨拶",
+      "used_by": [
+        "desktop_web"
+      ]
+    },
+    "nrLegacy": {
+      "zh": "完整设定（旧版原文，可留空）",
+      "en": "Full setting (legacy text, optional)",
+      "ja": "完全設定（旧版の原文・空欄可）",
+      "used_by": [
+        "desktop_web"
+      ]
+    },
+    "nrMesExample": {
+      "zh": "对话示例",
+      "en": "Example dialogue",
+      "ja": "会話例",
+      "used_by": [
+        "desktop_web"
+      ]
+    },
+    "nrNotes": {
+      "zh": "备注",
+      "en": "Notes",
+      "ja": "メモ",
+      "used_by": [
+        "desktop_web"
+      ]
+    },
+    "nrPersonality": {
+      "zh": "性格",
+      "en": "Personality",
+      "ja": "性格",
+      "used_by": [
+        "desktop_web"
+      ]
+    },
+    "nrSpeech": {
+      "zh": "说话方式（语气/口癖/句式）",
+      "en": "Speech style (tone / catchphrases)",
+      "ja": "話し方（口調・口癖）",
+      "used_by": [
+        "desktop_web"
+      ]
+    },
+    "persona": {
+      "zh": "🧑 玩家角色",
+      "en": "🧑 Player Persona",
+      "ja": "🧑 プレイヤー設定",
+      "used_by": [
+        "desktop_web"
+      ]
+    },
+    "placeholder": {
+      "zh": "输入消息... (使用 @角色名 指定说话者)",
+      "en": "Type a message... (use @name to target a speaker)",
+      "ja": "メッセージを入力...（@名前 で発言者を指定）",
+      "used_by": [
+        "desktop_web"
+      ]
+    },
+    "preset": {
+      "zh": "预设：",
+      "en": "Preset: ",
+      "ja": "プリセット：",
+      "used_by": [
+        "desktop_web"
+      ]
+    },
+    "qcClearDoc": {
+      "zh": "🧹 清文档",
+      "en": "🧹 Clear doc",
+      "ja": "🧹 資料をクリア",
+      "used_by": [
+        "desktop_web"
+      ]
+    },
+    "qcExport": {
+      "zh": "💾 导出Word",
+      "en": "💾 Export Word",
+      "ja": "💾 Word を書き出し",
+      "used_by": [
+        "desktop_web"
+      ]
+    },
+    "qcRead": {
+      "zh": "📄 读文档",
+      "en": "📄 Read doc",
+      "ja": "📄 資料を読む",
+      "used_by": [
+        "desktop_web"
+      ]
+    },
+    "qcTheme": {
+      "zh": "🎨 主题",
+      "en": "🎨 Theme",
+      "ja": "🎨 テーマ",
+      "used_by": [
+        "desktop_web"
+      ]
+    },
+    "qc_image": {
+      "zh": "图片",
+      "en": "Image",
+      "ja": "画像",
+      "used_by": [
+        "android"
+      ]
+    },
+    "remove": {
+      "zh": "✕ 移除",
+      "en": "✕ Remove",
+      "ja": "✕ 削除",
+      "used_by": [
+        "desktop_web"
+      ]
+    },
+    "roles": {
+      "zh": "📂 存档列表",
+      "en": "📂 Archives",
+      "ja": "📂 アーカイブ",
+      "used_by": [
+        "desktop_web"
+      ]
+    },
+    "roles_none": {
+      "zh": "无",
+      "en": "none",
+      "ja": "なし",
+      "used_by": [
+        "desktop_py"
+      ]
+    },
+    "save": {
+      "zh": "保存",
+      "en": "Save",
+      "ja": "保存",
+      "used_by": [
+        "desktop_web"
+      ]
+    },
+    "send": {
+      "zh": "发送",
+      "en": "Send",
+      "ja": "送信",
+      "used_by": [
+        "desktop_web"
+      ]
+    },
+    "settings": {
+      "zh": "⚙️ 设置",
+      "en": "⚙️ Settings",
+      "ja": "⚙️ 設定",
+      "used_by": [
+        "desktop_web"
+      ]
+    },
+    "sidebar": {
+      "zh": "角色与世界",
+      "en": "Roles & Worlds",
+      "ja": "キャラとワールド",
+      "used_by": [
+        "desktop_web"
+      ]
+    },
+    "stAuto": {
+      "zh": "🤖 自动接话",
+      "en": "🤖 Auto follow-up",
+      "ja": "🤖 自動応答",
+      "used_by": [
+        "desktop_web"
+      ]
+    },
+    "stAutoHint": {
+      "zh": "群聊时其他角色自动跟进（每轮最多 2 次）",
+      "en": "Other characters follow up in group chat (max 2 per round)",
+      "ja": "グループチャットで他のキャラが続ける（1 ターン最大 2 回）",
+      "used_by": [
+        "desktop_web"
+      ]
+    },
+    "stBudget": {
+      "zh": "🧮 上下文预算",
+      "en": "🧮 Context budget",
+      "ja": "🧮 コンテキスト予算",
+      "used_by": [
+        "desktop_web"
+      ]
+    },
+    "stBuy": {
+      "zh": "🔑 去官网注册 / 充值",
+      "en": "🔑 Official site (sign up / top up)",
+      "ja": "🔑 公式サイト（登録 / チャージ）",
+      "used_by": [
+        "desktop_web"
+      ]
+    },
+    "stFont": {
+      "zh": "🔤 字体大小",
+      "en": "🔤 Font size",
+      "ja": "🔤 文字サイズ",
+      "used_by": [
+        "desktop_web"
+      ]
+    },
+    "stPlugins": {
+      "zh": "🔌 插件管理",
+      "en": "🔌 Plugins",
+      "ja": "🔌 プラグイン",
+      "used_by": [
+        "desktop_web"
+      ]
+    },
+    "stProvider": {
+      "zh": "模型商",
+      "en": "Provider",
+      "ja": "プロバイダ",
+      "used_by": [
+        "desktop_web"
+      ]
+    },
+    "status_roles_prefix": {
+      "zh": "当前角色：",
+      "en": "Active roles: ",
+      "ja": "選択中のキャラ：",
+      "used_by": [
+        "desktop_py"
+      ]
+    },
+    "system": {
+      "zh": "系统",
+      "en": "System",
+      "ja": "システム",
+      "used_by": [
+        "android"
+      ]
+    },
+    "theme": {
+      "zh": "主题",
+      "en": "Theme",
+      "ja": "テーマ",
+      "used_by": [
+        "desktop_web"
+      ]
+    },
+    "title": {
+      "zh": "Direct-Interface Cork-bore Kit · 设置",
+      "en": "Direct-Interface Cork-bore Kit · Settings",
+      "ja": "Direct-Interface Cork-bore Kit · 設定",
+      "used_by": [
+        "desktop_web"
+      ]
+    },
+    "tokens_label": {
+      "zh": "总消耗: %s tokens",
+      "en": "Total tokens: %s",
+      "ja": "合計トークン: %s",
+      "used_by": [
+        "desktop_py"
+      ]
+    },
+    "treeTitle": {
+      "zh": "回溯",
+      "en": "Backtrack",
+      "ja": "巻き戻し",
+      "used_by": [
+        "desktop_web"
+      ]
+    },
+    "unknown_cmd": {
+      "zh": "未知命令",
+      "en": "Unknown command. Try /dice for help.",
+      "ja": "不明なコマンド。/dice でヘルプ。",
+      "used_by": [
+        "desktop_py",
+        "android"
+      ]
+    },
+    "vision_fail": {
+      "zh": "⚠️ 图片识别失败（免费视觉链被限流或网络问题），请稍后重试",
+      "en": "⚠️ Image recognition failed (rate limit or network). Try again later.",
+      "ja": "⚠️ 画像の認識に失敗しました（制限またはネットワーク）。後でもう一度。",
+      "used_by": [
+        "desktop_py",
+        "android"
+      ]
+    },
+    "weConst": {
+      "zh": "常驻",
+      "en": "Always on",
+      "ja": "常時",
+      "used_by": [
+        "desktop_web"
+      ]
+    },
+    "weContent": {
+      "zh": "内容",
+      "en": "Content",
+      "ja": "内容",
+      "used_by": [
+        "desktop_web"
+      ]
+    },
+    "weDepth": {
+      "zh": "深度",
+      "en": "Depth",
+      "ja": "深度",
+      "used_by": [
+        "desktop_web"
+      ]
+    },
+    "weEnabled": {
+      "zh": "启用",
+      "en": "Enabled",
+      "ja": "有効",
+      "used_by": [
+        "desktop_web"
+      ]
+    },
+    "weEntries": {
+      "zh": "世界书条目（关键词触发，可空）",
+      "en": "World book entries (keyword-triggered)",
+      "ja": "ワールドブック項目（キーワードで発動）",
+      "used_by": [
+        "desktop_web"
+      ]
+    },
+    "weKeywords": {
+      "zh": "关键词（逗号分隔）",
+      "en": "Keywords (comma separated)",
+      "ja": "キーワード（カンマ区切り）",
+      "used_by": [
+        "desktop_web"
+      ]
+    },
+    "weProb": {
+      "zh": "概率%",
+      "en": "Probability %",
+      "ja": "確率 %",
+      "used_by": [
+        "desktop_web"
+      ]
+    },
+    "weWeight": {
+      "zh": "权重",
+      "en": "Weight",
+      "ja": "重み",
+      "used_by": [
+        "desktop_web"
+      ]
+    },
+    "welcome": {
+      "zh": "👋 欢迎使用 %s！",
+      "en": "👋 Welcome to %s!",
+      "ja": "👋 %s へようこそ！",
+      "used_by": [
+        "desktop_py"
+      ]
+    },
+    "welcome2": {
+      "zh": "多角色模式：输入 @角色名 内容 来指定说话者。",
+      "en": "Group chat: type @name message to target a speaker.",
+      "ja": "グループチャット：@名前 メッセージ で発言者を指定。",
+      "used_by": [
+        "desktop_py"
+      ]
+    },
+    "wmDesc": {
+      "zh": "背景描述",
+      "en": "Background",
+      "ja": "背景",
+      "used_by": [
+        "desktop_web"
+      ]
+    },
+    "wmName": {
+      "zh": "名字",
+      "en": "Name",
+      "ja": "名前",
+      "used_by": [
+        "desktop_web"
+      ]
+    },
+    "wmParams": {
+      "zh": "世界参数（物理系统等）",
+      "en": "World parameters (physics system etc.)",
+      "ja": "ワールドパラメータ（物理法則など）",
+      "used_by": [
+        "desktop_web"
+      ]
+    },
+    "wmRules": {
+      "zh": "规则（每行一条）",
+      "en": "Rules (one per line)",
+      "ja": "ルール（1 行に 1 つ）",
+      "used_by": [
+        "desktop_web"
+      ]
+    },
+    "wmTitle": {
+      "zh": "新建世界",
+      "en": "New World",
+      "ja": "新規ワールド",
+      "used_by": [
+        "desktop_web"
+      ]
+    },
+    "wm_params": {
+      "zh": "世界参数（物理系统等）",
+      "en": "World parameters (physics system etc.)",
+      "ja": "ワールドパラメータ（物理法則など）",
+      "used_by": [
+        "android"
+      ]
+    },
+    "world_entries": {
+      "zh": "世界书条目（关键词触发，可空）",
+      "en": "World Book Entries",
+      "ja": "ワールドブック項目",
+      "used_by": [
+        "android"
+      ]
+    },
+    "worlds": {
+      "zh": "🌍 世界卡（多选 = 平行世界）",
+      "en": "🌍 Worlds (multi-select = parallel worlds)",
+      "ja": "🌍 ワールド（複数選択 = 並行世界）",
+      "used_by": [
+        "desktop_web"
+      ]
+    },
+    "wsClose": {
+      "zh": "关闭",
+      "en": "Close",
+      "ja": "閉じる",
+      "used_by": [
+        "desktop_web"
+      ]
+    },
+    "wsDel": {
+      "zh": "🗑️ 删除",
+      "en": "🗑️ Delete",
+      "ja": "🗑️ 削除",
+      "used_by": [
+        "desktop_web"
+      ]
+    },
+    "wsDownload": {
+      "zh": "⬇️ 下载到本地",
+      "en": "⬇️ Download",
+      "ja": "⬇️ ダウンロード",
+      "used_by": [
+        "desktop_web"
+      ]
+    },
+    "wsExport": {
+      "zh": "📤 导出文件",
+      "en": "📤 Export file",
+      "ja": "📤 ファイルを書き出し",
+      "used_by": [
+        "desktop_web"
+      ]
+    },
+    "wsKey": {
+      "zh": "🔑 Key（可选）",
+      "en": "🔑 Key (optional)",
+      "ja": "🔑 Key（任意）",
+      "used_by": [
+        "desktop_web"
+      ]
+    },
+    "wsLike": {
+      "zh": "❤️ 点赞",
+      "en": "❤️ Like",
+      "ja": "❤️ いいね",
+      "used_by": [
+        "desktop_web"
+      ]
+    },
+    "wsLocal": {
+      "zh": "📂 本地",
+      "en": "📂 Local",
+      "ja": "📂 ローカル",
+      "used_by": [
+        "desktop_web"
+      ]
+    },
+    "wsOnline": {
+      "zh": "🌐 在线",
+      "en": "🌐 Online",
+      "ja": "🌐 オンライン",
+      "used_by": [
+        "desktop_web"
+      ]
+    },
+    "wsOpen": {
+      "zh": "📂 打开目录",
+      "en": "📂 Open folder",
+      "ja": "📂 フォルダを開く",
+      "used_by": [
+        "desktop_web"
+      ]
+    },
+    "wsPrev": {
+      "zh": "预览",
+      "en": "Preview",
+      "ja": "プレビュー",
+      "used_by": [
+        "desktop_web"
+      ]
+    },
+    "wsProxy": {
+      "zh": "🛰️ 代理（可选）",
+      "en": "🛰️ Proxy (optional)",
+      "ja": "🛰️ プロキシ（任意）",
+      "used_by": [
+        "desktop_web"
+      ]
+    },
+    "wsTest": {
+      "zh": "🔌 测试连接",
+      "en": "🔌 Test",
+      "ja": "🔌 テスト",
+      "used_by": [
+        "desktop_web"
+      ]
+    },
+    "wsTitle": {
+      "zh": "🧰 创意工坊",
+      "en": "🧰 Workshop",
+      "ja": "🧰 ワークショップ",
+      "used_by": [
+        "desktop_web"
+      ]
+    },
+    "wsUpload": {
+      "zh": "📤 上传本地",
+      "en": "📤 Upload local",
+      "ja": "📤 ローカルを送信",
+      "used_by": [
+        "desktop_web"
+      ]
+    },
+    "ws_delete": {
+      "zh": "🗑️ 删除",
+      "en": "🗑️ Delete",
+      "ja": "🗑️ 削除",
+      "used_by": [
+        "android"
+      ]
+    },
+    "ws_download": {
+      "zh": "⬇️ 下载",
+      "en": "⬇️ Download",
+      "ja": "⬇️ ダウンロード",
+      "used_by": [
+        "android"
+      ]
+    },
+    "ws_export": {
+      "zh": "📤 导出",
+      "en": "📤 Export",
+      "ja": "📤 書き出し",
+      "used_by": [
+        "android"
+      ]
+    },
+    "ws_key": {
+      "zh": "Key（可选）",
+      "en": "Key (optional)",
+      "ja": "Key（任意）",
+      "used_by": [
+        "android"
+      ]
+    },
+    "ws_like": {
+      "zh": "❤️ 点赞",
+      "en": "❤️ Like",
+      "ja": "❤️ いいね",
+      "used_by": [
+        "android"
+      ]
+    },
+    "ws_local": {
+      "zh": "📂 本地 ▾",
+      "en": "📂 Local",
+      "ja": "📂 ローカル",
+      "used_by": [
+        "android"
+      ]
+    },
+    "ws_online": {
+      "zh": "🌐 在线 ▾",
+      "en": "🌐 Online",
+      "ja": "🌐 オンライン",
+      "used_by": [
+        "android"
+      ]
+    },
+    "ws_search": {
+      "zh": "搜索",
+      "en": "Search",
+      "ja": "検索",
+      "used_by": [
+        "android"
+      ]
+    },
+    "ws_test": {
+      "zh": "🔄 重新检测",
+      "en": "🔌 Test",
+      "ja": "🔌 テスト",
+      "used_by": [
+        "android"
+      ]
+    },
+    "ws_upload": {
+      "zh": "📤 上传",
+      "en": "📤 Upload",
+      "ja": "📤 送信",
+      "used_by": [
+        "android"
+      ]
+    },
+    "you": {
+      "zh": "你",
+      "en": "You",
+      "ja": "あなた",
+      "used_by": [
+        "android"
+      ]
+    }
+  },
+  "_legacy": {
+    "auto_speaking": {
+      "zh": " 正在输入...",
+      "en": " is typing...",
+      "ja": " が入力中...",
+      "from": "py"
+    },
+    "branchTitle": {
+      "zh": "分支",
+      "en": "Branches",
+      "ja": "ブランチ",
+      "from": "web"
+    },
+    "branch_none": {
+      "zh": "",
+      "en": "No other branches",
+      "ja": "他のブランチはありません",
+      "from": "kt"
+    },
+    "branch_title": {
+      "zh": "",
+      "en": "Switch Branch",
+      "ja": "ブランチ切替",
+      "from": "kt"
+    },
+    "btn_avatar": {
+      "zh": "🖼️ 角色头像",
+      "en": "🖼️ Avatar",
+      "ja": "🖼️ アイコン",
+      "from": "py"
+    },
+    "btn_buy_api": {
+      "zh": "💰 购买API",
+      "en": "💰 Buy API",
+      "ja": "💰 API を購入",
+      "from": "py"
+    },
+    "btn_close": {
+      "zh": "关闭",
+      "en": "Close",
+      "ja": "閉じる",
+      "from": "py"
+    },
+    "btn_collapse": {
+      "zh": "◀ 收起侧栏",
+      "en": "◀ Collapse Sidebar",
+      "ja": "◀ サイドバーを畳む",
+      "from": "py"
+    },
+    "btn_del": {
+      "zh": "🗑️ 删除",
+      "en": "🗑️ Delete",
+      "ja": "🗑️ 削除",
+      "from": "py"
+    },
+    "btn_del_role": {
+      "zh": "🗑️ 删除角色",
+      "en": "🗑️ Delete Role",
+      "ja": "🗑️ キャラを削除",
+      "from": "py"
+    },
+    "btn_del_world": {
+      "zh": "🗑️ 删除世界",
+      "en": "🗑️ Delete World",
+      "ja": "🗑️ ワールドを削除",
+      "from": "py"
+    },
+    "btn_disable": {
+      "zh": "❌ 停用",
+      "en": "❌ Disable",
+      "ja": "❌ 無効",
+      "from": "py"
+    },
+    "btn_edit_last": {
+      "zh": "✏️ 编辑上一条",
+      "en": "✏️ Edit Last",
+      "ja": "✏️ 最後を編集",
+      "from": "py"
+    },
+    "btn_enable": {
+      "zh": "✅ 启用",
+      "en": "✅ Enable",
+      "ja": "✅ 有効",
+      "from": "py"
+    },
+    "btn_exp_role": {
+      "zh": "📤 导出角色",
+      "en": "📤 Export Role",
+      "ja": "📤 キャラを書き出し",
+      "from": "py"
+    },
+    "btn_exp_world": {
+      "zh": "📤 导出世界",
+      "en": "📤 Export World",
+      "ja": "📤 ワールドを書き出し",
+      "from": "py"
+    },
+    "btn_expand": {
+      "zh": "▶ 展开侧栏",
+      "en": "▶ Expand Sidebar",
+      "ja": "▶ サイドバーを開く",
+      "from": "py"
+    },
+    "btn_export_png": {
+      "zh": "",
+      "en": "🖼️ PNG",
+      "ja": "🖼️ PNG",
+      "from": "kt"
+    },
+    "btn_get_started": {
+      "zh": "开始使用",
+      "en": "Get Started",
+      "ja": "はじめる",
+      "from": "py"
+    },
+    "btn_imp_role": {
+      "zh": "📥 导入角色",
+      "en": "📥 Import Role",
+      "ja": "📥 キャラを読み込み",
+      "from": "py"
+    },
+    "btn_imp_world": {
+      "zh": "📥 导入世界",
+      "en": "📥 Import World",
+      "ja": "📥 ワールドを読み込み",
+      "from": "py"
+    },
+    "btn_lang_switch": {
+      "zh": "切换语言",
+      "en": "Switch language",
+      "ja": "言語を切り替え",
+      "from": "py"
+    },
+    "btn_manage_preset": {
+      "zh": "✏️ 管理",
+      "en": "✏️ Manage",
+      "ja": "✏️ 管理",
+      "from": "py"
+    },
+    "btn_new": {
+      "zh": "➕ 新建",
+      "en": "➕ New",
+      "ja": "➕ 新規",
+      "from": "py"
+    },
+    "btn_open_saves": {
+      "zh": "📂 打开存档位置",
+      "en": "📂 Open Saves Folder",
+      "ja": "📂 セーブフォルダを開く",
+      "from": "py"
+    },
+    "btn_open_worlds": {
+      "zh": "📂 打开世界卡位置",
+      "en": "📂 Open Worlds Folder",
+      "ja": "📂 ワールドフォルダを開く",
+      "from": "py"
+    },
+    "btn_retry": {
+      "zh": "🔄 重试",
+      "en": "🔄 Retry",
+      "ja": "🔄 再生成",
+      "from": "py"
+    },
+    "btn_settings": {
+      "zh": "⚙️ 设置",
+      "en": "⚙️ Settings",
+      "ja": "⚙️ 設定",
+      "from": "py"
+    },
+    "btn_start": {
+      "zh": "✅ 启动聊天",
+      "en": "✅ Start Chat",
+      "ja": "✅ チャット開始",
+      "from": "py"
+    },
+    "btn_theme": {
+      "zh": "打开主题中心",
+      "en": "Open Theme Center",
+      "ja": "テーマセンターを開く",
+      "from": "py"
+    },
+    "chat_empty": {
+      "zh": "（对话为空）",
+      "en": "(No conversation yet)",
+      "ja": "（まだ会話がありません）",
+      "from": "py"
+    },
+    "chk_rolling": {
+      "zh": "📜 滚动摘要",
+      "en": "📜 Rolling Summary",
+      "ja": "📜 ローリング要約",
+      "from": "py"
+    },
+    "dlg_settings_title": {
+      "zh": "设置",
+      "en": "Settings",
+      "ja": "設定",
+      "from": "py"
+    },
+    "dlg_subtitle": {
+      "zh": "无限制 AI 交互工作室",
+      "en": "Unlimited AI Interaction Studio",
+      "ja": "無制限 AI インタラクションスタジオ",
+      "from": "py"
+    },
+    "dlg_welcome_title": {
+      "zh": "欢迎",
+      "en": "Welcome",
+      "ja": "ようこそ",
+      "from": "py"
+    },
+    "done": {
+      "zh": "完成",
+      "en": "Done",
+      "ja": "完了",
+      "from": "web"
+    },
+    "feat1": {
+      "zh": "🎭 创建任意角色（性格、背景、说话风格）",
+      "en": "🎭 Create any character (personality, background, speech style)",
+      "ja": "🎭 どんなキャラでも作成（性格・背景・話し方）",
+      "from": "py"
+    },
+    "feat2": {
+      "zh": "🌍 构建任意世界观（规则、关键词、场景）",
+      "en": "🌍 Build any world (rules, keywords, scenes)",
+      "ja": "🌍 どんな世界でも構築（ルール・キーワード・シーン）",
+      "from": "py"
+    },
+    "feat3": {
+      "zh": "🔄 自由切换 17 种不同 AI 模型",
+      "en": "🔄 Switch freely among AI providers",
+      "ja": "🔄 AI プロバイダを自由に切り替え",
+      "from": "py"
+    },
+    "feat4": {
+      "zh": "🧩 通过插件扩展无限功能",
+      "en": "🧩 Extend infinitely with plugins",
+      "ja": "🧩 プラグインで無限に拡張",
+      "from": "py"
+    },
+    "hint": {
+      "zh": "提示",
+      "en": "Info",
+      "ja": "情報",
+      "from": "py"
+    },
+    "hint_enter": {
+      "zh": "💡 按 Enter 发送；群聊时可输入 @角色名 指定发言对象",
+      "en": "💡 Press Enter to send; use @name to target a speaker in group chat",
+      "ja": "💡 Enter で送信。グループチャットでは @名前 で発言者を指定",
+      "from": "py"
+    },
+    "hint_font": {
+      "zh": "字体与字号在右侧底部调整",
+      "en": "Font and size are at the bottom of the right panel",
+      "ja": "フォントとサイズは右パネルの一番下",
+      "from": "py"
+    },
+    "input_placeholder": {
+      "zh": "输入消息... (使用 @角色名 指定说话者)",
+      "en": "Type a message... (use @name to target a speaker)",
+      "ja": "メッセージを入力...（@名前 で発言者を指定）",
+      "from": "py"
+    },
+    "item_roles": {
+      "zh": "",
+      "en": "Roles",
+      "ja": "キャラ",
+      "from": "kt"
+    },
+    "item_roles_worlds": {
+      "zh": "",
+      "en": "Roles & Worlds",
+      "ja": "キャラとワールド",
+      "from": "kt"
+    },
+    "item_worlds": {
+      "zh": "",
+      "en": "Worlds",
+      "ja": "ワールド",
+      "from": "kt"
+    },
+    "langBtn": {
+      "zh": "切换语言",
+      "en": "Switch language",
+      "ja": "言語",
+      "from": "web"
+    },
+    "lang_changed": {
+      "zh": "语言已切换，重启程序后全面生效",
+      "en": "Language switched. Restart the app for the change to take full effect.",
+      "ja": "言語を切り替えました。完全に反映するには再起動してください。",
+      "from": "py"
+    },
+    "lbl_apikey": {
+      "zh": "请输入你的 API Key：",
+      "en": "Enter your API Key:",
+      "ja": "API Key を入力：",
+      "from": "py"
+    },
+    "lbl_archives": {
+      "zh": "📂 存档列表",
+      "en": "📂 Archives",
+      "ja": "📂 アーカイブ",
+      "from": "py"
+    },
+    "lbl_baseurl": {
+      "zh": "",
+      "en": "Provider Base URL",
+      "ja": "プロバイダ Base URL",
+      "from": "kt"
+    },
+    "lbl_budget": {
+      "zh": "🧮 预算：",
+      "en": "🧮 Budget:",
+      "ja": "🧮 予算：",
+      "from": "py"
+    },
+    "lbl_font": {
+      "zh": "字体：",
+      "en": "Font:",
+      "ja": "フォント：",
+      "from": "py"
+    },
+    "lbl_key_free": {
+      "zh": "",
+      "en": "API Key (free, can be blank)",
+      "ja": "API Key（無料・空欄可）",
+      "from": "kt"
+    },
+    "lbl_language": {
+      "zh": "语言 / Language",
+      "en": "Language",
+      "ja": "言語",
+      "from": "py"
+    },
+    "lbl_model": {
+      "zh": "模型：",
+      "en": "Model:",
+      "ja": "モデル：",
+      "from": "py+kt"
+    },
+    "lbl_persona": {
+      "zh": "🧑 玩家角色",
+      "en": "🧑 Player Persona",
+      "ja": "🧑 プレイヤー設定",
+      "from": "py+kt"
+    },
+    "lbl_plugins": {
+      "zh": "",
+      "en": "Plugins",
+      "ja": "プラグイン",
+      "from": "kt"
+    },
+    "lbl_prompt": {
+      "zh": "",
+      "en": "Personality / background",
+      "ja": "性格・背景",
+      "from": "kt"
+    },
+    "lbl_provider": {
+      "zh": "服务商：",
+      "en": "Provider:",
+      "ja": "プロバイダ：",
+      "from": "py+kt"
+    },
+    "lbl_quickstart": {
+      "zh": "🚀 快速开始",
+      "en": "🚀 Quick Start",
+      "ja": "🚀 クイックスタート",
+      "from": "py"
+    },
+    "lbl_size": {
+      "zh": "大小：",
+      "en": "Size:",
+      "ja": "サイズ：",
+      "from": "py"
+    },
+    "lbl_theme_row": {
+      "zh": "主题 / Theme",
+      "en": "Theme",
+      "ja": "テーマ",
+      "from": "py"
+    },
+    "lbl_worlds": {
+      "zh": "🌍 世界卡（可多选 = 平行世界）",
+      "en": "🌍 Worlds (multi-select = parallel worlds)",
+      "ja": "🌍 ワールド（複数選択 = 並行世界）",
+      "from": "py"
+    },
+    "loading": {
+      "zh": "⏳ 正在输入...",
+      "en": "⏳ Typing...",
+      "ja": "⏳ 入力中...",
+      "from": "py"
+    },
+    "menu_tools": {
+      "zh": "🛠️ 工具",
+      "en": "🛠️ Tools",
+      "ja": "🛠️ ツール",
+      "from": "py"
+    },
+    "param_climate": {
+      "zh": "气候环境",
+      "en": "Climate",
+      "ja": "気候",
+      "from": "web"
+    },
+    "param_economy": {
+      "zh": "经济体系",
+      "en": "Economy",
+      "ja": "経済",
+      "from": "web"
+    },
+    "param_geography": {
+      "zh": "地理格局",
+      "en": "Geography",
+      "ja": "地理",
+      "from": "web"
+    },
+    "param_physics": {
+      "zh": "物理法则",
+      "en": "Physics",
+      "ja": "物理法則",
+      "from": "web"
+    },
+    "param_politics": {
+      "zh": "政治格局",
+      "en": "Politics",
+      "ja": "政治",
+      "from": "web"
+    },
+    "param_supernatural": {
+      "zh": "超自然体系",
+      "en": "Supernatural",
+      "ja": "超自然設定",
+      "from": "web"
+    },
+    "param_tech_level": {
+      "zh": "科技水平",
+      "en": "Tech level",
+      "ja": "技術水準",
+      "from": "web"
+    },
+    "param_time_flow": {
+      "zh": "时间流速",
+      "en": "Time flow",
+      "ja": "時間の流れ",
+      "from": "web"
+    },
+    "pick_avatar_ft": {
+      "zh": "图片文件",
+      "en": "Image files",
+      "ja": "画像ファイル",
+      "from": "py"
+    },
+    "pick_avatar_title": {
+      "zh": "选择头像图片",
+      "en": "Select avatar image",
+      "ja": "アイコン画像を選択",
+      "from": "py"
+    },
+    "pick_role_first": {
+      "zh": "请先在存档列表选择一个角色",
+      "en": "Select a role in the archive list first",
+      "ja": "先にアーカイブ一覧でキャラを選んでください",
+      "from": "py"
+    },
+    "prompt": {
+      "zh": "设定（性格/背景）",
+      "en": "Personality / background",
+      "ja": "設定（性格・背景）",
+      "from": "web"
+    },
+    "qcNovel": {
+      "zh": "📖 导出小说(EPUB)",
+      "en": "📖 Export novel (EPUB)",
+      "ja": "📖 小説を書き出し（EPUB）",
+      "from": "web"
+    },
+    "qs1": {
+      "zh": "① 点击「购买API」获取 DeepSeek API Key",
+      "en": "① Click Buy API to get a DeepSeek API Key",
+      "ja": "①「API を購入」から DeepSeek の API Key を取得",
+      "from": "py"
+    },
+    "qs2": {
+      "zh": "② 粘贴 Key → 点击「启动聊天」",
+      "en": "② Paste the Key → click Start Chat",
+      "ja": "② Key を貼り付けて「チャット開始」",
+      "from": "py"
+    },
+    "qs3": {
+      "zh": "③ 左侧选择角色 → 开始对话",
+      "en": "③ Pick a role on the left → start talking",
+      "ja": "③ 左のキャラを選んで話しかける",
+      "from": "py"
+    },
+    "sec_cards": {
+      "zh": "角色与世界",
+      "en": "Roles & Worlds",
+      "ja": "キャラとワールド",
+      "from": "py"
+    },
+    "success": {
+      "zh": "成功",
+      "en": "Success",
+      "ja": "成功",
+      "from": "py"
+    },
+    "theme_unavailable": {
+      "zh": "主题中心不可用（现代界面插件未加载）",
+      "en": "Theme center is unavailable (Modern UI plugin not loaded)",
+      "ja": "テーマセンターは利用できません（Modern UI プラグイン未読み込み）",
+      "from": "py"
+    },
+    "welcome3": {
+      "zh": "按住 Ctrl 键点击角色卡可同时激活多个角色。",
+      "en": "Hold Ctrl and click role cards to activate multiple roles.",
+      "ja": "Ctrl を押しながらキャラをクリックすると複数選択できます。",
+      "from": "py"
+    },
+    "wsConn": {
+      "zh": "💾 保存连接",
+      "en": "💾 Save connection",
+      "ja": "💾 接続を保存",
+      "from": "web"
+    },
+    "wsServer": {
+      "zh": "🔗 服务器地址",
+      "en": "🔗 Server URL",
+      "ja": "🔗 サーバー URL",
+      "from": "web"
+    },
+    "ws_save_conn": {
+      "zh": "",
+      "en": "💾 Save",
+      "ja": "💾 保存",
+      "from": "kt"
+    },
+    "ws_server": {
+      "zh": "",
+      "en": "Server URL",
+      "ja": "サーバー URL",
+      "from": "kt"
+    }
+  },
+  "_same_as_zh_ok": [
+    "apiKey",
+    "btn_edit",
+    "btn_edit_msg",
+    "btn_regenerate",
+    "btn_save",
+    "entry_content",
+    "entry_delete",
+    "entry_depth",
+    "match_all",
+    "match_any",
+    "match_regex",
+    "nrPersonality",
+    "save",
+    "weContent",
+    "weDepth"
+  ]
+}

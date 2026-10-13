@@ -1331,6 +1331,7 @@ button .ic{ margin-right:2px; }
   <div class="a-txt" id="achToastTxt"><b>已回到这段故事</b><span>回档</span></div>
 </div>
 
+<script src="i18n.js"></script>
 <script>
 // pywebview 桥接别名：api_xxx -> xxx（兼容不同 pywebview 版本的方法命名）
 function ensureApiAliases() {
@@ -1672,99 +1673,12 @@ var T = {};
 
 function setT(l) {
   // 三档：zh / en / ja。认不出的值退回中文（与后端 i18n.set_lang 同一条规矩）。
+  // 文案表来自 web/i18n.js（由 lang/strings.json 生成，见 tools/gen_i18n.py）——
+  // 这里原来内联了三段 T = {...}，跟 i18n.py / 安卓 I18n.kt 各写一份，迟早对不上。
   if (l !== 'en' && l !== 'ja') l = 'zh';
   lang = l;
-  if (l === 'ja') {
-    T = { sidebar:'キャラとワールド', roles:'📂 アーカイブ', worlds:'🌍 ワールド（複数選択 = 並行世界）',
-      newRole:'➕ 新規キャラ', persona:'🧑 プレイヤー設定', editPersona:'⚙️ プレイヤー設定を編集',
-      settings:'⚙️ 設定', placeholder:'メッセージを入力...（@名前 で発言者を指定）',
-      send:'送信', remove:'✕ 削除', image:'📷 画像', imgAttached:'画像を選択済み',
-      preset:'プリセット：', apiKey:'API Key', baseUrl:'プロバイダ Base URL', model:'モデル',
-      theme:'テーマ', accent:'アクセント：', langBtn:'言語', cancel:'キャンセル', save:'保存',
-      name:'名前', prompt:'設定（性格・背景）', title:'Direct-Interface Cork-bore Kit · 設定',
-      newRoleTitle:'新規キャラ', done:'完了', newWorld:'➕ 新規ワールド', wmTitle:'新規ワールド',
-      wmName:'名前', wmDesc:'背景', wmRules:'ルール（1 行に 1 つ）', aiDraft:'✨ AI 下書き',
-      importCard:'📥 カードを読み込み', editMsg:'メッセージを編集', branchTitle:'ブランチ', treeTitle:'巻き戻し',
-      weEntries:'ワールドブック項目（キーワードで発動）', weKeywords:'キーワード（カンマ区切り）',
-      weContent:'内容', weEnabled:'有効', weConst:'常時', weWeight:'重み',
-      weProb:'確率 %', weDepth:'深度', addEntry:'＋ 項目を追加',
-      stProvider:'プロバイダ', stBuy:'🔑 公式サイト（登録 / チャージ）',
-      nrLegacy:'完全設定（旧版の原文・空欄可）', nrAppearance:'外見', nrPersonality:'性格',
-      nrBackground:'過去の経験', nrSpeech:'話し方（口調・口癖）', nrFirstMes:'挨拶',
-      nrMesExample:'会話例', nrNotes:'メモ',
-      wmParams:'ワールドパラメータ（物理法則など）',
-      param_tech_level:'技術水準', param_supernatural:'超自然設定', param_physics:'物理法則',
-      param_time_flow:'時間の流れ', param_climate:'気候', param_geography:'地理',
-      param_politics:'政治', param_economy:'経済',
-      btnWorkshop:'🧰 ワークショップ', wsTitle:'🧰 ワークショップ', wsLocal:'📂 ローカル', wsOnline:'🌐 オンライン',
-      wsPrev:'プレビュー', wsServer:'🔗 サーバー URL', wsProxy:'🛰️ プロキシ（任意）', wsKey:'🔑 Key（任意）', wsClose:'閉じる',
-      wsConn:'💾 接続を保存', wsTest:'🔌 テスト', wsDownload:'⬇️ ダウンロード', wsLike:'❤️ いいね',
-      wsUpload:'📤 ローカルを送信', wsDel:'🗑️ 削除', wsExport:'📤 ファイルを書き出し', wsOpen:'📂 フォルダを開く',
-      stBudget:'🧮 コンテキスト予算', stAuto:'🤖 自動応答', stAutoHint:'グループチャットで他のキャラが続ける（1 ターン最大 2 回）',
-      stFont:'🔤 文字サイズ', stPlugins:'🔌 プラグイン', qcRead:'📄 資料を読む', qcClearDoc:'🧹 資料をクリア',
-      qcExport:'💾 Word を書き出し', qcNovel:'📖 小説を書き出し（EPUB）', qcTheme:'🎨 テーマ', budgetUnlimited:'無制限',
-      chLoading:'⏳ 選択肢を生成中…' };
-  } else if (l === 'en') {
-    T = { sidebar:'Roles & Worlds', roles:'📂 Archives', worlds:'🌍 Worlds (multi-select = parallel worlds)',
-      newRole:'➕ New Role', persona:'🧑 Player Persona', editPersona:'⚙️ Edit Player Persona',
-      settings:'⚙️ Settings', placeholder:'Type a message... (use @name to target a speaker)',
-      send:'Send', remove:'✕ Remove', image:'📷 Image', imgAttached:'Image attached',
-      preset:'Preset: ', apiKey:'API Key', baseUrl:'Provider Base URL', model:'Model',
-      theme:'Theme', accent:'Accent: ', langBtn:'Switch language', cancel:'Cancel', save:'Save',
-      name:'Name', prompt:'Personality / background', title:'Direct-Interface Cork-bore Kit · Settings',
-      newRoleTitle:'New Role', done:'Done', newWorld:'➕ New World', wmTitle:'New World',
-      wmName:'Name', wmDesc:'Background', wmRules:'Rules (one per line)', aiDraft:'✨ AI Draft',
-      importCard:'📥 Import Card', editMsg:'Edit Message', branchTitle:'Branches', treeTitle:'Backtrack',
-      weEntries:'World book entries (keyword-triggered)', weKeywords:'Keywords (comma separated)',
-      weContent:'Content', weEnabled:'Enabled', weConst:'Always on', weWeight:'Weight',
-      weProb:'Probability %', weDepth:'Depth', addEntry:'＋ Add Entry',
-      stProvider:'Provider', stBuy:'🔑 Official site (sign up / top up)',
-      nrLegacy:'Full setting (legacy text, optional)', nrAppearance:'Appearance', nrPersonality:'Personality',
-      nrBackground:'Past experiences', nrSpeech:'Speech style (tone / catchphrases)', nrFirstMes:'Greeting',
-      nrMesExample:'Example dialogue', nrNotes:'Notes',
-      wmParams:'World parameters (physics system etc.)',
-      param_tech_level:'Tech level', param_supernatural:'Supernatural', param_physics:'Physics',
-      param_time_flow:'Time flow', param_climate:'Climate', param_geography:'Geography',
-      param_politics:'Politics', param_economy:'Economy',
-      btnWorkshop:'🧰 Workshop', wsTitle:'🧰 Workshop', wsLocal:'📂 Local', wsOnline:'🌐 Online',
-      wsPrev:'Preview', wsServer:'🔗 Server URL', wsProxy:'🛰️ Proxy (optional)', wsKey:'🔑 Key (optional)', wsClose:'Close',
-      wsConn:'💾 Save connection', wsTest:'🔌 Test', wsDownload:'⬇️ Download', wsLike:'❤️ Like',
-      wsUpload:'📤 Upload local', wsDel:'🗑️ Delete', wsExport:'📤 Export file', wsOpen:'📂 Open folder',
-      stBudget:'🧮 Context budget', stAuto:'🤖 Auto follow-up', stAutoHint:'Other characters follow up in group chat (max 2 per round)',
-      stFont:'🔤 Font size', stPlugins:'🔌 Plugins', qcRead:'📄 Read doc', qcClearDoc:'🧹 Clear doc',
-      qcExport:'💾 Export Word', qcNovel:'📖 Export novel (EPUB)', qcTheme:'🎨 Theme', budgetUnlimited:'Unlimited',
-      chLoading:'⏳ Generating options…' };
-  } else {
-    T = { sidebar:'角色与世界', roles:'📂 存档列表', worlds:'🌍 世界卡（多选 = 平行世界）',
-      newRole:'➕ 新建角色', persona:'🧑 玩家角色', editPersona:'⚙️ 编辑玩家角色',
-      settings:'⚙️ 设置', placeholder:'输入消息... (使用 @角色名 指定说话者)',
-      send:'发送', remove:'✕ 移除', image:'📷 图片', imgAttached:'已选图片',
-      preset:'预设：', apiKey:'API Key', baseUrl:'服务商 Base URL', model:'模型',
-      theme:'主题', accent:'强调色：', langBtn:'切换语言', cancel:'取消', save:'保存',
-      name:'名字', prompt:'设定（性格/背景）', title:'Direct-Interface Cork-bore Kit · 设置',
-      newRoleTitle:'新建角色', done:'完成', newWorld:'➕ 新建世界', wmTitle:'新建世界',
-      wmName:'名字', wmDesc:'背景描述', wmRules:'规则（每行一条）', aiDraft:'✨ AI 起草',
-      importCard:'📥 导入角色卡', editMsg:'编辑消息', branchTitle:'分支', treeTitle:'回溯',
-      weEntries:'世界书条目（关键词触发，可空）', weKeywords:'关键词（逗号分隔）',
-      weContent:'内容', weEnabled:'启用', weConst:'常驻', weWeight:'权重',
-      weProb:'概率%', weDepth:'深度', addEntry:'＋ 添加条目',
-      stProvider:'模型商', stBuy:'🔑 去官网注册 / 充值',
-      nrLegacy:'完整设定（旧版原文，可留空）', nrAppearance:'外貌', nrPersonality:'性格',
-      nrBackground:'过去经历', nrSpeech:'说话方式（语气/口癖/句式）', nrFirstMes:'开场白',
-      nrMesExample:'对话示例', nrNotes:'备注',
-      wmParams:'世界参数（物理系统等）',
-      param_tech_level:'科技水平', param_supernatural:'超自然体系', param_physics:'物理法则',
-      param_time_flow:'时间流速', param_climate:'气候环境', param_geography:'地理格局',
-      param_politics:'政治格局', param_economy:'经济体系',
-      btnWorkshop:'🧰 创意工坊', wsTitle:'🧰 创意工坊', wsLocal:'📂 本地', wsOnline:'🌐 在线',
-      wsPrev:'预览', wsServer:'🔗 服务器地址', wsProxy:'🛰️ 代理（可选）', wsKey:'🔑 Key（可选）', wsClose:'关闭',
-      wsConn:'💾 保存连接', wsTest:'🔌 测试连接', wsDownload:'⬇️ 下载到本地', wsLike:'❤️ 点赞',
-      wsUpload:'📤 上传本地', wsDel:'🗑️ 删除', wsExport:'📤 导出文件', wsOpen:'📂 打开目录',
-      stBudget:'🧮 上下文预算', stAuto:'🤖 自动接话', stAutoHint:'群聊时其他角色自动跟进（每轮最多 2 次）',
-      stFont:'🔤 字体大小', stPlugins:'🔌 插件管理', qcRead:'📄 读文档', qcClearDoc:'🧹 清文档',
-      qcExport:'💾 导出Word', qcNovel:'📖 导出小说(EPUB)', qcTheme:'🎨 主题', budgetUnlimited:'不限',
-      chLoading:'⏳ 正在生成选项…' };
-  }
+  var table = (window.DICK_I18N || {});
+  T = table[l] || table.zh || {};
   document.getElementById('cardsTitle').textContent = '🎭 ' + T.sidebar;
   document.getElementById('lblRoles').textContent = T.roles;
   document.getElementById('lblWorlds').textContent = T.worlds;
