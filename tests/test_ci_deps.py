@@ -244,6 +244,22 @@ def test_container_and_env_tooling():
     check("lang/strings.json 随包", "('lang', 'lang')" in spec_txt)
     check("lang/strings.json 在打包自检清单里", '("strings.json",' in br_txt)
     check("生成的 web/i18n.js 随包", "('web', 'web')" in spec_txt)
+
+    # 图标：唯一真相（emoji → Material Symbols 名字）+ 两端产物 + 随包字体与许可
+    icons_json = os.path.join(ROOT, "icons", "icons.json")
+    check("icons/icons.json 在（图标唯一真相）", os.path.isfile(icons_json))
+    check("生成的 web/icons.js 在", os.path.isfile(os.path.join(ROOT, "web", "icons.js")))
+    check("安卓生成的 IconNames.kt 在",
+          os.path.isfile(os.path.join(ROOT, "DICK-Android", "app", "src", "main", "java",
+                                      "com", "dick", "app", "IconNames.kt")))
+    for rel in (os.path.join("web", "fonts", "MaterialSymbolsOutlined.woff2"),
+                os.path.join("web", "fonts", "LICENSE"),
+                os.path.join("DICK-Android", "app", "src", "main", "res", "font",
+                             "material_symbols_outlined.ttf")):
+        check("字体/许可在仓库里：%s" % rel.replace(os.sep, "/"), os.path.isfile(os.path.join(ROOT, rel)))
+    check("图标字体随包（web/ 整目录）", "('web', 'web')" in spec_txt)
+    check("打包自检盯着 icons.js 与字体",
+          "web/icons.js" in br_txt and "MaterialSymbolsOutlined.woff2" in br_txt)
     # 故意**不**要求仓库里有 requirements-lock.txt：见 tools/lock_requirements.py 顶部的说明
     # （轮子可用性是"平台 × 版本"两个维度，手写一份跨平台锁文件只会制造新的环境坑）
 

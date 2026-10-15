@@ -19,6 +19,8 @@ numpy>=1.26           # test_ranker + ranker.py（排序器就是纯 numpy）
 cryptography>=41.0    # 加密备份容器（crypto_core.encrypt/decrypt → AES-GCM）
 python-docx>=1.1      # test_novel_export：导出 .docx 并读回来校验（会带上 lxml）
 werkzeug>=3.0         # 测试里直接 from werkzeug.serving import make_server（flask 也会带，钉住更保险）
+fonttools>=4.50       # tests/test_android_icons.py + tools/gen_icons.py：查字体的连字名（图标名在不在字体里）
+brotli>=1.1           # 上面那条读 woff2 时要用（读 ttf 不需要；缺它那一步会显式 SKIP）       # tests/test_android_icons.py + tools/gen_icons.py：查字体的连字名（图标名在不在字体里）
 
 # ---- 由上面传递带来，不单独钉版本 ----
 # lxml（python-docx 的依赖；仓库里没有任何地方直接 import 它）

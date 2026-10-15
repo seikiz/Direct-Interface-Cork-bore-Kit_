@@ -52,7 +52,7 @@ playable things (choice-driven scenes, mechanics/affection systems, one-click st
 | **规模** | 源码约 **86k 行**（Python 160 文件 / 44,386 行；Kotlin 60 / 16,040；JS 71 / 17,224；HTML 4 / 8,502，均排除依赖与构建产物） |
 | **桌面端** | 单个 `HtmlApp` 类（6,659 行）对外暴露 **154 个 `api_*`**，经 pywebview js_api 桥接；前端是单页 `web/index.html`（8,119 行） |
 | **三端实现** | 桌面（Python + pywebview）· 安卓（Kotlin + Compose）· 原生播放器（Compose Multiplatform，EXE 与 APK 同源） |
-| **跨端一致性** | 120 个线性图标由 `web/index.html` 的 `ICONS` **单点生成** → `tools/gen_android_icons.py` → 108 个 Android VectorDrawable；两端各有防漂移测试（改一边忘了另一边会红） |
+| **跨端一致性** | 三件事都收敛到「单一真相 + 生成 + 防漂测试」：**图标** `icons/icons.json`（emoji → Material Symbols 名字）→ `tools/gen_icons.py` → 网页 `web/icons.js`（字体连字）+ 安卓 `IconNames.kt`，字体随包（woff2 342.6 KB / ttf 976.8 KB，Apache-2.0，不连 CDN）；**文案** `lang/strings.json` → `web/i18n.js` + 安卓 `I18nStrings.kt`；**版号** `version.json` → 两端构建时读。改一处两端一起变，改漏了测试会红（`test_android_icons.py` / `test_icons.js` / `test_i18n_langs.py` / `test_version_consistency.py`） |
 | **界面文案（三语）** | 唯一真相是 `lang/strings.json`（中文 / English / 日本語，每个键的 `used_by` 标明哪端在用）。`web/i18n.js`（页面 `setT()` 原来内联三段表）与安卓 `I18nStrings.kt` 都是 `tools/gen_i18n.py` **生成**，`i18n.py` 运行时读 json —— **改一条文案只改一个地方，三端一起变**。`tools/gen_i18n.py --check`（CI 跑）与 `tests/test_i18n_langs.py`（93 条）盯着"谁还在自己写一份"，并核对桌面调用点的中文默认值 == json 的 zh、`used_by` 说的端源码里真的在用、三端入口都是三选一；当年三份手写表合并时有 91 个键三端都不再引用，收进 json 的 `_legacy` 段留档（不参与硬校验） |
 | **版本号** | 唯一真相是仓库根目录的 `version.json`（四段 `主.次.补.实验`：**前两位不变 = 兼容**，无法兼容直接进 2.0；大功能涨次位、**补位只用来标记「加了官方可选插件」**、第四位是实验性版本，纯修补不涨号（手动跑 `tools/bump_version.py major|minor|patch|exp`））。桌面端运行时读它（`app_version.py`：窗口标题 / 启动欢迎语）、安卓与播放器在 Gradle 配置阶段读同一份（`versionName` + 由四段算出的 `versionCode`，1.0.0.1 → 1000001，实测 merged manifest 就是这个值）、前端由 `api_state()` 带回（欢迎页与控制台横幅）。改号只改一个文件，没有第二处需要同步；`tests/test_version_consistency.py` 盯着别处不许写死 |
 | **测试** | `tests/` **80 个独立脚本 / 2,453 次断言**（实跑汇总，2026-10）+ Node 图标回归 + 安卓 kotlinc 自检（`DICK-Android/selftest/run.ps1`：TextGuard + 机制重置 + 生活/空间对拍 45+277 条）+ 安卓分道执行的结构检查（`test_android_lanes.py`）+ 跨端对拍前置检查（`test_android_parity.py`：表是否最新 / 基准有没有被用到 / 接线有没有断）；GitHub Actions 跑 **三个作业：Linux(3.11/3.12) + Windows(3.12)**，任一失败即红。环境写进文件而不是靠记忆：`Dockerfile`/`.devcontainer`（本机一条命令跑 Linux 全套）、`tools/env_report.py`（一条命令看清跑测试的是哪套环境）、`tools/ci_dep_check.py`（装完自检，失败直接点名缺哪个包） |
@@ -94,7 +94,7 @@ playable things (choice-driven scenes, mechanics/affection systems, one-click st
 - **`DICK-Narrative`**：Compose Multiplatform 写的**原生播放器**（EXE + APK 同源，不是网页套壳），与 GAL 制作器**零转换**互通
 
 ### 界面
-- **120 个黑白线性图标，两端由同一份字典生成**：`web/index.html` 的 `ICONS` → `tools/gen_android_icons.py` → Android VectorDrawable。改一处两端都变，不存在"改了一边忘了另一边"
+- **图标只用一份真相（`icons/icons.json`），字形来自谷歌 Material Symbols（Outlined / wght 300，细线少边）**：网页端 `@font-face` + 连字（`<span class="ms">名字</span>`），安卓端同一份字体走 Compose；改一处两端都变。选图标时看 `python tools/gen_icon_preview.py` 生成的总览页
 - 深色 / 浅色 / OLED 三套主题 + 四色强调色；文字与图标颜色全部跟随主题
 - 手机端「彻底清空历史」= 机制状态回到初始值 **且重演一遍开场白**（状态如初，连第一句也在）
 
@@ -179,7 +179,7 @@ node install.js     # 或双击 install.bat
 | `DICK-Android/` | 安卓端（Compose）：`core` / `app` / `plugins` / `tools` 四层 |
 | `DICK-Narrative/` | Compose Multiplatform 原生 GALGAME 播放器（EXE + APK），故事格式见其 README |
 | `tests/` | 77 个 Python 测试脚本（逐个独立运行）+ JS 图标回归 |
-| `tools/` | `gen_android_icons.py`（图标 → VectorDrawable）、`gen_icon_preview.py`（图标总览页）、存档同步 |
+| `tools/` | `gen_icons.py`（图标唯一真相 → 两端产物）、`gen_i18n.py`（文案唯一真相 → 两端产物）、`gen_parity.py`（生活/空间表与对拍基准）、`bump_version.py`（版号）、`gen_icon_preview.py`（图标总览页）、存档同步 |
 | `tree_weight.py` `salience.py` `lookahead.py` `ranker.py` `rubric.py` | 记忆权重与剪枝 / 有损遗忘曲线 / 前瞻展开 / 排序器 / 价值判据 |
 | `save_guard.py` `crypto_core.py` `dick_backup_tool.py` | 原子写+备份+校验自愈 / 加密备份容器 / 独立解密工具 |
 | `net.py` `trpg_server.py` | 创意工坊服务端 / 跑团房间服务端（Flask，独立启动） |
@@ -202,8 +202,8 @@ python tools/gen_parity.py --check                 # 手机端的表/对拍基�
 # 手机
 cd DICK-Android && gradle :app:assembleDebug        # → app/build/outputs/apk/debug/
 
-# 改过 web 的 ICONS 之后：重生成两端图标资源
-python tools/gen_android_icons.py
+# 改过 icons/icons.json 之后：重生成两端图标产物（网页 icons.js + 安卓 IconNames.kt）
+python tools/gen_icons.py --check
 python tools/gen_icon_preview.py                    # → _icons_preview.html，肉眼过一遍
 ```
 

@@ -84,7 +84,6 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
@@ -2518,12 +2517,7 @@ fun wsRefreshLocal() {
                             shadowElevation = 6.dp,
                         ) {
                             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                                Icon(
-                                    painterResource(R.drawable.ic_download),
-                                    contentDescription = "到底部",
-                                    modifier = Modifier.size(20.dp),
-                                    tint = accent,
-                                )
+                                MsIcon("download", 20.sp, accent, contentDescription = "到底部")
                             }
                         }
                     }

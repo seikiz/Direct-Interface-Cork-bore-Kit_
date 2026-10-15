@@ -52,6 +52,11 @@ FEATURES = {
     "生图·种子重抽": "genReroll",
     "生图·预设编辑器": "stPresetText",
     "生图·补充风格词": "genExtra",
+    # 2026-10 图标换 Material Symbols：前端必须引用随包字体与生成的图标名表，
+    # 否则图标全变空白/豆腐块（字体没随包时最典型）
+    "图标·随包字体": "fonts/MaterialSymbolsOutlined.woff2",
+    "图标·名字表脚本": "icons.js",
+    "图标·字体渲染样式": ".ms{",
 }
 
 
@@ -336,6 +341,9 @@ def step_selfcheck():
         ("world_packs", "世界卡包目录：缺了 /世界包 列表为空，也没有内置世界可装"),
         ("app_version.py", "版号读取：缺了窗口标题/欢迎语退回兜底版号（与 version.json 不一致）"),
         ("version.json", "版号的唯一真相：缺了 app_version 读不到号"),
+        ("web/icons.js", "图标名字表（由 icons/icons.json 生成）：缺了界面上的 emoji 一个都换不成图标"),
+        ("web/fonts/MaterialSymbolsOutlined.woff2", "Material Symbols 字体（随包，不连 CDN）：缺了图标全变空白/豆腐块"),
+        ("web/fonts/LICENSE", "字体许可（Apache-2.0）：随包分发必须带"),
         ("strings.json", "界面文案唯一真相（lang/strings.json）：缺了三语全部退回中文"),
         ("i18n.js", "生成的界面文案表（web/i18n.js）：缺了三语全部退回中文"),
         ("gothic_frame.html", "哥特边框前端"),

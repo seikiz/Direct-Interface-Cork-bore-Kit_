@@ -32,15 +32,15 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.font.Font
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
@@ -49,6 +49,8 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.text.InlineTextContent
 import androidx.compose.foundation.text.appendInlineContent
 import androidx.compose.runtime.remember
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.Placeholder
 import androidx.compose.ui.text.PlaceholderVerticalAlign
 import androidx.compose.ui.text.buildAnnotatedString
@@ -61,129 +63,6 @@ fun splitLeadingEmoji(s: String): Pair<String?, String> {
     val m = EMOJI_PREFIX.find(s) ?: return null to s
     return m.value.replace("\uFE0F", "") to s.removePrefix(m.value)
 }
-/** emoji → 黑白线性图标 drawable（与 Web 端同一套设计，stroke currentColor → 由 tint 控制颜色） */
-private val EMOJI_RES: Map<String, Int> = mapOf(
-    "📂" to R.drawable.ic_folder,
-    "🛰" to R.drawable.ic_radio,
-    "➕" to R.drawable.ic_plus,
-    "❌" to R.drawable.ic_close,
-    "⚙" to R.drawable.ic_settings,
-    "✅" to R.drawable.ic_check,
-    "🧰" to R.drawable.ic_toolbox,
-    "📤" to R.drawable.ic_upload,
-    "🗑" to R.drawable.ic_trash,
-    "🔑" to R.drawable.ic_key,
-    "⚠" to R.drawable.ic_warn,
-    "🌍" to R.drawable.ic_globe,
-    "🌐" to R.drawable.ic_globe,
-    "💾" to R.drawable.ic_save,
-    "🧮" to R.drawable.ic_calc,
-    "🔤" to R.drawable.ic_font,
-    "🔌" to R.drawable.ic_plug,
-    "🔍" to R.drawable.ic_search,
-    "⬇" to R.drawable.ic_download,
-    "📥" to R.drawable.ic_inbox,
-    "❤" to R.drawable.ic_heart,
-    "🤖" to R.drawable.ic_robot,
-    "✨" to R.drawable.ic_sparkle,
-    "🔥" to R.drawable.ic_flame,
-    "🎭" to R.drawable.ic_users,
-    "🧑" to R.drawable.ic_person,
-    "👤" to R.drawable.ic_person,
-    "📷" to R.drawable.ic_camera,
-    "🔗" to R.drawable.ic_link,
-    "📄" to R.drawable.ic_doc,
-    "🧹" to R.drawable.ic_clear,
-    "🎨" to R.drawable.ic_droplet,
-    "✏" to R.drawable.ic_edit,
-    "📚" to R.drawable.ic_book,
-    "🌿" to R.drawable.ic_branch,
-    "📊" to R.drawable.ic_chart,
-    "📈" to R.drawable.ic_trend,
-    "🎲" to R.drawable.ic_dice,
-    "🧠" to R.drawable.ic_chip,
-    "🎮" to R.drawable.ic_gamepad,
-    "✂" to R.drawable.ic_scissors,
-    "🔄" to R.drawable.ic_refresh,
-    "🖼" to R.drawable.ic_image,
-    "🚀" to R.drawable.ic_rocket,
-    "🔧" to R.drawable.ic_wrench,
-    "👋" to R.drawable.ic_wave,
-    "💬" to R.drawable.ic_chat,
-    "🎯" to R.drawable.ic_target,
-    "🎛" to R.drawable.ic_sliders,
-    "🎬" to R.drawable.ic_clapper,
-    "⚔" to R.drawable.ic_swords,
-    "⚡" to R.drawable.ic_bolt,
-    "🧍" to R.drawable.ic_person_stand,
-    "💘" to R.drawable.ic_heart_arrow,
-    "☰" to R.drawable.ic_menu,
-    "✕" to R.drawable.ic_x,
-    "📕" to R.drawable.ic_book_closed,
-    "🎴" to R.drawable.ic_card,
-    "📁" to R.drawable.ic_folder,
-    "📝" to R.drawable.ic_memo,
-    "📦" to R.drawable.ic_package,
-    "🖥" to R.drawable.ic_desktop,
-    "🎙" to R.drawable.ic_mic,
-    "🗂" to R.drawable.ic_files,
-    "🔀" to R.drawable.ic_shuffle,
-    "🔒" to R.drawable.ic_lock,
-    "🔐" to R.drawable.ic_lock_key,
-    "⭐" to R.drawable.ic_star,
-    "★" to R.drawable.ic_star,
-    "☆" to R.drawable.ic_star_off,
-    "🆕" to R.drawable.ic_plus_circle,
-    "🏳" to R.drawable.ic_flag_off,
-    "🚩" to R.drawable.ic_flag,
-    "👥" to R.drawable.ic_users,
-    "🪄" to R.drawable.ic_wand,
-    "📺" to R.drawable.ic_tv,
-    "⛶" to R.drawable.ic_fullscreen,
-    "🎎" to R.drawable.ic_doll,
-    "🌊" to R.drawable.ic_wave,
-    "📖" to R.drawable.ic_book_open,
-    "🏁" to R.drawable.ic_flag_end,
-    "🎁" to R.drawable.ic_gift,
-    "👁" to R.drawable.ic_eye,
-    "🙈" to R.drawable.ic_eye_off,
-    "💨" to R.drawable.ic_wind,
-    "🔊" to R.drawable.ic_volume,
-    "💤" to R.drawable.ic_sleep,
-    "⚖" to R.drawable.ic_scale,
-    "🧭" to R.drawable.ic_compass,
-    "📋" to R.drawable.ic_clipboard,
-    "🛠" to R.drawable.ic_terminal,
-    "🔖" to R.drawable.ic_bookmark,
-    "🎵" to R.drawable.ic_music,
-    "🔔" to R.drawable.ic_bell,
-    "💥" to R.drawable.ic_burst,
-    "⬏" to R.drawable.ic_chevron_up,
-    "⬍" to R.drawable.ic_chevron_down,
-    "⚫" to R.drawable.ic_dot_filled,
-    "⚪" to R.drawable.ic_dot_hollow,
-    "💗" to R.drawable.ic_heart,
-    "⏳" to R.drawable.ic_hourglass,
-    "⏸" to R.drawable.ic_pause,
-    "⏭" to R.drawable.ic_skip_forward,
-    "⏩" to R.drawable.ic_fast_forward,
-    "↪" to R.drawable.ic_arrow_right,
-    "⏰" to R.drawable.ic_clock,
-    "⏱" to R.drawable.ic_stopwatch,
-    "🌏" to R.drawable.ic_globe,
-    "🌟" to R.drawable.ic_star,
-    "🎤" to R.drawable.ic_mic,
-    "🗣" to R.drawable.ic_voice,
-    "📜" to R.drawable.ic_scroll,
-    "🌌" to R.drawable.ic_galaxy,
-    "📡" to R.drawable.ic_radio,
-    "🏠" to R.drawable.ic_home,
-    "🌧" to R.drawable.ic_rain,
-    "👻" to R.drawable.ic_ghost,
-    "💡" to R.drawable.ic_bulb,
-    "📉" to R.drawable.ic_trend_down,
-    "👨" to R.drawable.ic_person,
-)
 /** 排版符号（箭头/星号等）：这些交给字体渲染更稳，和 Web 端那套「不替换」名单一个口径。 */
 private val TYPO_GLYPHS = setOf("→", "←", "↑", "↓", "↔", "↻", "◀", "▶", "▸", "▾", "★", "☆", "·")
 /** 任意位置的 emoji（范围与 EMOJI_PREFIX 一致，这里用来找【句中】的图标） */
@@ -194,7 +73,7 @@ private fun splitEmojiSegments(s: String): List<Pair<String?, String>> {
     var last = 0
     for (m in EMOJI_ANY.findAll(s)) {
         val e = m.value.replace("\uFE0F", "")
-        if (e in TYPO_GLYPHS || EMOJI_RES[e] == null) continue
+        if (e in TYPO_GLYPHS || ICON_NAME_BY_EMOJI[e] == null) continue
         if (m.range.first > last) out.add(null to s.substring(last, m.range.first))
         out.add(e to "")
         last = m.range.last + 1
@@ -209,6 +88,27 @@ private fun splitEmojiSegments(s: String): List<Pair<String?, String>> {
  *   · 句中也有图标 → 走 AnnotatedString + InlineTextContent（长文案照常折行）
  *   · 查不到图标的 emoji（聊天内容、排版符号）原样保留
  */
+/** Material Symbols 字体（随包，Apache-2.0；与网页端同一份字形，见 icons/icons.json）。
+ *  图标名到字形的映射由 tools/gen_icons.py 生成到 IconNames.kt。 */
+val MaterialSymbols = FontFamily(Font(R.font.material_symbols_outlined))
+
+/** 画一个图标（字形来自 Material Symbols）：颜色跟随 tint，缺失字形时原样显示名字。
+ *  字号用 TextUnit —— 这样跟旁边的文字一起随字号缩放（原来用 Dp 会不跟手）。 */
+@Composable
+fun MsIcon(
+    name: String,
+    size: TextUnit = 16.sp,
+    tint: Color = LocalContentColor.current,
+    modifier: Modifier = Modifier,
+    contentDescription: String? = null,
+) {
+    val m = if (contentDescription == null) modifier
+    else modifier.semantics { this.contentDescription = contentDescription }
+    Text(
+        name, modifier = m, fontFamily = MaterialSymbols, fontSize = size, color = tint,
+        maxLines = 1, softWrap = false,
+    )
+}
 @Composable
 fun IconText(
     text: String,
@@ -221,19 +121,16 @@ fun IconText(
     maxLines: Int = Int.MAX_VALUE,
 ) {
     val (emoji, rest) = splitLeadingEmoji(text)
-    val res = emoji?.let { EMOJI_RES[it] } ?: 0
+    val iconName = emoji?.let { ICON_NAME_BY_EMOJI[it] }
     val tint = if (color == Color.Unspecified) LocalContentColor.current else color
     val segments = remember(text) { splitEmojiSegments(text) }
+    val nameSp = with(LocalDensity.current) { iconSize.toSp() }
     if (!segments.any { it.first != null }) {
-        if (res == 0) {
+        if (iconName == null) {
             Text(text, modifier = modifier, fontSize = fontSize, fontWeight = fontWeight, color = color, maxLines = maxLines)
         } else {
             Row(modifier = modifier, verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    painterResource(res), null,
-                    modifier = Modifier.size(iconSize),
-                    tint = tint,
-                )
+                MsIcon(iconName, nameSp, tint)
                 if (rest.isNotBlank()) {
                     Spacer(Modifier.width(gap))
                     Text(rest, fontSize = fontSize, fontWeight = fontWeight, color = color, maxLines = maxLines)
@@ -243,11 +140,11 @@ fun IconText(
         return
     }
     // Placeholder 的宽高要 TextUnit（随字号缩放），所以把 Dp 换一下
-    val iconSp = with(LocalDensity.current) { iconSize.toSp() }
-    val providers = remember(segments, iconSp, iconSize, tint) {
+    val iconSp = nameSp
+    val providers = remember(segments, iconSp, tint) {
         segments.mapNotNull { it.first }.distinct().associateWith { e ->
             InlineTextContent(Placeholder(iconSp, iconSp, PlaceholderVerticalAlign.Center)) {
-                Icon(painterResource(EMOJI_RES.getValue(e)), null, Modifier.size(iconSize), tint = tint)
+                MsIcon(ICON_NAME_BY_EMOJI.getValue(e), iconSp, tint)
             }
         }
     }

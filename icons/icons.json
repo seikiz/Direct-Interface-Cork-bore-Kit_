@@ -1,0 +1,535 @@
+{
+  "_note": "图标唯一真相：emoji / 具名（界面与正文里用的键）→ Material Symbols 名字。两端的产物都由 tools/gen_icons.py 生成，别手改产物。png 字段是旧版 web/icons/ 覆盖槽位（用户丢 ic_xxx.png 就能换图标），保留兼容。",
+  "_style": "Material Symbols Outlined，wght 300（细线）—— 少边拓扑（细线、几何）。这份字体是 Google Fonts 的**静态实例**（无 fvar 轴），所以 CSS 里的 FILL/GRAD/opsz 轴设定不会生效；要真调轴得换可变字体（约 3.9 MB，不值）。",
+  "_font": {
+    "web": "web/fonts/MaterialSymbolsOutlined.woff2（342.6 KB，Google Fonts CSS API `family=Material+Symbols+Outlined:wght@300`，wOF2 已验）",
+    "android": "DICK-Android/app/src/main/res/font/material_symbols_outlined.ttf（976.8 KB，由上面那份 woff2 用 fontTools 解出，magic 00 01 00 00、GSUB 可读已验；两端同一份字体，字形一致）",
+    "license": "Apache-2.0；见 web/fonts/LICENSE（Google Fonts · Material Symbols Outlined）"
+  },
+  "icons": {
+    "📂": {
+      "name": "folder",
+      "png": "ic_folder"
+    },
+    "🛰": {
+      "name": "satellite_alt",
+      "png": "ic_radio"
+    },
+    "➕": {
+      "name": "add",
+      "png": "ic_plus"
+    },
+    "❌": {
+      "name": "close",
+      "png": "ic_close"
+    },
+    "⚙": {
+      "name": "settings",
+      "png": "ic_settings"
+    },
+    "✅": {
+      "name": "check",
+      "png": "ic_check"
+    },
+    "🧰": {
+      "name": "home_repair_service",
+      "png": "ic_toolbox"
+    },
+    "📤": {
+      "name": "upload",
+      "png": "ic_upload"
+    },
+    "🗑": {
+      "name": "delete",
+      "png": "ic_trash"
+    },
+    "🔑": {
+      "name": "key",
+      "png": "ic_key"
+    },
+    "⚠": {
+      "name": "warning",
+      "png": "ic_warn"
+    },
+    "🌍": {
+      "name": "public",
+      "png": "ic_globe"
+    },
+    "🌐": {
+      "name": "language",
+      "png": "ic_globe"
+    },
+    "💾": {
+      "name": "save",
+      "png": "ic_save"
+    },
+    "🧮": {
+      "name": "calculate",
+      "png": "ic_calc"
+    },
+    "🔤": {
+      "name": "text_fields",
+      "png": "ic_font"
+    },
+    "🔌": {
+      "name": "power",
+      "png": "ic_plug"
+    },
+    "🔍": {
+      "name": "search",
+      "png": "ic_search"
+    },
+    "⬇": {
+      "name": "download",
+      "png": "ic_download"
+    },
+    "📥": {
+      "name": "inbox",
+      "png": "ic_inbox"
+    },
+    "❤": {
+      "name": "favorite",
+      "png": "ic_heart"
+    },
+    "🤖": {
+      "name": "smart_toy",
+      "png": "ic_robot"
+    },
+    "✨": {
+      "name": "auto_awesome",
+      "png": "ic_sparkle"
+    },
+    "🔥": {
+      "name": "local_fire_department",
+      "png": "ic_flame"
+    },
+    "🎭": {
+      "name": "theater_comedy",
+      "png": "ic_users"
+    },
+    "🧑": {
+      "name": "person",
+      "png": "ic_person"
+    },
+    "👤": {
+      "name": "person",
+      "png": "ic_person"
+    },
+    "📷": {
+      "name": "photo_camera",
+      "png": "ic_camera"
+    },
+    "🔗": {
+      "name": "link",
+      "png": "ic_link"
+    },
+    "📄": {
+      "name": "description",
+      "png": "ic_doc"
+    },
+    "🧹": {
+      "name": "delete_sweep",
+      "png": "ic_clear"
+    },
+    "🎨": {
+      "name": "palette",
+      "png": "ic_droplet"
+    },
+    "✏": {
+      "name": "edit",
+      "png": "ic_edit"
+    },
+    "📚": {
+      "name": "menu_book",
+      "png": "ic_book"
+    },
+    "🌿": {
+      "name": "account_tree",
+      "png": "ic_branch"
+    },
+    "📊": {
+      "name": "bar_chart",
+      "png": "ic_chart"
+    },
+    "📈": {
+      "name": "trending_up",
+      "png": "ic_trend"
+    },
+    "🎲": {
+      "name": "casino",
+      "png": "ic_dice"
+    },
+    "🧠": {
+      "name": "memory",
+      "png": "ic_chip"
+    },
+    "🎮": {
+      "name": "sports_esports",
+      "png": "ic_gamepad"
+    },
+    "✂": {
+      "name": "content_cut",
+      "png": "ic_scissors"
+    },
+    "🔄": {
+      "name": "refresh",
+      "png": "ic_refresh"
+    },
+    "🖼": {
+      "name": "image",
+      "png": "ic_image"
+    },
+    "🚀": {
+      "name": "rocket_launch",
+      "png": "ic_rocket"
+    },
+    "🔧": {
+      "name": "build",
+      "png": "ic_wrench"
+    },
+    "👋": {
+      "name": "waving_hand",
+      "png": "ic_wave"
+    },
+    "💬": {
+      "name": "chat_bubble",
+      "png": "ic_chat"
+    },
+    "🎯": {
+      "name": "target",
+      "png": "ic_target"
+    },
+    "🎛": {
+      "name": "tune",
+      "png": "ic_sliders"
+    },
+    "🎬": {
+      "name": "movie",
+      "png": "ic_clapper"
+    },
+    "⚔": {
+      "name": "swords",
+      "png": "ic_swords"
+    },
+    "⚡": {
+      "name": "bolt",
+      "png": "ic_bolt"
+    },
+    "🧍": {
+      "name": "accessibility_new",
+      "png": "ic_person_stand"
+    },
+    "💘": {
+      "name": "favorite",
+      "png": "ic_heart_arrow"
+    },
+    "☰": {
+      "name": "menu",
+      "png": "ic_menu"
+    },
+    "✕": {
+      "name": "close",
+      "png": "ic_x"
+    },
+    "📕": {
+      "name": "book",
+      "png": "ic_book_closed"
+    },
+    "🎴": {
+      "name": "style",
+      "png": "ic_card"
+    },
+    "📁": {
+      "name": "folder",
+      "png": "ic_folder"
+    },
+    "📝": {
+      "name": "note",
+      "png": "ic_memo"
+    },
+    "📦": {
+      "name": "inventory",
+      "png": "ic_package",
+      "note": "原定 inventory_2，这一版字体的连字名是 inventory_digit_two；改取更简的 inventory（少边）"
+    },
+    "🖥": {
+      "name": "desktop_windows",
+      "png": "ic_desktop"
+    },
+    "🎙": {
+      "name": "mic",
+      "png": "ic_mic"
+    },
+    "🗂": {
+      "name": "folder_open",
+      "png": "ic_files"
+    },
+    "🔀": {
+      "name": "shuffle",
+      "png": "ic_shuffle"
+    },
+    "🔒": {
+      "name": "lock",
+      "png": "ic_lock"
+    },
+    "🔐": {
+      "name": "vpn_key",
+      "png": "ic_lock_key"
+    },
+    "⭐": {
+      "name": "star",
+      "png": "ic_star"
+    },
+    "★": {
+      "name": "star",
+      "png": "ic_star"
+    },
+    "☆": {
+      "name": "star_border",
+      "png": "ic_star_off"
+    },
+    "🆕": {
+      "name": "add_circle",
+      "png": "ic_plus_circle"
+    },
+    "🏳": {
+      "name": "outlined_flag",
+      "png": "ic_flag_off"
+    },
+    "🚩": {
+      "name": "flag",
+      "png": "ic_flag"
+    },
+    "👥": {
+      "name": "group",
+      "png": "ic_users"
+    },
+    "🪄": {
+      "name": "auto_fix_high",
+      "png": "ic_wand"
+    },
+    "📺": {
+      "name": "tv",
+      "png": "ic_tv"
+    },
+    "⛶": {
+      "name": "fullscreen",
+      "png": "ic_fullscreen"
+    },
+    "🎎": {
+      "name": "toys",
+      "png": "ic_doll"
+    },
+    "🌊": {
+      "name": "waves",
+      "png": "ic_wave"
+    },
+    "📖": {
+      "name": "menu_book",
+      "png": "ic_book_open"
+    },
+    "🏁": {
+      "name": "sports_score",
+      "png": "ic_flag_end"
+    },
+    "🎁": {
+      "name": "redeem",
+      "png": "ic_gift"
+    },
+    "👁": {
+      "name": "visibility",
+      "png": "ic_eye"
+    },
+    "🙈": {
+      "name": "visibility_off",
+      "png": "ic_eye_off"
+    },
+    "💨": {
+      "name": "air",
+      "png": "ic_wind"
+    },
+    "🔊": {
+      "name": "volume_up",
+      "png": "ic_volume"
+    },
+    "💤": {
+      "name": "bedtime",
+      "png": "ic_sleep"
+    },
+    "⚖": {
+      "name": "balance",
+      "png": "ic_scale"
+    },
+    "🧭": {
+      "name": "explore",
+      "png": "ic_compass"
+    },
+    "📋": {
+      "name": "content_paste",
+      "png": "ic_clipboard"
+    },
+    "🛠": {
+      "name": "terminal",
+      "png": "ic_terminal"
+    },
+    "🔖": {
+      "name": "bookmark",
+      "png": "ic_bookmark"
+    },
+    "🎵": {
+      "name": "music_note",
+      "png": "ic_music"
+    },
+    "🔔": {
+      "name": "notifications",
+      "png": "ic_bell"
+    },
+    "💥": {
+      "name": "flare",
+      "png": "ic_burst"
+    },
+    "⬏": {
+      "name": "keyboard_arrow_up",
+      "png": "ic_chevron_up"
+    },
+    "⬍": {
+      "name": "keyboard_arrow_down",
+      "png": "ic_chevron_down"
+    },
+    "⚫": {
+      "name": "circle",
+      "png": "ic_dot_filled"
+    },
+    "⚪": {
+      "name": "radio_button_unchecked",
+      "png": "ic_dot_hollow"
+    },
+    "💗": {
+      "name": "favorite",
+      "png": "ic_heart"
+    },
+    "⏳": {
+      "name": "hourglass_empty",
+      "png": "ic_hourglass"
+    },
+    "⏸": {
+      "name": "pause",
+      "png": "ic_pause"
+    },
+    "⏭": {
+      "name": "skip_next",
+      "png": "ic_skip_forward"
+    },
+    "⏩": {
+      "name": "fast_forward",
+      "png": "ic_fast_forward"
+    },
+    "↪": {
+      "name": "arrow_forward",
+      "png": "ic_arrow_right"
+    },
+    "⏰": {
+      "name": "schedule",
+      "png": "ic_clock"
+    },
+    "⏱": {
+      "name": "timer",
+      "png": "ic_stopwatch"
+    },
+    "🌏": {
+      "name": "public",
+      "png": "ic_globe"
+    },
+    "🌟": {
+      "name": "star",
+      "png": "ic_star"
+    },
+    "🎤": {
+      "name": "mic",
+      "png": "ic_mic"
+    },
+    "🗣": {
+      "name": "record_voice_over",
+      "png": "ic_voice"
+    },
+    "📜": {
+      "name": "history_edu",
+      "png": "ic_scroll"
+    },
+    "🌌": {
+      "name": "blur_on",
+      "png": "ic_galaxy"
+    },
+    "📡": {
+      "name": "radio",
+      "png": "ic_radio"
+    },
+    "🏠": {
+      "name": "home",
+      "png": "ic_home"
+    },
+    "🌧": {
+      "name": "rainy",
+      "png": "ic_rain"
+    },
+    "👻": {
+      "name": "sentiment_dissatisfied",
+      "png": "ic_ghost",
+      "note": "字体里没有 ghost 连字（官方名单里也没有这个名字）；取语义最近的表情图标"
+    },
+    "💡": {
+      "name": "lightbulb",
+      "png": "ic_bulb"
+    },
+    "📉": {
+      "name": "trending_down",
+      "png": "ic_trend_down"
+    },
+    "👨": {
+      "name": "person",
+      "png": "ic_person"
+    },
+    "🕰": {
+      "name": "history",
+      "note": "「你不在的时候」标题；旧字典里就没有它（界面上一路是彩色 emoji），顺手补上",
+      "png": "ic_history"
+    },
+    "↺": {
+      "name": "settings_backup_restore",
+      "note": "撤销结算 / 恢复默认按钮；旧字典里没有它，顺手补上",
+      "png": "ic_settings_backup_restore"
+    },
+    "⏪": {
+      "name": "fast_rewind",
+      "note": "回溯按钮；旧字典里没有它，顺手补上",
+      "png": "ic_fast_rewind"
+    }
+  },
+  "named": {
+    "go": {
+      "name": "grid_on",
+      "png": "ic_go"
+    },
+    "sprite": {
+      "name": "portrait",
+      "png": "ic_sprite"
+    },
+    "sprite_off": {
+      "name": "person_off",
+      "png": "ic_sprite_off",
+      "note": "备选 frame_person_off（更贴原图但边更多）；这里取少边的 person_off"
+    },
+    "undo": {
+      "name": "undo",
+      "png": "ic_undo"
+    },
+    "redo": {
+      "name": "redo",
+      "png": "ic_redo"
+    },
+    "play": {
+      "name": "play_arrow",
+      "png": "ic_play"
+    }
+  }
+}

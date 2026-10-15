@@ -177,10 +177,19 @@ body{ background:var(--bg); color:var(--text); font-family:"Segoe UI","Microsoft
 #battlebar .battle-btn:hover{ background:var(--accent); color:#fff; }
 #battlebar .mb-item{ font-size:11px; color:var(--sub); }
 
-/* ---------- 黑白线性图标（替代 emoji） ---------- */
+/* ---------- 黑白线性图标：Material Symbols（唯一真相 icons/icons.json） ---------- */
+/* 字体随包（342.6 KB woff2，Apache-2.0，见 fonts/LICENSE）—— 不连 CDN，断网也要显示。
+   这是 Google Fonts 的静态实例（wght 300，细线/少边），所以 FILL/GRAD/opsz 轴设定不生效。 */
+@font-face{ font-family:'Material Symbols Outlined'; font-style:normal; font-weight:300;
+  font-display:block; src:url('fonts/MaterialSymbolsOutlined.woff2') format('woff2'); }
+.ms{ font-family:'Material Symbols Outlined'; font-weight:normal; font-style:normal; line-height:1;
+  font-size:1.15em; display:inline-block; vertical-align:-0.16em; letter-spacing:normal;
+  text-transform:none; white-space:nowrap; word-wrap:normal; direction:ltr;
+  -webkit-font-feature-settings:'liga'; font-feature-settings:'liga';
+  -webkit-font-smoothing:antialiased; }
 .ic{ display:inline-flex; align-items:center; justify-content:center;
   width:1.25em; height:1.25em; margin-right:2px; vertical-align:-0.2em; }
-.ic svg{ width:100%; height:100%; display:block; }
+.ic .ms{ font-size:1.25em; vertical-align:0; }   /* 填满 .ic 的方框（按眼睛调的，见说明） */
 .ic .ic-img{ width:100%; height:100%; object-fit:contain; display:block; }
 button .ic{ margin-right:2px; }
 .ic:only-child{ margin-right:0; }
@@ -1332,6 +1341,7 @@ button .ic{ margin-right:2px; }
 </div>
 
 <script src="i18n.js"></script>
+  <script src="icons.js"></script>
 <script>
 // pywebview 桥接别名：api_xxx -> xxx（兼容不同 pywebview 版本的方法命名）
 function ensureApiAliases() {
@@ -1355,174 +1365,23 @@ var lastEpoch = -1;
 var lastUserText = '';
 
 // ---------- 黑白线性图标（替代 emoji；currentColor 随主题） ----------
-var _SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" ' +
-  'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">';
-function _ic(inner) { return _SVG + inner + '</svg>'; }
-var ICONS = {
-  '📂': _ic('<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>'),
-  '🛰': _ic('<circle cx="12" cy="12" r="2.2"/><path d="M8.6 15.4a5 5 0 0 1 0-6.8M15.4 8.6a5 5 0 0 1 0 6.8M5.7 18.3a9 9 0 0 1 0-12.6M18.3 5.7a9 9 0 0 1 0 12.6"/>'),
-  '➕': _ic('<path d="M12 5v14M5 12h14"/>'),
-  '❌': _ic('<circle cx="12" cy="12" r="9"/><path d="M9 9l6 6M15 9l-6 6"/>'),
-  '⚙': _ic('<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h0a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h0a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v0a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>'),
-  '✅': _ic('<path d="M4 12.5l5 5L20 6.5"/>'),
-  '🧰': _ic('<rect x="3" y="8" width="18" height="12" rx="2"/><path d="M9 8V6a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2M3 13h18"/>'),
-  '📤': _ic('<path d="M12 16V5M6 11l6-6 6 6"/><path d="M4 20h16"/>'),
-  '🗑': _ic('<path d="M4 7h16M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2M6 7l1 13h10l1-13"/>'),
-  '🔑': _ic('<path d="M21 2l-2 2m-7.6 7.6a5.5 5.5 0 1 1-7.8 7.8 5.5 5.5 0 0 1 7.8-7.8zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/>'),
-  '⚠': _ic('<path d="M12 3L2.5 20h19z"/><path d="M12 10v4M12 17h.01"/>'),
-  '🌍': _ic('<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18"/>'),
-  '🌐': _ic('<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18"/>'),
-  '💾': _ic('<path d="M5 3h11l4 4v14H5z"/><path d="M8 3v4h5M8 21v-7h8v7"/>'),
-  '🧮': _ic('<rect x="5" y="3" width="14" height="18" rx="2"/><path d="M8 7h8M8 11h.01M12 11h.01M16 11h.01M8 15h.01M12 15h.01M16 15h.01M8 19h.01M12 19h.01M16 19h.01"/>'),
-  '🔤': _ic('<path d="M4 20L12 4l8 16M8 14h8"/>'),
-  '🔌': _ic('<path d="M9 2v5M15 2v5M7 7h10v4a5 5 0 0 1-10 0zM12 11v8"/>'),
-  '🔍': _ic('<circle cx="11" cy="11" r="7"/><path d="M16.5 16.5L21 21"/>'),
-  '⬇': _ic('<path d="M12 4v12M6 10l6 6 6-6"/><path d="M4 20h16"/>'),
-  '📥': _ic('<path d="M4 14v5a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-5M4 14l3-5h10l3 5M4 14h5l1 2h4l1-2h5"/>'),
-  '❤': _ic('<path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8l1 1.1L12 21.2l7.8-7.7 1-1.1a5.5 5.5 0 0 0 0-7.8z"/>'),
-  '🤖': _ic('<rect x="4.5" y="8.5" width="15" height="11" rx="3"/><circle cx="9.5" cy="13.5" r="1"/><circle cx="14.5" cy="13.5" r="1"/><path d="M12 8.5V6M9 6h6M7 19.5v2M17 19.5v2"/>'),
-  '✨': _ic('<path d="M12 3l1.9 4.6L18.5 9l-4.6 1.9L12 15.5l-1.9-4.6L5.5 9l4.6-1.4z"/><path d="M19 15l.9 2.1 2.1.9-2.1.9L19 21l-.9-2.1L16 18l2.1-.9z"/>'),
-  '🔥': _ic('<path d="M12 3c1.2 4.5-3.5 5.6-3.5 10a3.5 3.5 0 0 0 7 0c0-1.5-.6-2.6-1.2-3.6-.9.7-1.4 1.3-1.7 2.2-.6-2.2.3-5.1-.6-8.6z"/>'),
-  '🎭': _ic('<path d="M17 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2"/><circle cx="10" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8"/>'),
-  '🧑': _ic('<circle cx="12" cy="8" r="4"/><path d="M4 21v-2a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v2"/>'),
-  '👤': _ic('<circle cx="12" cy="8" r="4"/><path d="M4 21v-2a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v2"/>'),
-  '📷': _ic('<path d="M4 8h3l1.5-2.5h7L17 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13.5" r="3.5"/>'),
-  '🔗': _ic('<path d="M10 14a5 5 0 0 0 7.1 0l3-3a5 5 0 0 0-7.1-7.1l-1.5 1.5M14 10a5 5 0 0 0-7.1 0l-3 3a5 5 0 0 0 7.1 7.1l1.5-1.5"/>'),
-  '📄': _ic('<path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4M9 12h6M9 16h6"/>'),
-  '🧹': _ic('<rect x="4" y="4" width="16" height="16" rx="2"/><path d="M9 9l6 6M15 9l-6 6"/>'),
-  '🎨': _ic('<path d="M12 3s6.5 5.8 6.5 10a6.5 6.5 0 0 1-13 0C5.5 8.8 12 3 12 3z"/>'),
-  '✏': _ic('<path d="M4 20l1-4L16.5 4.5a2.1 2.1 0 0 1 3 3L8 19l-4 1z"/><path d="M14 6l3 3"/>'),
-  '📚': _ic('<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20v-18H6.5A2.5 2.5 0 0 0 4 6.5z"/>'),
-  '🌿': _ic('<line x1="6" y1="3" x2="6" y2="15"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M18 9a9 9 0 0 1-9 9"/>'),
-  '📊': _ic('<path d="M4 20h16M7 20V12M12 20V5M17 20v-9"/>'),
-  '📈': _ic('<path d="M3 17l6-6 4 4 8-8"/><path d="M14 7h7v7"/>'),
-  '🎲': _ic('<rect x="4" y="4" width="16" height="16" rx="3"/><path d="M8.5 8.5h.01M15.5 8.5h.01M8.5 15.5h.01M15.5 15.5h.01M12 12h.01"/>'),
-  '🧠': _ic('<rect x="6" y="6" width="12" height="12" rx="2"/><path d="M9 2v4M15 2v4M9 18v4M15 18v4M2 9h4M2 15h4M18 9h4M18 15h4"/>'),
-  '🎮': _ic('<rect x="2.5" y="8" width="19" height="10" rx="4"/><path d="M7 12v4M5 14h4M15.5 12.5h.01M17.5 14.5h.01"/>'),
-  '✂': _ic('<circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M20 4L8.1 15.9M14.5 14.5L20 20M8.1 8.1L12 12"/>'),
-  '🔄': _ic('<path d="M21 12a9 9 0 1 1-2.6-6.4M21 3v6h-6"/>'),
-  '🖼': _ic('<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5-11 11"/>'),
-  '🚀': _ic('<path d="M4.5 16.5c-1.5 1.3-2 5-2 5s3.7-.5 5-2c.7-.8.7-2.1-.1-2.9a2.2 2.2 0 0 0-2.9-.1z"/><path d="M12 15l-3-3a22 22 0 0 1 2-4A12.9 12.9 0 0 1 22 2c0 2.7-.8 7.5-6 11a22.4 22.4 0 0 1-4 2z"/><path d="M9 12H4s.6-3 2-4c1.6-1.1 5 0 5 0M12 15v5s3-.6 4-2c1.1-1.6 0-5 0-5"/>'),
-  '🔧': _ic('<path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>'),
-  '👋': _ic('<path d="M8 11V6a1.5 1.5 0 0 1 3 0v4.5M11 9V7a1.5 1.5 0 0 1 3 0v4M14 10.5a1.5 1.5 0 0 1 3 0V14a6 6 0 0 1-6 6h-.5c-2 0-3.6-1-4.8-2.8L4 14.3a1.6 1.6 0 0 1 2.7-1.7L8.5 14"/>'),
-  '💬': _ic('<path d="M21 11.5a8.5 8.5 0 0 1-8.5 8.5H8l-4.5 4.5v-6.6A8.5 8.5 0 1 1 21 11.5z"/>'),
-  '🎯': _ic('<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/>'),
-  '🎛': _ic('<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8" cy="12" r="2.5"/><circle cx="16" cy="9" r="2.5"/><circle cx="16" cy="15" r="2.5"/>'),
-  '🎬': _ic('<rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18M7 6l1.5 4M12 6l1.5 4M17 6l1.5 4"/>'),
-  '⚔': _ic('<path d="M14.5 17.5L3 6V3h3l11.5 11.5M13 19l6-6M16 16l4 4M19 21l2-2M14.5 6.5L18 3h3v3l-3.5 3.5M5 14l4 4M7 17l-3 3M3 19l2 2"/>'),
-  '⚡': _ic('<path d="M13 2L3 14h7l-1 8 11-13h-7z"/>'),
-  '🧍': _ic('<circle cx="12" cy="5" r="2"/><path d="M12 8v5M10 13l-2 6 2 1 2-4 2 4 2-1-2-6z"/>'),
-  '💘': _ic('<path d="M12 20s-7-4.6-9.5-9A5 5 0 0 1 12 6a5 5 0 0 1 9.5 5c-2.5 4.4-9.5 9-9.5 9z"/><path d="M12 8l1.5 2L15 8 16.5 10 18 8"/>'),
-  // ---- 第二批：补齐 UI 里还在裸露的 emoji（状态提示 / CODEX / 围棋 / 记忆树工具 / 主题等） ----
-  '☰': _ic('<path d="M4 7h16M4 12h16M4 17h16"/>'),
-  '✕': _ic('<path d="M6 6l12 12M18 6L6 18"/>'),
-  '📕': _ic('<path d="M5 3h11l3 3v15H5z"/><path d="M8 7h7M8 11h7M8 15h4"/>'),
-  '🎴': _ic('<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M7 15l3-4 2.5 3 2-2.5L18 15"/><circle cx="8.5" cy="9.5" r="1.3"/>'),
-  '📁': _ic('<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>'),
-  '📝': _ic('<path d="M5 3h9l5 5v13H5z"/><path d="M14 3v5h5"/><path d="M8 13h6M8 17h4"/>'),
-  '📦': _ic('<path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z"/><path d="M4 7.5l8 4.5 8-4.5M12 12v9"/>'),
-  '🖥': _ic('<rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/>'),
-  '🎙': _ic('<rect x="9" y="2.5" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3.5M9 21.5h6"/>'),
-  '🗂': _ic('<path d="M3 8a2 2 0 0 1 2-2h3l2 2h3a2 2 0 0 1 2 2"/><rect x="3" y="8" width="18" height="11" rx="2"/>'),
-  '🔀': _ic('<path d="M16 3h5v5"/><path d="M4 20L21 3"/><path d="M21 16v5h-5"/><path d="M15 15l6 6M4 4l5 5"/>'),
-  '🔒': _ic('<rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/>'),
-  '🔐': _ic('<rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/><circle cx="12" cy="15.5" r="1"/>'),
-  '⭐': _ic('<path fill="currentColor" d="M12 3.6l2.5 5.2 5.7.8-4.1 4 1 5.7-5.1-2.7-5.1 2.7 1-5.7-4.1-4 5.7-.8z"/>'),
-  '★': _ic('<path fill="currentColor" d="M12 3.6l2.5 5.2 5.7.8-4.1 4 1 5.7-5.1-2.7-5.1 2.7 1-5.7-4.1-4 5.7-.8z"/>'),
-  '☆': _ic('<path d="M12 3.6l2.5 5.2 5.7.8-4.1 4 1 5.7-5.1-2.7-5.1 2.7 1-5.7-4.1-4 5.7-.8z"/>'),
-  '🆕': _ic('<circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/>'),
-  '🏳': _ic('<path d="M5 21V4"/><path d="M5 5h13l-2.5 3.5L18 12H5z" stroke-dasharray="2.5 2"/>'),
-  '🚩': _ic('<path d="M5 21V4"/><path d="M5 5h13l-2.5 3.5L18 12H5z"/>'),
-  '👥': _ic('<path d="M17 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2"/><circle cx="10" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8"/>'),
-  '🪄': _ic('<path d="M4 20l9-9"/><path d="M13.5 5.5l5 5"/><path d="M6 5l.9 1.7L8.6 7.6 6.9 8.5 6 10.2 5.1 8.5 3.4 7.6l1.7-.9z"/>'),
-  '📺': _ic('<rect x="3" y="6" width="18" height="13" rx="2"/><path d="M8 3l4 3 4-3"/>'),
-  '⛶': _ic('<path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/>'),
-  '🎎': _ic('<circle cx="8.5" cy="5.5" r="2.5"/><path d="M5 21v-5l-1-3h9l-1 3v5"/><circle cx="16.5" cy="8.5" r="2"/><path d="M14 21v-6l-1-2.5h7L19 15v6"/>'),
-  '🌊': _ic('<path d="M3 8c2-2 4-2 6 0s4 2 6 0 4-2 6 0M3 13c2-2 4-2 6 0s4 2 6 0 4-2 6 0M3 18c2-2 4-2 6 0s4 2 6 0 4-2 6 0"/>'),
-  '📖': _ic('<path d="M12 6.5S10 5 6.5 5H4v13h2.5c3.5 0 5.5 1.5 5.5 1.5s2-1.5 5.5-1.5H20V5h-2.5C14 5 12 6.5 12 6.5z"/><path d="M12 6.5v13"/>'),
-  '🏁': _ic('<path d="M5 21V4"/><path d="M5 4h12v7H5z"/><path d="M9 4v3.5M13 7.5V11M17 4v3.5"/>'),
-  '🎁': _ic('<rect x="3" y="8" width="18" height="13" rx="2"/><path d="M3 13h18M12 8v13"/><path d="M12 8S10.6 3 8 3a2.5 2.5 0 0 0 0 5zM12 8s1.4-5 4-5a2.5 2.5 0 0 1 0 5z"/>'),
-  '👁': _ic('<path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6z"/><circle cx="12" cy="12" r="2.6"/>'),
-  '🙈': _ic('<path d="M4 4l16 16"/><path d="M9.6 5.4A10.7 10.7 0 0 1 12 5c6.5 0 10 7 10 7a17.6 17.6 0 0 1-3.3 4.1M6.4 7.6C3.9 9.3 2 12 2 12s3.5 6 10 6a10.7 10.7 0 0 0 4.1-.9"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/>'),
-  '💨': _ic('<path d="M3 8h10a3 3 0 1 0-3-3"/><path d="M3 13h14a3 3 0 1 1-3 3"/><path d="M3 18h7"/>'),
-  '🔊': _ic('<path d="M4 9h3l4-3.5v13L7 15H4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M18.5 6a9 9 0 0 1 0 12"/>'),
-  '💤': _ic('<path d="M20 14.5A8.2 8.2 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5z"/>'),
-  '⚖': _ic('<path d="M12 3v18M5 21h14"/><path d="M4 7h16"/><path d="M7 7l-3 6h6zM17 7l-3 6h6z"/>'),
-  '🧭': _ic('<circle cx="12" cy="12" r="9"/><path d="M15.5 8.5l-2 5-5 2 2-5z"/>'),
-  '📋': _ic('<path d="M9 4H7a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-2"/><rect x="9" y="2" width="6" height="4" rx="1"/><path d="M9 12h6M9 16h4"/>'),
-  '🛠': _ic('<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 9l3 3-3 3M13 15h4"/>'),
-  '🔖': _ic('<path d="M6 3h12v18l-6-4-6 4z"/>'),
-  '🎵': _ic('<path d="M9 18V6l10-2v12"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="16.5" cy="16" r="2.5"/>'),
-  '🔔': _ic('<path d="M18 9a6 6 0 1 0-12 0c0 5-2 6-2 6h16s-2-1-2-6"/><path d="M10.5 20a2 2 0 0 0 3 0"/>'),
-  '💥': _ic('<path d="M12 3l1.8 4L18 5.2l-1.3 4.2 4.3 1.6-4.3 1.6L18 16.8 13.8 15 12 19l-1.8-4L6 16.8l1.3-4.2L3 11l4.3-1.6L6 5.2 10.2 7z"/>'),
-  '⬏': _ic('<path d="M6 15l6-6 6 6"/>'),
-  '⬍': _ic('<path d="M6 9l6 6 6-6"/>'),
-  '⚫': _ic('<circle cx="12" cy="12" r="7" fill="currentColor"/>'),
-  '⚪': _ic('<circle cx="12" cy="12" r="7"/>'),
-  '💗': _ic('<path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8l1 1.1L12 21.2l7.8-7.7 1-1.1a5.5 5.5 0 0 0 0-7.8z"/>'),
-  '⏳': _ic('<path d="M7 3h10v3.2L12.6 12 17 17.8V21H7v-3.2L11.4 12 7 6.2z"/>'),
-  '⏸': _ic('<rect x="7" y="5" width="3.5" height="14" rx="1"/><rect x="13.5" y="5" width="3.5" height="14" rx="1"/>'),
-  '⏭': _ic('<path d="M6 5l9 7-9 7z"/><path d="M18 5v14"/>'),
-  '⏩': _ic('<path d="M4 5l8 7-8 7z"/><path d="M13 5l8 7-8 7z"/>'),
-  '↪': _ic('<path d="M4 12h13M12 7l5 5-5 5"/>'),
-  // ---- 第三批：只在安卓端用到的 emoji（Web 端没有，但 ICONS 是两端的唯一真相源，
-  //      安卓的 VectorDrawable 由它生成，所以一并收录；同义 emoji 复用同一图形） ----
-  '⏰': _ic('<circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2"/><path d="M5 3L3 5M19 3l2 2"/>'),
-  '⏱': _ic('<circle cx="12" cy="13.5" r="7.5"/><path d="M12 10v3.5l2.5 2"/><path d="M9.5 2h5M12 2v3"/>'),
-  '🌏': _ic('<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18"/>'),
-  '🌟': _ic('<path fill="currentColor" d="M12 3.6l2.5 5.2 5.7.8-4.1 4 1 5.7-5.1-2.7-5.1 2.7 1-5.7-4.1-4 5.7-.8z"/>'),
-  '🎤': _ic('<rect x="9" y="2.5" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3.5M9 21.5h6"/>'),
-  '🗣': _ic('<circle cx="9" cy="7" r="3"/><path d="M3 21v-2a5 5 0 0 1 5-5h2a5 5 0 0 1 5 5v2"/><path d="M18 8a4 4 0 0 1 0 6M20.5 5.5a8 8 0 0 1 0 11"/>'),
-  '📜': _ic('<path d="M5 4h12a2 2 0 0 1 2 2v11a3 3 0 0 0 3 3H8a3 3 0 0 1-3-3z"/><path d="M9 8h7M9 12h7"/>'),
-  '🌌': _ic('<path d="M3 12a9 3.5 0 0 0 18 0 9 3.5 0 0 0-18 0"/><circle cx="12" cy="12" r="2" fill="currentColor"/>'),
-  '📡': _ic('<circle cx="12" cy="12" r="2.2"/><path d="M8.6 15.4a5 5 0 0 1 0-6.8M15.4 8.6a5 5 0 0 1 0 6.8M5.7 18.3a9 9 0 0 1 0-12.6M18.3 5.7a9 9 0 0 1 0 12.6"/>'),
-  '🏠': _ic('<path d="M4 11l8-7 8 7"/><path d="M6 10v10h12V10"/><path d="M10 20v-6h4v6"/>'),
-  '🌧': _ic('<path d="M7 15a4.5 4.5 0 0 1 .4-9 6 6 0 0 1 11.6 1.5A3.5 3.5 0 0 1 18 15z"/><path d="M8 18l-1 2M12 18l-1 2M16 18l-1 2"/>'),
-  '👻': _ic('<path d="M6 21V11a6 6 0 0 1 12 0v10l-2-1.5L14 21l-2-1.5L10 21l-2-1.5z"/><path d="M10 10h.01M14 10h.01"/>'),
-  '💡': _ic('<path d="M9.5 18h5M10.5 21h3"/><path d="M12 3a6 6 0 0 0-3.5 10.9V16h7v-2.1A6 6 0 0 0 12 3z"/>'),
-  '📉': _ic('<path d="M3 7l6 6 4-4 8 8"/><path d="M21 11v6h-6"/>'),
-  '👨': _ic('<circle cx="12" cy="8" r="4"/><path d="M4 21v-2a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v2"/>')
-};
-var ICON_FILES = {
-  '📂':'ic_folder','🛰':'ic_radio','➕':'ic_plus','❌':'ic_close','⚙':'ic_settings','✅':'ic_check',
-  '🧰':'ic_toolbox','📤':'ic_upload','🗑':'ic_trash','🔑':'ic_key','⚠':'ic_warn','🌍':'ic_globe',
-  '🌐':'ic_globe','💾':'ic_save','🧮':'ic_calc','🔤':'ic_font','🔌':'ic_plug','🔍':'ic_search',
-  '⬇':'ic_download','📥':'ic_inbox','❤':'ic_heart','🤖':'ic_robot','✨':'ic_sparkle','🔥':'ic_flame',
-  '🎭':'ic_users','🧑':'ic_person','👤':'ic_person','📷':'ic_camera','🔗':'ic_link','📄':'ic_doc',
-  '🧹':'ic_clear','🎨':'ic_droplet','✏':'ic_edit','📚':'ic_book','🌿':'ic_branch','📊':'ic_chart',
-  '📈':'ic_trend','🎲':'ic_dice','🧠':'ic_chip','🎮':'ic_gamepad','✂':'ic_scissors','🔄':'ic_refresh',
-  '🖼':'ic_image','🚀':'ic_rocket','🔧':'ic_wrench','👋':'ic_wave','💬':'ic_chat','🎯':'ic_target',
-  '🎛':'ic_sliders','🎬':'ic_clapper','⚔':'ic_swords','⚡':'ic_bolt','🧍':'ic_person_stand','💘':'ic_heart_arrow',
-  // 第二批
-  '☰':'ic_menu','✕':'ic_x','📕':'ic_book_closed','🎴':'ic_card','📁':'ic_folder','📝':'ic_memo',
-  '📦':'ic_package','🖥':'ic_desktop','🎙':'ic_mic','🗂':'ic_files','🔀':'ic_shuffle','🔒':'ic_lock',
-  '🔐':'ic_lock_key','⭐':'ic_star','★':'ic_star','☆':'ic_star_off','🆕':'ic_plus_circle','🏳':'ic_flag_off',
-  '🚩':'ic_flag','👥':'ic_users','🪄':'ic_wand','📺':'ic_tv','⛶':'ic_fullscreen','🎎':'ic_doll',
-  '🌊':'ic_wave','📖':'ic_book_open','🏁':'ic_flag_end','🎁':'ic_gift','👁':'ic_eye','🙈':'ic_eye_off',
-  '💨':'ic_wind','🔊':'ic_volume','💤':'ic_sleep','⚖':'ic_scale','🧭':'ic_compass','📋':'ic_clipboard',
-  '🛠':'ic_terminal','🔖':'ic_bookmark','🎵':'ic_music','🔔':'ic_bell','💥':'ic_burst','⬏':'ic_chevron_up',
-  '⬍':'ic_chevron_down','⚫':'ic_dot_filled','⚪':'ic_dot_hollow','💗':'ic_heart','⏳':'ic_hourglass',
-  '⏸':'ic_pause','⏭':'ic_skip_forward','⏩':'ic_fast_forward','↪':'ic_arrow_right',
-  // 第三批（安卓端用到的）
-  '⏰':'ic_clock','⏱':'ic_stopwatch','🌏':'ic_globe','🌟':'ic_star','🎤':'ic_mic','🗣':'ic_voice',
-  '📜':'ic_scroll','🌌':'ic_galaxy','📡':'ic_radio','🏠':'ic_home','🌧':'ic_rain','👻':'ic_ghost',
-  '💡':'ic_bulb','📉':'ic_trend_down','👨':'ic_person'
-};
-// 具名图标（文本里写 [ic:名字] 即可）：同一个 emoji 承担多种语义时用名字精确区分
-var NAMED_ICONS = {
-  go: _ic('<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18M15 3v18M3 9h18M3 15h18"/>'),
-  sprite: _ic('<rect x="4" y="3" width="16" height="18" rx="2"/><circle cx="12" cy="9.5" r="2.6"/><path d="M6.5 20.5c0-3.2 2.5-5.5 5.5-5.5s5.5 2.3 5.5 5.5"/>'),
-  sprite_off: _ic('<rect x="4" y="3" width="16" height="18" rx="2"/><circle cx="12" cy="9.5" r="2.6"/><path d="M6.5 20.5c0-3.2 2.5-5.5 5.5-5.5s5.5 2.3 5.5 5.5"/><path d="M4 20L20 4"/>'),
-  undo: _ic('<path d="M3 9h11a5 5 0 0 1 0 10h-4"/><path d="M7 5L3 9l4 4"/>'),
-  redo: _ic('<path d="M21 9H10a5 5 0 0 0 0 10h4"/><path d="M17 5l4 4-4 4"/>'),
-  play: _ic('<path d="M7 4.5l13 7.5-13 7.5z"/>')
-};
-var ICONS_BY_SLUG = (function () {
-  var m = {};
-  for (var k in ICON_FILES) { if (ICONS[k]) m[ICON_FILES[k]] = ICONS[k]; }
-  for (var n in NAMED_ICONS) { m['ic_' + n] = NAMED_ICONS[n]; }
-  return m;
-})();
+// ---- 图标：Material Symbols（唯一真相 icons/icons.json → web/icons.js，见 tools/gen_icons.py）----
+// 这里只负责把"文本里的 emoji / [ic:名字]"换成 <span class="ms">图标名</span>，字形与大小
+// 由上面的 @font-face / .ms 给。以前那四张手写的内联 SVG 字典（emoji→svg、png 槽位表、
+// 具名表、按槽位索引表）连同 _ic / _SVG 两个小工具全部删掉了 —— 以后换图标只改 icons/icons.json。
+function _iconEntry(emoji) {
+  var m = window.DICK_ICONS || {};
+  return m[emoji] || m[String(emoji).replace(/\uFE0F/g, '')] || null;
+}
+function _iconEntryByName(name) {
+  var m = window.DICK_ICON_NAMES || {};
+  return m[String(name || '').toLowerCase().replace(/^ic_/, '')] || null;
+}
+// 拼进 innerHTML 用（按钮那类）：图标名缺失时原样回退 emoji，绝不显示空白/豆腐块
+function _iconHtml(emoji) {
+  var e = _iconEntry(emoji);
+  return e ? '<span class="ms">' + e.n + '</span>' : emoji;
+}
 // emoji 匹配范围：补上 2300-23FF（⏳⏸⏭⏩）与 2190-21FF（↪）——旧版漏了这两段，
 // 结果「生成中/打包中」这类状态提示里的沙漏一直没被替换掉。
 var _EMOJI_CLS = '[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{2B00}-\u{2BFF}\u{2300}-\u{23FF}\u{2190}-\u{21FF}\u{FE0F}\u{200D}\u{20E3}\u{1F1E6}-\u{1F1FF}]';
@@ -1557,19 +1416,18 @@ function _applyPng(span, slug) {
   };
   img.src = 'icons/' + slug + '.png';
 }
-function _makeIcon(svg, slug, fallback) {
+function _makeIcon(name, png, fallback) {
   var span = document.createElement('span');
   span.className = 'ic';
-  if (svg) span.innerHTML = svg;
-  else if (fallback) span.textContent = fallback;
-  _applyPng(span, slug);
+  if (name) span.innerHTML = '<span class="ms">' + name + '</span>';
+  else if (fallback) span.textContent = fallback;   // 没映射就原样显示 emoji
+  _applyPng(span, png);
   return span;
 }
 function _iconLookup(name) {
   var key = String(name).toLowerCase().replace(/^ic_/, '');
-  var slug = 'ic_' + key;
-  var svg = NAMED_ICONS[key] || ICONS_BY_SLUG[slug] || null;
-  return svg ? { svg: svg, slug: slug } : null;
+  var e = _iconEntryByName(key);
+  return e ? { name: e.n, png: e.p || ('ic_' + key) } : null;
 }
 function iconifyText(textNode) {
   var s = textNode.data;
@@ -1579,23 +1437,23 @@ function iconifyText(textNode) {
   while ((m = _ICON_SCAN.exec(s))) {
     if (m[1]) {                                     // [ic:名字] 具名标记
       var hit = _iconLookup(m[1]);
-      if (hit) hits.push([m.index, m.index + m[0].length, hit.svg, hit.slug, '']);
+      if (hit) hits.push([m.index, m.index + m[0].length, hit.name, hit.png, '']);
       continue;
     }
     var run = m[2], whole = run.replace(/\uFE0F/g, '');
-    if (ICONS[whole] || ICON_FILES[whole]) {        // 整段命中（单个 emoji 或 ZWJ 组合）
-      hits.push([m.index, m.index + run.length, ICONS[whole] || null,
-                 ICON_FILES[whole] || null, ICONS[whole] ? '' : whole]);
+    var ent = _iconEntry(whole);
+    if (ent) {                                      // 整段命中（单个 emoji 或 ZWJ 组合）
+      hits.push([m.index, m.index + run.length, ent.n, ent.p || '', '']);
       continue;
     }
     var cps = run.match(/./gu) || [], off = 0;      // 连续多个不同 emoji：逐个拆开
     for (var i = 0; i < cps.length; i++) {
       var cp = cps[i], clean = cp.replace(/\uFE0F/g, '');
-      var start = m.index + off;
+      var at = m.index + off;
       off += cp.length;
-      if (!clean || (!ICONS[clean] && !ICON_FILES[clean])) continue;
-      hits.push([start, m.index + off, ICONS[clean] || null,
-                 ICON_FILES[clean] || null, ICONS[clean] ? '' : clean]);
+      var one = clean ? _iconEntry(clean) : null;
+      if (!one) continue;                           // 没映射 → 原样留着这个 emoji
+      hits.push([at, m.index + off, one.n, one.p || '', '']);
     }
   }
   if (!hits.length) return;
@@ -1911,10 +1769,10 @@ function appendMessage(m) {
   var av = m.kind === 'sys' ? '' : avatarHtml(m.kind === 'user' ? (m.speaker || '你') : (m.speaker || 'AI'), cls);
   var ctl = '';
   if ((m.kind === 'user' || m.kind === 'ai') && m.node_id) {
-    ctl += '<button data-act="edit">' + (ICONS['✏'] || '✏️') + '</button>';
+    ctl += '<button data-act="edit">' + _iconHtml('✏') + '</button>';
   }
   if (m.kind === 'ai') {
-    ctl += '<button data-act="speak" title="朗读">' + (ICONS['🔊'] || '🔊') + '</button>';
+    ctl += '<button data-act="speak" title="朗读">' + (_iconHtml('🔊')) + '</button>';
     if (m.swipes && m.swipes.total > 1) {
       ctl += '<button data-act="sprev">◀</button><span class="swipe-n">' + (m.swipes.index + 1) + '/' + m.swipes.total + '</span><button data-act="snext">▶</button>';
     }
