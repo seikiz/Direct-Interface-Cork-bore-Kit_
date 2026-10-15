@@ -48,6 +48,28 @@ SCHEME = ("四段：主.次.补.实验。前两位不变 = 兼容；无法兼容
           "大功能涨次位；补位只用来标记「加了官方可选插件」；第四位是实验性版本；"
           "纯修补不涨号。")
 
+# 发布 tag 的纪律：**一律用版号**（`v1.0.0.1`），不用"代"（`v2.0`）。
+# 用户定调："一律用 1.0.0.1 那套纪律。" —— `v2.0` 这个名字还与"下一个不兼容纪元
+# （major+1 → 2.0.0.0）"撞号，所以只留作历史标签，不再用于发布。
+TAG_VER_RE = re.compile(r"^v\d+\.\d+\.\d+\.\d+$")
+LEGACY_TAGS = {"v2.0"}
+
+
+def tag_name(v=None):
+    """当前版号对应的发布 tag（`v1.0.0.1`）。"""
+    return "v" + str(v or read_json().get("version") or "").strip()
+
+
+def tag_problems(tags):
+    """检查 tag 命名纪律：一律 `v主.次.补.实验`；只有 LEGACY_TAGS 里的历史标签豁免。"""
+    bad = []
+    for t in tags or []:
+        t = str(t).strip()
+        if not t or t in LEGACY_TAGS or TAG_VER_RE.match(t):
+            continue
+        bad.append(t)
+    return bad
+
 # 涨号动作 → (动第几位[0.<seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌.3], 它后面几位是否归零)
 BUMPS = {
     "major": (0, True),    # 无法兼容 → 2.0.0.0
@@ -224,6 +246,21 @@ def cmd_check(quiet=False):
     # 打包清单：冻结版必须能找到 version.json
     if os.path.isfile(SPEC) and "version.json" not in read_text(SPEC):
         problems.append("DICK_HTML.spec 没有随包 version.json（冻结版会读不到号）")
+
+    # 发布 tag 纪律：一律 `v主.次.补.实验`（历史标签 v2.0 豁免）。
+    # 有 git 才查；不是 git 仓库（或没装 git）就跳过，不因此判红。
+    try:
+        import subprocess
+        out = subprocess.run(["git", "tag", "-l"], cwd=ROOT, stdout=subprocess.PIPE,
+                             stderr=subprocess.DEVNULL, timeout=10)
+        if out.returncode == 0:
+            tags = out.stdout.decode("utf-8", "replace").split()
+            bad = tag_problems(tags)
+            if bad:
+                problems.append("tag 命名不合纪律（一律用版号，如 %s）：%s"
+                                % (tag_name(v), "、".join(bad)))
+    except Exception:
+        pass
 
     if not quiet:
         if problems:

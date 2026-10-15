@@ -528,8 +528,47 @@ def main():
     step_scrub()
     zpath, size = step_zip()
     step_report()
+    if "--tag" in argv:
+        step_tag()
     print("")
     print("✅ 打包完成：%s（%.1f MB）" % (zpath, size))
+
+
+def step_tag():
+    """按版号打发布 tag（`--tag`）。
+
+    纪律（用户定调）：**发布 tag 一律用版号**（`v1.0.0.1`），不用"代"（`v2.0`）——
+    那个名字还与"下一个不兼容纪元 2.0.0.0"撞号。tag 名与提交信息都从 version.json 取，
+    所以不存在"手打错一个数字"这种事。**只打本地 tag，不自动推** —— 推是发布动作，
+    由人确认（推的命令会打出来）。
+    """
+    import subprocess
+    try:
+        import app_version
+    except Exception as e:
+        print("  [warn] 读不到版号（%s），跳过打 tag" % e)
+        return
+    name = "v" + app_version.VERSION
+    if not os.path.isdir(os.path.join(ROOT, ".git")):
+        print("  [warn] 不是 git 仓库，跳过打 tag")
+        return
+    dirty = subprocess.run(["git", "status", "--porcelain"], cwd=ROOT,
+                           stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
+    if dirty.returncode == 0 and dirty.stdout.strip():
+        print("  [warn] 工作区不干净，跳过打 tag（发布 tag 要打在干净的提交上）")
+        return
+    have = subprocess.run(["git", "tag", "-l", name], cwd=ROOT,
+                          stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
+    if have.returncode == 0 and have.stdout.strip():
+        print("  [ok] tag %s 已存在（不重复打）" % name)
+        return
+    done = subprocess.run(["git", "tag", "-a", name, "-m",
+                           "DICK %s（兼容线 %s）" % (name, app_version.compat_line())],
+                          cwd=ROOT, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    if done.returncode == 0:
+        print("  [ok] 已打 tag %s —— 推它：git push origin %s" % (name, name))
+    else:
+        print("  [warn] 打 tag 失败：%s" % done.stdout.decode("utf-8", "replace").strip()[:120])
 
 
 if __name__ == "__main__":

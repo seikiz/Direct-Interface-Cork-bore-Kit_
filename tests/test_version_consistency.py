@@ -146,6 +146,27 @@ def main():
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
 
+    print(u"\n-- ⑥ 发布 tag 的纪律：一律用版号（v2.0 只作历史标签） --")
+    # 用户定调："一律用 1.0.0.1 那套纪律。" —— 发布 tag 必须是四段版号；
+    # v2.0 这个名字还与"下一个不兼容纪元 2.0.0.0"撞号，所以只留作历史标签。
+    check(u"当前版号的 tag 名 = v1.0.0.1（跟着 version.json）",
+          bv.tag_name(ver) == "v" + ver, bv.tag_name(ver))
+    check(u"四段 tag 合法", bv.tag_problems(["v1.0.0.1"]) == [])
+    check(u"v2.0 作为历史标签豁免", bv.tag_problems(["v2.0"]) == [])
+    check(u"两段的 tag 不合纪律（会被点名）", bv.tag_problems(["v1.0"]) == ["v1.0"])
+    check(u"不兼容纪元 v2.0.0.0 也是合法四段", bv.tag_problems(["v2.0.0.0"]) == [])
+    # 真仓库上的 tag 也要过（不是 git 仓库就跳过，不因此判红）
+    try:
+        import subprocess
+        out = subprocess.run(["git", "tag", "-l"], cwd=ROOT, stdout=subprocess.PIPE,
+                             stderr=subprocess.DEVNULL, timeout=10)
+        if out.returncode == 0:
+            tags = out.stdout.decode("utf-8", "replace").split()
+            check(u"仓库里现有的 tag 都合纪律：%s" % (u"、".join(tags) or u"（无）"),
+                  bv.tag_problems(tags) == [], u"不合纪律：%s" % bv.tag_problems(tags))
+    except Exception:
+        print(u"   [SKIP] 读不到 git tag（不是 git 仓库 / 没装 git）")
+
     print("\n" + "=" * 58)
     print(u"通过 %d / 失败 %d" % (PASS, FAIL))
     if not FAIL:
