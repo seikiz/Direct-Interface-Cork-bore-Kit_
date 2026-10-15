@@ -44,8 +44,9 @@ SPEC = os.path.join(ROOT, "DICK_HTML.spec")
 DESKTOP = os.path.join(ROOT, "Direct-Interface Cork-bore Kit.py")
 HTML = os.path.join(ROOT, "web", "index.html")
 
-SCHEME = ("四段：主.次.补.实验。前两位不变 = 兼容；无法兼容直接进 2.0（主+1、低位归零）；"
-          "大功能涨次位；补位只用来标记「加了官方可选插件」；第四位是实验性版本；"
+SCHEME = ("四段：大版本.架构大改.插件更新.功能测试（1.0.0.1 = 大版本 1 / 架构 0 / 插件 0 / 第 1 次功能测试）。"
+          "前两位不变 = 兼容；无法兼容时大版本 +1、直接进 2.0（低位归零）；"
+          "架构大改涨第二位；第三位只用来标记「加了官方可选插件」；第四位是功能测试（实验）；"
           "纯修补不涨号。")
 
 # 发布 tag 的纪律：**一律用版号**（`v1.0.0.1`），不用"代"（`v2.0`）。
@@ -72,17 +73,17 @@ def tag_problems(tags):
 
 # 涨号动作 → (动第几位[0.<seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌.3], 它后面几位是否归零)
 BUMPS = {
-    "major": (0, True),    # 无法兼容 → 2.0.0.0
-    "minor": (1, True),    # 大功能   → 1.1.0.0
-    "patch": (2, True),    # 加了官方可选插件 → 1.0.1.0
-    "exp": (3, False),     # 实验性   → 1.0.0.2（只涨第四位）
+    "major": (0, True),    # 大版本：无法兼容 → 2.0.0.0
+    "minor": (1, True),    # 架构大改 → 1.1.0.0
+    "patch": (2, True),    # 插件更新（加了官方可选插件）→ 1.0.1.0
+    "exp": (3, False),     # 功能测试（实验）→ 1.0.0.2（只涨第四位）
 }
 
 WHAT = {
-    "major": "无法兼容（新兼容纪元）",
-    "minor": "大功能（新兼容线）",
-    "patch": "加了官方可选插件",
-    "exp": "实验性版本",
+    "major": "大版本（无法兼容 → 换大版本号）",
+    "minor": "架构大改",
+    "patch": "插件更新（加了官方可选插件）",
+    "exp": "功能测试（实验）",
 }
 
 
@@ -146,14 +147,15 @@ def cmd_show():
     data = read_json()
     v = data["version"]
     p = parts(v)
-    print("当前版号          %s   （主 %d / 次 %d / 补 %d / 实验 %d）" % (v, p[0], p[1], p[2], p[3]))
-    print("兼容线            %s   —— 前两位不变即兼容；不兼容时直接进 %d.0"
-          % (compat_line(v), p[0] + 1))
-    print("versionCode       %d（= 主*10^6+次*10^4+补*10^2+实验）" % code_of(v))
+    print("当前版号          %s   （大版本 %d / 架构大改 %d / 插件更新 %d / 功能测试 %d）"
+          % (v, p[0], p[1], p[2], p[3]))
+    print("兼容线            %s   —— 前两位（大版本+架构大改）不变即兼容；"
+          "不兼容时大版本 +1、直接进 %d.0" % (compat_line(v), p[0] + 1))
+    print("versionCode       %d（= 大版本*10^6+架构*10^4+插件*10^2+功能测试）" % code_of(v))
     print("电脑端显示        %s" % ("v" + v))
     print("安卓 / 播放器     versionName=%s versionCode=%d" % (v, code_of(v)))
-    print("下一个号          patch→%s  minor→%s  major→%s  exp→%s"
-          % (bump(v, "patch"), bump(v, "minor"), bump(v, "major"), bump(v, "exp")))
+    print("下一个号          架构大改(minor)→%s  插件更新(patch)→%s  大版本(major)→%s  功能测试(exp)→%s"
+          % (bump(v, "minor"), bump(v, "patch"), bump(v, "major"), bump(v, "exp")))
     print("口径              %s" % SCHEME)
     return 0
 
