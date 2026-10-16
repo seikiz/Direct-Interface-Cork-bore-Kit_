@@ -860,7 +860,7 @@ fun SettingsDialog(vm: ChatViewModel, deps: DialogDeps) {
                 engine.model = model
                 engine.baseUrl = baseUrl.trim().ifBlank { "https://api.deepseek.com" }
                 engine.proxy = proxy.trim().ifBlank { null }
-                val effRelay = relayUrl.trim().ifBlank { BUILTIN_RELAY }
+                val effRelay = relayUrl.trim().ifBlank { BUILTIN_RELAY }.ifBlank { null }
                 if (engine.relayBase != effRelay) engine.relayOn = false
                 engine.relayBase = effRelay
                 engine.stopSequences = parseStops(stopInput)
@@ -1008,7 +1008,7 @@ fun SettingsDialog(vm: ChatViewModel, deps: DialogDeps) {
                 engine.model = model
                 engine.baseUrl = baseUrl.trim().ifBlank { "https://api.deepseek.com" }
                 engine.proxy = proxy.trim().ifBlank { null }
-                val effRelay = relayUrl.trim().ifBlank { BUILTIN_RELAY }
+                val effRelay = relayUrl.trim().ifBlank { BUILTIN_RELAY }.ifBlank { null }
                 if (engine.relayBase != effRelay) engine.relayOn = false  // 改了中转地址 → 回到直连优先
                 engine.relayBase = effRelay
                 engine.stopSequences = parseStops(stopInput)

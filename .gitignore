@@ -104,6 +104,9 @@ tavern-installer/node/
 server_build/
 DICK-HTML.zip
 *.bak
+# 带时间戳的编辑器备份（X.kt.bak-20261016-212937 这种）：`*.bak` 匹配不到，必须单独一条，
+# 否则它们会跟着 git add -A 混进提交
+*.bak-*
 aoqi_crawler.py
 
 # DSH 环境目录

@@ -50,7 +50,12 @@ def _ensure_openai():
 try:
     import httpx
 except Exception:
-    httpx = None
+    try:
+        # 本机（及打包环境）只有 httpx2，openai 3.x 用的也是它；
+        # 少了这个回退，下面 set_proxy 会静默失效。
+        import httpx2 as httpx
+    except Exception:
+        httpx = None
 
 try:
     from style_guard import style_guard as _style_guard
@@ -566,12 +571,20 @@ class ChatCore:
         kw = {"api_key": self.api_key or "free", "base_url": self.base_url}
         if self.relay_on and self.relay_base:
             kw["base_url"] = self._relay_target_url()
-        if self.proxy and httpx is not None:
+        if httpx is not None:
             try:
-                kw["http_client"] = httpx.Client(
-                    proxy=self.proxy,
-                    timeout=httpx.Timeout(600.0, connect=20.0),
-                )
+                if self.proxy:
+                    kw["http_client"] = httpx.Client(
+                        proxy=self.proxy,
+                        timeout=httpx.Timeout(600.0, connect=20.0),
+                    )
+                else:
+                    # 没配代理时【不要】继承 Windows 系统代理：
+                    # 系统代理指向 127.0.0.1:7890 时，模型请求会被拖到超时。
+                    kw["http_client"] = httpx.Client(
+                        trust_env=False,
+                        timeout=httpx.Timeout(600.0, connect=20.0),
+                    )
             except Exception:
                 pass
         return _ensure_openai()(**kw)

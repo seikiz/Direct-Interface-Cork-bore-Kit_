@@ -44,7 +44,8 @@ data class ProviderSpec(
 )
 
 /** 内置代理通道（中转）：固定地址 → Worker → 隧道 → 本地 net.py → 真实厂商 */
-const val BUILTIN_RELAY = "https://dick-workshop.seiki342008.workers.dev"
+// 中转已停用：香港工坊的 /relay 出于安全关闭，且中转实现是整体缓冲、不支持流式
+const val BUILTIN_RELAY = ""
 
 /** 把逗号/换行分隔的停止序列文本解析成列表（指令模板） */
 fun parseStops(text: String): List<String> =

@@ -242,7 +242,7 @@ object Workshop {
 
     // 公网零配置兜底地址：局域网找不到时自动用它（用户不必手动填）。
     // 这是部署好的 dick-workshop Worker 稳定地址（永不失效，转发到你的工坊）。
-    private const val DEFAULT_PUBLIC_URL = "https://dick-workshop.seiki342008.workers.dev"
+    private const val DEFAULT_PUBLIC_URL = "http://154.94.226.240:8080"
 
     private fun request(
         path: String,

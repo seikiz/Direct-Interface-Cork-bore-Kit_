@@ -46,7 +46,15 @@ from plugin_manager import PluginManager
 BASE_DIR = app_paths.get_base_dir()
 
 # 内置代理通道（中转）：固定地址 → Worker → 隧道 → 本地 net.py → 真实厂商
-BUILTIN_RELAY = "https://dick-workshop.seiki342008.workers.dev"
+# 中转已停用：香港工坊的 /relay 出于安全关闭，且中转实现是整体缓冲、不支持流式
+BUILTIN_RELAY = ""
+
+# 创意工坊的**默认服务器地址**：用户不必再填 IP（界面上那栏已经删掉）。
+# 探测顺序：用户显式配的 server_url → 本机服务器 127.0.0.1:5000 → 这个默认地址。
+# 与安卓端 Workshop.DEFAULT_PUBLIC_URL 是同一个地址，换机器时两处一起改。
+# 注意：这里**只影响工坊（作品列表/下载/上传）**；聊天进度同步仍要求"显式配置 server_url
+# 或本机服务器在线"（_ws_sync_enabled），不会因为有了默认地址就把你的存档自动推到公网。
+DEFAULT_WS_SERVER = "http://154.94.226.240:8080"
 
 # ---------- 角色卡结构化字段 / 世界卡参数（精细化创作） ----------
 ROLE_FIELDS = [
@@ -3812,8 +3820,12 @@ class HtmlApp:
             candidates.append(cfg_url)
         # 其次本机服务器（局域网直连，最快最稳）
         candidates.append("http://127.0.0.1:5000")
+        # 最后是**内置默认服务器**：用户不必填 IP（界面上那栏已删），
+        # 与安卓端 Workshop.DEFAULT_PUBLIC_URL 同一个地址。
+        if DEFAULT_WS_SERVER:
+            candidates.append(DEFAULT_WS_SERVER)
         # 不再硬编码易变的 trycloudflare 临时地址，避免连到失效的旧隧道。
-        # 公网访问统一走 server_url（稳定地址），需要时把该地址填到工坊地址。
+        # 公网访问统一走 server_url（稳定地址）或上面的默认地址。
         import requests as _req
         for base in candidates:
             try:
@@ -4044,7 +4056,7 @@ class HtmlApp:
         try:
             import winreg
             key = winreg.OpenKey(winreg.HKEY_CURRENT_USER,
-                                 r"SoftwareMicrosoftWindowsCurrentVersionInternet Settings")
+                                 r"Software\Microsoft\Windows\CurrentVersion\Internet Settings")
             enable, _ = winreg.QueryValueEx(key, "ProxyEnable")
             server, _ = winreg.QueryValueEx(key, "ProxyServer")
             winreg.CloseKey(key)
