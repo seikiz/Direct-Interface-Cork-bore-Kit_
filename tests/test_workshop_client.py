@@ -250,6 +250,36 @@ def main():
         check(u"能力清单被缓存（第二次不再探）",
               sum(1 for c in calls if "/api/capabilities" in c["url"]) == 1,
               str([c["url"] for c in calls]))
+
+        print(u"\n== ⑧ types 的两种形状都要认（早期实现塞的是对象） ==")
+        app._ws_proxy_ok = None
+        app._ws_caps_cache = None
+        calls[:] = []
+        routes.clear()
+
+        def obj_types_server():
+            url = calls[-1]["url"]
+            if "/api/capabilities" in url:
+                # 早期实现：types 里是 {"name":...,"label":...,"ext":[...]} 对象数组。
+                # 只按字符串读会把 "packs" 判成不存在 → 工坊里永远看不到世界卡包
+                # （这条正是"客户端单元测试用字符串、服务端回对象"时漏掉的坑）。
+                return FakeResp(200, {"schema": 1, "features": ["types"],
+                                      "types": [{"name": "cards", "label": u"角色卡", "ext": [".json"]},
+                                                {"name": "packs", "label": u"世界卡包", "ext": [".json"]}]})
+            if "/api/cards/list" in url:
+                return FakeResp(200, [])
+            if "/api/worlds/list" in url:
+                return FakeResp(200, [])
+            if "/api/packs/list" in url:
+                return FakeResp(200, [{"id": "p9", "name": u"对象形状也能识别"}])
+            return FakeResp(404, None, text="")
+
+        routes[DIRECT_KEY] = obj_types_server
+        check(u"对象形状的 types 也能认出 packs",
+              "packs" in (app._ws_caps().get("types") or []), str(app._ws_caps()))
+        got3 = app.api_workshop_list()
+        check(u"照样能列出世界卡包",
+              [p["name"] for p in got3.get("packs") or []] == [u"对象形状也能识别"], str(got3))
     finally:
         requests.request = real_request
         if real_getproxies is not None:

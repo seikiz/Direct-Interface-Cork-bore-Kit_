@@ -3877,7 +3877,11 @@ class HtmlApp:
 
     def _ws_caps(self):
         """服务器能力清单（带缓存）。老服务器没有 /api/capabilities → 退回基础能力，
-        这样"新客户端连老服务器"和"老客户端连新服务器"都还能用。"""
+        这样"新客户端连老服务器"和"老客户端连新服务器"都还能用。
+
+        types 的两种形状都要认：纯名字列表（现在的契约）和对象数组
+        （早期版本把 {"name":...,"label":...} 塞进 types；只按字符串读会把
+        "世界卡包"永远判成不存在）。"""
         import time as _t
         cached = getattr(self, "_ws_caps_cache", None)
         if cached and _t.time() - cached[1] < 300:
@@ -3887,8 +3891,20 @@ class HtmlApp:
             r = self._ws_call("GET", self._ws_url("/api/capabilities"), timeout=6)
             if r.status_code < 400:
                 d = r.json() or {}
-                if isinstance(d.get("types"), list) and d["types"]:
-                    base = {"types": [str(t) for t in d["types"]],
+                names = []
+                for t in (d.get("types") or []):
+                    if isinstance(t, dict):
+                        t = t.get("name") or t.get("type") or ""
+                    t = str(t or "").strip().lower()
+                    if t:
+                        names.append(t)
+                if not names:      # 只给了 registry 的老实现
+                    for t in (d.get("registry") or []):
+                        n = str((t or {}).get("name") or "").strip().lower()
+                        if n:
+                            names.append(n)
+                if names:
+                    base = {"types": names,
                             "features": [str(f) for f in (d.get("features") or [])],
                             "schema": d.get("schema") or 0, "old": False}
         except Exception:

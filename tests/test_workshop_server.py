@@ -94,10 +94,19 @@ def main():
         check(u"health 带 capabilities 开关", "capabilities" in (h.get("features") or []))
         check(u"health 带 limits", isinstance(h.get("limits"), dict), str(h.get("limits")))
         cap = c.get("/api/capabilities").get_json()
-        names = [t["name"] for t in (cap.get("types") or [])]
-        check(u"capabilities 列出四种类型", set(names) == {"cards", "worlds", "plugins", "packs"}, str(names))
-        check(u"capabilities 标明扩展名白名单",
-              any(t["name"] == "packs" and t["ext"] == [".json"] for t in cap["types"]), str(cap["types"]))
+        # 契约：types 是**纯名字列表**（客户端只做 in 判断），细节在 registry 里。
+        # 早期实现把对象塞进 types，客户端按字符串读 → "packs" 永远判不出来（集成测试抓到过）。
+        check(u"capabilities.types 是纯字符串列表",
+              all(isinstance(t, str) for t in (cap.get("types") or [])), str(cap.get("types")))
+        check(u"capabilities 列出四种类型",
+              set(cap.get("types") or []) == {"cards", "worlds", "plugins", "packs"}, str(cap.get("types")))
+        reg = cap.get("registry") or []
+        check(u"registry 里带中文名与扩展名白名单",
+              any(t.get("name") == "packs" and t.get("label") == u"世界卡包" and t.get("ext") == [".json"]
+                  for t in reg), str(reg))
+        check(u"capabilities.types 与 health.types 一致",
+              sorted(cap.get("types") or []) == sorted(h.get("types") or []),
+              "%s vs %s" % (cap.get("types"), h.get("types")))
 
         print(u"\n== ② 统计按注册表聚合（不再漏 plugins） ==")
         s = c.get("/api/stats").get_json()

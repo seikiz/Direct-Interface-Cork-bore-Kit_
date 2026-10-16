@@ -273,11 +273,19 @@ def health():
 
 @app.get("/api/capabilities")
 def capabilities():
-    """单独一份能力清单（与 /api/health 的字段同源；给"只想知道能干什么"的调用方）"""
+    """单独一份能力清单（与 /api/health 的字段同源；给"只想知道能干什么"的调用方）
+
+    字段形状是**契约**：
+      types     纯类型名列表（"cards"/"worlds"/"plugins"/"packs"）—— 客户端只拿它做判断；
+      registry  每种类型的细节（中文名、扩展名白名单）—— 界面/校验用；
+    两者分开，客户端就不必去解析对象数组（早期版本 types 里塞对象，
+    客户端按字符串列表读，结果"世界卡包"永远判不出来）。
+    """
     return jsonify({
         "api": 1,
         "schema": INDEX_SCHEMA,
-        "types": [{"name": k, "label": v["label"], "ext": list(v["ext"])} for k, v in TYPES.items()],
+        "types": sorted(TYPES.keys()),
+        "registry": [{"name": k, "label": v["label"], "ext": list(v["ext"])} for k, v in TYPES.items()],
         "features": list(FEATURES),
         "limits": {"upload_max_mb": UPLOAD_MAX_MB},
     })
