@@ -52,15 +52,48 @@ DATA_DIR = os.path.join(_app_root(), "workshop_data")
 CARDS_DIR = os.path.join(DATA_DIR, "cards")
 WORLDS_DIR = os.path.join(DATA_DIR, "worlds")
 PLUGINS_DIR = os.path.join(DATA_DIR, "plugins")
+PACKS_DIR = os.path.join(DATA_DIR, "packs")
 SAVES_DIR = os.path.join(DATA_DIR, "saves")
 SYNC_SETTINGS_FILE = os.path.join(DATA_DIR, "sync_settings.json")
 INDEX_FILE = os.path.join(DATA_DIR, "index.json")
+
+# ============================================================
+#  资源类型注册表 —— **加一种资源 = 加一行**
+# ============================================================
+#  以前每种资源（角色卡/世界卡/插件）都手写一整套路由（list/download/upload/like/delete），
+#  加第四种就要抄 6~8 个函数。现在路由是泛型的（`/api/<rtype>/...`），类型差异全写在这里：
+#    dir      落盘目录
+#    label    给人看的名字（错误信息里用）
+#    ext      允许的扩展名（白名单，上传时校验）
+#    index    索引里对应的段名（同时也是 /api/<rtype>/list 的数据源）
+#  想再加类型（剧本 codex 包、语音/声库、Live2D、生图预设…）只要往这里加一行，
+#  再确保目录建出来（见下面的 for 循环）——路由、搜索、统计、点赞、删除全都自动生效。
+# ============================================================
+TYPES = {
+    "cards":   {"dir": CARDS_DIR,   "label": "角色卡", "ext": (".json", ".png"), "index": "cards"},
+    "worlds":  {"dir": WORLDS_DIR,  "label": "世界卡", "ext": (".json",),        "index": "worlds"},
+    "plugins": {"dir": PLUGINS_DIR, "label": "插件",   "ext": (".py", ".zip"),   "index": "plugins"},
+    # 世界卡包（world_packs/ 那 6 张成套卡）：一整包带地图/年代参数，装进 worlds/ 就能用
+    "packs":   {"dir": PACKS_DIR,   "label": "世界卡包", "ext": (".json",),      "index": "packs"},
+}
+
+# 索引结构版本：以后真要迁移时靠它判断"这是老索引"（照 crypto_core 的做法）
+INDEX_SCHEMA = 1
+
+# 能力清单：客户端据此决定"走整包还是分片""能不能按类型搜"（见 /api/capabilities）
+FEATURES = ("search", "like", "progress", "chunked_upload", "types", "capabilities")
+UPLOAD_MAX_MB = int(os.environ.get("WORKSHOP_UPLOAD_MAX_MB", "64"))
 
 # 运行配置（环境变量可覆盖）
 API_KEY = os.environ.get("WORKSHOP_API_KEY", "").strip()
 HOST = os.environ.get("WORKSHOP_HOST", "0.0.0.0")
 PORT = int(os.environ.get("WORKSHOP_PORT", "5000"))
 DEBUG = os.environ.get("WORKSHOP_DEBUG", "0") == "1"
+# 读接口是否也要 Key（默认关 = 保持老行为：只读公开）。公网部署建议开。
+READ_KEY = os.environ.get("WORKSHOP_READ_KEY", "0") == "1"
+# 内置中转（/relay）：默认关。客户端已停用它（香港工坊 /relay 出于安全关闭），
+# 留着只是历史包袱 + 开放代理风险；真要临时用就显式设 WORKSHOP_RELAY=1。
+RELAY_ON = os.environ.get("WORKSHOP_RELAY", "0") == "1"
 
 # 局域网发现：手机向该 UDP 端口发探测包，服务器回复自身 IP + HTTP 端口
 DISCOVER_PORT = int(os.environ.get("WORKSHOP_DISCOVER_PORT", "5001"))
@@ -69,21 +102,30 @@ DISCOVER_MAGIC = b"DICK_DISCOVER_V1"
 # 索引文件进程内锁（防并发读写冲突）
 _index_lock = threading.Lock()
 
-for d in [DATA_DIR, CARDS_DIR, WORLDS_DIR, PLUGINS_DIR, SAVES_DIR]:
+for d in [DATA_DIR, CARDS_DIR, WORLDS_DIR, PLUGINS_DIR, PACKS_DIR, SAVES_DIR]:
     os.makedirs(d, exist_ok=True)
 
 
+def type_of(rtype):
+    """把 URL 里的类型名解析成注册表条目；不认得的返回 None（调用方回 400）。"""
+    return TYPES.get(str(rtype or "").strip().lower())
+
+
+
 def load_index():
-    """读取索引，容错处理损坏文件"""
+    """读取索引，容错处理损坏文件；缺哪个段就补哪个（类型注册表驱动）"""
     try:
         with open(INDEX_FILE, "r", encoding="utf-8") as f:
             data = json.load(f)
     except (json.JSONDecodeError, OSError):
         data = {}
-    data.setdefault("cards", [])
-    data.setdefault("worlds", [])
-    data.setdefault("plugins", [])
+    if not isinstance(data, dict):
+        data = {}
+    for spec in TYPES.values():
+        data.setdefault(spec["index"], [])
     data.setdefault("users", {})
+    # 索引结构版本：老索引（没有这个字段）当成 schema 0，读取时补齐即可，不做破坏性迁移
+    data.setdefault("schema", INDEX_SCHEMA)
     return data
 
 
@@ -127,7 +169,8 @@ def _save_sync_settings(data: dict):
 
 
 if not os.path.exists(INDEX_FILE):
-    save_index({"cards": [], "worlds": [], "plugins": [], "users": {}})
+    save_index({"schema": INDEX_SCHEMA, "cards": [], "worlds": [], "plugins": [], "packs": [],
+                "users": {}})
 
 
 # ============ 工具函数 ============
@@ -208,13 +251,55 @@ def search_index(index, query):
 
 @app.get("/api/health")
 def health():
-    """健康检查"""
+    """健康检查 + **能力协商**：客户端不必再猜服务端支持什么。
+
+    老客户端只读 status/auth（照旧）；新客户端读 api/types/features/limits 决定
+    走整包还是分片上传、能不能按类型搜索、读接口是否要 Key。
+    """
     return jsonify({
         "status": "ok",
         "service": "创意工坊服务器",
         "auth": "key" if API_KEY else "open",
+        "api": 1,
+        "schema": INDEX_SCHEMA,
+        "types": sorted(TYPES.keys()),
+        "features": list(FEATURES),
+        "read_key": bool(READ_KEY),
+        "relay": bool(RELAY_ON),
+        "limits": {"upload_max_mb": UPLOAD_MAX_MB},
         "timestamp": datetime.now().isoformat(),
     })
+
+
+@app.get("/api/capabilities")
+def capabilities():
+    """单独一份能力清单（与 /api/health 的字段同源；给"只想知道能干什么"的调用方）"""
+    return jsonify({
+        "api": 1,
+        "schema": INDEX_SCHEMA,
+        "types": [{"name": k, "label": v["label"], "ext": list(v["ext"])} for k, v in TYPES.items()],
+        "features": list(FEATURES),
+        "limits": {"upload_max_mb": UPLOAD_MAX_MB},
+    })
+
+
+@app.before_request
+def _read_key_gate():
+    """WORKSHOP_READ_KEY=1 时，读接口也要 Key（默认关，保持老行为：只读公开）。
+
+    实测过的现状：不开这个开关时 /api/cards/list、/api/search、/api/stats
+    **不带 Key 也返回 200** —— 内容全公开可列。公网部署建议打开。
+    """
+    if not READ_KEY or not API_KEY:
+        return None
+    if request.method not in ("GET", "HEAD"):
+        return None
+    p = request.path or ""
+    if not p.startswith("/api/") or p in ("/api/health", "/api/capabilities"):
+        return None          # 健康检查/能力清单永远公开（探活要用）
+    if request.headers.get("X-API-Key", "") != API_KEY:
+        return jsonify({"error": "需要 API Key（服务端开了 WORKSHOP_READ_KEY）"}), 401
+    return None
 
 
 # ============ 内置代理通道（中转转发） ============
@@ -223,7 +308,13 @@ def health():
 def relay_proxy(b64target, subpath=""):
     """透明转发：把请求原样转发到 <解码后的目标>/<subpath>，密钥经 Authorization 原样透传。
     客户端把 base_url 做 urlsafe-base64（去 padding）放进路径即可让本地/云端服务代为访问，
-    用于直连被墙的通道（如 OpenAI 官方 API）。"""
+    用于直连被墙的通道（如 OpenAI 官方 API）。
+
+    **默认关闭**：两端客户端已停用中转（BUILTIN_RELAY = ""），留着等于对外挂一个开放代理。
+    要临时用就设 WORKSHOP_RELAY=1（health 里的 relay 字段会告诉你开没开）。
+    """
+    if not RELAY_ON:
+        return jsonify({"error": "relay 已停用（需服务端设 WORKSHOP_RELAY=1）"}), 404
     try:
         import base64
         pad = "=" * (-len(b64target) % 4)
@@ -252,16 +343,16 @@ def relay_proxy(b64target, subpath=""):
 
 @app.get("/api/stats")
 def stats():
-    """工坊统计信息"""
+    """工坊统计：**按类型注册表聚合**（以前手写 cards+worlds，漏了 plugins；现在加类型也不会漏）"""
     index = load_index()
-    cards = index.get("cards", [])
-    worlds = index.get("worlds", [])
-    return jsonify({
-        "cards": len(cards),
-        "worlds": len(worlds),
-        "downloads": sum(c.get("downloads", 0) for c in cards + worlds),
-        "likes": sum(c.get("likes", 0) for c in cards + worlds),
-    })
+    out = {"downloads": 0, "likes": 0, "types": {}}
+    for key, spec in TYPES.items():
+        items = index.get(spec["index"], []) or []
+        out[spec["index"]] = len(items)          # 老键名照旧（cards/worlds/plugins）
+        out["types"][key] = len(items)
+        out["downloads"] += sum(int(it.get("downloads", 0) or 0) for it in items)
+        out["likes"] += sum(int(it.get("likes", 0) or 0) for it in items)
+    return jsonify(out)
 
 
 # ============ 树存档同步（聊天进度互通） ============
@@ -309,6 +400,26 @@ def save_download(card_id):
     except Exception:
         return jsonify({"error": "bad save"}), 500
     return jsonify({"kind": data.get("kind"), "ts": data.get("ts", ""), "tree": data.get("tree", {})})
+
+
+@app.delete("/api/save/<card_id>")
+@require_auth
+def save_delete(card_id):
+    """删掉某个角色的聊天树存档（要 Key）。
+    用途：清掉服务器上不该留的进度（换设备不想续聊、测试留下的脏数据）。"""
+    p = _save_path(card_id)
+    if not os.path.exists(p):
+        return jsonify({"ok": True, "removed": False})
+    try:
+        os.remove(p)
+        return jsonify({"ok": True, "removed": True})
+    except OSError:
+        # Windows 上文件被占用时改名挪走（与作品删除同一套兜底）
+        try:
+            os.replace(p, p + ".trash-" + str(int(datetime.now().timestamp())))
+            return jsonify({"ok": True, "removed": True, "note": "文件被占用，已挪走"})
+        except Exception as e:
+            return jsonify({"error": "删除失败：" + str(e)[:200]}), 500
 
 
 # ============ 同步设置（API 码等跨设备共享） ============
@@ -361,24 +472,22 @@ def list_worlds():
 
 @app.get("/api/search")
 def search_all():
-    """统一搜索角色卡+世界卡。
-    参数: q=关键词  type=all|cards|worlds
-    结果条目均带 type 字段（角色卡/世界卡）。
-    """
+    """统一搜索（类型注册表驱动），结果条目均带 type 字段（中文名）。
+    参数: q=关键词  type=all|cards|worlds|packs|角色卡|世界卡|世界卡包
+    加一种资源后这里不用改：注册表里新加的类型自动进搜索。"""
     query = (request.args.get("q") or "").strip()
-    rtype = (request.args.get("type") or "all").strip().lower()
+    want = (request.args.get("type") or "all").strip()
     index = load_index()
     matcher = search_index(index, query)
 
     results = []
-    if rtype in ("all", "card", "cards"):
-        for c in index.get("cards", []):
-            if matcher(c):
-                results.append(dict(c, type="角色卡"))
-    if rtype in ("all", "world", "worlds"):
-        for w in index.get("worlds", []):
-            if matcher(w):
-                results.append(dict(w, type="世界卡"))
+    for code, spec in TYPES.items():
+        # type 过滤：接口名（cards）、单数别名（card）、中文名（角色卡）都认；all 全给
+        if want and want.lower() not in ("all", code, code.rstrip("s"), spec["label"]):
+            continue
+        for item in index.get(spec["index"], []) or []:
+            if matcher(item):
+                results.append(dict(item, type=spec["label"]))
     results.sort(key=lambda x: x.get("updated_at", ""), reverse=True)
     return jsonify(results[:100])
 
@@ -455,14 +564,25 @@ def delete_entry(section, target_dir, item_id, label):
             return jsonify({"error": f"{label}不存在"}), 404
         filename = info.get("filename", "")
         filepath = os.path.join(target_dir, filename)
+        trashed = ""
         if filename and os.path.exists(filepath):
             try:
                 os.remove(filepath)
-            except OSError as e:
-                return jsonify({"error": f"删除文件失败：{e}"}), 500
+            except OSError:
+                # Windows 上这个文件可能正被读取（有人正在下载）或被杀软占用：
+                # 别让整个删除请求炸成 500 —— 先改名挪开（索引照删，稍后可清理），
+                # 改名也失败才如实报错、并**保留**索引项（免得"列表里没了、文件还在"）。
+                try:
+                    trashed = filepath + ".trash-" + datetime.now().strftime("%Y%m%d%H%M%S")
+                    os.replace(filepath, trashed)
+                except OSError as e:
+                    return jsonify({"error": f"删除文件失败：{e}"}), 500
         remove_entry(index, section, item_id)
         save_index(index)
-        return jsonify({"success": True, "message": f"已删除：{info.get('name')}"})
+        msg = f"已删除：{info.get('name')}"
+        if trashed:
+            msg += "（文件当时被占用，已挪到 %s，稍后可清理）" % os.path.basename(trashed)
+        return jsonify({"success": True, "message": msg})
 
 
 @app.delete("/api/cards/<card_id>")
@@ -481,6 +601,48 @@ def delete_world(world_id):
 
 # ============ 上传 ============
 
+def _store_upload(section, target_dir, original_name, content, form, ext_whitelist=None):
+    """把**已解析好的 JSON 内容**落盘 + 写索引。整包上传与分片上传共用这一处。
+
+    ext_whitelist 给了就校验扩展名（类型注册表里的 ext），不在白名单里直接报错。
+    """
+    original_name = os.path.basename(original_name or "") or "upload.json"
+    ext = (os.path.splitext(original_name)[1] or ".json").lower()
+    if ext_whitelist and ext not in tuple(ext_whitelist):
+        raise ValueError("不接受的扩展名 %s（只收 %s）" % (ext, "、".join(ext_whitelist)))
+    new_filename = f"{uuid.uuid4().hex}{ext}"
+    filepath = os.path.join(target_dir, new_filename)
+    with open(filepath, "w", encoding="utf-8") as f:
+        json.dump(content, f, ensure_ascii=False, indent=2)
+
+    name = content.get("name", "未命名") if isinstance(content, dict) else "未命名"
+    entry = {
+        "id": str(uuid.uuid4()),
+        "name": str(name)[:120],
+        "filename": new_filename,
+        "original_name": original_name,
+        "author": (form.get("author") or "anonymous").strip()[:60] or "anonymous",
+        "tags": clean_tags(form.get("tags", "")),
+        "description": (form.get("description") or "").strip()[:500],
+        "created_at": datetime.now().isoformat(),
+        "updated_at": datetime.now().isoformat(),
+        "downloads": 0,
+        "likes": 0,
+    }
+    # 提取预览信息
+    if isinstance(content, dict):
+        for key in ("system_prompt", "background", "description"):
+            val = content.get(key)
+            if isinstance(val, str) and val:
+                entry[f"{key}_preview"] = val[:120]
+
+    with _index_lock:
+        index = load_index()
+        index.setdefault(section, []).append(entry)
+        save_index(index)
+    return entry
+
+
 def handle_upload(section, target_dir, default_name):
     if "file" not in request.files:
         return jsonify({"error": "没有上传文件"}), 400
@@ -496,43 +658,11 @@ def handle_upload(section, target_dir, default_name):
         return jsonify({"error": "内容必须是 JSON 对象或数组"}), 400
 
     original_name = os.path.basename(file.filename or "") or f"{default_name}.json"
-    ext = os.path.splitext(original_name)[1] or ".json"
-    new_filename = f"{uuid.uuid4().hex}{ext}"
-    filepath = os.path.join(target_dir, new_filename)
-
-    with open(filepath, "w", encoding="utf-8") as f:
-        json.dump(content, f, ensure_ascii=False, indent=2)
-
-    name = content.get("name", default_name) if isinstance(content, dict) else default_name
-    entry = {
-        "id": str(uuid.uuid4()),
-        "name": str(name)[:120],
-        "filename": new_filename,
-        "original_name": original_name,
-        "author": (request.form.get("author") or "anonymous").strip()[:60] or "anonymous",
-        "tags": clean_tags(request.form.get("tags", "")),
-        "description": (request.form.get("description") or "").strip()[:500],
-        "created_at": datetime.now().isoformat(),
-        "updated_at": datetime.now().isoformat(),
-        "downloads": 0,
-        "likes": 0,
-    }
-    # 提取预览信息
-    if isinstance(content, dict):
-        for key in ("system_prompt", "background", "description"):
-            val = content.get(key)
-            if isinstance(val, str) and val:
-                entry[f"{key}_preview"] = val[:120]
-
-    with _index_lock:
-        index = load_index()
-        index[section].append(entry)
-        save_index(index)
-
+    entry = _store_upload(section, target_dir, original_name, content, request.form)
     return jsonify({
         "success": True,
         "id": entry["id"],
-        "message": f"上传成功：{name}"
+        "message": f"上传成功：{entry['name']}"
     }), 201
 
 
@@ -548,6 +678,153 @@ def upload_card():
 def upload_world():
     """上传世界卡"""
     return handle_upload("worlds", WORLDS_DIR, "未命名世界")
+
+
+# ============ 泛型资源路由（类型注册表驱动） ============
+#  加一种资源 = 在 TYPES 里加一行 + 目录建出来；下面这几个视图对所有类型都生效。
+#  老路径（/api/cards/list 等）与泛型路径**形状相同**，Werkzeug 里静态段优先，
+#  所以老客户端照旧能用，新类型不用再抄一遍路由。
+app.config["MAX_CONTENT_LENGTH"] = UPLOAD_MAX_MB * 1024 * 1024
+
+
+def _bad_type(rtype):
+    return jsonify({"error": "未知的资源类型：%s" % rtype,
+                    "types": sorted(TYPES.keys())}), 400
+
+
+@app.get("/api/<rtype>/list")
+def list_any(rtype):
+    """列出一个类型的全部作品（索引里那一段）"""
+    spec = type_of(rtype)
+    if not spec:
+        return _bad_type(rtype)
+    return jsonify(load_index().get(spec["index"], []) or [])
+
+
+@app.get("/api/<rtype>/<item_id>")
+def download_any(rtype, item_id):
+    spec = type_of(rtype)
+    if not spec:
+        return _bad_type(rtype)
+    return download_entry(spec["index"], spec["dir"], item_id, spec["label"])
+
+
+@app.post("/api/<rtype>/<item_id>/like")
+def like_any(rtype, item_id):
+    spec = type_of(rtype)
+    if not spec:
+        return _bad_type(rtype)
+    return like_entry(spec["index"], item_id, spec["label"])
+
+
+@app.delete("/api/<rtype>/<item_id>")
+@require_auth
+def delete_any(rtype, item_id):
+    spec = type_of(rtype)
+    if not spec:
+        return _bad_type(rtype)
+    return delete_entry(spec["index"], spec["dir"], item_id, spec["label"])
+
+
+@app.post("/api/<rtype>/upload")
+@require_auth
+def upload_any(rtype):
+    """整包上传（小文件走这条；大文件走下面的分片）"""
+    spec = type_of(rtype)
+    if not spec:
+        return _bad_type(rtype)
+    return handle_upload(spec["index"], spec["dir"], spec["label"])
+
+
+# ---- 分片上传：大文件（声库 / Live2D / 卡包）不再顶 body 上限 ----
+CHUNK_DIR = os.path.join(DATA_DIR, ".uploads")
+
+
+@app.post("/api/<rtype>/upload/init")
+@require_auth
+def upload_init(rtype):
+    """开一次分片上传，拿到 upload_id"""
+    spec = type_of(rtype)
+    if not spec:
+        return _bad_type(rtype)
+    uid = uuid.uuid4().hex
+    os.makedirs(os.path.join(CHUNK_DIR, uid), exist_ok=True)
+    return jsonify({"success": True, "upload_id": uid, "max_mb": UPLOAD_MAX_MB}), 201
+
+
+def _arg(name, default=""):
+    """分片上传的参数读法：**优先 query string**（因为 body 是裸分片字节，塞不进表单）。
+
+    也兼容 form（客户端要是把元数据放表单里发也能用），两处都看。
+    """
+    v = request.args.get(name)
+    if v is None:
+        v = request.form.get(name)
+    return default if v is None else str(v).strip()
+
+
+@app.post("/api/<rtype>/upload/chunk")
+@require_auth
+def upload_chunk(rtype):
+    """收一片：body 就是裸字节（不走 multipart），元数据走 query string"""
+    spec = type_of(rtype)
+    if not spec:
+        return _bad_type(rtype)
+    uid = _arg("upload_id")
+    idx = _arg("index")
+    if not uid or not idx.isdigit():
+        return jsonify({"error": "缺少 upload_id / index（放 query string 里）"}), 400
+    d = os.path.join(CHUNK_DIR, uid)
+    if not os.path.isdir(d):
+        return jsonify({"error": "upload_id 不存在（先 init）"}), 404
+    data = request.get_data()
+    if not data:
+        return jsonify({"error": "空分片"}), 400
+    with open(os.path.join(d, "%08d.part" % int(idx)), "wb") as f:
+        f.write(data)
+    return jsonify({"success": True, "index": int(idx), "bytes": len(data)})
+
+
+@app.post("/api/<rtype>/upload/finish")
+@require_auth
+def upload_finish(rtype):
+    """把分片按序拼起来，当作一次整包上传登记（扩展名白名单照查）"""
+    spec = type_of(rtype)
+    if not spec:
+        return _bad_type(rtype)
+    uid = _arg("upload_id")
+    d = os.path.join(CHUNK_DIR, uid)
+    if not uid or not os.path.isdir(d):
+        return jsonify({"error": "upload_id 不存在（先 init）"}), 404
+    parts = sorted(p for p in os.listdir(d) if p.endswith(".part"))
+    if not parts:
+        return jsonify({"error": "没有收到任何分片"}), 400
+    raw = b""
+    for p in parts:
+        with open(os.path.join(d, p), "rb") as f:
+            raw += f.read()
+    if len(raw) > UPLOAD_MAX_MB * 1024 * 1024:
+        return jsonify({"error": "超过上限 %d MB" % UPLOAD_MAX_MB}), 413
+    try:
+        content = json.loads(raw.decode("utf-8"))
+    except Exception as e:
+        return jsonify({"error": "拼起来不是合法 JSON：%s" % e}), 400
+    name = (_arg("filename") or "upload.json")
+    try:
+        entry = _store_upload(spec["index"], spec["dir"], name, content, request.form, spec["ext"])
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
+    for p in parts:
+        try:
+            os.remove(os.path.join(d, p))
+        except OSError:
+            pass
+    try:
+        os.rmdir(d)
+    except OSError:
+        pass
+    return jsonify({"success": True, "id": entry["id"],
+                    "message": "分片上传完成：%s" % entry["name"]}), 201
 
 
 # ============ 插件市场（创意工坊插件 Tab） ============

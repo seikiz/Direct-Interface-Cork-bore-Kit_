@@ -6,7 +6,7 @@ rem  DICK 启动器（放在工程根目录 C:\Users\seiki\Desktop\dist 用）
 rem  作用：让模型通道不走那个坏掉的系统代理 127.0.0.1:7890
 rem ============================================================
 
-set "NO_PROXY=api.deepseek.com,127.0.0.1,localhost,::1"
+set "NO_PROXY=api.deepseek.com,154.94.226.240,127.0.0.1,localhost,::1"
 set "no_proxy=%NO_PROXY%"
 cd /d "%~dp0"
 

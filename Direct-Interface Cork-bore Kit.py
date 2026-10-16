@@ -552,10 +552,12 @@ class HtmlApp:
         _seed_defaults(self.base_dir)
         self.save_dir = os.path.join(self.base_dir, "saves")
         self.world_dir = os.path.join(self.base_dir, "worlds")
+        # 世界卡包库（world_packs/）：成套世界设定，可上传/下载，不自动进 worlds/
+        self.pack_dir = os.path.join(self.base_dir, "world_packs")
         self.preset_dir = os.path.join(self.base_dir, "prompt_presets")
         self.codex_dir = os.path.join(self.base_dir, "codex")
         self.config_file = os.path.join(self.base_dir, "config.json")
-        for d in (self.save_dir, self.world_dir, self.preset_dir, self.codex_dir):
+        for d in (self.save_dir, self.world_dir, self.pack_dir, self.preset_dir, self.codex_dir):
             os.makedirs(d, exist_ok=True)
 
         self.config = {}
@@ -3790,18 +3792,109 @@ class HtmlApp:
         key = (self._ws_load_config().get("api_key") or "").strip()
         return {"X-API-Key": key} if key else {}
 
-    def _ws_proxies(self):
-        """从配置读取代理（支持 http/https/socks5），返回 requests 代理字典或 None"""
+    def _ws_system_proxy(self):
+        """系统/环境里配的代理（requests 默认会悄悄用上的那个）；没有则 None"""
+        try:
+            from urllib.request import getproxies
+            p = getproxies() or {}
+        except Exception:
+            p = {}
+        url = (p.get("https") or p.get("http") or "").strip()
+        return url or None
+
+    def _ws_proxy_candidates(self):
+        """工坊请求的通道候选（按优先级）：
+        ① 工坊设置里手填的代理 —— 填了只走它，不替用户猜；
+        ② 直连 —— 公网工坊服务器可直连；而系统代理常把稍大的请求体截断
+           （实测：走 Clash 127.0.0.1:7890 传 1.3KB 包体得到 502，同一份文件直连 201）；
+        ③ 系统代理 —— 直连不通时的退路，给"只有代理能出网"的网络留活路。"""
         proxy = (self._ws_load_config().get("proxy") or "").strip()
-        if not proxy:
-            return None
-        if "://" not in proxy:
-            proxy = "http://" + proxy
-        return {"http": proxy, "https": proxy}
+        if proxy:
+            if "://" not in proxy:
+                proxy = "http://" + proxy
+            return [{"http": proxy, "https": proxy}]
+        cands = [{"http": "", "https": ""}]
+        sysp = self._ws_system_proxy()
+        if sysp:
+            cands.append({"http": sysp, "https": sysp})
+        return cands
+
+    def _ws_proxies(self):
+        """当前优先通道（返回 requests 代理字典；保留给不重试的老调用点）"""
+        ok = getattr(self, "_ws_proxy_ok", None)
+        if ok is not None:
+            return ok
+        cands = self._ws_proxy_candidates()
+        return cands[0] if cands else None
+
+    def _ws_call(self, method, url, fallback=True, **kw):
+        """带通道回退的工坊请求：一条路被掐断或吃 5xx 就换下一条，并记住走通的那条。
+        返回 requests.Response；所有通道都失败才抛异常。
+        fallback=False 用于极短超时的探测，不额外耗时。"""
+        import requests
+        cands = self._ws_proxy_candidates() if fallback else [self._ws_proxies()]
+        ok = getattr(self, "_ws_proxy_ok", None)
+        if ok is not None:
+            cands = [ok] + [c for c in cands if c != ok]
+        if "://127.0.0.1" in url or "://localhost" in url:
+            cands = [{"http": "", "https": ""}]     # 本机服务器永远直连，别绕代理（放最后，压过缓存）
+        kw.setdefault("headers", self._ws_headers())
+        last = None
+        for i, prox in enumerate(cands):
+            try:
+                r = requests.request(method, url, proxies=prox, **kw)
+            except Exception as e:
+                last = e
+                continue
+            # 5xx 多半是代理把请求体弄坏了；还有别的通道就换一条再试
+            if r.status_code >= 500 and i + 1 < len(cands):
+                last = RuntimeError("HTTP " + str(r.status_code))
+                continue
+            self._ws_proxy_ok = prox
+            return r
+        raise last if isinstance(last, Exception) else RuntimeError(str(last))
 
     def _ws_url(self, path):
         base = self._ws_active_server()
         return base + path
+
+    # 工坊资源类型表：中文名 →（接口段名，本地目录键，图标）
+    # 服务器那边同样是一张注册表（net.py 的 TYPES），加类型两边各加一行即可。
+    WS_KINDS = {
+        "角色卡": ("cards", "saves", "🎭"),
+        "世界卡": ("worlds", "worlds", "🌍"),
+        "世界卡包": ("packs", "packs", "📦"),
+    }
+
+    def _ws_kind(self, rtype):
+        """把界面上的中文类型名翻成（接口段名，本地目录键，图标），不认得就按世界卡处理"""
+        return self.WS_KINDS.get(str(rtype or "").strip(), self.WS_KINDS["世界卡"])
+
+    def _ws_local_dir(self, rtype):
+        api, folder, _icon = self._ws_kind(rtype)
+        dirs = {"saves": self.save_dir, "worlds": self.world_dir, "packs": self.pack_dir}
+        return dirs.get(folder, self.world_dir)
+
+    def _ws_caps(self):
+        """服务器能力清单（带缓存）。老服务器没有 /api/capabilities → 退回基础能力，
+        这样"新客户端连老服务器"和"老客户端连新服务器"都还能用。"""
+        import time as _t
+        cached = getattr(self, "_ws_caps_cache", None)
+        if cached and _t.time() - cached[1] < 300:
+            return cached[0]
+        base = {"types": ["cards", "worlds", "plugins"], "features": [], "schema": 0, "old": True}
+        try:
+            r = self._ws_call("GET", self._ws_url("/api/capabilities"), timeout=6)
+            if r.status_code < 400:
+                d = r.json() or {}
+                if isinstance(d.get("types"), list) and d["types"]:
+                    base = {"types": [str(t) for t in d["types"]],
+                            "features": [str(f) for f in (d.get("features") or [])],
+                            "schema": d.get("schema") or 0, "old": False}
+        except Exception:
+            pass
+        self._ws_caps_cache = (base, _t.time())
+        return base
 
     def _ws_active_server(self):
         """自动部署：返回当前可用的工坊服务器地址。
@@ -3829,8 +3922,7 @@ class HtmlApp:
         import requests as _req
         for base in candidates:
             try:
-                r = _req.get(base + "/api/health", timeout=2.5,
-                             headers=self._ws_headers(), proxies=self._ws_proxies())
+                r = self._ws_call("GET", base + "/api/health", timeout=2.5)
                 if r.status_code < 400:
                     self._ws_active_cache = (base, now)
                     return base
@@ -3850,8 +3942,8 @@ class HtmlApp:
             return True
         try:
             import requests as _req
-            r = _req.get("http://127.0.0.1:5000/api/health", timeout=0.6,
-                         headers=self._ws_headers(), proxies=self._ws_proxies())
+            r = self._ws_call("GET", "http://127.0.0.1:5000/api/health", timeout=0.6,
+                              fallback=False)
             return r.status_code < 400
         except Exception:
             return False
@@ -3861,8 +3953,7 @@ class HtmlApp:
         try:
             import requests as _req
             url = self._ws_url("/api/save/" + str(card_id))
-            r = _req.post(url, json={"tree": tree_data}, timeout=6,
-                          headers=self._ws_headers(), proxies=self._ws_proxies())
+            r = self._ws_call("POST", url, json={"tree": tree_data}, timeout=6)
             if r.status_code < 400:
                 return True, (r.json() or {}).get("ts", "")
         except Exception as e:
@@ -3880,7 +3971,7 @@ class HtmlApp:
         try:
             import requests as _req
             url = self._ws_url("/api/save/" + str(card_id))
-            r = _req.get(url, timeout=6, headers=self._ws_headers(), proxies=self._ws_proxies())
+            r = self._ws_call("GET", url, timeout=6)
             if r.status_code < 400:
                 d = r.json() or {}
                 if isinstance(d.get("tree"), dict):
@@ -3943,8 +4034,7 @@ class HtmlApp:
     def _ws_push_api_sync(self, payload):
         try:
             import requests as _req
-            r = _req.post(self._ws_url("/api/sync/api"), json=payload, timeout=6,
-                          headers=self._ws_headers(), proxies=self._ws_proxies())
+            r = self._ws_call("POST", self._ws_url("/api/sync/api"), json=payload, timeout=6)
             if r.status_code >= 400:
                 print(f"[API 同步] 推送失败 HTTP {r.status_code}")
         except Exception as e:
@@ -3956,8 +4046,7 @@ class HtmlApp:
             return False
         try:
             import requests as _req
-            r = _req.get(self._ws_url("/api/sync/api"), timeout=6,
-                         headers=self._ws_headers(), proxies=self._ws_proxies())
+            r = self._ws_call("GET", self._ws_url("/api/sync/api"), timeout=6)
             if r.status_code >= 400:
                 return False
             d = r.json() or {}
@@ -4034,6 +4123,7 @@ class HtmlApp:
         cfg = self._ws_load_config()
         roles = [fn for fn in sorted(os.listdir(self.save_dir)) if not fn.startswith(".") and fn.endswith(".json")]
         worlds = [fn for fn in sorted(os.listdir(self.world_dir)) if fn.endswith(".json")]
+        packs = [fn for fn in sorted(os.listdir(self.pack_dir)) if fn.endswith(".json")]
         active = ""
         try:
             active = self._ws_active_server()
@@ -4042,7 +4132,7 @@ class HtmlApp:
         return {"server_url": cfg.get("server_url", ""), "active_server": active,
                 "has_key": bool(cfg.get("api_key")),
                 "proxy": cfg.get("proxy", ""),
-                "local_roles": roles, "local_worlds": worlds}
+                "local_roles": roles, "local_worlds": worlds, "local_packs": packs}
 
     def api_workshop_save_conn(self, server_url, api_key, proxy=None):
         self._ws_save_config(server_url or "", api_key or "", proxy or "")
@@ -4093,7 +4183,7 @@ class HtmlApp:
     def api_workshop_test(self):
         import requests
         try:
-            r = requests.get(self._ws_url("/api/health"), timeout=6, headers=self._ws_headers(), proxies=self._ws_proxies())
+            r = self._ws_call("GET", self._ws_url("/api/health"), timeout=6)
             if r.status_code >= 400:
                 return {"ok": False, "err": "HTTP " + str(r.status_code)}
             try:
@@ -4102,7 +4192,7 @@ class HtmlApp:
                 health = {}
             stats = {}
             try:
-                sr = requests.get(self._ws_url("/api/stats"), timeout=6, headers=self._ws_headers(), proxies=self._ws_proxies())
+                sr = self._ws_call("GET", self._ws_url("/api/stats"), timeout=6)
                 if sr.status_code < 400:
                     stats = sr.json()
             except Exception:
@@ -4112,13 +4202,24 @@ class HtmlApp:
             return {"ok": False, "err": str(e)[:200]}
 
     def api_workshop_list(self):
-        import requests
+        """列出在线作品。角色卡/世界卡是基础能力（老服务器也有）；
+        世界卡包要看服务器能力清单，老服务器没有就别去问（否则整页报错）。"""
         try:
-            cr = requests.get(self._ws_url("/api/cards/list"), timeout=8, headers=self._ws_headers(), proxies=self._ws_proxies())
-            wr = requests.get(self._ws_url("/api/worlds/list"), timeout=8, headers=self._ws_headers(), proxies=self._ws_proxies())
-            if cr.status_code >= 400 or wr.status_code >= 400:
-                return {"ok": False, "err": "HTTP " + str(cr.status_code) + " / " + str(wr.status_code)}
-            return {"ok": True, "cards": cr.json(), "worlds": wr.json()}
+            caps = self._ws_caps()
+            types = list(caps.get("types") or [])
+            out = {"ok": True, "types": types, "server_old": bool(caps.get("old"))}
+            for name in ("cards", "worlds", "packs"):
+                if name == "packs" and "packs" not in types:
+                    continue    # 老服务器没有这种资源，问了只会 404
+                r = self._ws_call("GET", self._ws_url("/api/%s/list" % name), timeout=8)
+                if r.status_code >= 400:
+                    # 基础类型失败才算真失败；新增类型失败只是"这台服务器没开"
+                    if name != "packs":
+                        return {"ok": False, "err": "HTTP " + str(r.status_code)}
+                    out[name] = []
+                    continue
+                out[name] = r.json()
+            return out
         except Exception as e:
             return {"ok": False, "err": str(e)[:200]}
 
@@ -4130,7 +4231,7 @@ class HtmlApp:
                 params["q"] = query
             if rtype:
                 params["type"] = rtype
-            r = requests.get(self._ws_url("/api/search"), params=params, timeout=8, headers=self._ws_headers(), proxies=self._ws_proxies())
+            r = self._ws_call("GET", self._ws_url("/api/search"), params=params, timeout=8)
             if r.status_code >= 400:
                 return {"ok": False, "err": "HTTP " + str(r.status_code)}
             return {"ok": True, "results": r.json()}
@@ -4140,10 +4241,9 @@ class HtmlApp:
     def api_workshop_download(self, res_id, rtype, filename):
         import requests
         try:
-            kind = "cards" if rtype == "角色卡" else "worlds"
-            target_dir = self.save_dir if rtype == "角色卡" else self.world_dir
-            r = requests.get(self._ws_url("/api/" + kind + "/" + str(res_id)), timeout=30,
-                             headers=self._ws_headers(), proxies=self._ws_proxies())
+            kind, _folder, _icon = self._ws_kind(rtype)
+            target_dir = self._ws_local_dir(rtype)
+            r = self._ws_call("GET", self._ws_url("/api/" + kind + "/" + str(res_id)), timeout=30)
             if r.status_code >= 400:
                 return {"ok": False, "err": "HTTP " + str(r.status_code)}
             fname = (filename or (str(res_id) + ".json")).replace("..", "_")
@@ -4159,8 +4259,9 @@ class HtmlApp:
                 f.write(r.content)
             if rtype == "角色卡":
                 self._reload_roles()
-            else:
+            elif rtype == "世界卡":
                 self._reload_worlds()
+            # 世界卡包下载到 world_packs/ 后刻意不自动装进 worlds/：装哪几张是用户的选择
             return {"ok": True, "file": os.path.basename(dst)}
         except Exception as e:
             return {"ok": False, "err": str(e)[:200]}
@@ -4168,9 +4269,9 @@ class HtmlApp:
     def api_workshop_like(self, res_id, rtype):
         import requests
         try:
-            kind = "cards" if rtype == "角色卡" else "worlds"
-            r = requests.post(self._ws_url("/api/" + kind + "/" + str(res_id) + "/like"),
-                              timeout=8, headers=self._ws_headers(), proxies=self._ws_proxies())
+            kind, _folder, _icon = self._ws_kind(rtype)
+            r = self._ws_call("POST", self._ws_url("/api/" + kind + "/" + str(res_id) + "/like"),
+                              timeout=8)
             if r.status_code >= 400:
                 return {"ok": False, "err": "HTTP " + str(r.status_code)}
             return {"ok": True}
@@ -4180,9 +4281,8 @@ class HtmlApp:
     def api_workshop_delete(self, res_id, rtype):
         import requests
         try:
-            kind = "cards" if rtype == "角色卡" else "worlds"
-            r = requests.delete(self._ws_url("/api/" + kind + "/" + str(res_id)),
-                                timeout=8, headers=self._ws_headers(), proxies=self._ws_proxies())
+            kind, _folder, _icon = self._ws_kind(rtype)
+            r = self._ws_call("DELETE", self._ws_url("/api/" + kind + "/" + str(res_id)), timeout=8)
             if r.status_code >= 400:
                 return {"ok": False, "err": "HTTP " + str(r.status_code)}
             return {"ok": True}
@@ -4192,16 +4292,18 @@ class HtmlApp:
     def api_workshop_upload(self, rtype, name):
         import requests
         try:
-            target_dir = self.save_dir if rtype == "角色卡" else self.world_dir
+            kind, _folder, _icon = self._ws_kind(rtype)
+            target_dir = self._ws_local_dir(rtype)
             fname = self._safe_name(name) + ".json"
             path = os.path.join(target_dir, fname)
             if not os.path.isfile(path):
                 return {"ok": False, "err": "本地文件不存在：" + fname}
             with open(path, "rb") as f:
-                r = requests.post(
-                    self._ws_url("/api/cards/upload" if rtype == "角色卡" else "/api/worlds/upload"),
-                    files={"file": (fname, f, "application/json")}, data={"name": name},
-                    timeout=30, headers=self._ws_headers(), proxies=self._ws_proxies())
+                raw = f.read()      # 先读进内存：换通道重试时文件句柄已到末尾，必须能重发
+            r = self._ws_call(
+                "POST", self._ws_url("/api/" + kind + "/upload"),
+                files={"file": (fname, raw, "application/json")}, data={"name": name},
+                timeout=30)
             if r.status_code >= 400:
                 return {"ok": False, "err": "HTTP " + str(r.status_code)}
             return {"ok": True, "message": r.text[:200]}
@@ -4209,7 +4311,7 @@ class HtmlApp:
             return {"ok": False, "err": str(e)[:200]}
 
     def api_workshop_preview(self, rtype, filename):
-        target_dir = self.save_dir if rtype == "角色卡" else self.world_dir
+        target_dir = self._ws_local_dir(rtype)
         filename = os.path.basename((filename or "").replace("..", "_"))
         path = os.path.join(target_dir, filename)
         if not os.path.isfile(path):
@@ -4227,7 +4329,7 @@ class HtmlApp:
 
     def api_workshop_export(self, rtype, filename):
         """本地文件导出到用户选择的位置"""
-        target_dir = self.save_dir if rtype == "角色卡" else self.world_dir
+        target_dir = self._ws_local_dir(rtype)
         filename = os.path.basename((filename or "").replace("..", "_"))
         src = os.path.join(target_dir, filename)
         if not os.path.isfile(src):
@@ -4251,8 +4353,7 @@ class HtmlApp:
         """拉取工坊插件列表 + 本地已安装插件名（标记用）"""
         import requests
         try:
-            r = requests.get(self._ws_url("/api/plugins/list"), timeout=8,
-                             headers=self._ws_headers(), proxies=self._ws_proxies())
+            r = self._ws_call("GET", self._ws_url("/api/plugins/list"), timeout=8)
             if r.status_code >= 400:
                 return {"ok": False, "err": "HTTP " + str(r.status_code)}
             plugins = r.json()
@@ -4270,14 +4371,12 @@ class HtmlApp:
         """下载插件到 plugins/ 目录并热加载"""
         import requests
         try:
-            r = requests.get(self._ws_url("/api/plugins/" + str(plugin_id)), timeout=30,
-                             headers=self._ws_headers(), proxies=self._ws_proxies())
+            r = self._ws_call("GET", self._ws_url("/api/plugins/" + str(plugin_id)), timeout=30)
             if r.status_code >= 400:
                 return {"ok": False, "err": "HTTP " + str(r.status_code)}
             info = None
             try:
-                lr = requests.get(self._ws_url("/api/plugins/list"), timeout=8,
-                                  headers=self._ws_headers(), proxies=self._ws_proxies())
+                lr = self._ws_call("GET", self._ws_url("/api/plugins/list"), timeout=8)
                 if lr.status_code < 400:
                     info = next((p for p in lr.json() if str(p.get("id")) == str(plugin_id)), None)
             except Exception:
@@ -4300,7 +4399,7 @@ class HtmlApp:
             return {"ok": False, "err": str(e)[:200]}
 
     def api_workshop_delete_local(self, rtype, filename):
-        target_dir = self.save_dir if rtype == "角色卡" else self.world_dir
+        target_dir = self._ws_local_dir(rtype)
         filename = os.path.basename((filename or "").replace("..", "_"))
         path = os.path.join(target_dir, filename)
         if not os.path.isfile(path):
@@ -4309,7 +4408,7 @@ class HtmlApp:
             os.remove(path)
             if rtype == "角色卡":
                 self._reload_roles()
-            else:
+            elif rtype == "世界卡":
                 self._reload_worlds()
             return {"ok": True}
         except Exception as e:
@@ -4321,6 +4420,8 @@ class HtmlApp:
                 target = self.save_dir
             elif which == "worlds":
                 target = self.world_dir
+            elif which == "packs":
+                target = self.pack_dir
             elif which == "plugins":
                 target = getattr(self.plugin_manager, "plugin_dir", None) or "plugins"
             else:

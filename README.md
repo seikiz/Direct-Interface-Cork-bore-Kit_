@@ -178,11 +178,11 @@ node install.js     # 或双击 install.bat
 | `plugins/` | 19 个插件 + `protocol/` 协议插件（共 20 个）；插件要界面统一走 `host_ui.py` |
 | `DICK-Android/` | 安卓端（Compose）：`core` / `app` / `plugins` / `tools` 四层 |
 | `DICK-Narrative/` | Compose Multiplatform 原生 GALGAME 播放器（EXE + APK），故事格式见其 README |
-| `tests/` | 77 个 Python 测试脚本（逐个独立运行）+ JS 图标回归 |
+| `tests/` | 82 个 Python 测试脚本（逐个独立运行）+ JS 图标回归 |
 | `tools/` | `gen_icons.py`（图标唯一真相 → 两端产物）、`gen_i18n.py`（文案唯一真相 → 两端产物）、`gen_parity.py`（生活/空间表与对拍基准）、`bump_version.py`（版号）、`gen_icon_preview.py`（图标总览页）、存档同步 |
 | `tree_weight.py` `salience.py` `lookahead.py` `ranker.py` `rubric.py` | 记忆权重与剪枝 / 有损遗忘曲线 / 前瞻展开 / 排序器 / 价值判据 |
 | `save_guard.py` `crypto_core.py` `dick_backup_tool.py` | 原子写+备份+校验自愈 / 加密备份容器 / 独立解密工具 |
-| `net.py` `trpg_server.py` | 创意工坊服务端 / 跑团房间服务端（Flask，独立启动） |
+| `net.py` `trpg_server.py` | 创意工坊服务端 / 跑团房间服务端（Flask，独立启动）；工坊的资源类型由 `TYPES` 注册表驱动，部署与自检见 [创意工坊服务器部署.md](创意工坊服务器部署.md) |
 
 ### 命令
 
@@ -194,7 +194,7 @@ python build_release.py --build                     # 清缓存 + 打包 + 自�
 python build_release.py                             # 已打包过：只做后处理/自检/打 zip
 
 # 测试
-python tests/test_*.py                              # 逐个跑（60 个脚本）
+python tests/test_*.py                              # 逐个跑（82 个脚本）
 node tests/test_icons.js                            # 前端图标系统回归（需 Node）
 powershell -File DICK-Android/selftest/run.ps1      # 安卓自检（TextGuard + 机制状态重置 + 生活/空间对拍）
 python tools/gen_parity.py --check                 # 手机端的表/对拍基准是不是最新的（CI 也跑这条）

@@ -26,6 +26,11 @@ def check(c, m):
 tmp = tempfile.mkdtemp(prefix="dick_test_")
 html_app.BASE_DIR = tmp
 app = html_app.HtmlApp()
+# 这个测试必须是**自洽**的：勾选角色时会去工坊服务器拉"该角色最新进度"，
+# 而本机 workshop_config.json 里配了公网工坊 → 测试会拉回上一次跑测试推上去的
+# 「测试君」存档（15 个节点），窗口就不再是空的，断言随机红。
+# 测试不联网，进度同步一律关掉。
+app._ws_sync_enabled = lambda: False
 
 def conv_msgs():
     return [m for m in app.api_state()["messages"] if m["kind"] in ("user", "ai")]

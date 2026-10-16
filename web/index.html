@@ -568,6 +568,7 @@ button .ic{ margin-right:2px; }
       <div class="ws-cols">
         <div class="ws-col"><div class="section-label">📂 角色卡</div><select id="wsLocalRoles" size="10"></select></div>
         <div class="ws-col"><div class="section-label">🌍 世界卡</div><select id="wsLocalWorlds" size="10"></select></div>
+        <div class="ws-col"><div class="section-label">📦 世界卡包</div><select id="wsLocalPacks" size="10"></select></div>
       </div>
       <div class="field"><label id="wsPrevLabel">预览</label><pre id="wsPreview" style="background:var(--bg);padding:8px;border-radius:8px;max-height:130px;overflow:auto;font-size:11px;white-space:pre-wrap"></pre></div>
       <div class="row">
@@ -5053,6 +5054,7 @@ function wsLoadLocal() {
     }
     var rl = document.getElementById('wsLocalRoles');
     var wl = document.getElementById('wsLocalWorlds');
+    var pl = document.getElementById('wsLocalPacks');
     rl.innerHTML = '';
     (s.local_roles || []).forEach(function (f) {
       var o = document.createElement('option'); o.value = f; o.textContent = f.replace('.json', ''); rl.appendChild(o);
@@ -5061,6 +5063,12 @@ function wsLoadLocal() {
     (s.local_worlds || []).forEach(function (f) {
       var o = document.createElement('option'); o.value = f; o.textContent = f.replace('.json', ''); wl.appendChild(o);
     });
+    if (pl) {
+      pl.innerHTML = '';
+      (s.local_packs || []).forEach(function (f) {
+        var o = document.createElement('option'); o.value = f; o.textContent = f.replace('.json', ''); pl.appendChild(o);
+      });
+    }
   }).catch(function () {});
 }
 
@@ -5098,7 +5106,7 @@ function wsFillOnline(list) {
     card.className = 'ws-card';
     card.style.cursor = 'pointer';
     card.innerHTML =
-      '<div class="ws-card-top"><span class="ws-card-name">' + (r.type === '角色卡' ? '🎭 ' : '🌍 ') + escapeHtml(r.name || '') + '</span>' +
+      '<div class="ws-card-top"><span class="ws-card-name">' + (r.type === '角色卡' ? '🎭 ' : (r.type === '世界卡包' ? '📦 ' : '🌍 ')) + escapeHtml(r.name || '') + '</span>' +
       '<span class="ws-card-meta">' + escapeHtml(r.author || '?') + ' · ↓' + (r.downloads || 0) + ' · ❤' + (r.likes || 0) + '</span></div>' +
       (r.description ? '<div class="ws-card-desc">' + escapeHtml(String(r.description).slice(0, 60)) + '</div>' : '');
     card.onclick = function () {
@@ -5179,10 +5187,13 @@ function wsRefreshOnline() {
   wsSetStatus('加载中...');
   jobWait('workshop.list', []).then(function (r) {
     if (r && r.ok) {
-      var cards = (r.cards || []).map(function (x) { return { id: x.id, name: x.name, author: x.author, downloads: x.downloads, likes: x.likes, tags: x.tags, type: '角色卡', original_name: x.original_name }; });
-      var worlds = (r.worlds || []).map(function (x) { return { id: x.id, name: x.name, author: x.author, downloads: x.downloads, likes: x.likes, tags: x.tags, type: '世界卡', original_name: x.original_name }; });
-      wsFillOnline(cards.concat(worlds));
-      wsSetStatus('共 ' + (cards.length + worlds.length) + ' 个作品');
+      var mk = function (arr, type) {
+        return (arr || []).map(function (x) { return { id: x.id, name: x.name, author: x.author, downloads: x.downloads, likes: x.likes, tags: x.tags, type: type, original_name: x.original_name }; });
+      };
+      var all = mk(r.cards, '角色卡').concat(mk(r.worlds, '世界卡')).concat(mk(r.packs, '世界卡包'));
+      wsFillOnline(all);
+      wsSetStatus('共 ' + all.length + ' 个作品'
+        + (r.server_old ? '（服务器为旧版，无世界卡包）' : ''));
     } else {
       wsFillOnline([]);
       wsSetStatus('❌ ' + ((r && r.err) || '加载失败'));
@@ -5194,13 +5205,14 @@ document.getElementById('btnWorkshop').onclick = function () {
   document.getElementById('wsModal').classList.add('open');
   wsSwitchTab('local');
   wsLoadLocal();
-  // 自动检测代理：代理框为空时尝试自动填写
+  // 代理探测：只提示本机有哪些代理，**不自动填入**。
+  // 系统/本机代理常把稍大的上传包体截断（实测传 1.3KB 请求体经 127.0.0.1:7890 得 502，
+  // 同一份文件直连 201），所以默认直连，只有用户明确要代理时才走它。
   var px = document.getElementById('wsProxyInput');
   if (px && !px.value.trim() && pywebview.api.workshop_detect_proxy) {
     pywebview.api.workshop_detect_proxy().then(function (r) {
       if (r && r.ok && r.found && r.found.length) {
-        px.value = r.found[0].url;
-        wsSetStatus('🛰️ 已自动检测到代理: ' + r.found[0].label);
+        wsSetStatus('🛰️ 直连优先；本机检测到 ' + r.found[0].url + '（要走代理再填进上面那栏）');
       }
     }).catch(function () {});
   }
@@ -7714,6 +7726,7 @@ document.addEventListener('keydown', function (e) {
 });
 document.getElementById('wsLocalRoles').onchange = function () { if (this.value) wsShowLocalPreview('角色卡', this.value); };
 document.getElementById('wsLocalWorlds').onchange = function () { if (this.value) wsShowLocalPreview('世界卡', this.value); };
+document.getElementById('wsLocalPacks').onchange = function () { if (this.value) wsShowLocalPreview('世界卡包', this.value); };
 document.getElementById('wsExportBtn').onclick = function () {
   if (!wsCurLocal) { alert('先在列表里选一个文件'); return; }
   pywebview.api.workshop_export(wsCurLocal.rtype, wsCurLocal.filename).then(function (r) {
@@ -7722,7 +7735,8 @@ document.getElementById('wsExportBtn').onclick = function () {
 };
 document.getElementById('wsOpenBtn').onclick = function () {
   if (!wsCurLocal) { alert('先在列表里选一个文件'); return; }
-  pywebview.api.workshop_open_folder(wsCurLocal.rtype === '角色卡' ? 'roles' : 'worlds').then(function () {});
+  var folder = wsCurLocal.rtype === '角色卡' ? 'roles' : (wsCurLocal.rtype === '世界卡包' ? 'packs' : 'worlds');
+  pywebview.api.workshop_open_folder(folder).then(function () {});
 };
 document.getElementById('wsLocalDelBtn').onclick = function () {
   if (!wsCurLocal) { alert('先在列表里选一个文件'); return; }

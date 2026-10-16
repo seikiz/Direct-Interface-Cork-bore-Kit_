@@ -1,5 +1,10 @@
 # -*- coding: utf-8 -*-
-"""net.py 内置代理通道（/relay）端到端测试：本地回显目标 ← 转发。"""
+"""net.py 内置代理通道（/relay）端到端测试：本地回显目标 ← 转发。
+
+注意：/relay **默认关闭**（客户端已停用中转，开着等于开放代理），
+所以这里显式把开关打开再测 —— 测的是"开了之后转发还对不对"，
+"默认关着"由 test_workshop_server.py 的 ⑨ 守着。
+"""
 import sys, os, json, threading, base64, http.server, socketserver
 
 sys.stdout.reconfigure(encoding="utf-8")
@@ -7,6 +12,8 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
 sys.path.insert(0, ROOT)
 import net  # 启动 Flask app 定义
+
+net.RELAY_ON = True      # 打开中转开关（默认关）
 
 ok = 0
 bad = 0

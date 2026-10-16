@@ -2,6 +2,7 @@ package com.dick.core
 
 import java.io.File
 import java.net.HttpURLConnection
+import java.net.Proxy
 import java.net.URL
 import java.net.URLEncoder
 
@@ -58,7 +59,8 @@ object Workshop {
 
     private fun healthy(base: String): Boolean {
         return try {
-            val conn = URL(base.trimEnd('/') + "/api/health").openConnection() as HttpURLConnection
+            // 探活也直连：判定"这台服务器在不在"不该被系统代理干扰
+            val conn = URL(base.trimEnd('/') + "/api/health").openConnection(Proxy.NO_PROXY) as HttpURLConnection
             conn.connectTimeout = 2500
             conn.readTimeout = 2500
             if (apiKey.isNotBlank()) conn.setRequestProperty("X-API-Key", apiKey)
@@ -128,7 +130,10 @@ object Workshop {
     // ---------- 跑团主机 HTTP（对 trpg_server 的主机地址请求） ----------
     private fun httpAt(base: String, path: String, method: String = "GET", body: ByteArray? = null, contentType: String? = null, timeoutMs: Int = 8000): Pair<Int, ByteArray> {
         val url = URL(base.trimEnd('/') + path)
-        val conn = url.openConnection() as HttpURLConnection
+        // 直连：手机若在 Wi-Fi 里填了代理，系统代理会把稍大的请求体截断
+        // （桌面端实测 1.3KB 包体经代理得到 502，直连 201）。跑团主机是局域网地址，更不该绕代理。
+        // 用 openConnection(Proxy.NO_PROXY) 而不是 setProxy：后者在 Android 上不保证被采纳。
+        val conn = url.openConnection(Proxy.NO_PROXY) as HttpURLConnection
         conn.requestMethod = method
         conn.connectTimeout = timeoutMs; conn.readTimeout = timeoutMs
         if (body != null) { conn.doOutput = true; if (contentType != null) conn.setRequestProperty("Content-Type", contentType); conn.outputStream.use { it.write(body) } }
@@ -258,7 +263,8 @@ object Workshop {
                 URLEncoder.encode(k, "UTF-8") + "=" + URLEncoder.encode(v, "UTF-8")
             }
         }
-        val conn = urlFor(u).openConnection() as HttpURLConnection
+        // 直连优先：理由同 httpAt —— 系统代理会把较大的上传体截断成 502
+        val conn = urlFor(u).openConnection(Proxy.NO_PROXY) as HttpURLConnection
         conn.requestMethod = method
         conn.connectTimeout = timeoutMs
         conn.readTimeout = timeoutMs
