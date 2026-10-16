@@ -214,17 +214,30 @@ def main():
         check(u"未开 RELAY 时 /relay 返回 404",
               c4.get("/relay/aHR0cHM6Ly9leGFtcGxlLmNvbQ").status_code == 404)
 
-        print(u"\n== ⑨之二 文件被占用时删除不能炸（Windows：正在下载 / 杀软锁） ==")
+        print(u"\n== ⑨之二 文件删不掉时不能炸（Windows 文件锁 / 杀软占用） ==")
         # 造一张只读的卡：Windows 上 os.r<seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌emove 会失败，而改名挪走仍然可行 ——
         # 这条守的就是"删除请求别整个 500、索引和文件别对不上"。
+        # chmod(0o444) 那种造法只在 Windows 上成立：Linux/macOS 上文件权限不挡 unlink
+        # （目录权限才挡），CI 的 Linux 腿就跑不到兜底分支，断言反而红。
+        # 改成显式让 os.remove 抛 OSError —— 故障是模拟的，兜底逻辑是真的，各平台同一条路径。
         ro = c4.post("/api/cards/upload",
-                     data={"file": (io.BytesIO(json.dumps({"name": u"只读卡"}).encode("utf-8")), "ro.json")},
+                     data={"file": (io.BytesIO(json.dumps({"name": u"锁定卡"}).encode("utf-8")), "ro.json")},
                      content_type="multipart/form-data").get_json()
         entry = [x for x in c4.get("/api/cards/list").get_json() if x["id"] == ro["id"]][0]
         target = os.path.join(net.CARDS_DIR, entry["filename"])
-        os.chmod(target, 0o444)
-        d2 = c4.delete("/api/cards/" + ro["id"])
-        check(u"只读文件也能删掉（不 500）", d2.status_code == 200, str(d2.status_code) + str(d2.get_json()))
+        _real_remove = os.remove
+
+        def _deny_remove(path, *a, **kw):
+            if os.path.basename(str(path)) == os.path.basename(target):
+                raise PermissionError(13, "locked (test)")
+            return _real_remove(path, *a, **kw)
+
+        os.remove = _deny_remove
+        try:
+            d2 = c4.delete("/api/cards/" + ro["id"])
+        finally:
+            os.remove = _real_remove
+        check(u"删不掉也不 500", d2.status_code == 200, str(d2.status_code) + str(d2.get_json()))
         check(u"提示里说明文件被挪走了", u"占用" in json.dumps(d2.get_json(), ensure_ascii=False),
               str(d2.get_json()))
         check(u"索引里已经没有它", all(x["id"] != ro["id"] for x in c4.get("/api/cards/list").get_json()))
