@@ -57,6 +57,10 @@ FEATURES = {
     "图标·随包字体": "fonts/MaterialSymbolsOutlined.woff2",
     "图标·名字表脚本": "icons.js",
     "图标·字体渲染样式": ".ms{",
+    # 2026-12 工坊卡片外显：预览改成结构化卡片（字段表 = design/card_fields.json →
+    # web/card_fields.js）。这两串缺任一，打进去的就是旧前端（还在把整份 JSON 当代码显示）。
+    "工坊·卡片字段表": "DICK_CARD_FIELDS",
+    "工坊·结构化预览样式": "ws-cardview",
 }
 
 
@@ -357,6 +361,7 @@ def step_selfcheck():
         ("app_version.py", "版号读取：缺了窗口标题/欢迎语退回兜底版号（与 version.json 不一致）"),
         ("version.json", "版号的唯一真相：缺了 app_version 读不到号"),
         ("web/icons.js", "图标名字表（由 icons/icons.json 生成）：缺了界面上的 emoji 一个都换不成图标"),
+        ("web/card_fields.js", "卡片外显字段表（由 design/card_fields.json 生成）：缺了工坊预览退回原文"),
         ("web/styles", "样式已抽到 web/styles/（阶段1）：缺了整个界面没有任何自定义样式，等于裸 HTML"),
         ("web/screens", "屏的 DOM 片段（阶段2）：缺了围棋/生图/裁剪/表盘/编辑消息这几屏的界面直接不出现"),
         ("web/js/screens", "屏的 JS 模块（阶段2）：缺了上面几屏的按钮全是死的（有界面没行为）"),

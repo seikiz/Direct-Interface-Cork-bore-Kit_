@@ -503,11 +503,20 @@ object Workshop {
     fun localWorlds(): List<String> =
         AppEnv.worldsDir().listFiles()?.filter { it.isFile && it.name.endsWith(".json") && !it.name.startsWith("_tree_") && !it.name.startsWith(".") }?.map { it.name }?.sorted() ?: emptyList()
 
+    /** 预览用原文。
+     *
+     *  2026-12：上限从 6000 提到 512KB —— 已经够放下任何一张卡（实测最大的世界卡 131KB）。
+     *  原来的 6000 是给「原样显示一段文本」用的；现在工坊把它当**结构化卡片**解析
+     *  （ui/screens/workshop/CardPreview.kt），截断会让 JSON 解析失败、整张卡退化成原文。
+     */
     fun preview(type: String, filename: String): String {
         val targetDir = if (type == "角色卡") AppEnv.savesDir() else AppEnv.worldsDir()
         val f = File(targetDir, File(filename).name)
-        return if (f.isFile) f.readText(Charsets.UTF_8).take(6000) else ""
+        return if (f.isFile) f.readText(Charsets.UTF_8).take(PREVIEW_MAX_CHARS) else ""
     }
+
+    /** 预览原文上限（字符）。够大才能整份解析；再大就是异常文件了。 */
+    private const val PREVIEW_MAX_CHARS = 512 * 1024
 
     fun deleteLocal(type: String, filename: String): Boolean {
         val targetDir = if (type == "角色卡") AppEnv.savesDir() else AppEnv.worldsDir()

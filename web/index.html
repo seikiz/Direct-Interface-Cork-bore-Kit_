@@ -606,6 +606,11 @@
        数据取自 icons.js 的 DICK_ICONS_SCOPED。这里加载它是为了让任意面板都能用作用域，
        与全局表互不影响 —— 见下面 _ICON_SKIP 里的 [data-icon-scope]。 -->
   <script src="icon_scope.js"></script>
+  <!-- 卡片外显字段表（web/card_fields.js）：唯一真相 design/card_fields.json，
+       由 tools/gen_card_fields.py 生成；工坊「本地」预览按它把卡 JSON 摆成一张卡
+       （字段清单/折叠阈值都在这里，安卓端 CardFields.kt 是它的镜像）。
+       只提供数据与标签函数，不碰 DOM，所以排在屏模块之前加载即可。 -->
+  <script src="card_fields.js"></script>
 <!-- ===== 屏的骨架（阶段 2）：状态 / 路由 / 各屏模块 =====
      顺序不能改：state.js 给 DICK.state/DICK.bus，router.js 给"片段注入 + 挂载"，
      各屏模块只定义和注册（自己调 DICK.router.register），最后 boot() 一次性注入并 mount。

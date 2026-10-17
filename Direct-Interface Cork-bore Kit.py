@@ -4340,6 +4340,9 @@ class HtmlApp:
             return {"ok": False, "err": str(e)[:200]}
 
     def api_workshop_preview(self, rtype, filename):
+        # 2026-12：上限 8000 → 512KB。前端已经改成**结构化卡片**（web/js/screens/ws.js 按
+        # design/card_fields.json 的分区表排版），截断会让 JSON 解析失败、整张卡退化成原文。
+        # 实测最大的世界卡 131KB，512KB 够放下任何一张卡，又不会被异常大文件拖住。
         target_dir = self._ws_local_dir(rtype)
         filename = os.path.basename((filename or "").replace("..", "_"))
         path = os.path.join(target_dir, filename)
@@ -4347,11 +4350,7 @@ class HtmlApp:
             return {"ok": False, "err": "文件不存在"}
         try:
             with open(path, "r", encoding="utf-8") as f:
-                text = f.read(8000)
-            try:
-                json.loads(text)
-            except Exception:
-                pass
+                text = f.read(512 * 1024)
             return {"ok": True, "preview": text}
         except Exception as e:
             return {"ok": False, "err": str(e)}

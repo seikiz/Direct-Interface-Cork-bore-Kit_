@@ -239,11 +239,245 @@
         "desktop_web"
       ]
     },
+    "card_collapse": {
+      "zh": "收起",
+      "en": "Collapse",
+      "ja": "折りたたむ",
+      "used_by": [
+        "desktop_web",
+        "android"
+      ]
+    },
+    "card_count_list": {
+      "zh": "列表 · %d 项",
+      "en": "List · %d items",
+      "ja": "一覧・%d 件",
+      "used_by": [
+        "desktop_web",
+        "android"
+      ]
+    },
+    "card_count_obj": {
+      "zh": "对象 · %d 项",
+      "en": "Object · %d items",
+      "ja": "オブジェクト・%d 件",
+      "used_by": [
+        "desktop_web",
+        "android"
+      ]
+    },
+    "card_expand": {
+      "zh": "展开",
+      "en": "Expand",
+      "ja": "展開",
+      "used_by": [
+        "desktop_web",
+        "android"
+      ]
+    },
     "card_export_fail": {
       "zh": "⚠️ 导出失败：",
       "en": "⚠️ Export failed",
       "ja": "⚠️ 書き出しに失敗",
       "used_by": [
+        "android"
+      ]
+    },
+    "card_f_age": {
+      "zh": "年龄",
+      "en": "Age",
+      "ja": "年齢",
+      "used_by": [
+        "desktop_web",
+        "android"
+      ]
+    },
+    "card_f_appearance": {
+      "zh": "外貌",
+      "en": "Appearance",
+      "ja": "外見",
+      "used_by": [
+        "desktop_web",
+        "android"
+      ]
+    },
+    "card_f_author": {
+      "zh": "作者",
+      "en": "Author",
+      "ja": "作成者",
+      "used_by": [
+        "desktop_web",
+        "android"
+      ]
+    },
+    "card_f_background": {
+      "zh": "背景",
+      "en": "Background",
+      "ja": "背景設定",
+      "used_by": [
+        "desktop_web",
+        "android"
+      ]
+    },
+    "card_f_birthday": {
+      "zh": "生日",
+      "en": "Birthday",
+      "ja": "誕生日",
+      "used_by": [
+        "desktop_web",
+        "android"
+      ]
+    },
+    "card_f_created_at": {
+      "zh": "创建时间",
+      "en": "Created",
+      "ja": "作成日時",
+      "used_by": [
+        "desktop_web",
+        "android"
+      ]
+    },
+    "card_f_era": {
+      "zh": "年代",
+      "en": "Era",
+      "ja": "時代",
+      "used_by": [
+        "desktop_web",
+        "android"
+      ]
+    },
+    "card_f_era_kind": {
+      "zh": "年代类型",
+      "en": "Era kind",
+      "ja": "時代区分",
+      "used_by": [
+        "desktop_web",
+        "android"
+      ]
+    },
+    "card_f_gender": {
+      "zh": "性别",
+      "en": "Gender",
+      "ja": "性別",
+      "used_by": [
+        "desktop_web",
+        "android"
+      ]
+    },
+    "card_f_height": {
+      "zh": "身高",
+      "en": "Height",
+      "ja": "身長",
+      "used_by": [
+        "desktop_web",
+        "android"
+      ]
+    },
+    "card_f_mes_example": {
+      "zh": "对话示例",
+      "en": "Example dialogue",
+      "ja": "会話例",
+      "used_by": [
+        "desktop_web",
+        "android"
+      ]
+    },
+    "card_f_notes": {
+      "zh": "备注",
+      "en": "Notes",
+      "ja": "メモ",
+      "used_by": [
+        "desktop_web",
+        "android"
+      ]
+    },
+    "card_f_occupation": {
+      "zh": "职业",
+      "en": "Occupation",
+      "ja": "職業",
+      "used_by": [
+        "desktop_web",
+        "android"
+      ]
+    },
+    "card_f_personality": {
+      "zh": "性格",
+      "en": "Personality",
+      "ja": "人柄・性格",
+      "used_by": [
+        "desktop_web",
+        "android"
+      ]
+    },
+    "card_f_race": {
+      "zh": "种族",
+      "en": "Race",
+      "ja": "種族",
+      "used_by": [
+        "desktop_web",
+        "android"
+      ]
+    },
+    "card_f_region": {
+      "zh": "地区",
+      "en": "Region",
+      "ja": "地域",
+      "used_by": [
+        "desktop_web",
+        "android"
+      ]
+    },
+    "card_f_space": {
+      "zh": "空间",
+      "en": "Place",
+      "ja": "空間",
+      "used_by": [
+        "desktop_web",
+        "android"
+      ]
+    },
+    "card_f_speech": {
+      "zh": "说话风格",
+      "en": "Speech style",
+      "ja": "話し方",
+      "used_by": [
+        "desktop_web",
+        "android"
+      ]
+    },
+    "card_f_system_prompt": {
+      "zh": "设定正文",
+      "en": "Setting text",
+      "ja": "設定本文",
+      "used_by": [
+        "desktop_web",
+        "android"
+      ]
+    },
+    "card_f_tags": {
+      "zh": "标签",
+      "en": "Tags",
+      "ja": "タグ",
+      "used_by": [
+        "desktop_web",
+        "android"
+      ]
+    },
+    "card_f_time_period": {
+      "zh": "时间",
+      "en": "Time period",
+      "ja": "時期",
+      "used_by": [
+        "desktop_web",
+        "android"
+      ]
+    },
+    "card_f_version": {
+      "zh": "版本",
+      "en": "Version",
+      "ja": "バージョン",
+      "used_by": [
+        "desktop_web",
         "android"
       ]
     },
@@ -260,6 +494,87 @@
       "en": "Imported character: ",
       "ja": "キャラを読み込みました：",
       "used_by": [
+        "android"
+      ]
+    },
+    "card_no": {
+      "zh": "否",
+      "en": "No",
+      "ja": "いいえ",
+      "used_by": [
+        "desktop_web",
+        "android"
+      ]
+    },
+    "card_sec_era": {
+      "zh": "年代 / 空间",
+      "en": "Era & place",
+      "ja": "時代・空間",
+      "used_by": [
+        "desktop_web",
+        "android"
+      ]
+    },
+    "card_sec_greeting": {
+      "zh": "开场白",
+      "en": "Opening",
+      "ja": "冒頭の台詞",
+      "used_by": [
+        "desktop_web",
+        "android"
+      ]
+    },
+    "card_sec_other": {
+      "zh": "其它信息",
+      "en": "Other info",
+      "ja": "その他の情報",
+      "used_by": [
+        "desktop_web",
+        "android"
+      ]
+    },
+    "card_sec_persona": {
+      "zh": "性格 / 外貌",
+      "en": "Personality & appearance",
+      "ja": "性格・外見",
+      "used_by": [
+        "desktop_web",
+        "android"
+      ]
+    },
+    "card_sec_profile": {
+      "zh": "基本信息",
+      "en": "Basic info",
+      "ja": "基本情報",
+      "used_by": [
+        "desktop_web",
+        "android"
+      ]
+    },
+    "card_sec_rules": {
+      "zh": "规则",
+      "en": "Rules",
+      "ja": "ルール",
+      "used_by": [
+        "desktop_web",
+        "android"
+      ]
+    },
+    "card_sec_setting": {
+      "zh": "角色设定",
+      "en": "Character setting",
+      "ja": "キャラクター設定",
+      "used_by": [
+        "desktop_web",
+        "android"
+      ]
+    },
+    "card_yes": {
+      "zh": "是",
+      "en": "Yes",
+      "ja": "はい",
+      "used_by": [
+        "desktop_web",
         "android"
       ]
     },

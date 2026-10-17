@@ -1,5 +1,6 @@
 package com.dick.app
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -56,17 +57,24 @@ fun DickSurfaceTone.color(): Color {
  * 卡片：一个带圆角与底色的 Surface。
  * `radius` 是**圆角像素值**（8/10/12.dp 是这里真实在用的三档），不是语义档位 ——
  * 保持调用点能逐字复刻搬家前的数值。
+ *
+ * `outline` / `outlineWidth`（2026-12 加）是**描边**，默认不画（null = 与加它之前逐像素一致）：
+ * 用户反馈工坊的列表项「看起来不像卡片」——纯底色在浅色主题下是白压白、在暗色下是一块灰。
+ * 需要「看得出是卡片」的地方传 `theme.line`，选中态传 `theme.palette.accent`。
  */
 @Composable
 fun DickCard(
     modifier: Modifier = Modifier,
     radius: Dp = 12.dp,
     tone: DickSurfaceTone = DickSurfaceTone.Surface,
+    outline: Color? = null,
+    outlineWidth: Dp = 1.dp,
     content: @Composable () -> Unit,
 ) {
     Surface(
         shape = RoundedCornerShape(radius),
         color = tone.color(),
+        border = outline?.let { BorderStroke(outlineWidth, it) },
         modifier = modifier,
         content = content,
     )

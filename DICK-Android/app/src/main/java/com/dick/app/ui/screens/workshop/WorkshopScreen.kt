@@ -105,6 +105,10 @@ fun WorkshopScreen(vm: ChatViewModel, acts: WorkshopActions) {
                     DickTag(wsStatus, fontSize = 11.sp, iconSize = 12.dp)
                 }
                 if (!wsTabOnline && !wsTabPlugin) {
+                    // 本地文件列表 = **白底卡片**（2026-12）：底色只从令牌来
+                    //   · 未选：surface（浅色 = 白）+ line 描边（不描边就是白压白，看不见卡片）
+                    //   · 选中：surface_2 + accent 描边（浅色主题下 surface_2 也是白，
+                    //     所以选中只能靠强调色描边认出来 —— 原来那整块灰底在浅色弹窗里最扎眼）
                     Row {
                         Column(Modifier.weight(1f)) {
                             DickTag("📂 角色卡", fontSize = 12.sp)
@@ -113,12 +117,14 @@ fun WorkshopScreen(vm: ChatViewModel, acts: WorkshopActions) {
                                 DickCard(
                                     radius = 8.dp,
                                     tone = if (sel) DickSurfaceTone.Surface2 else DickSurfaceTone.Surface,
+                                    outline = if (sel) theme.palette.accent else theme.line,
+                                    outlineWidth = if (sel) 2.dp else 1.dp,
                                     modifier = Modifier.fillMaxWidth().padding(vertical = 1.dp).clickable {
                                         wsLocalType = "角色卡"; wsLocalIdx = i
                                         wsPreview = Workshop.preview("角色卡", f)
                                     },
                                 ) {
-                                    Text(f.removeSuffix(".json"), fontSize = 12.sp, modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp), maxLines = 1)
+                                    Text(f.removeSuffix(".json"), fontSize = 12.sp, color = theme.text, modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp), maxLines = 1)
                                 }
                             }
                         }
@@ -129,19 +135,33 @@ fun WorkshopScreen(vm: ChatViewModel, acts: WorkshopActions) {
                                 DickCard(
                                     radius = 8.dp,
                                     tone = if (sel) DickSurfaceTone.Surface2 else DickSurfaceTone.Surface,
+                                    outline = if (sel) theme.palette.accent else theme.line,
+                                    outlineWidth = if (sel) 2.dp else 1.dp,
                                     modifier = Modifier.fillMaxWidth().padding(vertical = 1.dp).clickable {
                                         wsLocalType = "世界卡"; wsLocalIdx = i
                                         wsPreview = Workshop.preview("世界卡", f)
                                     },
                                 ) {
-                                    Text(f.removeSuffix(".json"), fontSize = 12.sp, modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp), maxLines = 1)
+                                    Text(f.removeSuffix(".json"), fontSize = 12.sp, color = theme.text, modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp), maxLines = 1)
                                 }
                             }
                         }
                     }
                     if (wsPreview.isNotBlank()) {
-                        DickCard(radius = 10.dp, modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp)) {
-                            Text(wsPreview, fontSize = 11.sp, color = theme.text, modifier = Modifier.padding(10.dp), maxLines = 10)
+                        // 结构化卡片（CardPreview.kt）：字段清单来自 CardFields（唯一真相
+                        // design/card_fields.json），这里**不再**把整份 JSON 原样画出来。
+                        DickCard(
+                            radius = 10.dp,
+                            tone = DickSurfaceTone.Surface,
+                            outline = theme.line,
+                            modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
+                        ) {
+                            WsCardPreview(
+                                text = wsPreview,
+                                fileName = WorkshopState.selectedLocalFile(
+                                    wsLocalType, wsLocalIdx, wsLocalRoles, wsLocalWorlds) ?: "",
+                                modifier = Modifier.padding(10.dp),
+                            )
                         }
                     }
                     Row {
@@ -236,6 +256,8 @@ fun WorkshopScreen(vm: ChatViewModel, acts: WorkshopActions) {
                         DickCard(
                             radius = 12.dp,
                             tone = if (sel) DickSurfaceTone.Surface2 else DickSurfaceTone.Surface,
+                            outline = if (sel) theme.palette.accent else theme.line,
+                            outlineWidth = if (sel) 2.dp else 1.dp,
                             modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp).clickable { wsOnlineIdx = i },
                         ) {
                             Column(Modifier.padding(10.dp)) {
@@ -261,7 +283,12 @@ fun WorkshopScreen(vm: ChatViewModel, acts: WorkshopActions) {
                         val desc = selR.fields["description"]?.str() ?: ""
                         val created = selR.fields["created_at"]?.str() ?: ""
                         val preview = selR.fields["system_prompt_preview"]?.str() ?: ""
-                        DickCard(radius = 12.dp, modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+                        DickCard(
+                            radius = 12.dp,
+                            tone = DickSurfaceTone.Surface,
+                            outline = theme.line,
+                            modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                        ) {
                             Column(Modifier.padding(12.dp)) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     IconText(wsTypeIcon(t) + name, fontSize = 15.sp, fontWeight = FontWeight.Bold,
@@ -297,7 +324,8 @@ fun WorkshopScreen(vm: ChatViewModel, acts: WorkshopActions) {
                         }
                         DickCard(
                             radius = 10.dp,
-                            tone = DickSurfaceTone.Bubble,
+                            tone = DickSurfaceTone.Surface,
+                            outline = theme.line,
                             modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp),
                         ) {
                             Column(Modifier.padding(8.dp)) {

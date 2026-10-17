@@ -90,8 +90,387 @@ window.WsScreen = (function (global) {
   function wsShowLocalPreview(rtype, filename) {
     wsCurLocal = { rtype: rtype, filename: filename };
     pywebview.api.workshop_preview(rtype, filename).then(function (r) {
-      document.getElementById('wsPreview').textContent = (r && r.ok) ? r.preview : ((r && r.err) || '');
+      wsCardShow(r ? (r.ok ? r.preview : '') : '', filename,
+                 r && !r.ok ? (r.err || '') : '');
     });
+  }
+
+  // ================= 卡片外显：结构化预览 =================
+  /* 用户的反馈：「角色卡外显应该是结构化，而不是像现在一样像个代码，穿帮了」。
+   *
+   * 所以这里**不再把整份 JSON 塞进 <pre>**，而是按 design/card_fields.json 的分区表把它
+   * 摆成一张卡：标题 / 角色设定 / 性格·外貌 / 开场白 / 基本信息 / 年代·空间 / 规则 /
+   * 其它信息（两列）。字段清单与折叠阈值来自生成物 web/card_fields.js
+   * （window.DICK_CARD_FIELDS，由 tools/gen_card_fields.py 从同一份 json 生成，
+   * 安卓端 CardFields.kt 是它的镜像）——本文件只做渲染，**不硬编码字段名**。
+   *
+   * 三条硬规矩（tests/test_card_view.py 盯着）：
+   *   ① 不把 JSON 字符串化显示（没有 JSON.stringify / 没有 <pre>）；
+   *   ② 解析失败或不是 JSON → 显示原文，但用**正文样式**（不是等宽代码块）；
+   *   ③ 未知键一律进「其它信息」两列；数组/对象只报「列表 · N 项 / 对象 · N 项」，不打花括号。 */
+
+  var wsCardCur = null;          // 当前卡片模型（展开/收起只重画这个）
+  var wsCardOpen = {};           // 分区 id → 是否展开
+
+  function wsCardCfg() { return window.DICK_CARD_FIELDS || {}; }
+
+  /** 分区标签（生成物里展开成 T.<键> 字面量，文案只住 lang/strings.json） */
+  function wsCardLabel(id) {
+    try { return window.DICK_CARD_LABEL(id) || ''; } catch (e) { return ''; }
+  }
+
+  /** 字段标签；没登记的键返回空串（渲染器退回显示键名本身） */
+  function wsCardFieldLabel(key) {
+    try { return window.DICK_CARD_FIELD_LABEL(key) || ''; } catch (e) { return ''; }
+  }
+
+  /** 去掉字面 `\n` / `\t` 转义（卡片把换行存成两个字符），再掐掉行尾空白。 */
+  function wsCardNorm(v) {
+    var s = (v === null || v === undefined) ? '' : String(v);
+    s = s.replace(/\\r\\n/g, '\n').replace(/\\n/g, '\n').replace(/\\t/g, '\t');
+    return s.replace(/[ \t]+\n/g, '\n').replace(/\s+$/, '');
+  }
+
+  /** 正文 → 段落数组（空行分段；段内单换行保留）。 */
+  function wsCardParas(text) {
+    var t = wsCardNorm(text);
+    var blocks = t.split(/\n[ \t]*\n+/);
+    var out = [];
+    for (var i = 0; i < blocks.length; i++) {
+      var b = blocks[i].replace(/^\s+|\s+$/g, '');
+      if (b) out.push(b);
+    }
+    return out;
+  }
+
+  function wsCardLineCount(paras) {
+    var n = 0;
+    for (var i = 0; i < paras.length; i++) n += paras[i].split('\n').length;
+    return n;
+  }
+
+  /** 折叠：超过 collapseLines 行 → 只留攒够阈值的头几段。安卓端是同一套算法（逐行对齐）。 */
+  function wsCardVisible(paras) {
+    var limit = wsCardCfg().collapseLines || 8;
+    var total = wsCardLineCount(paras);
+    if (total <= limit) return { list: paras, more: false };
+    var out = [], n = 0;
+    for (var i = 0; i < paras.length; i++) {
+      if (n >= limit) break;
+      out.push(paras[i]);
+      n += paras[i].split('\n').length;
+    }
+    return { list: out, more: true };
+  }
+
+  /** 标量 → 文本；容器（数组/对象）返回 null（交给 wsCardSummary，绝不打花括号）。 */
+  function wsCardScalar(v) {
+    if (v === null || v === undefined) return null;
+    var t = typeof v;
+    if (t === 'string') return wsCardNorm(v);
+    if (t === 'number') return String(v);
+    if (t === 'boolean') return v ? (T.card_yes || 'Yes') : (T.card_no || 'No');
+    return null;
+  }
+
+  function wsCardSummary(v) {
+    if (Array.isArray(v)) return String(T.card_count_list || '%d').replace('%d', String(v.length));
+    if (v && typeof v === 'object') {
+      return String(T.card_count_obj || '%d').replace('%d', String(Object.keys(v).length));
+    }
+    return '';
+  }
+
+  function wsCardOneLine(s, max) {
+    var t = String(s).replace(/\s*\n\s*/g, ' ').replace(/\s+/g, ' ');
+    return t.length > (max || 0) ? (max ? t.slice(0, max) + '…' : t) : t;
+  }
+
+  /** 字符串里包着 JSON 的情况（世界卡包的 params.space 就是这么存的）→ 解出容器。
+   *  不这么做就得把 {"places":[{…}]} 原样摊在界面上 —— 那正是用户说的「像个代码，穿帮了」。 */
+  function wsCardJsonOf(text) {
+    var t = String(text === null || text === undefined ? '' : text).trim();
+    if (!t || (t.charAt(0) !== '{' && t.charAt(0) !== '[')) return null;
+    try {
+      var v = JSON.parse(t);
+      return (v && typeof v === 'object') ? v : null;
+    } catch (e) { return null; }
+  }
+
+  /** 界面值：标量照抄（压成一行）；容器报计数；字符串里包的 JSON 也按容器报计数。 */
+  function wsCardValueText(v, max) {
+    var sc = wsCardScalar(v);
+    if (sc === null) return wsCardSummary(v);
+    var inner = wsCardJsonOf(sc);
+    if (inner) return wsCardSummary(inner);
+    return wsCardOneLine(sc, max);
+  }
+
+  /** 点号路径取值：params.era → obj.params.era（世界卡的年代/空间住在 params 里）。 */
+  function wsCardGet(obj, path) {
+    var parts = String(path).split('.');
+    var cur = obj;
+    for (var i = 0; i < parts.length; i++) {
+      if (!cur || typeof cur !== 'object' || Array.isArray(cur)) return undefined;
+      if (!Object.prototype.hasOwnProperty.call(cur, parts[i])) return undefined;
+      cur = cur[parts[i]];
+    }
+    return cur;
+  }
+
+  function wsCardKV(path) { return wsCardFieldLabel(path) || path; }
+
+  /** 空白压平（只用来判重：同一段话在别的分区已经显示过，就不要再显示一遍）。 */
+  function wsCardFlat(s) { return String(s).replace(/\s+/g, ''); }
+
+  function wsCardSeen(seen, text) {
+    var flat = wsCardFlat(text);
+    for (var i = 0; i < seen.length; i++) {
+      if (seen[i].indexOf(flat) >= 0) return true;   // 这段是已显示内容的子串 → 重复
+    }
+    return false;
+  }
+
+  /** 一个分区：把同义键收进同一个块（body 按段、kv 两列、list 逐条）。 */
+  function wsCardCollect(obj, sec, seenBody) {
+    var cfg = wsCardCfg();
+    var kvMax = cfg.kvValueChars || 120;
+    var out = { id: sec.id, mode: sec.mode, blocks: [], rows: [] };
+    var seenLabel = {}, seenText = {};
+    var keys = sec.keys || [];
+    for (var i = 0; i < keys.length; i++) {
+      var path = keys[i];
+      var v = wsCardGet(obj, path);
+      if (v === undefined) continue;
+      if (sec.mode === 'body') {
+        var text = wsCardScalar(v);
+        if (!text || !text.replace(/\s/g, '')) continue;
+        if (seenText[text]) continue;       // system_prompt 与 description 同文时只留一份
+        if (wsCardFlat(text).length >= 12 && wsCardSeen(seenBody, text)) continue;
+        seenText[text] = 1;
+        seenBody.push(wsCardFlat(text));
+        out.blocks.push({ label: wsCardFieldLabel(path), paras: wsCardParas(text) });
+      } else if (sec.mode === 'list') {
+        var arr = Array.isArray(v) ? v : [v];
+        var items = [];
+        for (var j = 0; j < arr.length; j++) {
+          var s = wsCardScalar(arr[j]);
+          if (s === null) s = wsCardSummary(arr[j]);
+          s = s ? wsCardOneLine(s, 0) : '';
+          if (s) items.push(s);
+        }
+        if (items.length) out.blocks.push({ label: wsCardFieldLabel(path), items: items });
+      } else {
+        var sc = wsCardScalar(v);
+        var val = sc === null ? wsCardSummary(v) : wsCardOneLine(sc, kvMax);
+        if (!val) continue;
+        var lbl = wsCardKV(path);
+        if (seenLabel[lbl]) continue;       // params.era 与 era 同时存在时不留两行
+        seenLabel[lbl] = 1;
+        out.rows.push({ label: lbl, value: val });
+      }
+    }
+    return (out.blocks.length || out.rows.length) ? out : null;
+  }
+
+  /** 把一份卡 JSON 变成模型（纯数据，不碰 DOM）。 */
+  function wsCardModel(obj, fileName) {
+    var cfg = wsCardCfg();
+    var title = '';
+    var tk = cfg.titleKeys || [];
+    for (var i = 0; i < tk.length; i++) {
+      var tv = wsCardScalar(wsCardGet(obj, tk[i]));
+      if (tv && tv.replace(/\s/g, '')) { title = wsCardOneLine(tv, 80); break; }
+    }
+    if (!title) title = String(fileName || '').replace(/\.json$/i, '');
+
+    // 标题候选键算「已认领」：标题已经画在最上面了，再在「其它信息」里列一遍「name: xxx」是噪声
+    var claimed = {};
+    for (var t0 = 0; t0 < tk.length; t0++) claimed[tk[t0]] = 1;
+    var sections = [];
+    var seenBody = [];        // 已显示的正文（空白压平）：DICK 卡把同一段话既存进 system_prompt
+    var secs = cfg.sections || [];
+    for (var s = 0; s < secs.length; s++) {
+      var got = wsCardCollect(obj, secs[s], seenBody);
+      if (!got) continue;
+      for (var k = 0; k < (secs[s].keys || []).length; k++) claimed[secs[s].keys[k]] = 1;
+      sections.push(got);
+    }
+
+    var hidden = {};
+    (cfg.hiddenKeys || []).forEach(function (h) { hidden[h] = 1; });
+    var prefixes = cfg.hiddenPrefixes || [];
+    function isHidden(key) {
+      if (hidden[key]) return true;
+      for (var p = 0; p < prefixes.length; p++) {
+        if (String(key).indexOf(prefixes[p]) === 0) return true;
+      }
+      return false;
+    }
+
+    var kvMax = cfg.kvValueChars || 120;
+    var other = [];
+    // 长值重复正文时不再列一遍（旧版卡把旧的 system_prompt 存在 legacy 里，跟前文一模一样）
+    function repeatedInBody(val) {
+      var flat = wsCardFlat(val);
+      if (flat.length < 20) return false;
+      for (var i = 0; i < seenBody.length; i++) {
+        if (seenBody[i].indexOf(flat) >= 0) return true;
+      }
+      return false;
+    }
+    var top = Object.keys(obj || {});
+    for (var t = 0; t < top.length; t++) {
+      var k = top[t];
+      if (isHidden(k) || claimed[k]) continue;
+      var v = obj[k];
+      if (v && typeof v === 'object' && !Array.isArray(v)) {
+        // 对象下钻一层：世界卡的 params.tech_level 这类要看得见，不能压成「对象 · 8 项」。
+        // 子项全被上面的分区认领了（或全是隐藏槽）→ 这一行整个不要，别留一行纯计数。
+        var kids = Object.keys(v);
+        for (var c = 0; c < kids.length; c++) {
+          var path = k + '.' + kids[c];
+          if (isHidden(kids[c]) || claimed[path]) continue;
+          var sc2 = wsCardScalar(v[kids[c]]);
+          var val2 = sc2 === null ? wsCardSummary(v[kids[c]]) : wsCardOneLine(sc2, kvMax);
+          if (!val2 || repeatedInBody(val2)) continue;
+          other.push({ label: wsCardKV(path), value: val2 });
+        }
+        continue;
+      }
+      var sc = wsCardScalar(v);
+      var val = sc === null ? wsCardSummary(v) : wsCardOneLine(sc, kvMax);
+      if (!val || repeatedInBody(val)) continue;
+      other.push({ label: wsCardKV(k), value: val });
+    }
+    return { title: title, sections: sections, other: other };
+  }
+
+  /** 兜底模型：不是 JSON / 解析失败 → 原文按正文排版（不是等宽代码块）。 */
+  function wsCardRawModel(text, fileName) {
+    var cfg = wsCardCfg();
+    var t = String(text || '');
+    var max = cfg.maxTextChars || 4000;
+    if (t.length > max) t = t.slice(0, max) + '…';
+    return {
+      title: String(fileName || '').replace(/\.json$/i, ''),
+      sections: [{ id: 'raw', mode: 'body', blocks: [{ label: '', paras: wsCardParas(t) }] }],
+      other: []
+    };
+  }
+
+  function wsCardEsc(s) { return escapeHtml(s === null || s === undefined ? '' : String(s)); }
+
+  function wsCardBodyHtml(blk, secId) {
+    var vis = wsCardVisible(blk.paras);
+    var h = '';
+    if (blk.label) h += '<div class="cv-sub">' + wsCardEsc(blk.label) + '</div>';
+    h += '<div class="cv-body">';
+    for (var i = 0; i < vis.list.length; i++) {
+      h += '<p>' + wsCardEsc(vis.list[i]) + '</p>';
+    }
+    h += '</div>';
+    if (vis.more) {
+      var open = !!wsCardOpen[secId];
+      h += '<button class="btn2 ghost cv-more" data-cv="' + wsCardEsc(secId) + '">' +
+        wsCardEsc(open ? (T.card_collapse || 'Collapse') : (T.card_expand || 'Expand')) + '</button>';
+    }
+    return h;
+  }
+
+  function wsCardListHtml(blk) {
+    var h = '';
+    if (blk.label) h += '<div class="cv-sub">' + wsCardEsc(blk.label) + '</div>';
+    h += '<ul class="cv-list">';
+    for (var i = 0; i < blk.items.length; i++) h += '<li>' + wsCardEsc(blk.items[i]) + '</li>';
+    h += '</ul>';
+    return h;
+  }
+
+  function wsCardKvHtml(label, rows) {
+    var h = '<section class="cv-sec">';
+    if (label) h += '<div class="cv-sec-label">' + wsCardEsc(label) + '</div>';
+    h += '<div class="cv-kv">';
+    for (var i = 0; i < rows.length; i++) {
+      h += '<div class="cv-k">' + wsCardEsc(rows[i].label) + '</div>' +
+        '<div class="cv-v">' + wsCardEsc(rows[i].value) + '</div>';
+    }
+    h += '</div></section>';
+    return h;
+  }
+
+  function wsCardSectionHtml(sec) {
+    if (sec.mode === 'kv') return wsCardKvHtml(wsCardLabel(sec.id), sec.rows || []);
+    var label = wsCardLabel(sec.id);
+    var h = '<section class="cv-sec">' +
+      (label ? '<div class="cv-sec-label">' + wsCardEsc(label) + '</div>' : '');
+    for (var i = 0; i < sec.blocks.length; i++) {
+      var blk = sec.blocks[i];
+      h += blk.items ? wsCardListHtml(blk) : wsCardBodyHtml(blk, sec.id);
+    }
+    return h + '</section>';
+  }
+
+  /** 模型 → HTML（纯函数，不碰 DOM：守护测试直接调它）。 */
+  function wsCardRender(m) {
+    if (!m) return '';
+    var h = '<div class="ws-cardview"><div class="cv-title">' + wsCardEsc(m.title) + '</div>';
+    for (var i = 0; i < m.sections.length; i++) h += wsCardSectionHtml(m.sections[i]);
+    if (m.other && m.other.length) h += wsCardKvHtml(wsCardLabel('other'), m.other);
+    return h + '</div>';
+  }
+
+  /** 画到 #wsPreview（唯一改动 DOM 的地方）。 */
+  function wsCardPaint() {
+    var box = document.getElementById('wsPreview');
+    if (!box) return;
+    var m = wsCardCur;
+    if (!m) { box.innerHTML = ''; return; }
+    box.innerHTML = wsCardRender(m);
+    var btns = box.querySelectorAll('.cv-more');
+    for (var b = 0; b < btns.length; b++) {
+      btns[b].onclick = function () {
+        var id = this.getAttribute('data-cv');
+        wsCardOpen[id] = !wsCardOpen[id];
+        wsCardPaint();
+      };
+    }
+  }
+
+  /** 原文 + 文件名 → 模型（解析失败就退成原文模型）。 */
+  function wsCardBuild(text, fileName, err) {
+    var src = (text === null || text === undefined) ? '' : String(text);
+    if (!src.trim()) {
+      // 空文件 / 读不到：把原因当原文显示（正文样式），别留一块空白让人以为没点中
+      return wsCardRawModel(err || '', fileName);
+    }
+    var obj = null;
+    try {
+      var parsed = JSON.parse(src);
+      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) obj = parsed;
+    } catch (e) { obj = null; }
+    var cfg = wsCardCfg();
+    if (obj && (cfg.sections || []).length) return wsCardModel(obj, fileName);
+    return wsCardRawModel(src, fileName);
+  }
+
+  /** 入口：原文 + 文件名 → 结构化卡片（解析失败就按原文显示）。 */
+  function wsCardShow(text, fileName, err) {
+    wsCardOpen = {};
+    wsCardCur = wsCardBuild(text, fileName, err);
+    wsCardPaint();
+  }
+
+  /** 供守护测试用：一份卡原文 → HTML 字符串（不碰 DOM，不要求预览框存在）。 */
+  function wsCardHtmlFor(text, fileName, err) {
+    wsCardOpen = {};
+    return wsCardRender(wsCardBuild(text, fileName, err));
+  }
+
+  function wsCardClear() {
+    wsCardCur = null;
+    wsCardOpen = {};
+    wsCardPaint();
   }
 
   function wsSwitchTab(tab) {
@@ -265,7 +644,7 @@ window.WsScreen = (function (global) {
       pywebview.api.workshop_delete_local(wsCurLocal.rtype, wsCurLocal.filename).then(function (r) {
         if (r && r.ok) {
           wsCurLocal = null;
-          document.getElementById('wsPreview').textContent = '';
+          wsCardClear();
           wsLoadLocal();
           reloadRoles();
           reloadWorlds();
@@ -361,7 +740,9 @@ window.WsScreen = (function (global) {
     setStatus: wsSetStatus, refreshAuto: wsRefreshAuto, loadLocal: wsLoadLocal,
     showLocalPreview: wsShowLocalPreview, switchTab: wsSwitchTab, fillOnline: wsFillOnline,
     setPluginStatus: wsSetPluginStatus, refreshPlugins: wsRefreshPlugins,
-    refreshOnline: wsRefreshOnline
+    refreshOnline: wsRefreshOnline,
+    // 卡片外显（结构化预览）：cardHtml 给守护测试用（纯函数），cardShow/cardClear 是运行时入口
+    cardHtml: wsCardHtmlFor, cardShow: wsCardShow, cardClear: wsCardClear
   };
 })(window);
 

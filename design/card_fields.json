@@ -1,0 +1,169 @@
+{
+  "_note": "角色卡 / 世界卡的**外显字段唯一真相**（工坊「本地」页预览用）。原来两端都把整份 JSON 原样塞进等宽 <pre> / Text，用户看到的是大括号和引号 —— 那是数据不是卡片。这里把「常见键 → 分区 + 中文标签 + 展示方式」写成一份表，两端各写渲染器、但字段清单只认这一份：网页产物 web/card_fields.js，安卓产物 com/dick/app/CardFields.kt，都由 python tools/gen_card_fields.py 生成（--check 校验）。以 _ 开头的键是注释，生成器一律跳过。",
+  "_why": {
+    "sections": "分区顺序 = 渲染顺序。同一分区里可以放多个同义键（personality / 外貌 / 性格…）—— 它们会被**归并进同一个小节**，各自前面挂一个字段标签，而不是各占一屏。",
+    "mode": "展示方式只有三种：body = 正文（去掉字面 \\n 转义、按空行分段、超行折叠）；kv = 两列「键: 值」；list = 数组逐条成行。**没有 json 模式** —— 卡片外显不该出现大括号。",
+    "collapse_lines": "正文超过这么多行就折叠，带「展开 / 收起」。阈值两端共用这一个数（网页按段累加行数，安卓同一套算法），改这里两端一起变。",
+    "title_keys": "标题候选键，按顺序取第一个有非空标量值的；一个都没有就用文件名（去掉 .json）。",
+    "field_labels": "键 → 中文标签的 i18n 键（真实文案在 lang/strings.json，三语）。没登记的键在「其它信息」里直接显示键名本身（那是卡里的数据，不是界面文案）。",
+    "hidden_keys": "原样数据槽：不是给人看的字段，是程序的存档（整份原始卡 / 对话树 / 世界书元数据）。显示出来只会撑爆预览，且属于「穿帮」。",
+    "hidden_prefixes": "以这些前缀开头的键一律不显示（_meta / _tree_* 等程序槽）。",
+    "kv_value_chars": "两列视图里字符串值的截断长度（卡片正文太长会把「其它信息」撑成一整屏）。",
+    "max_text_chars": "正文分区单段最长字数，超出截断（防止一份 130KB 的世界卡把界面卡住）。",
+    "params_path": "世界卡的年代/空间住在 params 里（params.era / params.space）。这是**点号路径**：渲染器先按顶层键找，找不到再把路径逐层下钻。"
+  },
+  "version": 1,
+  "collapse_lines": 8,
+  "kv_value_chars": 120,
+  "max_text_chars": 4000,
+  "title_keys": [
+    "name",
+    "char_name",
+    "character_name",
+    "title"
+  ],
+  "sections": [
+    {
+      "id": "setting",
+      "label_key": "card_sec_setting",
+      "mode": "body",
+      "keys": [
+        "system_prompt",
+        "prompt",
+        "description",
+        "background",
+        "scenario",
+        "setting",
+        "world_setting",
+        "context"
+      ]
+    },
+    {
+      "id": "persona",
+      "label_key": "card_sec_persona",
+      "mode": "body",
+      "keys": [
+        "personality",
+        "性格",
+        "个性",
+        "appearance",
+        "外貌",
+        "外表",
+        "speech",
+        "speech_style",
+        "语气"
+      ]
+    },
+    {
+      "id": "greeting",
+      "label_key": "card_sec_greeting",
+      "mode": "body",
+      "keys": [
+        "greeting",
+        "first_mes",
+        "opening",
+        "first_message",
+        "initial_scene",
+        "alternate_greetings"
+      ]
+    },
+    {
+      "id": "profile",
+      "label_key": "card_sec_profile",
+      "mode": "kv",
+      "keys": [
+        "age",
+        "gender",
+        "occupation",
+        "race",
+        "species",
+        "height",
+        "birthday",
+        "author",
+        "version",
+        "tags",
+        "created_at",
+        "time_period"
+      ]
+    },
+    {
+      "id": "era",
+      "label_key": "card_sec_era",
+      "mode": "kv",
+      "keys": [
+        "params.era",
+        "params.era_kind",
+        "params.space",
+        "params.region",
+        "era",
+        "era_kind",
+        "space",
+        "region"
+      ]
+    },
+    {
+      "id": "rules",
+      "label_key": "card_sec_rules",
+      "mode": "list",
+      "keys": [
+        "rules",
+        "narrative_tips",
+        "factions",
+        "geography",
+        "example_dialogues"
+      ]
+    }
+  ],
+  "other": {
+    "id": "other",
+    "label_key": "card_sec_other",
+    "mode": "kv"
+  },
+  "field_labels": {
+    "system_prompt": "card_f_system_prompt",
+    "prompt": "card_f_system_prompt",
+    "description": "card_f_system_prompt",
+    "background": "card_f_background",
+    "scenario": "card_f_background",
+    "notes": "card_f_notes",
+    "mes_example": "card_f_mes_example",
+    "personality": "card_f_personality",
+    "性格": "card_f_personality",
+    "个性": "card_f_personality",
+    "appearance": "card_f_appearance",
+    "外貌": "card_f_appearance",
+    "外表": "card_f_appearance",
+    "speech": "card_f_speech",
+    "speech_style": "card_f_speech",
+    "语气": "card_f_speech",
+    "age": "card_f_age",
+    "gender": "card_f_gender",
+    "occupation": "card_f_occupation",
+    "race": "card_f_race",
+    "species": "card_f_race",
+    "height": "card_f_height",
+    "birthday": "card_f_birthday",
+    "author": "card_f_author",
+    "version": "card_f_version",
+    "tags": "card_f_tags",
+    "created_at": "card_f_created_at",
+    "time_period": "card_f_time_period",
+    "params.era": "card_f_era",
+    "era": "card_f_era",
+    "params.era_kind": "card_f_era_kind",
+    "era_kind": "card_f_era_kind",
+    "params.space": "card_f_space",
+    "space": "card_f_space",
+    "params.region": "card_f_region",
+    "region": "card_f_region"
+  },
+  "hidden_keys": [
+    "card_data",
+    "history_tree",
+    "extensions",
+    "world_entries"
+  ],
+  "hidden_prefixes": [
+    "_"
+  ]
+}
