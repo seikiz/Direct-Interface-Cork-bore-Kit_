@@ -197,8 +197,10 @@ def install_file(src, dst, dry):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--dir", default=os.environ.get("WORKSHOP_APP_DIR", "/opt/dick-workshop"))
-    ap.add_argument("--port", type=int, default=int(os.environ.get("WORKSHOP_PORT", "5000")))
-    ap.add_argument("--host", default=os.environ.get("WORKSHOP_HOST", "127.0.0.1"))
+    ap.add_argument("--port", type=int, default=int(os.environ.get("WORKSHOP_PORT", "8080")),
+                    help="默认 8080（与线上现状一致：Flask 直接对外）")
+    ap.add_argument("--host", default=os.environ.get("WORKSHOP_HOST", "0.0.0.0"),
+                    help="默认 0.0.0.0；放到 nginx 后面就传 127.0.0.1")
     ap.add_argument("--key", default="", help="写 Key；不给就沿用 env 里的，没有则随机生成")
     ap.add_argument("--service", default="dick-workshop")
     ap.add_argument("--no-systemd", action="store_true", help="没有 systemd 时用 nohup 起")
@@ -255,8 +257,24 @@ def main():
         print("✗ 找不到 net.py —— 把它和本脚本放同一个目录（或放它的上一级）再跑")
         return 1
     say("   net.py 就绪：%s（%d KB）" % (net_src, os.path.getsize(net_src) // 1024))
-    if not port_free(a.port) and not a.dry_run:
-        print("   端口 %d 已有进程在监听 —— 如果就是旧的工坊服务，下面会停掉它" % a.port)
+    if not port_free(a.port):
+        # 线上那台极可能就是这么跑的：一个裸 python net.py 占着 8080。
+        # 直接换文件再启会 bind 失败，所以先把旧工坊进程停掉（只认 net.py，别的一概不动）。
+        if a.dry_run:
+            say("   [dry-run] 端口 %d 被占：会先停掉旧的 net.py 进程再起" % a.port)
+        else:
+            pids = run(["pgrep", "-af", "net.py"]).stdout or ""
+            olds = [ln for ln in pids.splitlines() if "net.py" in ln and "deploy_workshop" not in ln]
+            for ln in olds:
+                print("   旧进程：%s" % ln.strip()[:110])
+            if olds:
+                run(["pkill", "-f", "net.py"], check=False)
+                time.sleep(1.5)
+                say("   已停掉旧的 net.py 进程")
+            if not port_free(a.port):
+                print("✗ 端口 %d 还被占着（不是 net.py？）。先手动停掉它："
+                      "ss -ltnp 'sport = :%d' 看 PID，或换端口 --port 5000" % (a.port, a.port))
+                return 1
     py, why = pick_python(app, a.dry_run)
     say("   Python：%s（%s）" % (py, why))
 

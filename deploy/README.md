@@ -24,6 +24,20 @@ sudo python3 deploy_workshop.py
 
 装完它会自己跑一遍自检（含上传/下载/删除），最后打印**写 Key**和下一步。
 
+## 两种对外形态（默认就和你线上现在一样）
+
+| 形态 | 命令 | 说明 |
+|---|---|---|
+| **直连 8080**（默认） | `sudo python3 deploy_workshop.py` | Flask 自己监听 `0.0.0.0:8080`，和现在那台一样。防火墙/安全组放行 8080 |
+| nginx 反代（更稳） | `sudo python3 deploy_workshop.py --host 127.0.0.1 --port 5000` | 再按 `nginx-workshop.conf` 把 8080 → 5000；外面只碰得到 nginx |
+
+> 线上实测：`PUT /api/health` 回 `405 + Allow: OPTIONS, GET, HEAD`（Flask 特征），
+> 4 MB 的包也能传上去（没有 nginx 那个 1 MB 默认限制）—— 说明现在**没有反代挡在前面**，
+> 所以默认按"直连 8080"装，换完文件和现在行为一致，不会因为少了反代而打不开。
+
+如果端口被旧的裸 `python net.py` 占着，脚本会先按 `pgrep -af net.py` 认出它并停掉再起；
+占着的是别的东西就停下来提示你（不会乱杀进程）。
+
 ## 常用
 
 ```bash
