@@ -20,16 +20,18 @@
       "png": "ic_plus"
     },
     "❌": {
-      "name": "close",
-      "png": "ic_close"
+      "name": "error",
+      "png": "ic_close",
+      "note": "失败/出错前缀（状态位）。原来取 close，可 ❌ 在两端**只**当错误标记用（关闭按钮走 ✕），用户已确认统一改 error"
     },
     "⚙": {
       "name": "settings",
       "png": "ic_settings"
     },
     "✅": {
-      "name": "check",
-      "png": "ic_check"
+      "name": "check_circle",
+      "png": "ic_check",
+      "note": "成功/完成前缀（状态位）。原来取 check（纯勾），用户已确认统一改 check_circle（带圈勾，和 ❌→error 成对）"
     },
     "🧰": {
       "name": "home_repair_service",
@@ -72,8 +74,9 @@
       "png": "ic_font"
     },
     "🔌": {
-      "name": "power",
-      "png": "ic_plug"
+      "name": "extension",
+      "png": "ic_plug",
+      "note": "原取 power（电源键），语义不对：这个键在两端只用来表示「插件」。改取 extension（拼图块 = 插件／扩展的通行图标）"
     },
     "🔍": {
       "name": "search",
@@ -530,6 +533,17 @@
     "play": {
       "name": "play_arrow",
       "png": "ic_play"
+    }
+  },
+  "scoped": {
+    "_note": "作用域图标（scoped）：只在标了 data-icon-scope=\"<作用域名>\" 的根元素【内部】替换，绝不进上面的 icons 全局表 —— 全局表里一旦出现，卡片/世界卡正文里同样的 emoji 也会被一起换成图标。网页端由 web/icon_scope.js 消费（生成到 window.DICK_ICONS_SCOPED）；安卓端【不生成】（避免污染 IconNames.kt / 对话框与正文）。值是 Material Symbols 名（纯字符串，作用域里不需要 png 覆盖槽位）。以 _ 开头的键是注释，不是作用域名。",
+    "gothic": {
+      "_note": "web/gothic_frame.html 顶部那五个预览按钮（📜简洁/🦇极繁/⛪大教堂/🔥满溢/💀糅合）。五个名字都一次命中字体：menu_book / dark_mode / church / local_fire_department / skull。🦇 是唯一的语义妥协 —— 这套字体里没有蝙蝠连字（bat/bat_alt 都没有，只有 bathtub 这种同前缀的无关词），取 dark_mode（月牙）最贴「暗夜」。🦇/⛪/💀 这三个新键刻意【没有】进全局表：⛪ 与 💀 在卡片/世界卡正文里很常见，进全局就会把正文一起换掉。📜 与 🔥 则是历史上早已在全局表（安卓 Dialogs.kt 的 IconText、网页 index.html 都在用），这里给 📜 换成 menu_book（卷轴语义），全局那份 history_edu 不动。",
+      "📜": "menu_book",
+      "🦇": "dark_mode",
+      "⛪": "church",
+      "🔥": "local_fire_department",
+      "💀": "skull"
     }
   }
 }

@@ -1,0 +1,14 @@
+<!-- 编辑消<seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌息模态 -->
+<!-- 阶段2：这一屏的 DOM 搬到了 web/screens/em.html，index.html 原位只留挂载点；
+     结构/class/行内 style 必须和搬家前逐字一致（tools/ui_snapshot.py 会核对），
+     行为在 web/js/screens/em.js（本屏 = 编辑框 + 保存/取消 + 订阅 msg:edit）。 -->
+<div class="modal" id="editMsgModal">
+  <div class="modal-box">
+    <h3 id="emTitle">编辑消息</h3>
+    <div class="field"><textarea id="emInput" rows="5"></textarea></div>
+    <div class="row">
+      <button class="btn2 ghost" id="emCancel">取消</button>
+      <button class="btn2" id="emSave">保存</button>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,30 @@
+<!-- 🎴 围棋：规则由 go_engi<seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌ne 判定，角色靠提示词注入陪下 -->
+<div id="goPanel" style="display:none;position:fixed;inset:0;z-index:9998;background:var(--bg,#0b0e14);flex-direction:column">
+  <div class="gal-top">
+    <b style="font-size:16px;color:var(--text,#eee)">🎴 围棋</b>
+    <span id="goStatus" style="font-size:13px;color:var(--sub,#8a93a3);white-space:nowrap"></span>    <div class="gal-actions">
+      <button class="btn2" id="goNew19">🆕 19 路</button>
+      <button class="btn2 ghost" id="goNew9">🆕 9 路</button>
+      <button class="btn2 ghost" id="goSwap">🔄 换执色</button>
+      <button class="btn2 ghost" id="goUndo">[ic:undo] 悔棋</button>
+      <button class="btn2 ghost" id="goPass">⏭ 停一手</button>
+      <button class="btn2 ghost" id="goResume">[ic:play] 催一手</button>
+      <button class="btn2 ghost" id="goScore">🧮 数目</button>
+      <button class="btn2 ghost" id="goResign">🏳️ 认输</button>
+      <button class="btn2 ghost" id="goClose">✕</button>
+    </div>
+  </div>
+  <div style="flex:1;display:flex;gap:16px;padding:16px;overflow:auto;min-height:0">
+    <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:0;gap:10px">
+      <svg id="goSvg" viewBox="0 0 600 600" style="width:min(72vh,100%);height:auto"></svg>
+      <div id="goInfo" style="font-size:12px;color:var(--sub,#8a93a3);text-align:center;line-height:1.7"></div>
+    </div>
+    <div style="width:300px;flex:0 0 auto;display:flex;flex-direction:column;gap:10px">
+      <div style="font-size:12px;color:var(--sub,#8a93a3)">对局记录</div>
+      <div id="goLog" style="flex:1;min-height:200px;overflow:auto;font-size:12px;line-height:1.8;color:var(--text,#ddd);background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:10px"></div>
+      <div style="font-size:11px;color:var(--sub,#8a93a3);line-height:1.6">
+        规则由引擎判定（提子/打劫/自杀/数目）。角色每手会收到整张棋盘 + 引擎给的候选点，从里面挑一个并说台词。
+      </div>
+    </div>
+  </div>
+</div>

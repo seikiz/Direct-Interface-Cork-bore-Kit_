@@ -35,6 +35,19 @@ AND_FONT = os.path.join(ROOT, "DICK-Android", "app", "src", "main", "res", "font
                         "material_symbols_outlined.ttf")
 LICENSE = os.path.join(ROOT, "web", "fonts", "LICENSE")
 INDEX = os.path.join(ROOT, "web", "index.html")
+# 2026-11 阶段1：页面里的 <style> 已原样拆到 web/styles/（按层叠顺序 link 进来）。
+# @font-face 与 .ms 现在住在 CSS 文件里，所以"网页端有没有换成字体渲染"要看页面 + 样式两边。
+WEB_STYLES = os.path.join(ROOT, "web", "styles")
+
+
+def web_front():
+    """index.html + web/styles/*.css 拼起来的文本（检查前端特征串用）。"""
+    parts = [read(INDEX)]
+    if os.path.isdir(WEB_STYLES):
+        for fn in sorted(os.listdir(WEB_STYLES)):
+            if fn.endswith(".css"):
+                parts.append(read(os.path.join(WEB_STYLES, fn)))
+    return u"\n".join(parts)
 UI = os.path.join(ROOT, "DICK-Android", "app", "src", "main", "java", "com", "dick", "app", "Ui.kt")
 JAVA_DIR = os.path.join(ROOT, "DICK-Android", "app", "src", "main", "java")
 DRAW_DIR = os.path.join(ROOT, "DICK-Android", "app", "src", "main", "res", "drawable")
@@ -173,13 +186,14 @@ def main():
 
     print(u"\n== ④ 网页端已换成字体渲染 ==")
     idx = read(INDEX)
+    front = web_front()
     check(u"没有残留的内联 SVG 图标字典", "var ICONS = {" not in idx)
     check(u"没有残留的 ICON_FILES / NAMED_ICONS / ICONS_BY_SLUG",
           not any(s in idx for s in ("var ICON_FILES", "var NAMED_ICONS", "ICONS_BY_SLUG")))
     check(u"引用了 icons.js", "icons.js" in idx)
     check(u"有 @font-face 指向随包字体",
-          "@font-face" in idx and "fonts/MaterialSymbolsOutlined.woff2" in idx)
-    check(u"有 .ms 图标样式（连字渲染）", ".ms{" in idx and "liga" in idx)
+          "@font-face" in front and "fonts/MaterialSymbolsOutlined.woff2" in front)
+    check(u"有 .ms 图标样式（连字渲染）", ".ms{" in front and "liga" in front)
     check(u"替换逻辑走图标名（<span class=\"ms\">）", 'class="ms"' in idx)
     check(u"缺失名字时回退原 emoji（不显示空白）", "_iconEntry(emoji)" in idx or "return emoji" in idx)
 

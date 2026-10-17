@@ -16,6 +16,12 @@
   · `web/icons.js`                                     emoji → 名字（网页端 iconify* 用）
   · `DICK-Android/.../com/dick/app/IconNames.kt`        emoji/具名 → 名字（安卓端用）
 
+作用域（json 顶层 `scoped` 段）：
+  有些 emoji **只**想在某个页面的某块区域里换成图标（例如 gothic_frame.html 那五个预览按钮）。
+  放进全局 `icons` 表就会连卡片/世界卡正文里同样的 emoji 一起换掉，所以单开一段：
+  只输出到 `web/icons.js` 的 `window.DICK_ICONS_SCOPED`（消费方 web/icon_scope.js），
+  **不进** IconNames.kt —— 安卓端没有「作用域」的需求，不该被这份表污染。
+
 用法：
     python tools/gen_icons.py            # 重新生成两份产物
     python tools/gen_icons.py --check    # 校验 json + 产物是否最新（CI / 测试用）
@@ -97,6 +103,24 @@ def ligature_names(path):
         f.close()
 
 
+def scoped_tables(data):
+    """只留真作用域：`scoped` 段里以 _ 开头的是注释（_note 之类），不是作用域名。
+
+    返回 {作用域名: {emoji: 图标名}}，顺序跟 json 一致。
+    """
+    out = {}
+    for scope, table in (data.get("scoped") or {}).items():
+        if str(scope).startswith("_") or not isinstance(table, dict):
+            continue
+        pairs = {}
+        for k, v in table.items():
+            if str(k).startswith("_"):        # 作用域内部也可以写 _note
+                continue
+            pairs[k] = v
+        out[scope] = pairs
+    return out
+
+
 def load(strict=True):
     """读唯一真相；返回 (data, problems)。"""
     problems = []
@@ -114,18 +138,29 @@ def load(strict=True):
         for k, v in table.items():
             if not isinstance(v, dict) or not str(v.get("name") or "").strip():
                 problems.append(u"%s[%s] 没有 name" % (label, k))
+    # 作用域段：值就是图标名（纯字符串），不是 {"name": ...} 对象 —— 它没有 png 覆盖槽位
+    for scope, pairs in scoped_tables(data).items():
+        if not pairs:
+            problems.append(u"scoped[%s] 是空的" % scope)
+        for k, v in pairs.items():
+            if isinstance(v, dict) or not str(v or "").strip():
+                problems.append(u"scoped[%s][%s] 应该是纯图标名字符串" % (scope, k))
     return data, problems
 
 
 def check_fonts(data, problems):
     """每个名字都要在**两份字体**里真的有连字（这是整套东西的地基）。
 
+    作用域段（scoped）的图标名同样算在内：预览按钮上那几个 emoji 要是命中不了，
+    就是空白/豆腐块，而且只有点进那个页面才发现。
+
     例外：读 **woff2** 需要 fontTools + brotli。brotli 是可选依赖（CI 与开发机都装了，
     见 requirements-test.txt），缺它时**只跳过 woff2 那份**并把话说出来 ——
     安卓 ttf 那份是同一套字形，仍然照查；不许静默放过。
     """
     names = sorted(set([v["name"] for v in data["icons"].values()] +
-                       [v["name"] for v in data["named"].values()]))
+                       [v["name"] for v in data["named"].values()] +
+                       [n for pairs in scoped_tables(data).values() for n in pairs.values()]))
     for label, path in ((u"网页 woff2", WEB_FONT), (u"安卓 ttf", AND_FONT)):
         if not os.path.isfile(path):
             problems.append(u"字体不在：%s" % os.path.relpath(path, ROOT))
@@ -145,18 +180,36 @@ def check_fonts(data, problems):
     return names
 
 
+def _web_ui_text():
+    """页面 + 已拆出去的样式（阶段1：`<style>` 搬到了 web/styles/）。
+
+    "前端有没有 @font-face / 有没有引用随包字体"这类检查，2026-11 之后
+    得看两边 —— 字体规则住进了 web/styles/components.css。
+    """
+    parts = []
+    if os.path.isfile(INDEX):
+        parts.append(_read(INDEX))
+    sdir = os.path.join(ROOT, "web", "styles")
+    if os.path.isdir(sdir):
+        for fn in sorted(os.listdir(sdir)):
+            if fn.endswith(".css"):
+                parts.append(_read(os.path.join(sdir, fn)))
+    return u"\n".join(parts)
+
+
 def structural(data, problems):
     """前端那半边：不许再有内联 SVG 字典；字体与许可要在仓库里。"""
     if not os.path.isfile(LICENSE):
         problems.append(u"缺 web/fonts/LICENSE（Apache-2.0）")
     if os.path.isfile(INDEX):
-        t = _read(INDEX)
-        if "var ICONS = {" in t:
+        page = _read(INDEX)
+        front = _web_ui_text()
+        if "var ICONS = {" in page:
             problems.append(u"web/index.html 里还留着内联 SVG 字典（var ICONS = {）")
-        if "icons.js" not in t:
+        if "icons.js" not in page:
             problems.append(u"web/index.html 没有引用 icons.js")
-        if "@font-face" not in t:
-            problems.append(u"web/index.html 没有 @font-face（字体没法加载）")
+        if "@font-face" not in front:
+            problems.append(u"前端没有 @font-face（字体没法加载；现在该在 web/styles/components.css）")
 
 
 # ---------------- 产物 ----------------
@@ -171,6 +224,17 @@ def gen_web(data):
     for k, v in data["named"].items():
         o.append(u"  %s: { n: %s, p: %s }," % (json.dumps(k), json.dumps(v["name"]),
                                                json.dumps(v.get("png") or "")))
+    o.append(u"};")
+    # 作用域图标：只在标了 data-icon-scope="<作用域名>" 的根内替换（消费者是 web/icon_scope.js）。
+    # 刻意与上面的全局表分开：全局表里出现 💀/⛪ 会把卡片/世界卡正文里同样的 emoji 一起换掉。
+    o.append(u"// 作用域图标：只在 [data-icon-scope=\"名字\"] 的根内替换，不进全局表（见 web/icon_scope.js）。")
+    o.append(u"window.DICK_ICONS_SCOPED = {")
+    for scope, pairs in scoped_tables(data).items():
+        o.append(u"  %s: {" % json.dumps(scope))
+        for e, name in pairs.items():
+            o.append(u"    %s: { n: %s, p: \"\" }," % (json.dumps(e, ensure_ascii=False),
+                                                      json.dumps(name)))
+        o.append(u"  },")
     o.append(u"};")
     return u"\n".join(o) + u"\n"
 
@@ -215,6 +279,9 @@ def cmd_report(data, names):
     icons, named = data["icons"], data["named"]
     print(u"== icons/icons.json ==")
     print(u"  emoji %d ／ 具名 %d ／ 去重后图标名 %d" % (len(icons), len(named), len(names)))
+    for scope, pairs in scoped_tables(data).items():
+        print(u"  作用域 %s：%d 条（%s）"
+              % (scope, len(pairs), u"、".join(u"%s→%s" % (k, v) for k, v in pairs.items())))
     shared = {}
     for e, v in icons.items():
         shared.setdefault(v["name"], []).append(e)
@@ -265,8 +332,9 @@ def main(argv):
             for p in problems:
                 print(u"[问题] " + p)
         if ok1 and ok2 and not problems:
-            print(u"[ok] 图标一致：emoji %d ／ 具名 %d ／ 字体里全部命中"
-                  % (len(data["icons"]), len(data["named"])))
+            scoped_n = sum(len(p) for p in scoped_tables(data).values())
+            print(u"[ok] 图标一致：emoji %d ／ 具名 %d ／ 作用域 %d ／ 字体里全部命中"
+                  % (len(data["icons"]), len(data["named"]), scoped_n))
         elif not (ok1 and ok2):
             return 1
     return 0

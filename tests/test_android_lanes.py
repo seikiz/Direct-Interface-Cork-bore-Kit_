@@ -45,6 +45,17 @@ def read(*parts):
         return f.read()
 
 
+def read_chat():
+    """聊天主屏的源码（App.kt + ui/screens/chat/ChatScreen.kt 拼起来）。
+
+    2026-11 UI 解耦：App.kt 只剩入口/主题解析，2500 行的聊天屏正文搬进了
+    `app/ui/screens/chat/ChatScreen.kt`（纯搬运，行内容没变）。
+    这个测试盯的是"重活有没有被搬回主线程"，与代码住哪个文件无关 —— 所以两份一起看，
+    而不是把断言删掉或者只盯着那个 30 行的入口文件。
+    """
+    return read("app", "App.kt") + "\n" + read("app", "ui", "screens", "chat", "ChatScreen.kt")
+
+
 def seg_of(text, start, limit=6000):
     """从 start 标记处截一段，遇到下一个同级 `    fun ` 就停（别切进别人的代码）"""
     i = text.find(start)
@@ -86,7 +97,7 @@ def test_lanes_exists():
 
 def test_app_uses_lanes():
     print("\n== 2. App.kt：重活都在线上，不在主线程 ==")
-    app = read("app", "App.kt")
+    app = read_chat()
     check("导入了 Lanes", "import com.dick.core.Lanes" in app)
     check("再也不 new 裸线程", "Thread {" not in app and "Thread(" not in app)
 
@@ -129,7 +140,7 @@ def test_mech_split():
 
 def test_card_io_off_main():
     print("\n== 4. 角色卡导入/导出：文件活挪出主线程 ==")
-    app = read("app", "App.kt")
+    app = read_chat()
     cardio = read("app", "CardIo.kt")
     check("CardIo.kt 里没有 Compose 状态（不碰界面）",
           all(k not in cardio for k in ("sysMsgs.add", "wsStatus =", "avatarCache.",
@@ -151,7 +162,7 @@ def test_card_io_off_main():
 
 def test_no_main_thread_io_regression():
     print("\n== 5. 剩下的主线程活儿必须是“只能主线程做的” ==")
-    app = read("app", "App.kt")
+    app = read_chat()
     # scope.launch { … }（不带 dispa<seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌tcher）只允许出现在 Compose 挂起调用处：
     # 抽屉开关 / 列表滚动 —— 这些本来就只能在主线程做，挪走反而错。
     bare = [ln.strip() for ln in app.splitlines()

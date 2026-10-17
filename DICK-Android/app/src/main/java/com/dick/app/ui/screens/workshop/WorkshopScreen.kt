@@ -1,0 +1,332 @@
+package com.dick.app
+
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.dick.core.J
+import com.dick.core.Workshop
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+
+/** 工坊在线列表的「类型」前缀（角色卡 / 世界卡包 / 世界卡）：返回的是图标键，
+ *  由 IconText 画成 Material 图标（不要再往这里塞彩色 emoji）。 */
+private fun wsTypeIcon(t: String): String = when (t) {
+    "角色卡" -> "🎭 "
+    "世界卡包" -> "📦 "
+    else -> "🌍 "
+}
+
+/**
+ * WorkshopScreen —— 创意工坊屏（本地 / 在线 / 插件 三个页签）。
+ *
+ * 纯结构搬家：内容从 Dialogs.kt 的 WorkshopDialog 逐字搬过来，只换住址。
+ * 布局数值、文案、页签顺序、点击后的行为全部保持原样（观感守恒）。
+ *
+ * 硬边界：
+ *   · 状态只从 ChatViewModel 读（`by vm.xxx`）；派生读法在 WorkshopState.kt；
+ *   · 对外依赖只认 WorkshopActions（一组回调 + 只读对象）；
+ *   · 控件一律用 ui/components/ 的 Dick*。
+ */
+@Composable
+fun WorkshopScreen(vm: ChatViewModel, acts: WorkshopActions) {
+    val theme = acts.theme
+    val scope = acts.scope
+    val importCardLauncher = acts.importCardLauncher
+    val wsExportLauncher = acts.wsExportLauncher
+    val wsRefreshLocal = acts.refreshLocal
+    val wsLoadOnline = acts.loadOnline
+    val wsLoadPlugins = acts.loadPlugins
+    val wsUploadLocal = acts.uploadLocal
+    val wsSearchOnline = acts.searchOnline
+    val wsDownloadSelected = acts.downloadSelected
+    val wsLikeSelected = acts.likeSelected
+    val wsDeleteSelected = acts.deleteSelected
+    val wsInstallPlugin = acts.installPlugin
+    val reloadRolesFromDisk = acts.reloadRolesFromDisk
+    val reloadWorldsFromDisk = acts.reloadWorldsFromDisk
+    var showWorkshop by vm.showWorkshop
+    var wsTabOnline by vm.wsTabOnline
+    var wsTabPlugin by vm.wsTabPlugin
+    var wsPlugins by vm.wsPlugins
+    var wsLocalPlugins by vm.wsLocalPlugins
+    var wsInstallingId by vm.wsInstallingId
+    val wsLocalRoles = vm.wsLocalRoles
+    val wsLocalWorlds = vm.wsLocalWorlds
+    var wsLocalType by vm.wsLocalType
+    var wsLocalIdx by vm.wsLocalIdx
+    var wsPreview by vm.wsPreview
+    var wsServerInput by vm.wsServerInput
+    var wsKeyInput by vm.wsKeyInput
+    var wsStatus by vm.wsStatus
+    val wsOnlineList = vm.wsOnlineList
+    var wsOnlineIdx by vm.wsOnlineIdx
+    var wsSearchInput by vm.wsSearchInput
+    var wsExportTarget by vm.wsExportTarget
+    if (showWorkshop) {
+    DickDialog(
+        onDismissRequest = { showWorkshop = false },
+        title = { IconText(I18n.t("btn_workshop", "🧰 创意工坊")) },
+        text = {
+            Column(Modifier.verticalScroll(rememberScrollState())) {
+                Row {
+                    DickTextButton(
+                        label = if (!wsTabOnline && !wsTabPlugin) I18n.t("ws_local", "📂 本地 ▾") else I18n.t("ws_local", "📂 本地"),
+                        onClick = { wsTabOnline = false; wsTabPlugin = false; wsRefreshLocal() },
+                        fontSize = 12.sp,
+                    )
+                    DickTextButton(
+                        label = if (wsTabOnline) I18n.t("ws_online", "🌐 在线 ▾") else I18n.t("ws_online", "🌐 在线"),
+                        onClick = { wsTabOnline = true; wsTabPlugin = false; wsLoadOnline() },
+                        fontSize = 12.sp,
+                    )
+                    DickTextButton(
+                        label = if (wsTabPlugin) "🔌 插件 ▾" else "🔌 插件",
+                        onClick = { wsTabPlugin = true; wsTabOnline = false; wsLoadPlugins() },
+                        fontSize = 12.sp,
+                    )
+                    Spacer(Modifier.weight(1f))
+                    // 状态串（✅ 上传成功 / ❌ 连接失败 / 🔑 <seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌要 Key …）里的 emoji 是图标键：
+                    // 走 IconText 画成 Material 图标，界面上不留彩色 emoji
+                    DickTag(wsStatus, fontSize = 11.sp, iconSize = 12.dp)
+                }
+                if (!wsTabOnline && !wsTabPlugin) {
+                    Row {
+                        Column(Modifier.weight(1f)) {
+                            DickTag("📂 角色卡", fontSize = 12.sp)
+                            wsLocalRoles.forEachIndexed { i, f ->
+                                val sel = wsLocalType == "角色卡" && wsLocalIdx == i
+                                DickCard(
+                                    radius = 8.dp,
+                                    tone = if (sel) DickSurfaceTone.Surface2 else DickSurfaceTone.Surface,
+                                    modifier = Modifier.fillMaxWidth().padding(vertical = 1.dp).clickable {
+                                        wsLocalType = "角色卡"; wsLocalIdx = i
+                                        wsPreview = Workshop.preview("角色卡", f)
+                                    },
+                                ) {
+                                    Text(f.removeSuffix(".json"), fontSize = 12.sp, modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp), maxLines = 1)
+                                }
+                            }
+                        }
+                        Column(Modifier.weight(1f)) {
+                            DickTag("🌍 世界卡", fontSize = 12.sp)
+                            wsLocalWorlds.forEachIndexed { i, f ->
+                                val sel = wsLocalType == "世界卡" && wsLocalIdx == i
+                                DickCard(
+                                    radius = 8.dp,
+                                    tone = if (sel) DickSurfaceTone.Surface2 else DickSurfaceTone.Surface,
+                                    modifier = Modifier.fillMaxWidth().padding(vertical = 1.dp).clickable {
+                                        wsLocalType = "世界卡"; wsLocalIdx = i
+                                        wsPreview = Workshop.preview("世界卡", f)
+                                    },
+                                ) {
+                                    Text(f.removeSuffix(".json"), fontSize = 12.sp, modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp), maxLines = 1)
+                                }
+                            }
+                        }
+                    }
+                    if (wsPreview.isNotBlank()) {
+                        DickCard(radius = 10.dp, modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp)) {
+                            Text(wsPreview, fontSize = 11.sp, color = theme.text, modifier = Modifier.padding(10.dp), maxLines = 10)
+                        }
+                    }
+                    Row {
+                        DickTextButton(
+                            label = I18n.t("btn_import_card", "📥 导入"),
+                            onClick = {
+                                importCardLauncher.launch(arrayOf("image/png", "image/webp", "application/json"))
+                            },
+                            fontSize = 12.sp,
+                        )
+                        DickTextButton(
+                            label = I18n.t("ws_export", "📤 导出"),
+                            onClick = {
+                                val fname = WorkshopState.selectedLocalFile(wsLocalType, wsLocalIdx, wsLocalRoles, wsLocalWorlds)
+                                if (fname != null) { wsExportTarget = fname; wsExportLauncher.launch(fname) }
+                            },
+                            fontSize = 12.sp,
+                        )
+                        DickTextButton(
+                            label = I18n.t("ws_delete", "🗑️ 删除"),
+                            onClick = {
+                                val fname = WorkshopState.selectedLocalFile(wsLocalType, wsLocalIdx, wsLocalRoles, wsLocalWorlds)
+                                if (fname != null) {
+                                    if (Workshop.deleteLocal(wsLocalType, fname)) {
+                                        wsPreview = ""
+                                        wsLocalIdx = -1
+                                        wsRefreshLocal()
+                                        reloadRolesFromDisk()
+                                        reloadWorldsFromDisk()
+                                        wsStatus = "✅ 已删除"
+                                    }
+                                }
+                            },
+                            fontSize = 12.sp, color = theme.danger,
+                        )
+                        DickTextButton(label = I18n.t("ws_upload", "📤 上传"), onClick = { wsUploadLocal() }, fontSize = 12.sp)
+                    }
+                } else if (wsTabOnline) {
+                    if (wsServerInput.isNotBlank()) {
+                        DickTag("🛰️ 自动连接：" + wsServerInput,
+                            fontSize = 12.sp, iconSize = 13.dp,
+                            modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp))
+                    } else {
+                        DickLoading("🛰️ 自动连接中...",
+                            fontSize = 12.sp, iconSize = 13.dp,
+                            modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp))
+                    }
+                    DickField(value = wsKeyInput, onValueChange = { wsKeyInput = it },
+                        label = I18n.t("ws_key", "Key（可选）"), singleLine = true)
+                    Row {
+                        DickTextButton(
+                            label = I18n.t("ws_test", "🔄 重新检测"),
+                            onClick = {
+                                Workshop.saveConfig(Workshop.serverUrl, wsKeyInput)
+                                wsStatus = "检测中..."
+                                scope.launch(Dispatchers.IO) {
+                                    val active = try { Workshop.activeServer() } catch (e: Exception) { "" }
+                                    val h = try { Workshop.health() } catch (e: Exception) { null }
+                                    val s = try { Workshop.stats() } catch (e: Exception) { null }
+                                    scope.launch(Dispatchers.Main) {
+                                        if (active.isNotBlank()) wsServerInput = active
+                                        if (h != null) {
+                                            val auth = h.fields["auth"]?.str() ?: "open"
+                                            val dl = (s?.fields?.get("downloads") as? J.Num)?.v?.toInt() ?: 0
+                                            val lk = (s?.fields?.get("likes") as? J.Num)?.v?.toInt() ?: 0
+                                            // auth=key 的服务器：上传/删除没 Key 就是 401，这里直接说清楚，
+                                            // 否则用户只看到"❌ 上传失败"，会以为是网络或服务器坏了。
+                                            val needKey = auth == "key" && wsKeyInput.isBlank()
+                                            wsStatus = "✅ 已连接（认证:" + auth + " · ↓" + dl + " ❤" + lk + "）" +
+                                                if (needKey) " · 🔑 上传/删除要先填 Key" else ""
+                                        } else wsStatus = "❌ 连接失败"
+                                    }
+                                }
+                            },
+                            fontSize = 12.sp,
+                        )
+                        Spacer(Modifier.weight(1f))
+                        DickField(value = wsSearchInput, onValueChange = { wsSearchInput = it },
+                            label = I18n.t("ws_search", "搜索"), singleLine = true, modifier = Modifier.width(110.dp))
+                        DickIconButton(icon = "🔍", onClick = { wsSearchOnline() })
+                    }
+                    DickTextButton(label = "全部作品", onClick = { wsLoadOnline() }, fontSize = 12.sp)
+                    wsOnlineList.forEachIndexed { i, r ->
+                        val t = r.fields["_type"]?.str() ?: "角色卡"
+                        val name = r.fields["name"]?.str() ?: "?"
+                        val author = r.fields["author"]?.str() ?: "?"
+                        val dl = (r.fields["downloads"] as? J.Num)?.v?.toInt() ?: 0
+                        val lk = (r.fields["likes"] as? J.Num)?.v?.toInt() ?: 0
+                        val tags = (r.fields["tags"] as? J.Arr)?.items?.mapNotNull { it.str() } ?: emptyList()
+                        val desc = r.fields["description"]?.str() ?: ""
+                        val sel = i == wsOnlineIdx
+                        DickCard(
+                            radius = 12.dp,
+                            tone = if (sel) DickSurfaceTone.Surface2 else DickSurfaceTone.Surface,
+                            modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp).clickable { wsOnlineIdx = i },
+                        ) {
+                            Column(Modifier.padding(10.dp)) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    IconText(wsTypeIcon(t) + name, fontSize = 14.sp, fontWeight = FontWeight.SemiBold,
+                                        modifier = Modifier.weight(1f), iconSize = 16.dp)
+                                    DickTag("↓" + dl + "  ❤" + lk, fontSize = 11.sp, iconSize = 12.dp)
+                                }
+                                Text(author, fontSize = 11.sp, color = theme.muted)
+                                if (tags.isNotEmpty()) Text(tags.joinToString(" · "), fontSize = 10.sp, color = theme.muted)
+                                if (desc.isNotBlank()) Text(desc, fontSize = 11.sp, color = theme.text, maxLines = 2)
+                            }
+                        }
+                    }
+                    val selR = wsOnlineList.getOrNull(wsOnlineIdx)
+                    if (selR != null) {
+                        val t = selR.fields["_type"]?.str() ?: "角色卡"
+                        val name = selR.fields["name"]?.str() ?: "?"
+                        val author = selR.fields["author"]?.str() ?: "?"
+                        val dl = (selR.fields["downloads"] as? J.Num)?.v?.toInt() ?: 0
+                        val lk = (selR.fields["likes"] as? J.Num)?.v?.toInt() ?: 0
+                        val tags = (selR.fields["tags"] as? J.Arr)?.items?.mapNotNull { it.str() } ?: emptyList()
+                        val desc = selR.fields["description"]?.str() ?: ""
+                        val created = selR.fields["created_at"]?.str() ?: ""
+                        val preview = selR.fields["system_prompt_preview"]?.str() ?: ""
+                        DickCard(radius = 12.dp, modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+                            Column(Modifier.padding(12.dp)) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    IconText(wsTypeIcon(t) + name, fontSize = 15.sp, fontWeight = FontWeight.Bold,
+                                        modifier = Modifier.weight(1f), iconSize = 17.dp)
+                                    DickTag("↓" + dl + "  ❤" + lk, fontSize = 12.sp, iconSize = 13.dp)
+                                }
+                                Text("作者：" + author, fontSize = 12.sp, color = theme.muted)
+                                if (created.isNotBlank()) Text("上传：" + created.take(10), fontSize = 10.sp, color = theme.muted)
+                                if (tags.isNotEmpty()) Text("标签：" + tags.joinToString(" · "), fontSize = 11.sp, color = theme.muted)
+                                if (desc.isNotBlank()) Text(desc, fontSize = 13.sp, color = theme.text)
+                                if (preview.isNotBlank()) Text("人设：" + preview.take(120), fontSize = 11.sp, color = theme.muted, maxLines = 4)
+                            }
+                        }
+                    }
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        DickTextButton(label = I18n.t("ws_download", "⬇️ 下载"), onClick = { wsDownloadSelected() }, fontSize = 12.sp)
+                        DickTextButton(label = I18n.t("ws_like", "❤️ 点赞"), onClick = { wsLikeSelected() }, fontSize = 12.sp)
+                        DickTextButton(label = I18n.t("ws_delete", "🗑️ 删除"), onClick = { wsDeleteSelected() }, fontSize = 12.sp, color = theme.danger)
+                    }
+                } else {
+                    if (wsPlugins.isEmpty()) {
+                        DickEmptyState("🔌 插件市场暂无内容（工坊服务器未启动或未上传插件）")
+                    }
+                    wsPlugins.forEach { p ->
+                        val id = p.fields["id"]?.str() ?: return@forEach
+                        val name = p.fields["name"]?.str() ?: "?"
+                        val ver = p.fields["version"]?.str() ?: "1.0"
+                        val author = p.fields["author"]?.str() ?: "?"
+                        val desc = p.fields["description"]?.str() ?: ""
+                        val dl = (p.fields["downloads"] as? J.Num)?.v?.toInt() ?: 0
+                        val installed = wsLocalPlugins.any {
+                            it == name || it == (p.fields["original_name"]?.str()?.removeSuffix(".py"))
+                        }
+                        DickCard(
+                            radius = 10.dp,
+                            tone = DickSurfaceTone.Bubble,
+                            modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp),
+                        ) {
+                            Column(Modifier.padding(8.dp)) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    IconText("🔌 $name", fontSize = 13.sp, fontWeight = FontWeight.SemiBold,
+                                        modifier = Modifier.weight(1f), iconSize = 14.dp)
+                                    DickTag("v$ver · $author · ↓$dl", fontSize = 10.sp, iconSize = 11.dp)
+                                }
+                                if (desc.isNotBlank()) {
+                                    Text(desc, fontSize = 11.sp, color = theme.muted, maxLines = 2)
+                                }
+                                if (installed) {
+                                    DickTag("✅ 已安装", fontSize = 11.sp, tone = DickTone.Ok, iconSize = 12.dp)
+                                } else {
+                                    DickTextButton(
+                                        label = if (wsInstallingId == id) "⏳ 安装中..." else "⬇️ 安装",
+                                        onClick = { wsInstallPlugin(id) },
+                                        enabled = wsInstallingId != id,
+                                        fontSize = 12.sp,
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {},
+        dismissButton = { DickTextButton(label = I18n.t("btn_cancel", "取消"), onClick = { showWorkshop = false }) },
+    )
+    }
+}

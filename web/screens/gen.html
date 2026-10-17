@@ -1,0 +1,40 @@
+<!-- 生图<seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌模态 -->
+<div class="modal" id="genImgModal">
+  <div class="modal-box" style="width:440px">
+    <h3>🎨 生图</h3>
+    <div class="field"><label>风格预设</label>
+      <select id="genPreset"></select>
+      <div id="genPresetDesc" style="font-size:11px;color:var(--sub);margin-top:3px"></div>
+    </div>
+    <div class="field"><label>画面内容（描述要生成什么）</label>
+      <textarea id="genPrompt" rows="3" placeholder="例如：她站在樱花树下回头微笑，微风拂起银白发丝"></textarea>
+    </div>
+    <div class="field"><label>补充风格词（可选，追加在内容之后）</label>
+      <input id="genExtra" placeholder="例如：masterpiece, upper body, soft rim light, 逆光">
+    </div>
+    <div class="field"><label>负面提示（可选，不想要的内容）</label>
+      <input id="genNegative" placeholder="例如：模糊, 变形, 多余手指">
+      <div id="genNegativeHint" style="font-size:11px;color:var(--sub);margin-top:3px"></div>
+    </div>
+    <div class="row" style="justify-content:flex-start">
+      <label style="font-size:12px;color:var(--sub);margin-right:6px">尺寸</label>
+      <select id="genSize" style="width:110px">
+        <option value="1024x1024">方形 1024</option>
+        <option value="1024x768">横版 1024x768</option>
+        <option value="768x1024">竖版 768x1024</option>
+        <option value="512x512">小方形 512</option>
+      </select>
+      <label style="font-size:12px;color:var(--sub);margin:0 6px 0 14px">种子</label>
+      <input id="genSeed" style="width:110px" placeholder="留空=随机">
+      <button class="btn2 ghost" id="genReroll" style="width:auto;margin:0 0 0 6px;padding:4px 8px"
+              title="换一个随机种子，重新生成（同一个种子能复现同一张图）">🎲 重抽</button>
+    </div>
+    <div id="genNote" style="font-size:11px;color:var(--sub);margin-top:4px"></div>
+    <div id="genResult" style="margin-top:8px;display:none;text-align:center">
+      <img id="genResultImg" style="max-width:100%;max-height:260px;border-radius:8px">
+    </div>
+    <div class="row">
+      <button class="btn2 ghost" onclick="document.getElementById('genImgModal').classList.remove('open')">取消</button>
+      <button class="btn2" id="genGo" style="width:auto;margin:0">✨ 生成</button>
+    </div>  </div>
+</div>

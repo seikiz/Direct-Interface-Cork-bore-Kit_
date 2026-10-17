@@ -293,6 +293,8 @@ def test_android_has_same_loading_state():
     a = os.path.join(ROOT, "DICK-Android", "app", "src", "main", "java", "com", "dick", "app")
     vm = io.open(os.path.join(a, "ChatViewModel.kt"), encoding="utf-8").read()
     app = io.open(os.path.join(a, "App.kt"), encoding="utf-8").read()
+    app += io.open(os.path.join(a, "ui", "screens", "chat", "ChatScreen.kt"),
+                   encoding="utf-8").read()
     check("ViewModel 里有 openingLoading 状态",
           "var openingLoading = mutableStateOf(false)" in vm)
     check("App 里接了 openingLoading", "var openingLoading by vm.openingLoading" in app)
@@ -308,6 +310,8 @@ def test_clear_history_restarts_opening():
     print("\n== 10. 清空历史后要重演开场白（复用开局路径）==")
     a = os.path.join(ROOT, "DICK-Android", "app", "src", "main", "java", "com", "dick", "app")
     app = io.open(os.path.join(a, "App.kt"), encoding="utf-8").read()
+    app += io.open(os.path.join(a, "ui", "screens", "chat", "ChatScreen.kt"),
+                   encoding="utf-8").read()
     i = app.find("fun clearHistory(")
     check("找得到 App.kt 的 clearHistory", i > 0)
     if i < 0:

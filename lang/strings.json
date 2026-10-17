@@ -1258,8 +1258,8 @@
     },
     "ws_test": {
       "zh": "🔄 重新检测",
-      "en": "🔌 Test",
-      "ja": "🔌 テスト",
+      "en": "🔄 Test",
+      "ja": "🔄 テスト",
       "used_by": [
         "android"
       ]
@@ -1276,6 +1276,446 @@
       "zh": "你",
       "en": "You",
       "ja": "あなた",
+      "used_by": [
+        "android"
+      ]
+    },
+    "st_api_title": {
+      "zh": "🔑 API 配置（模型商 / 模型 / Key）",
+      "en": "🔑 API Settings (provider / model / key)",
+      "ja": "🔑 API 設定（プロバイダー / モデル / Key）",
+      "used_by": [
+        "android"
+      ]
+    },
+    "st_provider": {
+      "zh": "模型商",
+      "en": "Provider",
+      "ja": "プロバイダー",
+      "used_by": [
+        "android"
+      ]
+    },
+    "st_model": {
+      "zh": "模型",
+      "en": "Model",
+      "ja": "モデル",
+      "used_by": [
+        "android"
+      ]
+    },
+    "st_custom_model": {
+      "zh": "自定义模型 ID",
+      "en": "Custom model ID",
+      "ja": "カスタムモデル ID",
+      "used_by": [
+        "android"
+      ]
+    },
+    "st_use_custom": {
+      "zh": "使用自定义模型",
+      "en": "Use custom model",
+      "ja": "カスタムモデルを使う",
+      "used_by": [
+        "android"
+      ]
+    },
+    "st_api_key": {
+      "zh": "API Key",
+      "en": "API Key",
+      "ja": "API Key",
+      "used_by": [
+        "android"
+      ]
+    },
+    "st_api_key_free": {
+      "zh": "API Key（免 Key，可留空）",
+      "en": "API Key (not required, may be empty)",
+      "ja": "API Key（不要・空欄可）",
+      "used_by": [
+        "android"
+      ]
+    },
+    "st_base_url": {
+      "zh": "Base URL",
+      "en": "Base URL",
+      "ja": "Base URL",
+      "used_by": [
+        "android"
+      ]
+    },
+    "st_base_hint": {
+      "zh": "选模型商时自动填",
+      "en": "filled automatically when you pick a provider",
+      "ja": "プロバイダー選択で自動入力",
+      "used_by": [
+        "android"
+      ]
+    },
+    "st_proxy": {
+      "zh": "代理",
+      "en": "Proxy",
+      "ja": "プロキシ",
+      "used_by": [
+        "android"
+      ]
+    },
+    "st_proxy_hint": {
+      "zh": "通道不通时填，如 http://127.0.0.1:7890",
+      "en": "fill in when the connection fails, e.g. http://127.0.0.1:7890",
+      "ja": "接続できない時に記入（例 http://127.0.0.1:7890）",
+      "used_by": [
+        "android"
+      ]
+    },
+    "st_relay": {
+      "zh": "内置代理通道",
+      "en": "Built-in relay",
+      "ja": "内蔵リレー",
+      "used_by": [
+        "android"
+      ]
+    },
+    "st_relay_hint": {
+      "zh": "直连失败自动走中转",
+      "en": "falls back to the relay when direct fails",
+      "ja": "直結失敗時は自動で中継",
+      "used_by": [
+        "android"
+      ]
+    },
+    "st_relay_on": {
+      "zh": "● 中转通道已启用（直连失败已自动切换）",
+      "en": "● Relay enabled (switched automatically after a direct failure)",
+      "ja": "● リレー有効（直結失敗で自動切替）",
+      "used_by": [
+        "android"
+      ]
+    },
+    "st_relay_off": {
+      "zh": "○ 直连模式（直连失败自动走中转）",
+      "en": "○ Direct mode (auto-falls back to the relay)",
+      "ja": "○ 直結モード（失敗時は自動で中継）",
+      "used_by": [
+        "android"
+      ]
+    },
+    "st_stop": {
+      "zh": "停止序列",
+      "en": "Stop sequences",
+      "ja": "停止シーケンス",
+      "used_by": [
+        "android"
+      ]
+    },
+    "st_stop_hint": {
+      "zh": "逗号分隔，如 <|im_end|>, </s>",
+      "en": "comma separated, e.g. <|im_end|>, </s>",
+      "ja": "カンマ区切り（例 <|im_end|>, </s>）",
+      "used_by": [
+        "android"
+      ]
+    },
+    "st_free_suffix": {
+      "zh": "（免 Key）",
+      "en": " (no key needed)",
+      "ja": "（Key 不要）",
+      "used_by": [
+        "android"
+      ]
+    },
+    "st_ollama_online": {
+      "zh": " · 本地已连接",
+      "en": " · local: connected",
+      "ja": " · ローカル接続済み",
+      "used_by": [
+        "android"
+      ]
+    },
+    "st_ollama_offline": {
+      "zh": " · 本地未检测到",
+      "en": " · local: not detected",
+      "ja": " · ローカル未検出",
+      "used_by": [
+        "android"
+      ]
+    },
+    "st_current_suffix": {
+      "zh": "（当前）",
+      "en": " (current)",
+      "ja": "（現在）",
+      "used_by": [
+        "android"
+      ]
+    },
+    "st_regex": {
+      "zh": "正则规则（每行 id|名称|正则|替换|作用域；ai/user/both）",
+      "en": "Regex rules (one per line: id|name|pattern|replace|scope; ai/user/both)",
+      "ja": "正規表現ルール（1行 id|名前|正規表現|置換|スコープ；ai/user/both）",
+      "used_by": [
+        "android"
+      ]
+    },
+    "st_temp": {
+      "zh": "温度",
+      "en": "Temperature",
+      "ja": "温度",
+      "used_by": [
+        "android"
+      ]
+    },
+    "st_topp": {
+      "zh": "top_p",
+      "en": "top_p",
+      "ja": "top_p",
+      "used_by": [
+        "android"
+      ]
+    },
+    "st_hint_default": {
+      "zh": "留空 = 默认",
+      "en": "empty = default",
+      "ja": "空欄 = 既定",
+      "used_by": [
+        "android"
+      ]
+    },
+    "st_lang": {
+      "zh": "语言",
+      "en": "Language",
+      "ja": "言語",
+      "used_by": [
+        "android"
+      ]
+    },
+    "st_timedial": {
+      "zh": "⏳ 时间流速",
+      "en": "⏳ Time speed",
+      "ja": "⏳ 時間速度",
+      "used_by": [
+        "android"
+      ]
+    },
+    "st_lifespace": {
+      "zh": "生活 / 空间 / 世界卡库（吃饭 · 不能瞬移 · 卡包）",
+      "en": "Life / Space / World packs (eating · no teleport · packs)",
+      "ja": "生活 / 空間 / ワールドパック（食事・テレポート不可・パック）",
+      "used_by": [
+        "android"
+      ]
+    },
+    "st_appicon": {
+      "zh": "🎨 应用图标",
+      "en": "🎨 App icon",
+      "ja": "🎨 アプリアイコン",
+      "used_by": [
+        "android"
+      ]
+    },
+    "st_wallpaper": {
+      "zh": "🖼️ 壁纸（聊天背景）",
+      "en": "🖼️ Wallpaper (chat background)",
+      "ja": "🖼️ 壁紙（チャット背景）",
+      "used_by": [
+        "android"
+      ]
+    },
+    "st_pick_hint": {
+      "zh": "（点击从相册选择）",
+      "en": " (tap to pick from the gallery)",
+      "ja": "（タップでギャラリーから選択）",
+      "used_by": [
+        "android"
+      ]
+    },
+    "st_set_hint": {
+      "zh": "（已设置，点击更换）",
+      "en": " (set — tap to change)",
+      "ja": "（設定済み・タップで変更）",
+      "used_by": [
+        "android"
+      ]
+    },
+    "st_wallpaper_clear": {
+      "zh": "🧹 恢复默认背景",
+      "en": "🧹 Reset to the default background",
+      "ja": "🧹 既定の背景に戻す",
+      "used_by": [
+        "android"
+      ]
+    },
+    "st_dev": {
+      "zh": "🔧 开发者模式（解锁角色卡高级设置/内置游戏）",
+      "en": "🔧 Developer mode (unlocks advanced card settings / built-in games)",
+      "ja": "🔧 開発者モード（カード詳細設定・内蔵ゲームを解放）",
+      "used_by": [
+        "android"
+      ]
+    },
+    "st_humanize": {
+      "zh": "🧍 去 AI 味（具体细节/生活有变化/口语不完美/引用共同记忆）",
+      "en": "🧍 De-AI (concrete detail / life changes / imperfect speech / shared memories)",
+      "ja": "🧍 AI っぽさを消す（具体的な描写・生活の変化・不完全な口語・共有の記憶）",
+      "used_by": [
+        "android"
+      ]
+    },
+    "st_style": {
+      "zh": "🎛 风格闸（去文学化漂移：生活词/比喻→事实/拆长句）",
+      "en": "🎛 Style guard (stop literary drift: life words / metaphors → facts / split long sentences)",
+      "ja": "🎛 スタイルガード（文学化の揺れを止める：生活語・比喩→事実、長文の分割）",
+      "used_by": [
+        "android"
+      ]
+    },
+    "st_long": {
+      "zh": "🌊 长句模式（不拆长句，允许更流畅/文学化表达）",
+      "en": "🌊 Long sentences (do not split; allow smoother / more literary prose)",
+      "ja": "🌊 長文モード（分割せず、より流暢で文学的な表現を許可）",
+      "used_by": [
+        "android"
+      ]
+    },
+    "st_plugins": {
+      "zh": "🔌 插件",
+      "en": "🔌 Plugins",
+      "ja": "🔌 プラグイン",
+      "used_by": [
+        "android"
+      ]
+    },
+    "st_gal_count": {
+      "zh": "每轮选项：",
+      "en": "Options per turn: ",
+      "ja": "毎ターンの選択肢：",
+      "used_by": [
+        "android"
+      ]
+    },
+    "st_gal_auto": {
+      "zh": "自动生成",
+      "en": "Auto-generate",
+      "ja": "自動生成",
+      "used_by": [
+        "android"
+      ]
+    },
+    "theme_dark": {
+      "zh": "深色",
+      "en": "Dark",
+      "ja": "ダーク",
+      "used_by": [
+        "android"
+      ]
+    },
+    "theme_light": {
+      "zh": "浅色",
+      "en": "Light",
+      "ja": "ライト",
+      "used_by": [
+        "android"
+      ]
+    },
+    "theme_oled": {
+      "zh": "OLED",
+      "en": "OLED",
+      "ja": "OLED",
+      "used_by": [
+        "android"
+      ]
+    },
+    "theme_system": {
+      "zh": "跟随系统",
+      "en": "Follow system",
+      "ja": "システムに従う",
+      "used_by": [
+        "android"
+      ]
+    },
+    "accent_blue": {
+      "zh": "蓝",
+      "en": "Blue",
+      "ja": "青",
+      "used_by": [
+        "android"
+      ]
+    },
+    "accent_green": {
+      "zh": "绿",
+      "en": "Green",
+      "ja": "緑",
+      "used_by": [
+        "android"
+      ]
+    },
+    "accent_purple": {
+      "zh": "紫",
+      "en": "Purple",
+      "ja": "紫",
+      "used_by": [
+        "android"
+      ]
+    },
+    "accent_pink": {
+      "zh": "粉",
+      "en": "Pink",
+      "ja": "ピンク",
+      "used_by": [
+        "android"
+      ]
+    },
+    "preset_default": {
+      "zh": "默认",
+      "en": "Default",
+      "ja": "既定",
+      "used_by": [
+        "android"
+      ]
+    },
+    "preset_trpg_gm": {
+      "zh": "跑团主持人",
+      "en": "TRPG game master",
+      "ja": "TRPG ゲームマスター",
+      "used_by": [
+        "android"
+      ]
+    },
+    "preset_novel": {
+      "zh": "小说叙事",
+      "en": "Novel narration",
+      "ja": "小説ナレーション",
+      "used_by": [
+        "android"
+      ]
+    },
+    "preset_oshi": {
+      "zh": "单推模式",
+      "en": "Oshi mode",
+      "ja": "単推しモード",
+      "used_by": [
+        "android"
+      ]
+    },
+    "preset_oshi_target": {
+      "zh": "角色单推模式",
+      "en": "Character oshi mode",
+      "ja": "キャラ単推しモード",
+      "used_by": [
+        "android"
+      ]
+    },
+    "preset_doc": {
+      "zh": "公文模式",
+      "en": "Official document mode",
+      "ja": "公文書モード",
+      "used_by": [
+        "android"
+      ]
+    },
+    "preset_finance": {
+      "zh": "财报模式",
+      "en": "Earnings report mode",
+      "ja": "決算モード",
       "used_by": [
         "android"
       ]
@@ -1830,6 +2270,7 @@
     }
   },
   "_same_as_zh_ok": [
+    "accent_purple",
     "apiKey",
     "btn_edit",
     "btn_edit_msg",
@@ -1843,6 +2284,7 @@
     "match_regex",
     "nrPersonality",
     "save",
+    "st_temp",
     "weContent",
     "weDepth"
   ]

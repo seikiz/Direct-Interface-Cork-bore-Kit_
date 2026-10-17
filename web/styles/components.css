@@ -1,0 +1,56 @@
+/* components.css —— 通用件：图标字体（@font-face / .ms / .ic）、模态壳、消息控制条
+   （原 web/index.html 内联 <style> 的第 3 段，原样搬出）
+
+   依赖上一文件 screens.css；且必须排在 panels.css 之前 —— 这不是风格问题，是真依赖：
+     components.css 的 `.modal-box .btn2{ padding:7px 16px }`
+   与 panels.css 的 `.ws-card .btn2{ padding:3px 8px }` 特异性都是 (0,2,0)，
+   谁在后面谁赢。世界书弹窗里的卡片按钮正是靠"panels 在后"才拿到 3px/8px ——
+   把本文件挪到 panels 后面，按钮 padding 立刻变 7px/16px（肉眼可见）。
+
+   ⚠ 全文件唯一一处改了字符的地方：@font-face 的 url 从 'fonts/…' 改成 '../fonts/…'。
+   CSS 里的相对 url() 是相对**这份 CSS 文件**解析的（不是相对页面），
+   从 web/ 搬到 web/styles/ 之后不补这个 ../ 就会 404、图标全变空白 —— 那是唯一可见的观感变化。
+*/
+/* ---------- 黑白线性图标：Material Symbols<seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌（唯一真相 icons/icons.json） ---------- */
+/* 字体随包（342.6 KB woff2，Apache-2.0，见 fonts/LICENSE）—— 不连 CDN，断网也要显示。
+   这是 Google Fonts 的静态实例（wght 300，细线/少边），所以 FILL/GRAD/opsz 轴设定不生效。 */
+@font-face{ font-family:'Material Symbols Outlined'; font-style:normal; font-weight:300;
+  font-display:block; src:url('../fonts/MaterialSymbolsOutlined.woff2') format('woff2'); }
+.ms{ font-family:'Material Symbols Outlined'; font-weight:normal; font-style:normal; line-height:1;
+  font-size:1.15em; display:inline-block; vertical-align:-0.16em; letter-spacing:normal;
+  text-transform:none; white-space:nowrap; word-wrap:normal; direction:ltr;
+  -webkit-font-feature-settings:'liga'; font-feature-settings:'liga';
+  -webkit-font-smoothing:antialiased; }
+.ic{ display:inline-flex; align-items:center; justify-content:center;
+  width:1.25em; height:1.25em; margin-right:2px; vertical-align:-0.2em; }
+.ic .ms{ font-size:1.25em; vertical-align:0; }   /* 填满 .ic 的方框（按眼睛调的，见说明） */
+.ic .ic-img{ width:100%; height:100%; object-fit:contain; display:block; }
+button .ic{ margin-right:2px; }
+.ic:only-child{ margin-right:0; }
+.rc-unlock .ic{ margin:0; }
+.iconbtn .ic{ width:1.1em; height:1.1em; margin:0; }
+
+/* ---------- 模态 ---------- */
+.modal{ display:none; position:fixed; inset:0; background:rgba(0,0,0,.55); z-index:50;
+  align-items:center; justify-content:center; }
+.modal.open{ display:flex; animation:fadein .16s ease-out; }
+@keyframes fadein{ from{ opacity:0; } to{ opacity:1; } }
+.modal-box{ background:var(--panel); border:1px solid var(--line); border-radius:14px;
+  padding:18px 20px; width:420px; max-width:92vw; max-height:84vh; overflow-y:auto;
+  animation:pop .2s cubic-bezier(.22,.61,.36,1); }
+.modal-box h3{ font-size:15px; margin-bottom:12px; }
+.modal-box .field{ margin:8px 0; }
+.modal-box label{ display:block; font-size:12px; color:var(--sub); margin-bottom:4px; }
+.modal-box input,.modal-box textarea,.modal-box select{ width:100%; background:var(--bubble);
+  border:1px solid var(--line); border-radius:8px; color:var(--text); padding:8px 10px; font-size:13px; font-family:inherit; }
+.modal-box .row{ display:flex; gap:8px; margin-top:14px; justify-content:flex-end; }
+.modal-box .btn2{ background:var(--accent); color:#0b1220; border:none; border-radius:8px; padding:7px 16px; cursor:pointer; }
+.modal-box .btn2.ghost{ background:var(--bubble); color:var(--text); border:1px solid var(--line); }
+
+/* ---------- 消息控制（编辑/滑条/重生成） ---------- */
+.msg .mctl{ display:none; margin-top:4px; gap:4px; align-items:center; font-size:11px; color:var(--sub); }
+.msg:hover .mctl{ display:flex; }
+.msg .mctl button{ background:var(--bubble); border:1px solid var(--line); color:var(--sub);
+  border-radius:7px; padding:2px 8px; font-size:11px; cursor:pointer; }
+.msg .mctl button:hover{ border-color:var(--accent); color:var(--text); }
+.msg .mctl .swipe-n{ min-width:40px; text-align:center; }

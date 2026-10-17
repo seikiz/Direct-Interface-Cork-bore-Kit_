@@ -1,5 +1,9 @@
 package com.dick.app
 
+/* 目录约定（web/UI_ARCHITECTURE.md 安卓节）：一屏一包、一包三件。
+ * 本文件是「世界 / 生活空间 / 世界卡库」这一屏的渲染；状态仍全部在 ChatViewModel
+ * （生活层/空间层与机制状态强耦合，这一批只搬 UI，不碰状态迁移 —— 见报告「下一步」）。
+ * 兼容门面：Dialogs.kt 的 LifeSpaceSettingsPanel() 转调本文件。 */
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -69,7 +73,7 @@ import java.io.File
  *   · 世界卡包列表要读目录 → 走 io 线，结果回主线程。
  */
 @Composable
-fun LifeSpaceSettingsPanel(vm: ChatViewModel, deps: DialogDeps) {
+fun LifeSpaceScreen(vm: ChatViewModel, deps: DialogDeps) {
     if (!vm.showLifeSpace.value) return
     val theme = deps.theme
     val accent = deps.accent

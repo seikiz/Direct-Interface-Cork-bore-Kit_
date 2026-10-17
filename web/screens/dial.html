@@ -1,0 +1,17 @@
+<!-- ⏳ 时间流速表盘模态。DOM 已搬到本文件：结构与行内 style 必须和搬家前逐字一致（too<seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌ls/ui_snapshot.py 会核对），行为在 web/js/screens/dial.js -->
+<div class="modal" id="timeDialModal">
+  <div class="modal-box" style="width:min(94vw,420px)">
+    <h3>⏳ 时间流速</h3>
+    <div style="font-size:12px;color:var(--sub);line-height:1.6;margin-bottom:2px">
+      世界那边过得比现实快多少倍。倍率越高，一段时间没说话她那边过得越久。
+    </div>
+    <div id="dialWrap" style="display:flex;justify-content:center;margin:2px 0"></div>
+    <div id="dialReadout" style="text-align:center;margin:2px 0 8px"></div>
+    <div id="dialWarning" style="font-size:11px;color:var(--sub);line-height:1.5;
+         padding:6px 8px;border-radius:6px;border:1px solid var(--line);margin-bottom:10px"></div>
+    <div class="row" style="justify-content:space-between">
+      <button class="btn2 ghost" onclick="document.getElementById('timeDialModal').classList.remove('open')">关闭</button>
+      <button class="btn" id="dialSave">保存这个流速</button>
+    </div>
+  </div>
+</div>

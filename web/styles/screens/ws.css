@@ -1,0 +1,26 @@
+/* web/styles/screens/ws.css —— 🧰 创意工坊 / 世界卡库屏的专属样式
+ * 阶段 3 从 styles/panels.css 原样搬出：.ws-cols/.ws-col（三列本地列表）、.ws-cards/.ws-card*
+ * （在线/插件卡片）、.ws-empty（空态）、.ws-tabbtn.active（当前 Tab）。一行声明都没动。
+ *
+ * 层叠顺序（别随手挪 <link>）：本文件排在 styles/screens/wm.css 之后（两个都是 panels.css 搬出来的，
+ * 搬家前 panels.css 里也是 .wentry/.p-grid 在前、.ws-* 在后）。
+ * 这里有一条**真的会和 components.css 抢**的规则：
+ *   `.ws-card .btn2{ font-size:11px; padding:3px 8px }`  vs  `.modal-box .btn2{ padding:7px 16px }`
+ * 两者特异性相同（0,2,0），谁在后面谁赢 —— 搬家前 panels.css 在 components.css 之后，所以是
+ * `.ws-card .btn2` 赢。本文件只要还排在 components.css 之后，卡片里的按钮就还是原来的小尺寸。 */
+.ws-cols{ display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+.ws-col select{ width:100%; background:var(--bubble); border:1px solid var(--line); border-radius:8px;
+  color:var(--text); padding:6px; font-size:12px; }
+.ws-col .section-label{ padding-left:0; }
+.ws-cards{ display:flex; flex-direction:column; gap:6px; max-height:300px; overflow:auto; padding:2px; }
+.ws-card{ background:var(--bubble); border:1px solid var(--line); border-radius:10px; padding:8px 10px; }
+.ws-card:hover{ border-color:var(--accent); }
+.ws-card .ws-card-top{ display:flex; align-items:center; gap:6px; }
+.ws-card .ws-card-name{ font-size:13px; font-weight:600; color:var(--text); flex:1; }
+.ws-card .ws-card-meta{ font-size:10px; color:var(--sub); white-space:nowrap; }
+.ws-card .ws-card-desc{ font-size:11px; color:var(--sub); margin-top:3px; }
+.ws-card .ws-card-btns{ display:flex; gap:6px; margin-top:6px; }
+.ws-card .btn2{ font-size:11px; padding:3px 8px; }
+.ws-empty{ font-size:12px; color:var(--sub); padding:10px; text-align:center; }
+.ws-tabbtn.active{ border-color:var(--accent); background:var(--bubble); color:var(--text); }
+/* <seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌

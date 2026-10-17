@@ -1,0 +1,29 @@
+package com.dick.app
+
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+
+/**
+ * SettingsState —— 设置屏的**屏内瞬态**。
+ *
+ * 硬边界（这一条是"状态收口"的落地口径）：
+ *   · 只放「离开这一屏就没有意义」的东西：展开/折叠、输入缓冲、滚动位置；
+ *   · 跨屏要用的偏好（主题/强调色/预设/语言/去 AI 味/风格闸/自动接话/开发者模式）
+ *     **一律在 ChatViewModel** —— 屏不许自己留副本，否则两份迟早不同步；
+ *   · 这里的东西不许被别的屏读。
+ *
+ * 原来这些是 SettingsDialog 里的 `remember { mutableStateOf(...) }`，
+ * 搬到类里之后寿命由调用点决定（`rememberSettingsState()` 放在弹窗打开的分支里，
+ * 所以仍然是"关掉就重置"，和搬家前一模一样）。
+ */
+class SettingsState {
+    /** 「🔌 插件」这一段是不是展开<seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌的（默认收起 —— 与搬家前一致） */
+    var foldPlugins by mutableStateOf(false)
+}
+
+/** 跟着「设置弹窗打开」这一段的组合走：弹窗关掉，屏内瞬态一起丢。 */
+@Composable
+fun rememberSettingsState(): SettingsState = remember { SettingsState() }

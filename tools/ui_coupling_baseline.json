@@ -1,0 +1,42 @@
+{
+  "version": 1,
+  "tool": "tools/audit_ui_coupling.py",
+  "note": "UI 解耦阶段2（状态/路由 + 5 个低耦合小屏搬出 index.html）完成时的现状；指标口径见本脚本顶部文档。阶段 3/4/5 只会更好，别让数字退回去。",
+  "total_score": 29.6,
+  "metrics": {
+    "big_files": {
+      "value": 8481,
+      "unit": "超标行数合计",
+      "score": 10.55
+    },
+    "html_style": {
+      "value": 556.5,
+      "unit": "惩罚分（块行数 + 行内×1.5 + 块×3）",
+      "score": 26.44
+    },
+    "colors": {
+      "value": 392,
+      "unit": "颜色字面量处数",
+      "score": 27.68
+    },
+    "globals": {
+      "value": 55,
+      "unit": "个",
+      "score": 12.7
+    },
+    "coupling": {
+      "value": 218,
+      "unit": "跨屏引用处数（网页 185 + 安卓 33）",
+      "score": 15.5
+    },
+    "reuse": {
+      "value": 355,
+      "unit": "裸控件出现次数（共享件调用 341 ／ 定义处 9）",
+      "score": 96.06
+    }
+  },
+  "counts": {
+    "web_files": 23,
+    "android_files": 13
+  }
+}

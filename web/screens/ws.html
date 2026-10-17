@@ -1,0 +1,58 @@
+<!-- 🧰 创意工坊 / 世界卡库（阶段3：这一屏的 DOM 从 index.html 搬到这里，index.html 原位只留挂载点）
+     结构/class/行内 style 必须和搬家前逐字一致（tools/ui_snapshot.py 会核对），
+     行为在 web/js/screens/ws.js（本屏 = 本地文件 / 在线工坊 / 插件市场 三个 Tab）。 -->
+<!-- 创意工<seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌坊模态 -->
+<div class="modal" id="wsModal">
+  <div class="modal-box" style="width:680px">
+    <h3 data-i18n="wsTitle" id="wsTitle">🧰 创意工坊</h3>
+    <div class="row" style="justify-content:flex-start">
+      <button data-i18n="wsLocal" class="btn2 ws-tabbtn" id="wsTabLocal">📂 本地</button>
+      <button data-i18n="wsOnline" class="btn2 ghost ws-tabbtn" id="wsTabOnline">🌐 在线</button>
+      <button class="btn2 ghost ws-tabbtn" id="wsTabPlugin">🔌 插件</button>
+      <span style="flex:1"></span>
+      <span id="wsStatus" style="font-size:12px;color:var(--sub)"></span>
+    </div>
+    <div id="wsLocalPane">
+      <div class="ws-cols">
+        <div class="ws-col"><div class="section-label">📂 角色卡</div><select id="wsLocalRoles" size="10"></select></div>
+        <div class="ws-col"><div class="section-label">🌍 世界卡</div><select id="wsLocalWorlds" size="10"></select></div>
+        <div class="ws-col"><div class="section-label">📦 世界卡包</div><select id="wsLocalPacks" size="10"></select></div>
+      </div>
+      <div class="field"><label data-i18n="wsPrev" id="wsPrevLabel">预览</label><pre id="wsPreview" style="background:var(--bg);padding:8px;border-radius:8px;max-height:130px;overflow:auto;font-size:11px;white-space:pre-wrap"></pre></div>
+      <div class="row">
+        <button data-i18n="wsExport" class="btn2 ghost" id="wsExportBtn">📤 导出文件</button>
+        <button data-i18n="wsOpen" class="btn2 ghost" id="wsOpenBtn">📂 打开目录</button>
+        <button data-i18n="wsDel" class="btn2 ghost" id="wsLocalDelBtn" style="color:#f87171">🗑️ 删除</button>
+      </div>
+    </div>
+    <div id="wsOnlinePane" style="display:none">
+      <div class="field" style="padding:6px 0"><span id="wsAutoStatus" style="font-size:12px;color:var(--sub)">🛰️ 自动连接中...</span></div>
+      <div class="field"><label data-i18n="wsProxy" id="wsProxy">🛰️ 代理（可选）</label><input id="wsProxyInput" placeholder="http://127.0.0.1:7890 或 socks5://..."></div>
+      <div class="field"><label data-i18n="wsKey" id="wsKey">🔑 Key（可选）</label><input id="wsKeyInput" type="password"></div>
+      <div class="row" style="justify-content:flex-start">
+        <button data-i18n="wsTest" class="btn2 ghost" id="wsTestBtn">🔄 重新检测</button>
+        <span style="flex:1"></span>
+        <input id="wsSearchInput" placeholder="搜索..." style="width:150px">
+        <button class="btn2 ghost" id="wsSearchBtn">🔍</button>
+        <button class="btn2 ghost" id="wsAllBtn">全部</button>
+      </div>
+      <div id="wsOnlineList" class="ws-cards" style="max-height:230px"></div>
+      <div class="row">
+        <button data-i18n="wsDownload" class="btn2" id="wsDownloadBtn">⬇️ 下载到本地</button>
+        <button data-i18n="wsLike" class="btn2 ghost" id="wsLikeBtn">❤️ 点赞</button>
+        <button data-i18n="wsUpload" class="btn2 ghost" id="wsUploadBtn">📤 上传本地</button>
+        <button data-i18n="wsDel" class="btn2 ghost" id="wsOnlineDelBtn" style="color:#f87171">🗑️ 删除</button>
+      </div>
+    </div>
+    <div id="wsPluginPane" style="display:none">
+      <div class="field" style="padding:4px 0"><span id="wsPluginStatus" style="font-size:12px;color:var(--sub)"></span></div>
+      <div id="wsPluginList" class="ws-cards"></div>
+      <div class="row" style="justify-content:flex-start">
+        <button class="btn2 ghost" id="wsPluginRefresh">🔄 刷新</button>
+        <span style="flex:1"></span>
+        <button class="btn2 ghost" id="wsPluginOpen">📂 打开插件目录</button>
+      </div>
+    </div>
+    <div class="row"><button data-i18n="wsClose" class="btn2 ghost" id="wsCloseBtn">关闭</button></div>
+  </div>
+</div>

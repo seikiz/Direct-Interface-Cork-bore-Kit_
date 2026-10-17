@@ -1,0 +1,19 @@
+/* tokens.css —— 应用级 CSS 变量 + 基础重置
+   （原 web/index.html 内联 <style> 的第 1 段，原样搬出；由 tools/audit_ui_coupling.py 盯着别再长回去）
+
+   层叠顺序：**必须最先加载**。后面的 screens / components / panels 全都用到这里的
+   :root 变量和 `*{}` 重置；把它挪后，等于把 reset 压到组件规则之后。
+   真正的配色令牌在 web/theme.css（design/tokens.json 的生成物，别手改）——
+   这里只有一个跟主题无关的应用级变量：--chat-wallpaper。
+
+   改动须知：阶段 1 只搬位置、不改值。要改观感请另开一轮，别顺手"美化"。
+*/
+:root{
+  /* 颜色/圆角/字号全部在 theme.css <seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌里定义；这里只放跟主题无关的应用状态变量 */
+  --chat-wallpaper:none;
+}
+*{ box-sizing:border-box; margin:0; padding:0; }
+html,body{ height:100%; }
+body{ background:var(--bg); color:var(--text); font-family:"Segoe UI","Microsoft YaHei",sans-serif; overflow:hidden; }
+
+#app{ display:flex; height:100vh; }

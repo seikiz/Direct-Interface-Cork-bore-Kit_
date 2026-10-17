@@ -43,6 +43,26 @@ FRONTEND_OPTIONAL = {
 }
 
 
+def front_end():
+    """前端语料：页面 + 屏片段 + 屏模块。
+
+    2026-11 阶段3 起，加密备份/多存档/世界书/创意工坊这几屏的 DOM 与 JS 都搬出了
+    index.html（`web/screens/<名字>.html` + `web/js/screens/<名字>.js`）。
+    只读 index.html 的话，"元素存在吗 / 接口接上了吗"会成片误报 —— 那是搬家的正常结果，
+    不是回归。所以语料必须跟着扩到整棵前端。
+    """
+    parts = [io.open(os.path.join(ROOT, "web", "index.html"), encoding="utf-8").read()]
+    for sub in ("screens", os.path.join("js")):
+        d = os.path.join(ROOT, "web", sub)
+        if not os.path.isdir(d):
+            continue
+        for base, _dirs, files in os.walk(d):
+            for fn in sorted(files):
+                if fn.endswith((".html", ".js")):
+                    parts.append(io.open(os.path.join(base, fn), encoding="utf-8").read())
+    return "\n".join(parts)
+
+
 def load_app_class():
     path = os.path.join(ROOT, "Direct-Interface Cork-bore Kit.py")
     spec = importlib.util.spec_from_file_location("dick_app_api_check", path)
@@ -59,9 +79,13 @@ def main():
 
     with io.open(os.path.join(ROOT, "web", "index.html"), encoding="utf-8") as f:
         html = f.read()
+    front = front_end()          # 页面 + 屏片段 + 屏模块（阶段3 之后"前端"是整棵）
 
     # 前端调用了哪些 api_xxx
-    called = set(re.findall(r"pywebview\.api\.([A-Za-z_][A-Za-z0-9_]*)", html))
+    # 末尾那个 (?![\w*]) 是给文档字符串让路的：屏模块的文件头注释里会写
+    # `pywebview.api.backup_*` 这种"一家子接口"的说法，通配符不是调用 —— 不算进去，
+    # 否则会把 backup_ / go_ 这类半截名字当成缺失的后端方法。
+    called = set(re.findall(r"pywebview\.api\.([A-Za-z_][A-Za-z0-9_]*)(?![\w*])", front))
     print(f"\n前端调用 {len(called)} 个接口")
 
     cls = load_app_class()
@@ -83,18 +107,20 @@ def main():
               "后端做完了但界面没入口")
 
     print("\n== 3. 前端 UI 元素必须存在 ==")
+    # 备份屏的 DOM 在阶段3 搬到了 web/screens/bk.html，所以查 front（整棵前端），不是 html。
     for el in ("btnBackup", "backupModal", "bkPw", "bkPw2", "bkExport",
                "bkRestore", "bkCancel", "bkStatus", "bkPwMsg", "bkGen",
                "bkGenHint", "bkWarn"):
-        check(f"存在元素 #{el}", ('id="%s"' % el) in html)
+        check(f"存在元素 #{el}", ('id="%s"' % el) in front)
 
     print("\n== 4. 不得使用原生弹窗（深色主题下会闪白框）==")
-    # 只看加密备份的 JS 区段。注意不能用 html.find("🔐 加密备份")：
+    # 只看加密备份的 JS 区段。注意不能用 find("🔐 加密备份")：
     # 侧栏按钮文本也含这几个字，且在文件更前面，会切出一大段无关的老代码。
+    # 阶段3 起这段在 web/js/screens/bk.js 里，所以同样查 front。
     marker = "// ================= 🔐 加密备份 ================="
-    i = html.find(marker)
+    i = front.find(marker)
     check("能找到加密备份 JS 区段", i > 0)
-    seg = html[i: i + 6000] if i > 0 else ""
+    seg = front[i: i + 6000] if i > 0 else ""
     for bad in ("alert(", "confirm(", "prompt("):
         hit = re.search(r"(?<![A-Za-z_.])" + re.escape(bad), seg)
         check(f"加密备份区段不用 {bad}", hit is None, "应改用主题化弹窗")
@@ -103,10 +129,11 @@ def main():
     print("\n== 5. 后端孤儿接口（做完了没接 UI）==")
     # 有些接口是通过字符串分发的，例如 goAct('go_undo', '悔棋')：
     # 名字以字符串形式出现在前端，正则抓不到 pywebview.api.xxx 这种直接调用。
-    # 所以判据是「名字在 HTML 里完全不出现」才算真孤儿，否则会大量假阳性。
+    # 所以判据是「名字在前端完全不出现」才算真孤儿，否则会大量假阳性。
+    # （阶段3 起"前端"是 index.html + 屏片段 + 屏模块：孤儿接口可能只被搬走的屏用着。）
     orphans = []
     for name in sorted(backend - called - FRONTEND_OPTIONAL):
-        if re.search(r"['\"]" + re.escape(name) + r"['\"]", html):
+        if re.search(r"['\"]" + re.escape(name) + r"['\"]", front):
             continue
         orphans.append(name)
     print(f"     {len(orphans)} 个后端接口前端完全没提到：")

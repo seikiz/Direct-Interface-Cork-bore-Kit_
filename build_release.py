@@ -215,27 +215,15 @@ def step_postprocess():
     if os.path.isfile(tool):
         shutil.copyfile(tool, os.path.join(BUILD, "dick_backup_tool.py"))
         print("   dick_backup_tool.py 顶层化（解密工具与 exe 同级）")
-    # 顺手给一份怎么用的说明，省得用户对着 .py 发愣
+    # 说明不再单独生成 txt（用户要求：发布目录里别放这种零散说明文件）。
+    # 需要的话看 README / 说明书；旧的残留文件顺手清掉，免得打进包里。
     note = os.path.join(BUILD, "备份怎么打开.txt")
-    try:
-        with open(note, "w", encoding="utf-8") as f:
-            f.write(
-                "DICK 加密备份怎么打开\n"
-                "========================================\n\n"
-                "正常情况下不用看这个文件：\n"
-                "  打开 DICK → 左侧「🔐 加密备份」→ 输入口令 → 「📂 从备份还原」\n\n"
-                "如果 DICK 装不上了、换电脑了、或者程序没了：\n"
-                "  1) 装 Python 3（python.org，勾选 Add to PATH）\n"
-                "  2) 命令行执行： pip install cryptography\n"
-                "  3) 在本文件夹打开命令行，执行：\n"
-                "       python dick_backup_tool.py 查看  你的备份.dickbackup\n"
-                "       python dick_backup_tool.py 解密  你的备份.dickbackup\n"
-                "     解密结果会放在备份文件旁边的「_还原」文件夹里。\n\n"
-                "口令是什么只有你自己知道 —— 我们没有留任何后门，\n"
-                "也没有任何办法帮你找回。请务必单独记好。\n")
-        print("   备份怎么打开.txt 已生成")
-    except Exception as e:
-        print("   （说明文件生成失败：%s）" % e)
+    if os.path.isfile(note):
+        try:
+            os.remove(note)
+            print("   已移除遗留的「备份怎么打开.txt」")
+        except OSError as e:
+            print("   （旧说明文件删不掉：%s）" % e)
 
 
 def find_player():
@@ -301,9 +289,36 @@ def step_selfcheck():
     with open(src, encoding="utf-8") as f:
         source = f.read()
 
+    # 2026-11 阶段1：页面里的 <style> 已原样拆到 web/styles/ 并按层叠顺序 link 进来。
+    # 所以"前端有没有这个特征串"要看 页面 + 拆出去的样式 两边，
+    # 而且样式文件是不是真的随包了，本身就是必须查的一项（缺了整个界面会裸奔）。
+    style_dir = os.path.join(BUILD, "_internal", "web", "styles")
+    css = ""
+    if os.path.isdir(style_dir):
+        for fn in sorted(os.listdir(style_dir)):
+            if fn.endswith(".css"):
+                with open(os.path.join(style_dir, fn), encoding="utf-8") as f:
+                    css += "\n" + f.read()
+    else:
+        fail("包里没有 _internal/web/styles/（样式抽取后前端必须带上这个目录）")
+    # 2026-11 阶段2：一屏的 DOM/JS 搬到了 web/screens/*.html 与 web/js/screens/*.js，
+    # 特征串可能已经不在 index.html 里了 —— 所以"前端"= 页面 + 样式 + 屏片段 + 屏模块。
+    # 这几块缺任何一块，界面上的对应屏/样式就是死的（页面能开，但那几屏点不开）。
+    parts = [bundled, css]
+    for sub in (("web", "screens"), ("web", "js")):
+        d = os.path.join(BUILD, "_internal", *sub)
+        if not os.path.isdir(d):
+            fail("包里没有 _internal/%s/（阶段2 起屏的片段与模块必须随包）" % "/".join(sub))
+        for base, _dirs, files in os.walk(d):
+            for fn in sorted(files):
+                if fn.endswith((".html", ".js")):
+                    with open(os.path.join(base, fn), encoding="utf-8") as f:
+                        parts.append(f.read())
+    front = "\n".join(parts)
+
     bad = 0
     for name, needle in FEATURES.items():
-        hit = needle in bundled
+        hit = needle in front
         print("   %s %s" % ("OK  " if hit else "FAIL", name))
         if not hit:
             bad += 1
@@ -342,6 +357,10 @@ def step_selfcheck():
         ("app_version.py", "版号读取：缺了窗口标题/欢迎语退回兜底版号（与 version.json 不一致）"),
         ("version.json", "版号的唯一真相：缺了 app_version 读不到号"),
         ("web/icons.js", "图标名字表（由 icons/icons.json 生成）：缺了界面上的 emoji 一个都换不成图标"),
+        ("web/styles", "样式已抽到 web/styles/（阶段1）：缺了整个界面没有任何自定义样式，等于裸 HTML"),
+        ("web/screens", "屏的 DOM 片段（阶段2）：缺了围棋/生图/裁剪/表盘/编辑消息这几屏的界面直接不出现"),
+        ("web/js/screens", "屏的 JS 模块（阶段2）：缺了上面几屏的按钮全是死的（有界面没行为）"),
+        ("web/js/state.js", "屏之间的状态总线（阶段2）：缺了 5 个屏模块加载时就报错"),
         ("web/fonts/MaterialSymbolsOutlined.woff2", "Material Symbols 字体（随包，不连 CDN）：缺了图标全变空白/豆腐块"),
         ("web/fonts/LICENSE", "字体许可（Apache-2.0）：随包分发必须带"),
         ("strings.json", "界面文案唯一真相（lang/strings.json）：缺了三语全部退回中文"),
@@ -420,6 +439,15 @@ def step_zip():
         checks.append("播放器/runtime/bin/server/jvm.dll")
     for need in checks:
         print("   %s %s" % ("OK  " if need in names else "FAIL", need))
+    # 阶段2：屏片段/屏模块必须真的进包（web 是整目录递归收的，但 datas 一旦被改坏就会漏）。
+    frags = [n for n in names if n.startswith("_internal/web/screens/") and n.endswith(".html")]
+    mods = [n for n in names
+            if n.startswith("_internal/web/js/screens/") and n.endswith(".js")]
+    print("   %s 屏片段 %d 个 ／ 屏模块 %d 个 随包"
+          % ("OK  " if (len(frags) >= 5 and len(mods) >= 5) else "FAIL", len(frags), len(mods)))
+    if len(frags) < 5 or len(mods) < 5:
+        fail("包里的屏片段/屏模块不够（片段 %d、模块 %d）：检查 DICK_HTML.spec 的 datas "
+             "是否还收着整个 web/ 目录" % (len(frags), len(mods)))
     return zpath, size
 
 

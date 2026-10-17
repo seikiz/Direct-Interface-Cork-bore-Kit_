@@ -59,7 +59,6 @@ def main():
     print("\n== 1. 发布包内的关键文件 ==")
     want = {
         "顶层解密工具": "dick_backup_tool.py",
-        "顶层说明": "备份怎么打开.txt",
         "包内 crypto_core": "_internal/crypto_core.py",
         "AES 原生扩展": "_internal/cryptography/hazmat/bindings/_rust.pyd",
     }

@@ -5,9 +5,9 @@ window.DICK_ICONS = {
   "📂": { n: "folder", p: "ic_folder" },
   "🛰": { n: "satellite_alt", p: "ic_radio" },
   "➕": { n: "add", p: "ic_plus" },
-  "❌": { n: "close", p: "ic_close" },
+  "❌": { n: "error", p: "ic_close" },
   "⚙": { n: "settings", p: "ic_settings" },
-  "✅": { n: "check", p: "ic_check" },
+  "✅": { n: "check_circle", p: "ic_check" },
   "🧰": { n: "home_repair_service", p: "ic_toolbox" },
   "📤": { n: "upload", p: "ic_upload" },
   "🗑": { n: "delete", p: "ic_trash" },
@@ -18,7 +18,7 @@ window.DICK_ICONS = {
   "💾": { n: "save", p: "ic_save" },
   "🧮": { n: "calculate", p: "ic_calc" },
   "🔤": { n: "text_fields", p: "ic_font" },
-  "🔌": { n: "power", p: "ic_plug" },
+  "🔌": { n: "extension", p: "ic_plug" },
   "🔍": { n: "search", p: "ic_search" },
   "⬇": { n: "download", p: "ic_download" },
   "📥": { n: "inbox", p: "ic_inbox" },
@@ -133,4 +133,14 @@ window.DICK_ICON_NAMES = {
   "undo": { n: "undo", p: "ic_undo" },
   "redo": { n: "redo", p: "ic_redo" },
   "play": { n: "play_arrow", p: "ic_play" },
+};
+// 作用域图标：只在 [data-icon-scope="名字"] 的根内替换，不进全局表（见 web/icon_scope.js）。
+window.DICK_ICONS_SCOPED = {
+  "gothic": {
+    "📜": { n: "menu_book", p: "" },
+    "🦇": { n: "dark_mode", p: "" },
+    "⛪": { n: "church", p: "" },
+    "🔥": { n: "local_fire_department", p: "" },
+    "💀": { n: "skull", p: "" },
+  },
 };

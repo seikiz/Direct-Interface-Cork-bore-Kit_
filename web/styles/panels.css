@@ -1,0 +1,134 @@
+/* panels.css —— 面板与浮层：分支面板、首启引导、世界书条目编辑器、下拉/卡片、箭头教程、成就横幅
+   （原 web/index.html 内联 <style> 的第 4 段，原样搬出）
+
+   依赖前三个文件（tokens → screens → components），并且必须是**最后一个**加载：
+   这里有多条规则是靠"排在后面"覆盖 components.css 里同特异性规则的，
+   典型例子 `.ws-card .btn2{padding:3px 8px}` 覆盖 `.modal-box .btn2{padding:7px 16px}`
+   （两者特异性相同）。所以：不许把 panels.css 提到前面，也不许按"语义"重排文件。
+*/
+/* ---------- 分支面板 · 灰白成就（M<seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌C progress 风） ---------- */
+#branchWrap{ position:relative; }
+#branchPanel{ display:none; position:absolute; top:38px; right:0; width:340px; max-height:400px; overflow-y:auto;
+  background:#f4f5f7; border:2px solid #c9ccd2; border-radius:10px; z-index:40;
+  box-shadow:0 12px 34px rgba(0,0,0,.4), inset 0 0 0 1px #ffffff; }
+#branchPanel.open{ display:block; animation:fadein .14s ease-out; }
+/* 像素硬边（MC 物品格内描边）：outer 2px 灰 + inner 1px 白，像成就框 */
+#branchPanel .b-item{ padding:9px 12px; font-size:12px; color:#3a3f46; cursor:pointer;
+  border-bottom:1px solid #e2e4e8; display:flex; align-items:flex-start; gap:10px;
+  background:#fbfbfc; }
+#branchPanel .b-item:hover{ background:#eef0f3; }
+#branchPanel .b-item.cur{ background:#ffffff; box-shadow:inset 0 0 0 2px #a7adb6, inset 0 0 0 3px #ffffff;
+  position:relative; }
+#branchPanel .b-item.cur::after{ content:""; position:absolute; top:0; right:0; bottom:0; width:4px; background:#9aa1ab; }
+/* 成就图标框（左侧灰色像素方块） */
+#branchPanel .b-item .b-who{ flex:none; width:30px; height:30px; border-radius:5px;
+  background:#e7e9ec; border:2px solid #cfd3d8; box-shadow:inset 0 0 0 1px #ffffff;
+  display:flex; align-items:center; justify-content:center; font-size:14px; color:#7b828b; }
+#branchPanel .b-item.cur .b-who{ background:#ffffff; border-color:#9aa1ab; color:#3a3f46; }
+/* 成就名 + 灰描述（两行结构） */
+#branchPanel .b-item .b-main{ flex:1; min-width:0; display:flex; flex-direction:column; gap:1px; }
+#branchPanel .b-item .b-prev{ color:#3a3f46; font-size:12px; white-space:nowrap;
+  overflow:hidden; text-overflow:ellipsis; flex:none; line-height:1.3; }
+#branchPanel .b-item:not(.cur) .b-prev{ color:#6b7078; }
+#branchPanel .b-item .b-desc{ color:#9aa1ab; font-size:11px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+#branchPanel .b-item .b-cur{ flex:none; color:#3a3f46; font-weight:600; font-size:10px;
+  background:#e7e9ec; border:1px solid #cfd3d8; border-radius:4px; padding:1px 5px; }
+#branchPanel .b-item.on-path{ opacity:1; }
+#branchPanel .b-item:not(.on-path){ opacity:.55; }
+#branchPanel .b-item.seg{ padding:6px 12px; font-size:11px; color:#7b828b; font-style:italic; background:#f4f5f7; display:block; }
+#branchPanel .b-item.seg:hover{ background:#eef0f3; color:#3a3f46; }
+#branchPanel .b-item .b-prev.seg-label{ white-space:nowrap; }
+#branchPanel .b-head{ padding:8px 12px; font-size:11px; color:#7b828b; font-weight:600;
+  border-bottom:2px solid #c9ccd2; background:#eef0f3; letter-spacing:.5px; text-transform:uppercase; }
+#branchPanel .b-hint{ padding:8px 12px; font-size:11px; color:#9aa1ab; }
+
+/* ---------- 首次启动引导框 ---------- */
+#onboard{ position:fixed; inset:0; z-index:200; }
+.onb-mask{ position:absolute; inset:0; background:rgba(8,10,14,.72); backdrop-filter:blur(3px); }
+.onb-box{ position:absolute; left:50%; top:46%; transform:translate(-50%,-50%);
+  width:430px; max-width:92vw; background:var(--panel); border:1px solid var(--line);
+  border-radius:16px; padding:22px 24px; box-shadow:0 20px 60px rgba(0,0,0,.6); }
+.onb-steps{ min-height:170px; }
+.onb-step{ display:none; }
+.onb-step.on{ display:block; animation:fadein .18s ease-out; }
+.onb-step h3{ margin:0 0 10px; font-size:17px; }
+.onb-step p{ margin:0; font-size:13px; line-height:1.8; color:var(--text); }
+.onb-step b{ color:var(--accent); }
+.onb-nav{ display:flex; align-items:center; gap:8px; margin-top:16px; }
+
+/* ---------- 世界书条目编辑器 ----------
+   .wentry（条目卡片）与 .p-grid/.pcell（8 格世界参数）搬到了 styles/screens/wm.css（阶段3，
+   随世界书条目屏一起搬）。它仍然排在 components.css 之后（<link> 顺序见 index.html 头部），
+   层叠一字未动。 */
+.dd-panel{ position:absolute; left:0; right:0; top:100%; z-index:80; background:var(--panel);
+  border:1px solid var(--line); border-radius:10px; max-height:230px; overflow-y:auto;
+  box-shadow:0 10px 30px rgba(0,0,0,.45); }
+.dd-item{ padding:8px 12px; font-size:13px; cursor:pointer; border-bottom:1px solid var(--line); }
+.dd-item:hover{ background:var(--bubble); }
+.dd-item.sel{ color:var(--accent); font-weight:600; }
+.dd-caret{ position:absolute; right:6px; top:6px; background:none; border:none; color:var(--sub);
+  font-size:12px; cursor:pointer; }
+.chipgrid{ display:flex; flex-wrap:wrap; gap:5px; }
+.chip2{ padding:5px 10px; border:1px solid var(--line); border-radius:8px; background:var(--bubble);
+  font-size:12px; cursor:pointer; color:var(--text); }
+.chip2:hover{ border-color:var(--accent); }
+.chip2.sel{ border-color:var(--accent); color:var(--accent); font-weight:600; }
+.dd-select{ width:100%; padding:8px 10px; background:var(--bubble); border:1px solid var(--line);
+  border-radius:8px; color:var(--text); font-size:13px; cursor:pointer; }
+.dd-overlay{ position:fixed; z-index:999; background:var(--panel); border:1px solid var(--line);
+  border-radius:10px; max-height:280px; overflow-y:auto; box-shadow:0 14px 40px rgba(0,0,0,.5);
+  min-width:260px; }
+.dd-overlay .o-item{ padding:9px 12px; font-size:13px; cursor:pointer; border-bottom:1px solid var(--line);
+  display:flex; justify-content:space-between; gap:8px; }
+.dd-overlay .o-item:hover{ background:var(--bubble); }
+.dd-overlay .o-item.sel{ color:var(--accent); font-weight:600; }
+.dd-overlay .o-item .tag{ color:var(--sub); font-size:11px; }
+.chkline{ display:flex; align-items:center; gap:6px; font-size:12px; color:var(--sub); }
+.chkline input{ width:auto; }
+.prow{ border:1px solid var(--line); border-radius:10px; padding:8px 10px; margin:6px 0; background:var(--bg); }
+.prow .phead{ display:flex; align-items:center; gap:6px; font-size:12px; }
+.prow .phead .pname{ font-weight:600; color:var(--text); }
+.prow .phead .pname-toggle{ cursor:pointer; }
+.prow .phead .pname-toggle:hover{ color:var(--accent); }
+.prow .phead .parrow{ cursor:pointer; }
+.prow .pdesc{ font-size:11px; color:var(--sub); margin:2px 0 4px; }
+.prow .psets{ border-top:1px dashed var(--line); margin-top:4px; padding-top:4px; }
+.prow .pset{ margin:4px 0; font-size:11px; }
+.prow .pset label{ display:inline-block; min-width:90px; color:var(--sub); font-size:11px; }
+.prow .pset input[type=text],.prow .pset input[type=number],.prow .pset select{
+  width:150px; background:var(--bubble); border:1px solid var(--line); border-radius:6px;
+  color:var(--text); padding:3px 6px; font-size:11px; }
+.prow .pset input[type=checkbox]{ width:auto; }
+/* ---- 创意工坊（世界卡库）的三列列表 / 在线卡片 / 空态 / Tab：
+   搬到 styles/screens/ws.css（阶段3，随创意工坊屏一起搬）。仍然排在 components.css 之后
+   （<link> 顺序见 index.html 头部），所以 `.ws-card .btn2` 照样盖住 `.modal-box .btn2`。 ---- */
+
+/* ---- 箭头引导式教程（spotGuide）：高亮目标 + 说明气泡 + 箭头 ---- */
+.sg-mask{ position:fixed; inset:0; z-index:9000; pointer-events:none; }
+.sg-highlight{ position:fixed; z-index:9001; pointer-events:none; border:3px solid var(--accent);
+  border-radius:10px; box-shadow:0 0 0 2000px rgba(6,7,16,.72), 0 0 26px rgba(201,162,39,.6);
+  transition:all .28s cubic-bezier(.2,.7,.3,1); }
+.sg-bubble{ position:fixed; z-index:9002; max-width:300px; background:var(--panel);
+  border:1px solid var(--accent); border-radius:12px; padding:12px 14px; color:var(--text);
+  box-shadow:0 8px 40px rgba(0,0,0,.5); font-size:13px; line-height:1.55; }
+.sg-bubble b{ color:var(--gold2,#e9cf7a); }
+.sg-bubble .sg-arrow{ position:absolute; width:0; height:0; border:9px solid transparent; }
+.sg-bubble .sg-step{ font-size:11px; color:var(--sub); letter-spacing:.5px; margin-bottom:4px; }
+.sg-bubble .sg-btns{ display:flex; gap:8px; margin-top:10px; }
+.sg-bubble .sg-btns button{ border:1px solid var(--line); background:var(--bubble); color:var(--text);
+  border-radius:8px; padding:5px 12px; font-size:12px; cursor:pointer; }
+.sg-bubble .sg-btns .sg-next{ background:var(--accent); color:#0b1220; border:none; font-weight:600; }
+.sg-bubble .sg-btns .sg-skip{ margin-left:auto; opacity:.8; }
+
+/* ---- 回档成就横幅（灰白 MC progress 风） ---- */
+.ach-toast{ position:fixed; top:16px; left:50%; transform:translate(-50%,-140%); z-index:9500;
+  display:flex; align-items:center; gap:10px; background:#fbfbfc; border:2px solid #c9ccd2;
+  border-radius:12px; padding:10px 16px; box-shadow:0 10px 30px rgba(0,0,0,.45), inset 0 0 0 1px #ffffff;
+  transition:transform .32s cubic-bezier(.2,.7,.3,1); max-width:440px; }
+.ach-toast.show{ transform:translate(-50%,0); }
+.ach-toast .a-ic{ width:36px; height:36px; border-radius:6px; background:#e7e9ec;
+  border:2px solid #cfd3d8; box-shadow:inset 0 0 0 1px #ffffff; display:flex;
+  align-items:center; justify-content:center; font-size:16px; color:#7b828b; }
+.ach-toast .a-txt{ font-size:13px; color:#3a3f46; line-height:1.3; }
+.ach-toast .a-txt b{ display:block; font-size:14px; color:#3a3f46; }
+.ach-toast .a-txt span{ font-size:11px; color:#9aa1ab; }

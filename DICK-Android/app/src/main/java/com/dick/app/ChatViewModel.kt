@@ -4,8 +4,6 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.graphics.ImageBitmap
-import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.lifecycle.ViewModel
 import com.dick.core.J
 import com.dick.core.WorldEntry
@@ -48,6 +46,20 @@ class ChatViewModel : ViewModel() {
     var providerMenu = mutableStateOf(false)
     var modelMenu = mutableStateOf(false)
     var customModelInput = mutableStateOf("")
+
+    // ---- 应用级偏好（2026-11 收口：原来散在 App() 的 rememberSaveable 里，屏各存一份副本）----
+    // 为什么收进来：设置屏改一个开关，引擎/顶栏/聊天要立刻读到同一份；两份副本 = 迟早不同步。
+    // 语义与原来一致：启动时 loadConfig() 覆盖默认值，保存时 saveConfig() 写出（config.json）。
+    var themeIdx = mutableStateOf(0)                              // THEMES 下标
+    var accentIdx = mutableStateOf(0)                             // ACCENTS 下标
+    var presetIdx = mutableStateOf(0)                             // PRESETS 下标
+    var currentWorld = mutableStateOf("")                         // 当前世界卡（单选）
+    var devMode = mutableStateOf(false)                           // 开发者模式（解锁高级设置）
+    var humanize = mutableStateOf(true)                           // 去 AI 味
+    var styleGuard = mutableStateOf(true)                         // 风格闸
+    var styleGuardLong = mutableStateOf(false)                    // 长句模式
+    var autoTurn = mutableStateOf(false)                          // 群聊自动接话
+    var language = mutableStateOf("")                             // 界面语言（I18n.lang 的落盘值）
 
     // ---- 界面开关 ----
     var showGuide = mutableStateOf(false)

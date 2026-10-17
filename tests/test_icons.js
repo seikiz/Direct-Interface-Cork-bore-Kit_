@@ -10,9 +10,27 @@ const vm = require('vm');
 
 const htmlPath = path.join(__dirname, '..', 'web', 'index.html');
 const html = fs.readFileSync(htmlPath, 'utf8');
-const m = html.match(/<script>([\s\S]*?)<\/script>/);
-if (!m) { console.log('NO_SCRIPT'); process.exit(1); }
-const src = m[1];
+// 2026-11 阶段1：页面里的 <style> 已原样拆到 web/styles/（按层叠顺序 link 进来）。
+// 字体声明/@font-face 现在住在 CSS 文件里，所以"前端有没有引用随包字体"要看页面 + 样式两边。
+const stylesDir = path.join(__dirname, '..', 'web', 'styles');
+const css = fs.existsSync(stylesDir)
+  ? fs.readdirSync(stylesDir).filter(f => f.endsWith('.css')).sort()
+      .map(f => fs.readFileSync(path.join(stylesDir, f), 'utf8')).join('\n')
+  : '';
+const frontEnd = html + '\n' + css;
+// 2026-11 阶段2：页面里不止一段内联 <script> 了（路由引导那一小段 + 原来那段大的）。
+// 图标引擎（_iconEntry/iconifyUI）在主脚本里，所以这里把所有**无 src 的内联块**按顺序拼起来，
+// 而不是只取第一段 —— 只取第一段会拿到引导脚本，_EMOJI_CLS 就找不到了。
+const inline = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map(x => x[1]);
+if (!inline.length) { console.log('NO_SCRIPT'); process.exit(1); }
+const src = inline.join('\n');
+// 屏片段里的 emoji 同样是"界面上的图标"，覆盖率必须一起看（DOM 搬到 web/screens/ 之后
+// 只看 index.html 就等于漏掉一半屏）。
+const screensDir = path.join(__dirname, '..', 'web', 'screens');
+const fragments = fs.existsSync(screensDir)
+  ? fs.readdirSync(screensDir).filter(f => f.endsWith('.html')).sort()
+      .map(f => fs.readFileSync(path.join(screensDir, f), 'utf8')).join('\n')
+  : '';
 
 let fail = 0;
 const check = (c, msg) => { if (!c) { fail++; console.log('  FAIL ' + msg); } else console.log('  OK   ' + msg); };
@@ -26,8 +44,9 @@ const DICK_ICONS = winSandbox.window.DICK_ICONS || {};
 const DICK_ICON_NAMES = winSandbox.window.DICK_ICON_NAMES || {};
 
 // ============ ① 覆盖率 ============
-// 注释里的 emoji 不是界面元素：行注释与 HTML 注释都先去掉
-const ui = html.replace(/<!--[\s\S]*?-->/g, '').replace(/^[ \t]*\/\/.*$/gm, '');
+// 注释里的 emoji 不是界面元素：行注释与 HTML 注释都先去掉。
+// 语料 = 页面 + 屏片段（阶段2 起一屏的 DOM 住在 web/screens/*.html）。
+const ui = (html + '\n' + fragments).replace(/<!--[\s\S]*?-->/g, '').replace(/^[ \t]*\/\/.*$/gm, '');
 const RE = new RegExp('^(' + (src.match(/var _EMOJI_CLS = '([^']+)'/) || [])[1] + '+)', 'u');
 const CLS = (src.match(/var _EMOJI_CLS = '([^']+)'/) || [])[1];
 
@@ -54,7 +73,7 @@ for (const k of Object.keys(DICK_ICONS)) {
 }
 check(badName === 0, '全部 ' + Object.keys(DICK_ICONS).length + ' 条都是合法图标名（没有空名/怪名）');
 check(!/var ICONS = \{/.test(html), 'index.html 里没有残留的内联 SVG 图标字典');
-check(html.includes('fonts/MaterialSymbolsOutlined.woff2'), 'index.html 引用随包字体（不连 CDN）');
+check(frontEnd.includes('fonts/MaterialSymbolsOutlined.woff2'), '前端引用随包字体（不连 CDN；页面或 web/styles/）');
 
 const leading = (s) => {
   const mm = s.match(RE);
@@ -213,6 +232,92 @@ const unknownText = makeText('🛸 未收录的');
 unknown.appendChild(unknownText);
 sandbox.iconifyText(unknownText);
 check(unknown.childNodes[0] === unknownText, '未收录 emoji 原样保留（不替换、不变空）');
+
+// ============ ③ 作用域替换（web/icon_scope.js） ============
+// 预览按钮那五个 emoji 走 scoped 映射，**只在 [data-icon-scope] 根内**替换：
+// 必须证明（a）根内按 scoped 映射换、（b）根外一个文本节点都不动、（c）.ic / svg 等跳过、
+// （d）作用域里没有的 emoji 不回落全局表（否则"局部"就名不副实）。
+const scopeJs = fs.readFileSync(path.join(__dirname, '..', 'web', 'icon_scope.js'), 'utf8');
+const scopeWin = {
+  DICK_ICONS,                                     // 全局表（📜→history_edu 之类）
+  DICK_ICONS_SCOPED: {                            // 作用域表（与 web/icons.js 同形）
+    gothic: { '📜': { n: 'menu_book' }, '💀': { n: 'skull' } }
+  }
+};
+const emptyBody = makeEl([]);
+emptyBody.querySelectorAll = () => [];            // 自动 boots 用；这里只手动调 iconifyScoped
+emptyBody.matches = () => false;
+const scopeSandbox = {
+  window: scopeWin,
+  document: {
+    body: emptyBody,
+    readyState: 'complete',
+    createElement: () => makeEl([]),
+    createTextNode: d => makeText(d),
+    createTreeWalker(root, what, filter) {
+      const out = [];
+      (function walk(n) {
+        if (n.nodeType === 3) {
+          if (filter.acceptNode(n) !== 2) out.push(n);
+          return;
+        }
+        (n.childNodes || []).forEach(walk);
+      })(root);
+      let i = 0;
+      return {
+        get currentNode() { return i > 0 ? out[i - 1] : null; },
+        nextNode() { return i < out.length ? out[i++] : null; }
+      };
+    }
+  },
+  NodeFilter: { SHOW_TEXT: 4, FILTER_REJECT: 2, FILTER_ACCEPT: 1 },
+  console
+};
+vm.createContext(scopeSandbox);
+vm.runInContext(scopeJs, scopeSandbox);
+// 浏览器里 window 就是全局；vm 沙箱里 window 是普通对象，所以从 scopeWin 上取
+check(typeof scopeWin.iconifyScoped === 'function' &&
+  typeof scopeWin.iconifyScopedAll === 'function', 'icon_scope.js 导出 iconifyScoped / iconifyScopedAll');
+
+const scopeBody = build('sb', [], []);
+const bar = build('bar', ['[data-icon-scope]'], [makeText('📜 简洁')]);
+const cardText = makeText('卡片正文：💀 糅合(位图)');
+const card = build('card', [], [cardText]);
+const iconBox = makeEl(['.ic']);                  // 已替换过的图标节点：不许再动
+const iconText = makeText('💀');
+iconBox.appendChild(iconText);
+const bar2 = build('bar2', ['[data-icon-scope]'], [iconBox]);
+const globalOnly = build('g', ['[data-icon-scope]'], [makeText('📂 存档')]);
+scopeBody.appendChild(card);
+scopeBody.appendChild(bar);
+scopeBody.appendChild(bar2);
+scopeBody.appendChild(globalOnly);
+scopeSandbox.document.body = scopeBody;
+
+scopeWin.iconifyScoped(bar, 'gothic');
+const barIcons = bar.childNodes.filter(n => n.nodeType === 1);
+check(barIcons.length === 1 && barIcons[0].className === 'ms' && barIcons[0].textContent === 'menu_book',
+  '根内按 scoped 映射换（📜 → menu_book，而不是全局的 history_edu）');
+check(card.childNodes[0] === cardText && cardText.data === '卡片正文：💀 糅合(位图)',
+  '根外（卡片正文）一个文本节点都不动 —— 💀 仍是原文');
+check(bar2.childNodes[0] === iconBox && iconText.data === '💀', '根内 .ic 节点不重复替换');
+const gEl = globalOnly.childNodes[0];
+check(gEl && gEl.nodeType === 3, '作用域里没有的 emoji 不回落全局表（📂 原样留着）');
+
+const inner = build('inner', ['[data-icon-scope]'], [makeText('💀 内层')]);
+const outer = build('outer', ['[data-icon-scope]'], [makeText('💀 外层')]);
+outer.appendChild(inner);
+scopeWin.iconifyScoped(outer, 'gothic');
+const outerIcon = outer.childNodes[0];
+check(outerIcon && outerIcon.nodeType === 1 && outerIcon.textContent === 'skull',
+  '嵌套作用域：外层自己那段照常按映射换');
+check(inner.childNodes[0].nodeType === 3 && inner.childNodes[0].data === '💀 内层',
+  '嵌套作用域：外层不抢内层（内层留给内层自己）');
+
+const direct = build('direct', [], [makeText('💀 直接给映射表')]);
+scopeWin.iconifyScoped(direct, { '💀': { n: 'skull' } });
+check(direct.childNodes[0].nodeType === 1 && direct.childNodes[0].textContent === 'skull',
+  '也支持「根元素 + 一份映射表」的调用姿势');
 
 console.log(fail === 0 ? 'ICON_TEST_OK' : 'ICON_TEST_FAIL: ' + fail);
 process.exit(fail ? 1 : 0);

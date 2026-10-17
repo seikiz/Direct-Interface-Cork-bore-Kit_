@@ -3,6 +3,7 @@ package com.dick.app
 import android.graphics.BitmapFactory
 import android.speech.tts.TextToSpeech
 import android.webkit.WebView
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
@@ -172,7 +173,7 @@ fun FoldHead(title: String, folded: Boolean, onToggle: () -> Unit, modifier: Mod
     ) {
         IconText(title, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
         Spacer(Modifier.weight(1f))
-        Text(if (folded) "▸" else "▾", fontSize = 12.sp, color = Color(0xFF94A3B8))
+        Text(if (folded) "▸" else "▾", fontSize = 12.sp, color = LocalDickPalette.current.textSub)
     }
 }
 // ---------- 聊天/头像/抽屉 组件（<seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌自 App.kt 拆出） ----------
@@ -257,12 +258,14 @@ fun Bubble(
     onSwipe: (ChatMsg, Int) -> Unit,
 ) {
     val isUser = m.isUser
-    val nameColor = if (isUser) Color(0xFF4ADE80) else aiColor
     val displayRole = when (m.role) {
         "你" -> I18n.t("you", "你")
         "系统" -> I18n.t("system", "系统")
         else -> m.role
     }
+    // 名字色跟主题走：暗色用 #4ade80/#94a3b8 那一套，浅色用对应的深色版（见 design/tokens.json）
+    val pal = LocalDickPalette.current
+    val nameColor = speakerNameColor(displayRole, isUser, aiColor, pal)
     Column(Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
         Row(
             Modifier.fillMaxWidth(),
@@ -271,10 +274,16 @@ fun Bubble(
             if (!isUser) Avatar(displayRole, avatarCache)
             Spacer(Modifier.width(6.dp))
             Column(horizontalAlignment = if (isUser) Alignment.End else Alignment.Start) {
-                Text(displayRole, color = nameColor, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                // 署名紧贴气泡上沿（≤4dp）：行高压到 14sp，去掉字体行盒在下方留的那点空 ——
+                // 否则署名看起来是"悬"在气泡上方，跟气泡不是一组。
+                Text(displayRole, color = nameColor, fontWeight = FontWeight.Bold, fontSize = 12.sp, lineHeight = 14.sp)
+                Spacer(Modifier.height(2.dp))
                 Surface(
                     shape = RoundedCornerShape(12.dp),
                     color = bubbleBg,
+                    // 自己的气泡加一圈描边：只有 surface_2 那种极淡的填充时，暗色下和页面底色
+                    // 几乎分不出来（用户原话"颜色费劲"）。描边用令牌里的 border，不新造颜色。
+                    border = if (isUser) BorderStroke(1.dp, pal.border) else null,
                 ) {
                     Column(Modifier.padding(10.dp)) {
                         if (m.image != null) {
@@ -291,8 +300,12 @@ fun Bubble(
             }
         }
         if (m.nodeId != null) {
+            // 动作条挂在气泡下面，**和气泡同侧对齐**：自己的消息头像在右边，
+            // 所以内边距要留在右边（原来一律 start=44dp，等于把"自己的"动作条推到气泡左边，
+            // 看起来就是"错位/被裁"）。
             Row(
-                Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(start = 44.dp),
+                Modifier.fillMaxWidth().horizontalScroll(rememberScrollState())
+                    .padding(start = if (isUser) 0.dp else 44.dp, end = if (isUser) 44.dp else 0.dp),
                 horizontalArrangement = if (isUser) Arrangement.End else Arrangement.Start,
             ) {
                 TextButton(onClick = { onEdit(m) }, modifier = Modifier.heightIn(min = 44.dp)) { IconText(I18n.t("btn_edit_msg", "✏️"), fontSize = 12.sp) }
@@ -303,7 +316,7 @@ fun Bubble(
                             (m.swipeIndex + 1).toString() + "/" + m.swipeTotal,
                             Modifier.padding(top = 14.dp),
                             fontSize = 11.sp,
-                            color = Color(0xFF9CA3AF),
+                            color = pal.textDim,
                         )
                         TextButton(onClick = { onSwipe(m, 1) }, enabled = m.swipeIndex < m.swipeTotal - 1, modifier = Modifier.heightIn(min = 44.dp)) { Text("▶", fontSize = 12.sp) }
                     }

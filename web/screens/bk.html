@@ -1,0 +1,42 @@
+<!-- 🔐 加密备份（阶段3：这一屏的 DOM 从 index.html 搬到这里，index.html 原位只留挂载点）
+     结构/class/行内 style 必须和搬家前逐字一致（tools/ui_snapshot.py 会核对），
+     行为在 web/js/screens/bk.js（本屏 = 口令强度提示 + 生成强口令 + 立即备份 + 从备份还原）。 -->
+<div class="modal" id="backupModal">
+  <div class="modal-box" style="width:480px">
+    <h3>🔐 加密备份</h3>
+    <div style="font-size:12px;color:var(--sub);line-height:1.6;margin-bottom:10px">
+      把所有角色卡（含聊天树）、世界卡、玩家卡、剧情包和设置打成<b>一个文件</b>并加密。<br>
+      整份内容连同<b>文件名和目录结构</b>都在密文里 —— 光看这个文件，谁也看不出你有几个存档、叫什么名字。
+    </div>
+
+    <div class="field">
+      <label>备份口令</label>
+      <input id="bkPw" type="password" placeholder="至少 12 位，混合大小写字母和数字">
+      <div id="bkPwMsg" style="font-size:11px;margin-top:4px;color:var(--sub)"></div>
+      <div style="margin-top:6px">
+        <button class="btn2 ghost" id="bkGen" style="font-size:11px;padding:4px 10px;white-space:nowrap">🎲 生成强口令</button>
+        <span id="bkGenHint" style="font-size:11px;color:var(--sub);margin-left:6px"></span>
+      </div>
+    </div>
+    <div class="field">
+      <label>再输一次（确认没打错）</label>
+      <input id="bkPw2" type="password" placeholder="重复上面的口令">
+      <div id="bkWarn" style="font-size:11px;margin-top:4px;color:var(--sub)">
+        ⚠️ 口令<b>不保存在任何地方</b>，忘了就打不开了。请单独记好（抄纸上 / 存密码管理器）。
+      </div>
+    </div>
+
+    <div id="bkStatus" style="font-size:12px;line-height:1.7;margin:10px 0;min-height:18px"></div>
+
+    <div style="font-size:11px;color:var(--sub);margin-top:14px;line-height:1.6">
+      换了电脑、DICK 装不上了也能打开：EXE 旁边的
+      <code style="white-space:nowrap">dick_backup_tool.py</code>（看「备份怎么打开.txt」）
+    </div>
+    <div class="row" style="justify-content:flex-end;flex-wrap:nowrap;gap:8px">
+      <button class="btn2 ghost" id="bkCancel" style="white-space:nowrap;flex:0 0 auto">关闭</button>
+      <button class="btn2 ghost" id="bkRestore" style="white-space:nowrap;flex:0 0 auto">📂 从备份还原</button>
+      <button class="btn2" id="bkExport" style="white-space:nowrap;flex:0 0 auto">🔐 立即备份</button>
+    </div>
+  </div>
+</div>
+<!-- <seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌

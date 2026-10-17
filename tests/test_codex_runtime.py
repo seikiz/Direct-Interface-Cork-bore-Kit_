@@ -80,7 +80,9 @@ def main():
     print("=" * 62)
 
     html = io.open(INDEX, encoding="utf-8").read()
-    inapp = re.findall(r"<script(?![^>]*\bsrc=)[^>]*>(.*?)</script>", html, re.S)[0]
+    # 2026-11 阶段2：页面里不止一段内联 <script> 了（最前面还有一段几行的路由引导脚本），
+    # 只取第一段会拿到引导脚本、什么都扫不到 —— 所以把所有**无 src 的内联块**按顺序拼起来。
+    inapp = "\n".join(re.findall(r"<script(?![^>]*\bsrc=)[^>]*>(.*?)</script>", html, re.S))
     exported = CX.STANDALONE_PLAYER_JS
 
     print(u"\n== ① 两个播放器的 JS 都必须是合法 JS ==")

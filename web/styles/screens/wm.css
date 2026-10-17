@@ -1,0 +1,30 @@
+/* web/styles/screens/wm.css —— 🌍 世界书条目（世界卡编辑窗）的专属样式
+ * 阶段 3 从 styles/panels.css 原样搬出：.wentry（条目卡片）+ .p-grid/.pcell（8 格世界参数网格）。
+ *
+ * 搬家只改了**存放位置**，一行声明都没动（tools/ui_snapshot.py 比的是全局规则集合，会核对）。
+ * 层叠顺序（别随手挪 <link>）：本文件在 index.html 里排在 styles/panels.css 之后、
+ * styles/screens/ws.css 之前 —— 和搬家前 panels.css 里的相对顺序一致。
+ * 会跟它抢的规则只有 .modal-box input/textarea（components.css，特异性 0,1,1）：
+ * 本文件的 `.p-grid input`（0,1,1）与 `.wentry textarea`（0,1,1）在它后面，所以仍然赢，
+ * 这一点和搬家前完全一样（panels.css 本来就排在 components.css 之后）。 */
+/* ---------- 世界书条<seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌目编辑器 ---------- */
+.wentry{ border:1px solid var(--line); border-radius:10px; padding:8px 10px; margin:8px 0; background:var(--bg); }
+.wentry .we-row{ display:flex; gap:6px; align-items:center; margin:5px 0; flex-wrap:wrap; }
+.wentry .we-row input[type=text]{ flex:1; min-width:120px; }
+.wentry .we-row input.narrow{ width:74px; flex:none; }
+.wentry .we-row select{ width:92px; flex:none; }
+.wentry .we-dot{ width:9px; height:9px; border-radius:50%; display:inline-block; flex:none;
+  background:var(--line); }
+.wentry .we-dot.on{ background:#4ade80; }
+.wentry .we-dot.const{ background:#60a5fa; }
+.wentry .we-del{ background:none; border:none; color:#f87171; cursor:pointer; font-size:14px; }
+.wentry .we-chk{ display:inline-flex; align-items:center; gap:4px; font-size:11px; color:var(--sub); }
+.wentry .we-chk input{ width:auto; }
+.wentry textarea{ width:100%; background:var(--bubble); border:1px solid var(--line); border-radius:8px;
+  color:var(--text); padding:7px 9px; font-size:13px; font-family:inherit; resize:vertical; }
+/* ---------- 世界参数：8 格网�� ---------- */
+.p-grid{ display:grid; grid-template-columns:1fr 1fr; gap:6px 8px; }
+.p-grid .pcell{ display:flex; flex-direction:column; }
+.p-grid .pcell span{ font-size:11px; color:var(--sub); margin-bottom:2px; }
+.p-grid input{ width:100%; background:var(--bubble); border:1px solid var(--line); border-radius:8px;
+  color:var(--text); padding:6px 8px; font-size:12px; }

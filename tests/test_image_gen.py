@@ -565,10 +565,26 @@ def _js_call_args(html, name):
     return out
 
 
+def _front_end():
+    """前端语料：页面 + 屏片段 + 屏模块。
+
+    2026-11 阶段2 起，生图屏的调用点搬到了 web/js/screens/gen.js（DOM 在 web/screens/gen.html），
+    只读 index.html 的话"前端实参"会扫成 None —— 那是搬家的正常结果，不是回归。
+    """
+    parts = [io.open(os.path.join(ROOT, "web", "index.html"), encoding="utf-8").read()]
+    for sub in (("web", "screens"), ("web", "js")):
+        d = os.path.join(ROOT, *sub)
+        for base, _dirs, files in os.walk(d):
+            for fn in sorted(files):
+                if fn.endswith((".html", ".js")):
+                    parts.append(io.open(os.path.join(base, fn), encoding="utf-8").read())
+    return "\n".join(parts)
+
+
 def test_web_bridge():
     print(u"\n== ⑨ 前端调用与后端签名对得上（位置参数错了 pywebview 不会报错）==")
     app = io.open(os.path.join(ROOT, "Direct-Interface Cork-bore Kit.py"), encoding="utf-8").read()
-    html = io.open(os.path.join(ROOT, "web", "index.html"), encoding="utf-8").read()
+    html = _front_end()
 
     def py_params(name):
         m = re.search(r"def api_%s\(self,?([^)]*)\)" % name, app)

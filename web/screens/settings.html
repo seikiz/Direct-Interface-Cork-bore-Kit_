@@ -1,0 +1,145 @@
+<!-- ⚙️ 设置（阶段4：这一屏的 DOM 从 index.html 搬到这里，index.html 原位只留挂载点）
+     结构/class/行内 style 必须和搬家前逐字一致（tools/ui_snapshot.py 会核对），
+     文案走 data-i18n 标注（阶段4 的 i18n 收口），行为在 web/js/screens/settings.js。
+     本屏元素多，但都是"读设置 / 写设置"的表单：模型商、Base URL、代理、停止序列、
+     正则、采样参数、Key、模型、生图后端、图片预设、主题/强调色、壁纸、Live2D、语言、
+     预算、自动接话、开发者模式、去 AI 味、风格闸、字号、插件管理。 -->
+<!-- 设置<seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌模态 -->
+<div class="modal" id="settingsModal">
+  <div class="modal-box">
+    <h3 data-i18n="title" id="stTitle">设置</h3>
+    <div class="field"><label data-i18n="stProvider" id="stProvider">模型商</label>
+      <button type="button" class="btn2 ghost" id="stProviderBtn" style="width:100%;text-align:left">模型商：— ▾</button>
+      <div class="dd-overlay" id="stProviderMenu" style="display:none"></div>
+      <div class="row" style="margin-top:6px;justify-content:flex-start">
+        <button data-i18n="stBuy" class="btn2 ghost" id="stBuyBtn" style="font-size:12px">🔑 去官网注册 / 充值</button>
+        <span id="stBuyHint" style="font-size:11px;color:var(--sub)"></span>
+      </div>
+      <div class="field" style="margin-top:6px"><label data-i18n="baseUrl" id="stBase">Base URL（选模型商自动填）</label><input id="stBaseInput"></div>
+      <div class="field" style="margin-top:6px"><label id="stProxy">代理（可选，通道不通时填写，如 http://127.0.0.1:7890）</label><input id="stProxyInput" placeholder="http://127.0.0.1:7890"></div>
+      <div class="field" style="margin-top:6px"><label id="stRelay">内置代理通道（直连失败自动走中转；默认内置地址，可改）</label><input id="stRelayInput" placeholder="https://dick-workshop.seiki342008.workers.dev">
+        <span id="relayStatus" style="font-size:11px;color:var(--sub)"></span></div>
+      <div class="field" style="margin-top:6px"><label id="stStop">停止序列（指令模板，逗号分隔；留空用预设/模型默认）</label><input id="stStopInput" placeholder="&lt;|im_end|&gt;, &lt;/s&gt;">
+        <span id="stopStatus" style="font-size:11px;color:var(--sub)"></span></div>
+      <div class="field" style="margin-top:6px"><label id="stRegex">🔤 正则规则（每行 id|名称|正则|替换|作用域；作用域 ai/user/both；\1 为捕获组）</label>
+        <textarea id="stRegexInput" rows="4" placeholder="rm_star|动作去星号|\*([^*]+)\*|（$1）|both&#10;strip_blank|去多余空行|\n{3,}|\n\n|both"></textarea>
+        <span style="font-size:11px;color:var(--sub)">存储前应用（树状回溯/分支看到的都是处理后的文本）；角色卡可配专属规则</span></div>
+      <div class="field" style="margin-top:6px"><label id="stSample">采样参数（温度 / top_p，留空 = 模型默认）</label>
+        <div class="row" style="justify-content:flex-start">
+          <input id="stTempInput" type="number" step="0.1" min="0" max="2" placeholder="温度 如 0.8" style="width:120px">
+          <input id="stTopPInput" type="number" step="0.05" min="0" max="1" placeholder="top_p 如 0.9" style="width:120px">
+        </div></div>
+    </div>
+    <div class="field"><label data-i18n="apiKey" id="stKey">API Key</label><input id="stKeyInput" type="password"></div>
+    <div class="field"><label data-i18n="model" id="stModel">模型</label>
+      <button type="button" class="btn2 ghost" id="stModelBtn" style="width:100%;text-align:left">模型：— ▾</button>
+      <div class="dd-overlay" id="stModelMenu" style="display:none"></div>
+      <input id="stModelInput" list="stModelList" placeholder="或输入自定义模型 ID" style="margin-top:6px"><datalist id="stModelList"></datalist>
+    </div>
+    <div class="mech-fold" id="foldImgGen">
+      <div class="fold-head" onclick="toggleFold('foldImgGen')"><span>🎨 生图设置</span><span class="fold-arrow">▾</span></div>
+      <div class="fold-body">
+        <div class="field"><label>生图后端（自动识别按端点判断；本地服务不在默认端口时手动选）</label>
+          <select id="stImgBackend">
+            <option value="auto">自动识别（推荐）</option>
+            <option value="openai">OpenAI 兼容（需 Key）</option>
+            <option value="pollinations">Pollinations 免 Key 免费</option>
+            <option value="sdwebui">本地 A1111 / Forge（/sdapi）</option>
+            <option value="comfyui">本地 ComfyUI（8188）</option>
+          </select></div>
+        <div class="field"><label>生图 API Key（硅基流动 / 智谱 / 任意兼容中转；免 Key 端点留空即可）</label>
+          <input id="stImgKey" type="password" placeholder="sk-...（免 Key 端点可留空）"></div>
+        <div class="field"><label>生图端点（OpenAI 兼容 /images/generations；填 https://image.pollinations.ai 则免 Key 免费出图）</label>
+          <input id="stImgBase" placeholder="https://api.siliconflow.cn/v1　或　https://image.pollinations.ai"></div>
+        <div class="field"><label>生图模型（免 Key 端点填 flux / turbo；本地 ComfyUI 填 checkpoint 文件名 .safetensors）</label>
+          <input id="stImgModel" placeholder="black-forest-labs/FLUX.1-schnell　或　flux　或　sd_xl_base_1.0.safetensors"></div>
+        <button class="btn2 ghost" id="stImgSave" style="width:auto;margin:0">💾 保存生图设置</button>
+        <div style="font-size:11px;color:var(--sub);margin-top:6px" id="stImgState"></div>
+      </div>
+    </div>
+    <div class="mech-fold" id="foldImgPreset">
+      <div class="fold-head" onclick="toggleFold('foldImgPreset');loadPresetEditor()"><span>🎭 生图预设（自定义风格）</span><span class="fold-arrow">▾</span></div>
+      <div class="fold-body">
+        <div style="font-size:11px;color:var(--sub);margin-bottom:6px" id="stPresetState"></div>
+        <textarea id="stPresetText" rows="8" spellcheck="false"
+                  style="width:100%;font-family:ui-monospace,Consolas,monospace;font-size:12px"></textarea>
+        <div class="row" style="justify-content:flex-start;gap:6px;margin-top:6px">
+          <button class="btn2 ghost" id="stPresetSave" style="width:auto;margin:0">💾 保存预设</button>
+          <button class="btn2 ghost" id="stPresetExample" style="width:auto;margin:0">📋 填入示例</button>
+          <button class="btn2 ghost" id="stPresetReset" style="width:auto;margin:0">↺ 恢复内置</button>
+        </div>
+        <div style="font-size:11px;color:var(--sub);margin-top:6px">
+          写法：<code>{"国风": {"label": "国风线稿", "prompt": "chinese ink line art, ", "desc": "说明"}}</code>
+          或简写 <code>{"国风": "chinese ink line art, "}</code>；
+          <b>同名 id 覆盖内置预设</b>，下划线开头的键（如 <code>_说明</code>）会被忽略，可以拿来写注释。
+        </div>
+      </div>
+    </div>
+    <div class="field"><label data-i18n="theme" id="stTheme">主题 / Theme</label>
+      <button class="btn" style="width:auto" id="stThemeBtn">深色</button>
+      <button class="btn" style="width:auto" id="stAccentBtn">强调色：蓝</button>
+    </div>
+    <div class="field"><label id="stWallpaper">🖼 聊天壁纸（核心·可换）</label>
+      <div style="display:flex;gap:6px;align-items:center">
+        <button class="btn" style="width:auto" id="stWallpaperSet">上传图片</button>
+        <button class="btn ghost" style="width:auto" id="stWallpaperClear">恢复默认</button>
+        <span id="stWallpaperState" style="font-size:11px;color:var(--sub)"></span>
+      </div>
+    </div>
+    <div class="mech-fold" id="foldL2d">
+      <div class="fold-head" onclick="toggleFold('foldL2d')"><span>🎎 看板娘（核心·Live2D）</span><span class="fold-arrow">▾</span></div>
+      <div class="fold-body">
+        <div class="field"><label>模型（web/live2d/models/ 下）</label>
+          <button class="btn" style="width:auto" id="stL2dModel">选择模型</button><span id="stL2dModelName" style="font-size:11px;color:var(--sub);margin-left:6px"></span>
+        </div>
+        <div class="field"><label>缩放（%）</label>
+          <input id="stL2dScale" type="number" min="30" max="300" step="5" style="width:90px"></div>
+        <div class="field"><label>位置</label>
+          <select id="stL2dPos"><option>右下</option><option>左下</option><option>右上</option><option>左上</option></select></div>
+        <div class="field"><label>不透明度（%）</label>
+          <input id="stL2dOpacity" type="number" min="20" max="100" step="5" style="width:90px"></div>
+        <div class="field"><label>可拖拽 / 呼吸动画</label>
+          <label class="chkline" style="display:inline-flex;gap:10px"><input type="checkbox" id="stL2dDrag"> 可拖拽 <input type="checkbox" id="stL2dBreath"> 呼吸动画</label>
+        </div>
+        <div style="font-size:11px;color:var(--sub)">把 .model3.json 放入 web/live2d/models/ 即生效；渲染库放 web/live2d/vendor/。</div>
+      </div>
+    </div>
+    <div class="field"><label id="stLang">语言 / Language / 言語</label>
+      <select id="stLangSel" title="界面语言 / UI language / 表示言語">
+        <option value="zh">中文</option>
+        <option value="en">English</option>
+        <option value="ja">日本語</option>
+      </select>
+    </div>
+    <div class="field"><label data-i18n="stBudget" id="stBudget">🧮 上下文预算</label>
+      <button class="btn" style="width:auto" id="stBudgetBtn">预算：不限</button>
+    </div>
+    <div class="field"><label data-i18n="stAuto" id="stAuto">🤖 自动接话</label>
+      <label class="chkline"><input type="checkbox" id="stAutoInput"> <span data-i18n="stAutoHint" id="stAutoHint">群聊时其他角色自动跟进（每轮最多 2 次）</span></label>
+    </div>
+    <div class="field"><label id="stDevMode">🔧 开发者模式</label>
+      <label class="chkline"><input type="checkbox" id="stDevModeInput"> <span id="stDevModeHint">解锁角色卡高级设置（内置游戏 / 额外提示 / 卡片快捷回复）</span></label>
+    </div>
+    <div class="field"><label id="stHumanize">🧍 去 AI 味</label>
+      <label class="chkline"><input type="checkbox" id="stHumanizeInput"> <span id="stHumanizeHint">注入人性化对话规则（具体细节 / 生活有变化 / 口语不完美 / 引用共同记忆）</span></label>
+    </div>
+    <div class="field"><label id="stStyleGuard">🎛 风格闸（防文学化漂移）</label>
+      <label class="chkline"><input type="checkbox" id="stStyleGuardInput"> <span id="stStyleGuardHint">确定性洗文学腔表达（拆长句/收堆叠副词），不改内容；配合角色锚点从架构外掐断自增强</span></label>
+      <label class="chkline"><input type="checkbox" id="stStyleGuardLongInput"> <span id="stStyleGuardLongHint">🌊 长句模式：不拆长句，允许更流畅/文学化的表达（默认关，短句口语更"活人"）</span></label>
+    </div>
+    <div class="field"><label data-i18n="stFont" id="stFont">🔤 字体大小</label>
+      <button class="btn" style="width:auto" id="stFontBtn">字体：中</button>
+    </div>
+    <div class="field"><label data-i18n="stPlugins" id="stPlugins">🔌 插件管理</label>
+      <div id="stPluginList"></div>
+    </div>
+    <div style="margin-top:8px;font-size:11px;color:var(--sub)">📦 手机端 ~9MB、电脑端便携版 ~110MB</div>
+    <div class="row" style="justify-content:flex-start">
+      <button class="btn2 ghost" style="margin-right:auto" id="stKeyGuideBtn">📖 配置教程</button>
+    </div>
+    <div class="row">
+      <button data-i18n="cancel" class="btn2 ghost" id="stCancel">取消</button>
+      <button data-i18n="save" class="btn2" id="stSave">保存</button>
+    </div>
+  </div>
+</div>

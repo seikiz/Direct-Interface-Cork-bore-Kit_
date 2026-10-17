@@ -1,0 +1,25 @@
+<!-- 🌍 世界卡 / 世界书条目（阶段3：这一屏的 DOM 从 index.html 搬到这里，index.html 原位只留挂载点）
+     结构/class/行内 style 必须和搬家前逐字一致（tools/ui_snapshot.py 会核对），
+     行为在 web/js/screens/wm.js（本屏 = 世界名字/背景/规则 + 8 格世界参数 + 关键词触发条目列表）。 -->
+<!-- 世界<seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌卡模态 -->
+<div class="modal" id="worldModal">
+  <div class="modal-box">
+    <h3 data-i18n="wmTitle" id="wmTitle">新建世界</h3>
+    <div class="field"><label data-i18n="wmName" id="wmName">名字</label><input id="wmNameInput"></div>
+    <div class="field"><label data-i18n="wmDesc" id="wmDesc">背景描述</label><textarea id="wmDescInput" rows="3"></textarea></div>
+    <div class="field"><label data-i18n="wmRules" id="wmRules">规则（每行一条）</label><textarea id="wmRulesInput" rows="3"></textarea></div>
+    <div class="field">
+      <label data-i18n="wmParams" id="wmParams">世界参数（物理系统等）</label>
+      <div class="p-grid" id="wmParamsList"></div>
+    </div>
+    <div class="field">
+      <label data-i18n="weEntries" id="wmEntries">世界书条目（关键词触发，可空）</label>
+      <div id="wmEntriesList"></div>
+      <button data-i18n="addEntry" class="btn" style="width:auto;margin:2px 0" id="wmAddEntry">＋ 添加条目</button>
+    </div>
+    <div class="row" style="justify-content:space-between">
+      <button data-i18n="aiDraft" class="btn2 ghost" id="wmDraft">✨ AI 起草</button>
+      <span><button class="btn2 ghost" id="wmCancel">取消</button> <button class="btn2" id="wmSave">保存</button></span>
+    </div>
+  </div>
+</div>

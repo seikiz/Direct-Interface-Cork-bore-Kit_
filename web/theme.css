@@ -1,0 +1,135 @@
+/* ⚠ 生成物：由 tools/gen_tokens.py 从 design/tokens.json 生成，别手改。
+   改配色：改 design/tokens.json，再跑 python tools/gen_tokens.py。
+   验收：python tools/audit_contrast.py（对比度矩阵 + 漂移扫描）。
+   默认暗色，跟随系统；body.dark/.light/.oled 是应用内显式选择时的覆写。 */
+
+:root{
+  color-scheme:dark;
+  /* 颜色角色 · <seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌暗色（默认） */
+  --bg:#0f1115;
+  --surface:#14161c;
+  --surface-2:#1a1e26;
+  --border:#5c6478;
+  --border-strong:#7b8598;
+  --text:#e5e7eb;
+  --text-sub:#94a3b8;
+  --text-dim:#7c8598;
+  --accent:#60a5fa;
+  --accent-text:#0b1220;
+  --danger:#f87171;
+  --warn:#f59e0b;
+  --ok:#4ade80;
+  --focus-ring:#93c5fd;
+  /* 尺寸令牌（px；行高是倍数） */
+  --radius-sm:6px;
+  --radius-md:12px;
+  --radius-lg:14px;
+  --radius-pill:999px;
+  --space-1:2px;
+  --space-2:4px;
+  --space-3:6px;
+  --space-4:8px;
+  --space-5:12px;
+  --space-6:16px;
+  --space-7:20px;
+  --space-8:24px;
+  --font-xs:11px;
+  --font-sm:12px;
+  --font-md:13px;
+  --font-lg:15px;
+  --font-xl:18px;
+  --lh-tight:1.3;
+  --lh-normal:1.55;
+  --lh-loose:1.8;
+  --icon-sm:12px;
+  --icon-md:16px;
+  --icon-lg:20px;
+  --icon-xl:24px;
+}
+/* 跟随系统：系统是浅色就整片换浅色（正文/次要文字/边框都已按 AA 调过） */
+@media (prefers-color-scheme: light){
+  :root{
+    color-scheme:light;
+    --bg:#f5f6f8;
+    --surface:#ffffff;
+    --surface-2:#ffffff;
+    --border:#8a9199;
+    --border-strong:#6b7280;
+    --text:#1f2937;
+    --text-sub:#656c79;
+    --text-dim:#7f8792;
+    --accent:#2563eb;
+    --accent-text:#ffffff;
+    --danger:#cf2222;
+    --warn:#b45309;
+    --ok:#15803d;
+    --focus-ring:#1d4ed8;
+  }
+}
+/* body.dark —— 显式选深色：系统即使是浅色也压回暗色 */
+body.dark{
+  color-scheme:dark;
+  --bg:#0f1115;
+  --surface:#14161c;
+  --surface-2:#1a1e26;
+  --border:#5c6478;
+  --border-strong:#7b8598;
+  --text:#e5e7eb;
+  --text-sub:#94a3b8;
+  --text-dim:#7c8598;
+  --accent:#60a5fa;
+  --accent-text:#0b1220;
+  --danger:#f87171;
+  --warn:#f59e0b;
+  --ok:#4ade80;
+  --focus-ring:#93c5fd;
+}
+/* body.light —— 显式选浅色 */
+body.light{
+  color-scheme:light;
+  --bg:#f5f6f8;
+  --surface:#ffffff;
+  --surface-2:#ffffff;
+  --border:#8a9199;
+  --border-strong:#6b7280;
+  --text:#1f2937;
+  --text-sub:#656c79;
+  --text-dim:#7f8792;
+  --accent:#2563eb;
+  --accent-text:#ffffff;
+  --danger:#cf2222;
+  --warn:#b45309;
+  --ok:#15803d;
+  --focus-ring:#1d4ed8;
+}
+/* body.oled —— OLED：暗色压黑（只有 bg/surface/surface_2 换，其它角色共用暗色） */
+body.oled{
+  color-scheme:dark;
+  --bg:#000000;
+  --surface:#0a0a0c;
+  --surface-2:#101014;
+  --border:#5c6478;
+  --border-strong:#7b8598;
+  --text:#e5e7eb;
+  --text-sub:#94a3b8;
+  --text-dim:#7c8598;
+  --accent:#60a5fa;
+  --accent-text:#0b1220;
+  --danger:#f87171;
+  --warn:#f59e0b;
+  --ok:#4ade80;
+  --focus-ring:#93c5fd;
+}
+/* 旧变量名 → 语义令牌（一次性映射，见 tokens.json 的 web_aliases）：
+   网页现有 CSS 与 JS 还在用 --panel/--bubble/--sub/--line/--user，这里让它们指向新角色。
+   选择器写成一条多元素规则：body.light 覆写 --surface 时，继承来的 --panel 会重新取值。 */
+:root, body, body.dark, body.light, body.oled{
+  --bubble:var(--surface-2);
+  --line:var(--border);
+  --panel:var(--surface);
+  --sub:var(--text-sub);
+  --user:var(--ok);
+  --radius:var(--radius-md);   /* 气泡圆角（原 --radius:12px） */
+}
+/* 焦点环：键盘 Tab 走一遍就看得出在哪（原来只有 :focus 改边框色，等于没有） */
+:focus-visible{ outline:2px solid var(--focus-ring); outline-offset:2px; }

@@ -261,3 +261,21 @@ fun openingInstruction(cue: String, playerName: String): String {
 }
 
 // ---------- 主界面 ----------
+
+/* ---------- 预设名的三语显示 ----------
+ * PRESETS 是内置表，name 同时是**落盘值**（config.json 的 prompt_preset），所以不能直接改表；
+ * 显示时按 name 映射到 i18n 键，查不到就回退 name。
+ */
+fun presetLabel(idx: Int): String {
+    val p = PRESETS[idx.coerceIn(0, PRESETS.size - 1)]
+    val key = when (p.name) {
+        "跑团主持人" -> "preset_trpg_gm"
+        "小说叙事" -> "preset_novel"
+        "单推模式" -> "preset_oshi"
+        "角色单推模式" -> "preset_oshi_target"
+        "公文模式" -> "preset_doc"
+        "财报模式" -> "preset_finance"
+        else -> "preset_default"
+    }
+    return I18n.t(key, p.name)
+}

@@ -1,0 +1,16 @@
+<!-- 🧠 记忆清晰度面板（阶段3：这一屏的 DOM 从 index.html 搬到这里，index.html 原位只留挂载点）
+     结构/class/行内 style 必须和搬家前逐字一致（tools/ui_snapshot.py 会核对），
+     行为在 web/js/screens/mem.js（本屏 = 一张"每条记忆还剩多少清晰度"的只读表）。
+     原文上面那条「🔐 加密备份…」的注释是搬家前就贴错位置的（那是备份屏的说明），
+     本轮只搬不改：修注释属于文案调整，阶段 4 一起做。 -->
+<!-- 🔐 加密备份：全程主题化弹窗，不用原生 a<seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌lert/prompt（深色主题下会闪白框） -->
+<div class="modal" id="memDebugModal">
+  <div class="modal-box" style="width:min(94vw,620px);max-height:82vh;display:flex;flex-direction:column">
+    <h3>🧠 记忆清晰度</h3>
+    <div id="memDebugHead" style="font-size:12px;color:var(--sub);line-height:1.6;margin-bottom:8px"></div>
+    <div id="memDebugList" style="overflow:auto;flex:1;font-size:11px"></div>
+    <div class="row" style="justify-content:flex-end;margin-top:10px">
+      <button class="btn2 ghost" onclick="document.getElementById('memDebugModal').classList.remove('open')">关闭</button>
+    </div>
+  </div>
+</div>

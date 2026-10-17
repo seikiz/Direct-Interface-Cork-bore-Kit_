@@ -190,9 +190,14 @@ def main():
     # ---------------- ⑤ used_by 说真话 ----------------
     print(u"\n-- ⑤ used_by 声明的端，源码里真的在用 --")
     miss, extra = G.usage_mismatch(doc, scan)
+    # 运行期拼出来的键扫不到是正常的：主题/强调色/预设的显示名是 "accent_" + 名字 拼的，
+    # 语言标题是 data-i18n 之外的动态注入。按前缀认下来，别误判成死键。
+    DYNAMIC_PREFIXES = ("accent_", "preset_", "lang_", "theme_")
+    miss = {k for k in miss if not k.startswith(DYNAMIC_PREFIXES)}
     check(u"没有「声明了却扫不到」的键（死键嫌疑）", not miss, u"%s" % sorted(miss)[:8])
     check(u"没有「扫到了却没声明」的键", not extra, u"%s" % sorted(extra)[:8])
-    stray = sorted(scan["used"]["android"] - set(keys))
+    # 拼接用的前缀（"accent_" + x）会被扫成一个以 _ 结尾的"键"，它不是键
+    stray = sorted(k for k in (scan["used"]["android"] - set(keys)) if not k.endswith("_"))
     check(u"安卓用到的键都在 json 里", not stray, u"%s" % stray[:8])
     check(u"I18n.kt 不再内联 EN/JA/ZH 表（改用生成的 I18nStrings）",
           not re.search(r"private val (EN|JA|ZH)\s*=\s*mapOf\(",
@@ -203,24 +208,38 @@ def main():
     html = read(os.path.join(ROOT, "web", "index.html"))
     check(u"index.html 不再内联三段 T = {...}", "window.DICK_I18N" in html)
     check(u"index.html 引了生成的 i18n.js", 'src="i18n.js"' in html)
+    # 阶段4 起设置屏的 DOM 搬到了 web/screens/settings.html，语言选择器跟着走了 ——
+    # 所以"界面里有没有这三种语言"要查整棵前端，不是只看 index.html。
+    web_all = html
+    for base, _dirs, files in os.walk(os.path.join(ROOT, "web", "screens")):
+        for fn in sorted(files):
+            if fn.endswith(".html"):
+                web_all += "\n" + read(os.path.join(base, fn))
 
     # ---------------- ⑥ 三端入口都是三选一 ----------------
     print(u"\n-- ⑥ 语言入口：三端都是三种 --")
     for v in ("zh", "en", "ja"):
-        check(u"index.html 的语言选项有 %s" % v, ('value="%s"' % v) in html)
+        check(u"网页前端的语言选项有 %s" % v, ('value="%s"' % v) in web_all)
     check(u"i18n.py 的 LANGS 三种", 'LANGS = ("zh", "en", "ja")' in read(
         os.path.join(ROOT, "i18n.py")))
     ktp = read(os.path.join(ROOT, "DICK-Android", "app", "src", "main", "java",
                             "com", "dick", "app", "I18n.kt"))
     check(u"I18n.kt 的 LANGS 三种", 'listOf("zh", "en", "ja")' in ktp)
-    check(u"设置里那个选择器的标题写着三种语言名", u"中文 / English / 日本語" in html)
-    check(u"安卓设置里按 I18n.LANGS 渲染三选一",
-          "for (code in I18n.LANGS)" in read(os.path.join(
-              ROOT, "DICK-Android", "app", "src", "main", "java", "com", "dick",
-              "app", "Dialogs.kt")))
-    check(u"安卓启动时归一化语言（非法值当 zh）",
-          "I18n.normalize(" in read(os.path.join(ROOT, "DICK-Android", "app", "src",
-                                                 "main", "java", "com", "dick", "app", "App.kt")))
+    check(u"设置里那个选择器的标题写着三种语言名", u"中文 / English / 日本語" in web_all)
+    # 安卓 UI 已按 feature 拆包（App.kt / Dialogs.kt 只剩壳与门面）：
+    # 这两个结构断言改成扫整棵安卓源码，别再钉死某个文件（否则每次拆包都要改测试）。
+    def _all_kt():
+        root = os.path.join(ROOT, "DICK-Android", "app", "src", "main", "java", "com", "dick")
+        buf = []
+        for base, _dirs, files in os.walk(root):
+            for fn in files:
+                if fn.endswith(".kt"):
+                    buf.append(read(os.path.join(base, fn)))
+        return "\n".join(buf)
+
+    _kt_all = _all_kt()
+    check(u"安卓设置里按 I18n.LANGS 渲染三选一（整棵源码）", "for (code in I18n.LANGS)" in _kt_all)
+    check(u"安卓启动时归一化语言（整棵源码）", "I18n.normalize(" in _kt_all)
     check(u"发言者标签三语（你 / You / あなた）",
           keys.get("you", {}).get("zh") == u"你" and keys.get("you", {}).get("en") == "You"
           and keys.get("you", {}).get("ja") == u"あなた",
@@ -292,6 +311,51 @@ def main():
         app_paths.get_base_dir = real_base
         live_i18n.set_lang("zh")
         shutil.rmtree(tmp, ignore_errors=True)
+
+    # ---------------- ⑨ data-i18n 标注的键必须都在 json 里 ----------------
+    # 阶段4 起文案改成"标注在元素上"（data-i18n="<key>"），setT() 不再逐个 id 点名。
+    # 好处是换文案只动标注；代价是**打错一个键名不会报错**，只是那一处永远显示初始中文。
+    # 所以这里把标注的键全抓出来跟 json 对一遍：拼错的键、删掉的键，当场红。
+    print(u"\n-- ⑨ 元素上的 data-i18n 标注，键必须都在 lang/strings.json --")
+    web_dir = os.path.join(ROOT, "web")
+    pages = [os.path.join(web_dir, "index.html")]
+    for base, _dirs, files in os.walk(os.path.join(web_dir, "screens")):
+        for fn in sorted(files):
+            if fn.endswith(".html"):
+                pages.append(os.path.join(base, fn))
+    RE_ATTR = re.compile(r"""\bdata-i18n(?:-placeholder)?\s*=\s*["']([A-Za-z_][A-Za-z0-9_]*)["']""")
+    RE_PREFIX = re.compile(r"""\bdata-i18n-prefix\s*=\s*["']""")
+    marks = {}          # key -> ["文件:行", …]
+    for p in pages:
+        for i, ln in enumerate(read(p).split("\n"), 1):
+            for m in RE_ATTR.finditer(ln):
+                marks.setdefault(m.group(1), []).append(
+                    u"%s:%d" % (os.path.relpath(p, ROOT).replace("\\", "/"), i))
+    check(u"页面上有 data-i18n 标注（阶段4 的入口）", bool(marks),
+          u"一个都没找到：文案套用还停在逐 id 改名")
+    stray_keys = sorted(k for k in marks if k not in keys)
+    check(u"标注的 %d 个键都在 json 里（拼错/删掉的键 %d 个）" % (len(marks), len(stray_keys)),
+          not stray_keys,
+          u"、".join(u"%s（%s）" % (k, marks[k][0]) for k in stray_keys[:8]))
+    # 标注了的键，三语必须都翻过（不然切到 en/ja 会留着中文）
+    untranslated = []
+    for k in sorted(marks):
+        row = keys.get(k) or {}
+        for lg in G.LANGS:
+            if not row.get(lg):
+                untranslated.append(u"%s@%s" % (k, lg))
+    check(u"标注的键三语都有文案（缺 %d 处）" % len(untranslated), not untranslated,
+          u"%s" % untranslated[:8])
+    check(u"data-i18n-prefix 只跟 data-i18n 一起出现（图标前缀不进文案表）",
+          not [p for p in pages
+               if RE_PREFIX.search(read(p)) and not RE_ATTR.search(read(p))])
+    # 反向：setT() 不该偷偷回到逐 id 改名（阶段4 之前它是 68 处）
+    idx = read(os.path.join(web_dir, "index.html"))
+    i_set = idx.find("function setT(l)")
+    setT_body = idx[i_set:i_set + 4000] if i_set >= 0 else u""
+    id_sets = len(re.findall(r"getElementById\('[^']+'\)\s*\.textContent", setT_body))
+    check(u"setT() 里不再逐 id 改文案（现在 %d 处，阶段4 之前 68 处）" % id_sets,
+          i_set >= 0 and id_sets <= 1, u"%d 处" % id_sets)
 
     print(u"\n" + "=" * 60)
     for n in NOTE:

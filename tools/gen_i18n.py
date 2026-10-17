@@ -13,7 +13,8 @@
 
 "谁在用"的判定（--check 与 tests/test_i18n_langs.py 共用这套，别各写一份）
 ------------------------------------------------------------------------
-   · desktop_web  —— `web/*.html` 里出现 `T.<key>` / `T['<key>']`，
+   · desktop_web  —— `web/*.html` 里出现 `T.<key>` / `T['<key>']` /
+                     `data-i18n="<key>"` / `data-i18n-placeholder="<key>"`，
                      或命中动态前缀（`T['param_' + k]` → 所有 `param_*`）
    · desktop_py   —— 活跃 `*.py` 里出现 `i18n.t("<key>"` 或模块内 `t("<key>"`
                      （**排除 `tests/` 与 `tools/`**：那里是测试与工具，不是界面在用它；
@@ -55,6 +56,9 @@ SKIP_DIRS = {".git", "node_modules", ".gradle", "build", ".kotlin", "utau_env",
              "__pycache__", ".idea", "archive"}
 # 这两个目录里的 .py 不算<seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌"界面在用"（测试 / 工具）
 PY_SKIP_DIRS = SKIP_DIRS | {"tests", "tools"}
+# web/ 下的 .js 里，这几个不是"界面调用点"：i18n.js 是生成物（表本身），
+# icons.js / icon_scope.js 是图标表与图标替换器。扫它们只会引入噪声。
+WEB_JS_SKIP = {"i18n.js", "icons.js", "icon_scope.js"}
 
 HEADER_JS = ("// ⚠ 生成物：由 tools/gen_i18n.py 从 lang/strings.json 生成，别手改。\n"
              "//   改文案改 json；改完跑 python tools/gen_i18n.py\n")
@@ -226,8 +230,15 @@ def scan_sources(json_keys=None):
     used = {s: set() for s in SIDES}
     defaults = {"py": {}, "kt": {}}
 
-    # ---- desktop_web：index.html 里的 T.<key> / T['<key>'] / 动态前缀 ----
-    html = "\n".join(read(p) for p in _walk([".html"], [WEB_DIR], SKIP_DIRS))
+    # ---- desktop_web：页面 + 屏模块里的 T.<key> / T['<key>'] / 动态前缀 ----
+    # 2026-11 阶段2：一屏的 JS 搬到了 web/js/screens/*.js（DOM 在 web/screens/*.html），
+    # 只扫 .html 会把那些屏用到的键误判成死键 —— 所以 .js 也要扫。
+    # 例外见 WEB_JS_SKIP：i18n.js 是生成物（表本身），icons.js/icon_scope.js 是图标表，
+    # 它们里面出现的 T.xxx 不是"界面调用点"。
+    web_src = [read(p) for p in _walk([".html"], [WEB_DIR], SKIP_DIRS)]
+    web_src += [read(p) for p in _walk([".js"], [WEB_DIR], SKIP_DIRS)
+                if os.path.basename(p) not in WEB_JS_SKIP]
+    html = "\n".join(web_src)
     for m in re.finditer(r"\bT\.([A-Za-z_][A-Za-z0-9_]*)\b", html):
         used["desktop_web"].add(m.group(1))
     for m in re.finditer(r"\bT\[['\"]([A-Za-z_][A-Za-z0-9_]*)['\"]\]", html):
@@ -239,6 +250,13 @@ def scan_sources(json_keys=None):
         else:
             for k in re.findall(r"['\"](%s[A-Za-z0-9_]+)['\"]" % re.escape(pfx), html):
                 used["desktop_web"].add(k)
+    # 2026-11 阶段4：文案改成**标注在元素上**（data-i18n="<key>"），setT() 不再逐个
+    # getElementById 点名。所以这两种属性也必须算"界面在用"，否则整页的键会被判成死键。
+    #   data-i18n="key"              → textContent
+    #   data-i18n-placeholder="key"  → placeholder
+    for m in re.finditer(r"""\bdata-i18n(?:-placeholder)?\s*=\s*["']([A-Za-z_][A-Za-z0-9_]*)["']""",
+                         html):
+        used["desktop_web"].add(m.group(1))
 
     # ---- desktop_py：活跃 .py 里的 i18n.t("k" / 模块内 t("k" ----
     # 注意别用 `(?:i18n\.)?(?<![A-Za-z_.])t\(`：`i18n.` 之后的 `t` 前面正好是 `.`，

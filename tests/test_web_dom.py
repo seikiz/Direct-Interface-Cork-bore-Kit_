@@ -14,6 +14,11 @@
 所以把审计固化成测试。这类"琐碎但要一条条对"的活正是不该靠人记的。
 
 跑法：utau_env\\Scripts\\python.exe tests\\test_web_dom.py
+
+2026-11 阶段 2 起：一屏的 DOM/JS 不再全写在 index.html 里 ——
+结构搬到 `web/screens/<名字>.html`（index.html 原位只留 `<!--@screen:名字-->` 挂载点），
+JS 搬到 `web/js/screens/<名字>.js`。所以本测试的"语料"必须跟着扩到
+**index.html + 所有屏片段 + 所有屏模块**，否则"元素存在/函数已定义"会成片误报。
 """
 import io
 import os
@@ -23,6 +28,8 @@ import sys
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
 HTML = os.path.join(ROOT, "web", "index.html")
+SCREENS = os.path.join(ROOT, "web", "screens")
+JSDIR = os.path.join(ROOT, "web", "js")
 
 # 运行时才创建的元素（setAttribute('i<seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌d', ...) / innerHTML 里生成），
 # 静态看不到，但确实存在。每加一个都要写明理由。
@@ -44,12 +51,39 @@ def check(name, cond, detail=""):
         print("  [FAIL] %s  %s" % (name, detail))
 
 
+def _read(path):
+    with io.open(path, encoding="utf-8") as f:
+        return f.read()
+
+
+def corpus():
+    """前端语料：[(名字, 文本)] —— 页面 + 屏片段 + 屏模块。
+
+    顺序按"人读代码的顺序"排，方便报错时定位。片段里如果还有挂载点（本轮没有嵌套），
+    这里不递归展开 —— 静态审计只认文件，展开逻辑归 tools/ui_snapshot.py。
+    """
+    out = [("web/index.html", _read(HTML))]
+    if os.path.isdir(SCREENS):
+        for fn in sorted(os.listdir(SCREENS)):
+            if fn.endswith(".html"):
+                out.append(("web/screens/" + fn, _read(os.path.join(SCREENS, fn))))
+    if os.path.isdir(JSDIR):
+        for base, dirs, files in os.walk(JSDIR):
+            dirs[:] = sorted(dirs)
+            for fn in sorted(files):
+                if fn.endswith(".js"):
+                    p = os.path.join(base, fn)
+                    out.append((os.path.relpath(p, ROOT).replace("\\", "/"), _read(p)))
+    return out
+
+
 def main():
     print("=" * 62)
     print("Web 前端静态审计")
     print("=" * 62)
-    with io.open(HTML, encoding="utf-8") as f:
-        html = f.read()
+    srcs = corpus()
+    html = "\n".join(t for _n, t in srcs)      # 语料合并：所有"字面量必须存在"类的检查都看它
+    print("        语料 %d 个文件：%s" % (len(srcs), "、".join(n for n, _t in srcs)))
 
     print("\n== ① JS 引用的元素 id 必须存在 ==")
     used = sorted(set(re.findall(r"""getElementById\(['"]([A-Za-z_][A-Za-z0-9_]*)['"]\)""", html)))
@@ -150,24 +184,54 @@ def main():
     # 两个顶层 function 同名时，后声明的会静默覆盖前一个：调用点看着都在，功能却没了，
     # 而且不报错。真踩过 —— Galgame 选项面板的 renderChoices 被记忆树「选项骨架」的同名函数
     # 覆盖，选项面板从此再也不刷新（且 treeList 非空时抛 TypeError）。
-    m = re.search(r"<script>([\s\S]*?)</script>", html)
-    src = m.group(1) if m else ""
-    base = html[:m.start(1)].count("\n") if m else 0
-    decl = {}
-    for i, line in enumerate(src.split("\n"), 1):
-        d = re.match(r"function\s+([A-Za-z_$][\w$]*)\s*\(", line)
-        if not d:
+    #
+    # 阶段 2 之后要查两层：
+    #   ① 同一个文件里重名（后面覆盖前面）——原来的检查，现在按"每个 <script> 块 / 每个 .js"分开算；
+    #   ② 跨文件重名（后加载的 .js 覆盖前面的）——搬屏之后这是新的踩坑方式：
+    #      两个模块都定义了 goOpen，谁后加载谁赢，页面上还看不出来。
+    blocks = []          # [(名字, 起始行在语料里的偏移, 源码)]
+    for name, text in srcs:
+        if name.endswith(".js"):
+            blocks.append((name, 0, text))
+            continue
+        for m in re.finditer(r"<script>([\s\S]*?)</script>", text):
+            blocks.append((name, text[:m.start(1)].count("\n"), m.group(1)))
+
+    def _decls(src):
+        out = {}
+        for i, line in enumerate(src.split("\n"), 1):
+            d = re.match(r"function\s+([A-Za-z_$][\w$]*)\s*\(", line)
+            if d:
+                out.setdefault(d.group(1), []).append(("function", i))
+                continue
             d2 = re.match(r"(?:var|let|const)\s+([A-Za-z_$][\w$]*)\s*=\s*function", line)
             if d2:
-                decl.setdefault(d2.group(1), []).append(("var", base + i))
-            continue
-        decl.setdefault(d.group(1), []).append(("function", base + i))
-    dup = dict((k, v) for k, v in decl.items() if len(v) > 1)
-    for name in sorted(dup):
-        where = "、".join("%s@第%d行" % (kind, ln) for kind, ln in dup[name])
-        check("顶层声明 %s 唯一" % name, False, "重复：%s（后者覆盖前者）" % where)
-    if not dup:
-        check("全部 %d 个顶层函数声明互不重名" % len(decl), True)
+                out.setdefault(d2.group(1), []).append(("var", i))
+        return out
+
+    total_decl = 0
+    dup_any = 0
+    owner = {}           # 函数名 → [(文件, 行)]
+    for name, base, src in blocks:
+        decl = _decls(src)
+        total_decl += len(decl)
+        for fn, where in decl.items():
+            owner.setdefault(fn, []).append((name, base + where[0][1]))
+        dup = dict((k, v) for k, v in decl.items() if len(v) > 1)
+        for fn in sorted(dup):
+            where = "、".join("%s@第%d行" % (kind, base + ln) for kind, ln in dup[fn])
+            dup_any += 1
+            check("顶层声明 %s 唯一（%s）" % (fn, name), False,
+                  "同文件重复：%s（后者覆盖前者）" % where)
+
+    cross = dict((k, v) for k, v in owner.items() if len(v) > 1)
+    for fn in sorted(cross):
+        where = "、".join("%s:%d" % (n, ln) for n, ln in cross[fn])
+        dup_any += 1
+        check("顶层声明 %s 不跨文件重名" % fn, False,
+              "多个文件都定义：%s（后加载的覆盖前面的）" % where)
+    if not dup_any:
+        check("全部 %d 个顶层函数声明互不重名（同文件 + 跨文件）" % total_decl, True)
 
     print("\n" + "=" * 62)
     print("通过 %d / 失败 %d" % (PASS, FAIL))

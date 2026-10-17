@@ -168,7 +168,11 @@ def main():
 
     # ---------- ⑧ 接线：界面 → 引擎 → 两层 ----------
     print(u"\n-- ⑧ 接线（注入进载荷、标签被收掉） --")
+    # 2026-11 UI 解耦：App.kt 只剩入口/主题解析，聊天屏正文在 ui/screens/chat/ChatScreen.kt
+    #（纯搬运）。接线断言盯的是"界面有没有接上"，与住哪个文件无关 —— 两份拼起来看。
     app_kt = read(os.path.join(AND, "app", "src", "main", "java", "com", "dick", "app", "App.kt"))
+    app_kt += u"\n" + read(os.path.join(AND, "app", "src", "main", "java", "com", "dick", "app",
+                                        "ui", "screens", "chat", "ChatScreen.kt"))
     engine_kt = read(os.path.join(CORE, "ChatEngine.kt"))
     bridge_kt = read(os.path.join(CORE, "ChatBridge.kt"))
     check(u"ChatEngine 有 contextProvider 钩子", u"var contextProvider" in engine_kt)

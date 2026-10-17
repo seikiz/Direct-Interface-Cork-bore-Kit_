@@ -1,0 +1,22 @@
+/* web/styles/screens/save.css —— 💾 角色卡·多存档屏的专属样式（阶段 3 从 styles/screens.css 原样搬出）
+ *
+ * 为什么单独一个文件：这 5 组规则只有存档点列表用得上，混在 styles/screens.css 里看不出归属。
+ * 搬家只改了**存放位置**，一行声明都没动（tools/ui_snapshot.py 比的是全局规则集合，会核对）。
+ *
+ * 层叠顺序（别随手挪 <link>）：本文件在 index.html 里紧跟在 styles/screens.css 之后、
+ * styles/components.css 之前 —— 和搬家前一模一样。这条顺序是**必需的**：
+ *   `.save-new input`(0,1,1) 与 components.css 的 `.modal-box input`(0,1,1) 特异性相同，
+ *   搬家前 components.css 在后面，所以输入框的底色/边框/圆角其实是由 .modal-box input 决定的。
+ *   本文件要是挪到 components.css 之后，存档名输入框的观感就会变（这是搬家最容易踩的坑）。 */
+/* 角色卡·多存<seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌档：存档点列表 */
+.save-row{ display:flex; align-items:center; gap:8px; padding:8px 10px; margin:6px 0;
+  border:1px solid var(--line); border-radius:10px; background:var(--bubble); }
+.save-row.save-active{ border-color:var(--accent); background:color-mix(in srgb, var(--accent) 10%, var(--bubble)); }
+.save-row .save-label{ font-size:13px; font-weight:600; color:var(--text); overflow:hidden;
+  text-overflow:ellipsis; white-space:nowrap; display:block; }
+.save-row .save-ops .iconbtn{ background:none; border:none; cursor:pointer; font-size:13px;
+  opacity:.7; padding:3px 6px; border-radius:6px; color:var(--sub); }
+.save-row .save-ops .iconbtn:hover{ opacity:1; background:var(--line); }
+.save-row .save-ops .act-del{ color:#f87171; }
+.save-new input{ background:var(--bubble); border:1px solid var(--line); border-radius:8px;
+  color:var(--text); padding:7px 10px; font-size:13px; }
