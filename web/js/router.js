@@ -16,7 +16,7 @@
  * "Synchronous XMLHttpRequest" 弃用警告。换来的是零时序风险，值得。
  *
  * 挂载点写法（index.html 里，原位保留）：
- *     <!--@screen:go-->
+ * <!--@screen:go-->
  * 片段文件：web/screens/go.html（可以多根，按顺序插进挂载点后面）
  * 屏模块：web/js/screens/go.js，必须导出 mount()/unmount()
  *

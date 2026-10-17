@@ -45,7 +45,7 @@ OUT_GOLDENS = os.path.join(AND, "selftest", "ParityGoldens.kt")
 PACKS_SRC = os.path.join(ROOT, "world_packs")
 ASSETS_PACKS = os.path.join(AND, "app", "src", "main", "assets", "world_packs")
 
-HEADER = (u"// ⚠ 生成物：由 tools/gen_parity.py 从 life_core.py / space_core.py / commonsense.py\n"
+HEADER = (u"// 生成物：由 tools/gen_parity.py 从 life_core.py / space_core.py / commonsense.py\n"
           u"//   生成。别手改 —— 手改会被 `python tools/gen_parity.py --check` 判为过期，\n"
           u"//   而且下一次生成就没了。要改表就改 Python 那边，然后重新生成。\n")
 

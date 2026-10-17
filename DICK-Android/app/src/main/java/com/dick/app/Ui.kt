@@ -57,8 +57,8 @@ import androidx.compose.ui.text.PlaceholderVerticalAlign
 import androidx.compose.ui.text.buildAnnotatedString
 
 /** 把字符串开头的 emoji 前缀提取出来，返回 (去 FE0F 的 emoji, 剩余文本)。无 emoji 时返回 (null, 原串)。
- *  范围与 Web 端 web/index.html 的 _EMOJI_CLS 保持一致：2300-23FF（⏳⏸⏭⏩）与
- *  2190-21FF（↪）以前漏了，导致「⏳ 生成中」这类状态提示在手机上一直是彩色 emoji。 */
+ *  范围与 Web 端 web/index.html 的 _EMOJI_CLS 保持一致：2300-23FF（）与
+ *  2190-21FF（）以前漏了，导致「 生成中」这类状态提示在手机上一直是彩色 emoji。 */
 private val EMOJI_PREFIX = Regex("^(?:[\\uD83C-\\uDBFF][\\uDC00-\\uDFFF]|[\\u2600-\\u27BF\\u2B00-\\u2BFF\\u2300-\\u23FF\\u2190-\\u21FF\\uFE0F\\u200D\\u20E3])+")
 fun splitLeadingEmoji(s: String): Pair<String?, String> {
     val m = EMOJI_PREFIX.find(s) ?: return null to s
@@ -84,10 +84,13 @@ private fun splitEmojiSegments(s: String): List<Pair<String?, String>> {
     return out
 }
 /**
- * 渲染 UI 框架标签：emoji 自动换成黑白线性图标（颜色跟随 color / LocalContentColor）。
+ * 渲染 UI 框架标签：图标与文字分开传 —— 图标走 `icon = "<Material Symbols 名字>"`，
+ * text 只留纯文本（2026-12：**界面文案里不许再出现 emoji 字符**）。
+ *   · 只给 icon 不给文字 → 只画图标（原来是「就一个 emoji」的图标按钮）
  *   · 行首只有一个图标 → 走 Row（和以前完全一样，不动那三百多处已有排版）
  *   · 句中也有图标 → 走 AnnotatedString + InlineTextContent（长文案照常折行）
- *   · 查不到图标的 emoji（聊天内容、排版符号）原样保留
+ * 下面那条「行首 emoji 自动换图标」的兜底**保留**：I18n 表之外的运行期文本
+ * （模型/用户拼进来的串）还得有人接住，但 UI 源码里不该再有调用点靠它。
  */
 /** Material Symbols 字体（随包，Apache-2.0；与网页端同一份字形，见 icons/icons.json）。
  *  图标名到字形的映射由 tools/gen_icons.py 生成到 IconNames.kt。 */
@@ -120,9 +123,13 @@ fun IconText(
     iconSize: Dp = 16.dp,
     gap: Dp = 3.dp,
     maxLines: Int = Int.MAX_VALUE,
+    // 显式图标名（Material Symbols）：界面文案里**不许再写 emoji 字符**，
+    // 图标一律由调用点在这里点名，text 只留纯文本。默认 null = 沿用下面那条
+    // 「行首 emoji 自动换图标」的老路子（历史调用点还靠它，见 tests/test_android_icons.py）。
+    icon: String? = null,
 ) {
     val (emoji, rest) = splitLeadingEmoji(text)
-    val iconName = emoji?.let { ICON_NAME_BY_EMOJI[it] }
+    val iconName = icon ?: emoji?.let { ICON_NAME_BY_EMOJI[it] }
     val tint = if (color == Color.Unspecified) LocalContentColor.current else color
     val segments = remember(text) { splitEmojiSegments(text) }
     val nameSp = with(LocalDensity.current) { iconSize.toSp() }
@@ -164,14 +171,14 @@ fun IconText(
         inlineContent = providers,
     )
 }
-/** 可折叠区块标题行（▸/▾ 指示，点击切换） */
+/** 可折叠区块标题行（▸/▾ 指示，点击切换；标题图标由 icon 显式给名） */
 @Composable
-fun FoldHead(title: String, folded: Boolean, onToggle: () -> Unit, modifier: Modifier = Modifier) {
+fun FoldHead(title: String, folded: Boolean, onToggle: () -> Unit, modifier: Modifier = Modifier, icon: String? = null) {
     Row(
         modifier = modifier.fillMaxWidth().clickable { onToggle() }.padding(top = 10.dp, bottom = 2.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        IconText(title, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+        IconText(title, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, icon = icon)
         Spacer(Modifier.weight(1f))
         Text(if (folded) "▸" else "▾", fontSize = 12.sp, color = LocalDickPalette.current.textSub)
     }
@@ -308,7 +315,8 @@ fun Bubble(
                     .padding(start = if (isUser) 0.dp else 44.dp, end = if (isUser) 44.dp else 0.dp),
                 horizontalArrangement = if (isUser) Arrangement.End else Arrangement.Start,
             ) {
-                TextButton(onClick = { onEdit(m) }, modifier = Modifier.heightIn(min = 44.dp)) { IconText(I18n.t("btn_edit_msg", "✏️"), fontSize = 12.sp) }
+                // 图标按钮：文案本来就只有那个图标，图标名走 icon 参数（文案表里不留 emoji 键）
+                TextButton(onClick = { onEdit(m) }, modifier = Modifier.heightIn(min = 44.dp)) { IconText("", fontSize = 12.sp, icon = "edit") }
                 if (!isUser && m.role != "系统") {
                     if (m.swipeTotal > 1) {
                         TextButton(onClick = { onSwipe(m, -1) }, enabled = m.swipeIndex > 0, modifier = Modifier.heightIn(min = 44.dp)) { Text("◀", fontSize = 12.sp) }
@@ -327,15 +335,15 @@ fun Bubble(
     }
 }
 @Composable
-fun RowScope.QuickChip(label: String, onClick: () -> Unit) {
+fun RowScope.QuickChip(label: String, icon: String? = null, onClick: () -> Unit) {
     TextButton(onClick = onClick, modifier = Modifier.weight(1f)) {
-        IconText(label, fontSize = 11.sp)
+        IconText(label, fontSize = 11.sp, icon = icon)
     }
 }
 @Composable
-fun DrawerItem(label: String, arrow: Boolean = false, arrowAngle: Float = 0f, color: Color = Color.Unspecified, onClick: () -> Unit) {
+fun DrawerItem(label: String, arrow: Boolean = false, arrowAngle: Float = 0f, color: Color = Color.Unspecified, icon: String? = null, onClick: () -> Unit) {
     TextButton(onClick = onClick, modifier = Modifier.fillMaxWidth()) {
-        IconText(label, modifier = Modifier.weight(1f), color = color)
+        IconText(label, modifier = Modifier.weight(1f), color = color, icon = icon)
         if (arrow) Text("▸", modifier = Modifier.rotate(arrowAngle))
     }
 }

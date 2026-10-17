@@ -103,9 +103,9 @@ fun PersonaScreen(vm: ChatViewModel, deps: DialogDeps) {
         text = {
             Column(Modifier.verticalScroll(rememberScrollState())) {
                 OutlinedTextField(value = pName, onValueChange = { pName = it }, label = { Text("名字") }, singleLine = true)
-                IconText("📜 完整设定（旧版原文，填了会整体覆盖，可留空）", fontSize = 11.sp, color = theme.muted, modifier = Modifier.padding(top = 6.dp))
+                IconText("完整设定（旧版原文，填了会整体覆盖，可留空）", fontSize = 11.sp, color = theme.muted, modifier = Modifier.padding(top = 6.dp), icon = "history_edu")
                 OutlinedTextField(value = pLegacy, onValueChange = { pLegacy = it }, label = { Text("Legacy 原文") }, minLines = 2)
-                IconText("🎨 结构化字段（与角色卡同标准）", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 10.dp))
+                IconText("结构化字段（与角色卡同标准）", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 10.dp), icon = "palette")
                 OutlinedTextField(value = pAppearance, onValueChange = { pAppearance = it }, label = { Text("外貌") }, minLines = 2)
                 OutlinedTextField(value = pPersonality, onValueChange = { pPersonality = it }, label = { Text("性格") }, minLines = 2)
                 OutlinedTextField(value = pBackground, onValueChange = { pBackground = it }, label = { Text("过去经历") }, minLines = 2)
@@ -113,7 +113,7 @@ fun PersonaScreen(vm: ChatViewModel, deps: DialogDeps) {
                 OutlinedTextField(value = pFirstMes, onValueChange = { pFirstMes = it }, label = { Text("开场白") }, minLines = 2)
                 OutlinedTextField(value = pMesExample, onValueChange = { pMesExample = it }, label = { Text("对话示例") }, minLines = 2)
                 OutlinedTextField(value = pNotes, onValueChange = { pNotes = it }, label = { Text("备注") }, minLines = 2)
-                FoldHead("⚔️ 玩家战斗属性（可选）", foldPBattle, onToggle = { foldPBattle = !foldPBattle })
+                FoldHead("玩家战斗属性（可选）", foldPBattle, onToggle = { foldPBattle = !foldPBattle }, icon = "swords")
                 if (foldPBattle) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Checkbox(checked = pBattleEnabled, onCheckedChange = { pBattleEnabled = it })
@@ -124,12 +124,12 @@ fun PersonaScreen(vm: ChatViewModel, deps: DialogDeps) {
                         OutlinedTextField(value = pBattleMech, onValueChange = { pBattleMech = it }, label = { Text("机制属性（每行 键|名|初值|上限）\n例：spd|速度|8|100") }, minLines = 4, modifier = Modifier.weight(1f))
                     }
                 }
-                FoldHead("🔤 玩家专属正则（可选）", foldPRegex, onToggle = { foldPRegex = !foldPRegex })
+                FoldHead("玩家专属正则（可选）", foldPRegex, onToggle = { foldPRegex = !foldPRegex }, icon = "text_fields")
                 if (foldPRegex) {
                     OutlinedTextField(value = pRegex, onValueChange = { pRegex = it }, label = { Text("正则（每行 id|名称|正则|替换|作用域，对玩家输入生效）") }, minLines = 3)
                 }
                 TextButton(onClick = { avatarTarget = userDisplayName(); avatarPicker.launch("image/*") }) {
-                    IconText("🧑 " + I18n.t("btn_avatar_persona", "玩家头像"), fontSize = 12.sp)
+                    IconText(I18n.t("btn_avatar_persona", "玩家头像"), fontSize = 12.sp, icon = "person")
                 }
             }
         },

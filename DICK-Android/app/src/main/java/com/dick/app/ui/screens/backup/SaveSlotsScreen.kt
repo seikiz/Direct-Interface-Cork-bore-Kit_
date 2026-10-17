@@ -52,7 +52,7 @@ fun SaveSlotsScreen(vm: ChatViewModel, deps: DialogDeps, role: String, onClose: 
     val saves = remember(role, tick) { deps.listRoleSaves(role) }
     AlertDialog(
         onDismissRequest = onClose,
-        title = { IconText("💾 存档 · " + role) },
+        title = { IconText("存档 · " + role, icon = "save") },
         text = {
             Column(Modifier.verticalScroll(rememberScrollState())) {
                 if (renameSlot != null) {
@@ -70,7 +70,7 @@ fun SaveSlotsScreen(vm: ChatViewModel, deps: DialogDeps, role: String, onClose: 
                     OutlinedTextField(value = newLabel, onValueChange = { newLabel = it },
                         placeholder = { Text("存档名（可留空，自动编号）", fontSize = 12.sp) },
                         singleLine = true, modifier = Modifier.weight(1f).padding(end = 8.dp))
-                    TextButton(onClick = { deps.createRoleSave(role, newLabel); newLabel = ""; tick++ }) { IconText("📝 新存档", fontSize = 13.sp) }
+                    TextButton(onClick = { deps.createRoleSave(role, newLabel); newLabel = ""; tick++ }) { IconText("新存档", fontSize = 13.sp, icon = "note") }
                 }
                 Spacer(Modifier.height(8.dp))
                 if (saves.isEmpty()) {
@@ -90,10 +90,10 @@ fun SaveSlotsScreen(vm: ChatViewModel, deps: DialogDeps, role: String, onClose: 
                                 Text(label, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
                                 Row(horizontalArrangement = Arrangement.spacedBy(2.dp),
                                     modifier = Modifier.horizontalScroll(rememberScrollState())) {
-                                    TextButton(onClick = { deps.loadRoleSlot(role, id); onClose() }, modifier = Modifier.heightIn(min = 40.dp)) { IconText("📂 读档", fontSize = 12.sp) }
-                                    TextButton(onClick = { deps.saveToRoleSlot(role, id); tick++ }, modifier = Modifier.heightIn(min = 40.dp)) { IconText("💾 覆盖", fontSize = 12.sp) }
-                                    TextButton(onClick = { renameSlot = id; renameText = label; tick++ }, modifier = Modifier.heightIn(min = 40.dp)) { IconText("✏️", fontSize = 12.sp) }
-                                    TextButton(onClick = { deps.deleteRoleSlot(role, id); tick++ }, modifier = Modifier.heightIn(min = 40.dp)) { IconText("🗑️", fontSize = 13.sp, color = theme.danger) }
+                                    TextButton(onClick = { deps.loadRoleSlot(role, id); onClose() }, modifier = Modifier.heightIn(min = 40.dp)) { IconText("读档", fontSize = 12.sp, icon = "folder") }
+                                    TextButton(onClick = { deps.saveToRoleSlot(role, id); tick++ }, modifier = Modifier.heightIn(min = 40.dp)) { IconText("覆盖", fontSize = 12.sp, icon = "save") }
+                                    TextButton(onClick = { renameSlot = id; renameText = label; tick++ }, modifier = Modifier.heightIn(min = 40.dp)) { IconText("", fontSize = 12.sp, icon = "edit") }
+                                    TextButton(onClick = { deps.deleteRoleSlot(role, id); tick++ }, modifier = Modifier.heightIn(min = 40.dp)) { IconText("", fontSize = 13.sp, color = theme.danger, icon = "delete") }
                                 }
                             }
                             Text("$prog 条对话 · $ts", color = theme.muted, fontSize = 11.sp)

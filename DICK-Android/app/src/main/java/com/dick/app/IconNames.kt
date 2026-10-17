@@ -1,4 +1,4 @@
-// ⚠ 生成物：由 tools/gen_icons.py <seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌从 icons/icons.json 生成，别手改。
+// 生成物：由 tools/gen_icons.py <seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌从 icons/icons.json 生成，别手改。
 //   换图标：改 icons/icons.json（emoji → Material Symbols 名字），再跑一次生成器。
 //   字体：res/font/material_symbols_outlined.ttf（Material Symbols Outlined，Apache-2.0）
 

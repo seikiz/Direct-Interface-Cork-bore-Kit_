@@ -35,11 +35,12 @@ fun DickField(
     singleLine: Boolean = false,
     minLines: Int = 1,
     enabled: Boolean = true,
+    icon: String? = null,
 ) {
     OutlinedTextField(
         value = value,
         onValueChange = onValueChange,
-        label = { IconText(label, iconSize = 14.dp) },
+        label = { IconText(label, iconSize = 14.dp, icon = icon) },
         modifier = modifier,
         singleLine = singleLine,
         minLines = minLines,
@@ -63,9 +64,11 @@ fun DickLabeledField(
     singleLine: Boolean = false,
     minLines: Int = 1,
     enabled: Boolean = true,
+    icon: String? = null,
 ) {
     Column(modifier) {
-        Text(label, fontSize = 12.sp, color = DickTone.Muted.color())
+        // 框上方的 label 也可能带图标位：走 IconText，图标名由调用点显式给
+        IconText(label, fontSize = 12.sp, color = DickTone.Muted.color(), iconSize = 14.dp, icon = icon)
         Spacer(Modifier.height(2.dp))
         OutlinedTextField(
             value = value,

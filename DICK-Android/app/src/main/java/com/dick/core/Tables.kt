@@ -1,4 +1,4 @@
-// ⚠ 生成物：由 tools/gen_parity.py 从 life_co<seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌re.py / space_core.py / commonsense.py
+// 生成物：由 tools/gen_parity.py 从 life_cor<seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌e.py / space_core.py / commonsense.py
 //   生成。别手改 —— 手改会被 `python tools/gen_parity.py --check` 判为过期，
 //   而且下一次生成就没了。要改表就改 Python 那边，然后重新生成。
 

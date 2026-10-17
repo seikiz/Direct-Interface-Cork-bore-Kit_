@@ -27,7 +27,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 /**
- * 顶栏 📂 文件夹下拉菜单：人物卡 + 世界卡 直接勾选。
+ * 顶栏  文件夹下拉菜单：人物卡 + 世界卡 直接勾选。
  *
  * 纯结构搬家（2026-11 UI 解耦第二批）：正文从 Dialogs.kt 的 `FolderMenu` 逐字搬过来，
  * 只换「代码住在哪个文件」。布局数值/文案/交互顺序一个都没动（观感守恒）。
@@ -39,7 +39,7 @@ import kotlinx.coroutines.launch
  *
  * 兼容门面：[FolderMenu]（在 Dialogs.kt 末尾），转调 [FolderMenuScreen]。
  */
-/** 顶栏 📂 文件夹 = 下拉菜单：人物卡 + 世界卡 都在这里直接勾选（编辑/导入/导出/删除留在抽屉） */
+/** 顶栏  文件夹 = 下拉菜单：人物卡 + 世界卡 都在这里直接勾选（编辑/导入/导出/删除留在抽屉） */
 @Composable
 fun FolderMenuScreen(vm: ChatViewModel, deps: DialogDeps) {
     val theme = deps.theme
@@ -95,7 +95,7 @@ fun FolderMenuScreen(vm: ChatViewModel, deps: DialogDeps) {
     }
 
     Box {
-        TextButton(onClick = { expanded = true }) { IconText("📂", fontSize = 16.sp) }
+        TextButton(onClick = { expanded = true }) { IconText("", fontSize = 16.sp, icon = "folder") }
         DropdownMenu(
             expanded = expanded,
             onDismissRequest = { expanded = false },
@@ -103,7 +103,7 @@ fun FolderMenuScreen(vm: ChatViewModel, deps: DialogDeps) {
         ) {
             // 内容直接放 DropdownMenu 的 ColumnScope 里（它内部自带滚动），
             // 不要在外层再套 verticalScroll / 宽度高度——会触发测量递归 StackOverflow。
-            IconText("👥 人物卡（" + selectedRoles.size + "）", fontSize = 12.sp, color = theme.muted, iconSize = 13.dp, modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp))
+            IconText("人物卡（" + selectedRoles.size + "）", fontSize = 12.sp, color = theme.muted, iconSize = 13.dp, modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp), icon = "group")
             if (roles.isEmpty()) {
                 DickEmptyState("（暂无 · 抽屉 → 角色 新建/导入）", fontSize = 11.sp,
                     modifier = Modifier.padding(horizontal = 14.dp, vertical = 2.dp))
@@ -119,7 +119,7 @@ fun FolderMenuScreen(vm: ChatViewModel, deps: DialogDeps) {
                     onClick = { toggleRole(n) },
                 )
             }
-            IconText("🌍 世界卡（" + selectedWorlds.size + "）", fontSize = 12.sp, color = theme.muted, iconSize = 13.dp, modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp))
+            IconText("世界卡（" + selectedWorlds.size + "）", fontSize = 12.sp, color = theme.muted, iconSize = 13.dp, modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp), icon = "public")
             if (worlds.isEmpty()) {
                 DickEmptyState("（暂无 · 抽屉 → 世界 新建）", fontSize = 11.sp,
                     modifier = Modifier.padding(horizontal = 14.dp, vertical = 2.dp))
@@ -141,11 +141,11 @@ fun FolderMenuScreen(vm: ChatViewModel, deps: DialogDeps) {
             }
             Text("管理", fontSize = 11.sp, color = theme.muted, modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp))
             DropdownMenuItem(
-                text = { IconText("⚙ 人物卡管理（编辑/导入/导出/删除）", fontSize = 12.sp) },
+                text = { IconText("人物卡管理（编辑/导入/导出/删除）", fontSize = 12.sp, icon = "settings") },
                 onClick = { expanded = false; vm.showRoles.value = true },
             )
             DropdownMenuItem(
-                text = { IconText("⚙ 世界卡管理（编辑/新建/删除）", fontSize = 12.sp) },
+                text = { IconText("世界卡管理（编辑/新建/删除）", fontSize = 12.sp, icon = "settings") },
                 onClick = { expanded = false; vm.showWorlds.value = true },
             )
         }

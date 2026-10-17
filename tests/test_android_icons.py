@@ -107,12 +107,38 @@ def ligs(path):
         f.close()
 
 
-# ---------------- ⑦ 的判定器（句子中间 emoji 会不会露成彩色） ----------------
-# 内容类消费方：这些是**内容**（聊天消息正文由模型/用户填），不是 UI 图标，允许带 emoji。
-# 每条都必须写清理由 —— 白名单只该给"内容不是图标"的地方。
+# ---------------- ⑥ 的白名单：**内容不是图标**的地方 ----------------
+# 2026-12 用户重申：「界面文案里一个 emoji 字符都不许有，图标必须走内置 Material Symbols 字体」。
+# 所以 ⑥ 从「行首 emoji 都有图标」升级成「源码里 emoji 出现次数 = 0」。
+# 唯一留白的是**内容**（不是界面文案）—— 逐条写清理由，并且要求「白名单里每一条都还必须存在」
+# （防白名单长成免死金牌）：删掉对应代码后不清理白名单，测试会反过来变红。
+CONTENT_EMOJI_OK = {
+    ("ChatScreen.kt", u"⚠️ 导入失败："): u"聊天系统消息正文（ChatMsg 的 content，由模型/引擎填）",
+    ("ChatScreen.kt", u"⚠️ 无法识别的角色卡格式（需 v1/v2/v3 JSON 或 PNG 嵌卡）"): u"聊天系统消息正文",
+    ("ChatScreen.kt", u"✅ "): u"聊天系统消息正文（导出成功的行首装饰）",
+    ("ChatScreen.kt", u"⚠️ 导出失败："): u"聊天系统消息正文",
+    ("ChatScreen.kt", u"✅ 已导出"): u"聊天系统消息正文",
+    ("ChatScreen.kt", u"❌ "): u"聊天系统消息正文（失败行首装饰）",
+    ("ChatScreen.kt", u"🏁 结局达成：「$nm」"): u"聊天系统消息正文",
+    ("ChatScreen.kt", u"⚠️ 当前角色未启用好感度（机制卡 → 好感度）"): u"聊天系统消息正文",
+    ("ChatScreen.kt", u"✨ METTERTOOLS！好感度已填至 $pct% → $res。"): u"聊天系统消息正文",
+    ("ChatScreen.kt", u"📤 已调起分享（导出聊天记录）"): u"聊天系统消息正文",
+    ("ChatScreen.kt", u"⚠️ 图片识别失败（免费视觉链被限流或网络问题），请稍后重试"): u"聊天系统消息正文",
+    ("ChatScreen.kt", u"🌌 坍缩：十万分之一的奇迹坍缩成现实！"): u"聊天系统消息正文",
+    ("ChatScreen.kt", u"🌟 天选：千分之一的天命眷顾被触发了！"): u"聊天系统消息正文",
+    ("ChatScreen.kt", u"💥 结果出了岔子！"): u"聊天系统消息正文",
+    ("ChatScreen.kt", u"✨ 命运的眷顾：触发了稀有事件！"): u"聊天系统消息正文",
+    ("ChatScreen.kt", u"✨ 效果暴击！"): u"聊天系统消息正文",
+    ("ChatScreen.kt", u"🌟 天选之人：十万分之一的战斗奇迹被触发了！"): u"聊天系统消息正文",
+    ("ChatScreen.kt", u"⚠️"): u"引擎返回文本的失败前缀判据（跨端协议，不是界面文案；改它要同时动 DICK_core.py）",
+    ("Models.kt", u"⚠️ 免责声明：以上分析仅供参考，不构成任何投资建议。"): u"预设正文（Preset 的内容，不是界面文案）",
+}
+
+# ⑦ 用的「内容类消费方」（句子中间 emoji 会不会露成彩色那一条）
 CONTENT_CONSUMERS = {
     "ChatMsg": "聊天消息对象（正文是内容，不是 UI 图标）",
 }
+
 # I18n.t 这类只是「取文案」的中转壳，真正的消费方在更外层
 TRANSPARENT_CALLS = ("t", "format", "trim", "toString")
 STR_LIT = re.compile(r'"((?:[^"\\]|\\.)*)"')
@@ -127,6 +153,60 @@ def _walk_kt(base):
         for fn in sorted(files):
             if fn.endswith(".kt"):
                 out.append(os.path.join(dirpath, fn))
+    return out
+
+
+# 生成物不算「文案」：IconNames.kt 是 emoji→图标名 的数据表，I18nStrings.kt 由
+# lang/strings.json 生成（那份表由 test_i18n_langs.py 单独守），CardFields/Tokens 同理由生成器守。
+GENERATED_KT = {"IconNames.kt", "I18nStrings.kt", "CardFields.kt", "Tokens.kt"}
+
+
+def _lexed_kt_files():
+    """`com/dick/app/**` 的 .kt（去掉生成物）。
+
+    注意范围：用户这次的清零点名的是 **UI 包** `com/dick/app/**`。旁边那个
+    `com/dick/core/**`（ChatBridge / MechanicsEngine / SpaceCore）是**引擎**：
+    它们拼的是聊天正文与结算文本（内容），里面的 ⚠/💥 属于内容不是界面文案，
+    本次不动 —— 需要时再单独开一轮。
+    """
+    return [p for p in _walk_kt(os.path.join(JAVA_DIR, "com", "dick", "app"))
+            if os.path.basename(p) not in GENERATED_KT]
+
+
+def _lexed_strings(text):
+    """[(行号, 字面量内容)] —— 真·字符串字面量，**跳过注释**（注释里的 emoji 不是界面文案）。
+
+    ⑥ 是「出现次数 = 0」的硬断言，用 ⑦ 那种裸正则会把注释里的引号也当成字面量，
+    所以这里按字符扫一遍：// 行注释、/* */ 块注释整体跳过。
+    """
+    out, i, n, seg = [], 0, len(text), 0
+    while i < n:
+        if text[i] == '"':
+            if text.startswith('"""', i):
+                j = text.find('"""', i + 3)
+                j = n if j < 0 else j + 3
+            else:
+                j = i + 1
+                while j < n:
+                    if text[j] == "\\":
+                        j += 2
+                        continue
+                    if text[j] == '"':
+                        j += 1
+                        break
+                    j += 1
+            out.append((text.count("\n", 0, i) + 1, text[i + 1:j - 1]))
+            i = seg = j
+            continue
+        if text.startswith("//", i):
+            j = text.find("\n", i)
+            i = n if j < 0 else j
+            continue
+        if text.startswith("/*", i):
+            j = text.find("*/", i + 2)
+            i = n if j < 0 else j + 2
+            continue
+        i += 1
     return out
 
 
@@ -304,23 +384,37 @@ def main():
     for stale in ("tools/gen_android_icons.py", "_android_icon_map.txt"):
         check(u"旧工具/映射表已删：%s" % stale, not os.path.isfile(os.path.join(ROOT, stale)))
 
-    print(u"\n== ⑥ 安卓界面里行首 emoji 都要有图标 ==")
-    gap, total = {}, 0
-    str_re = re.compile(u'"([^"\n]*)"')
-    for path in kotlin_files():
-        text = io.open(path, encoding="utf-8", errors="ignore").read()
-        for m in str_re.finditer(text):
-            s = ZW.sub(u"", m.group(1))
-            hit = EMOJI.search(s)
-            if not hit or s[:hit.start()].strip():
+    print(u"\n== ⑥ 界面文案里 emoji 字符清零（图标一律走 icon = 名字）==")
+    # 2026-12 用户要求：源码里的界面文案**一个 emoji 字符都不许有** —— 不是"能显示成图标"就行。
+    # 注释、正则、生成物（IconNames.kt / I18nStrings.kt / CardFields.kt / Tokens.kt）都不算文案：
+    #   · IconNames.kt 就是 emoji → 图标名 的数据表，本来就该有 emoji 键；
+    #   · I18nStrings.kt 由 lang/strings.json 生成，那份表由 tests/test_i18n_langs.py 守着。
+    left, total_clean, used = [], 0, {}
+    for path in _lexed_kt_files():
+        rel = os.path.basename(path)
+        text = read(path)
+        for line, lit in _lexed_strings(text):
+            hits = [e for e in EMOJI.findall(ZW.sub(u"", lit)) if e not in TYPO]
+            if not hits:
                 continue
-            total += 1
-            e = hit.group(0)
-            if e in TYPO or e in icons:
-                continue
-            gap[e] = gap.get(e, 0) + 1
-    detail = u"、".join(u"%s x%d" % (k, gap[k]) for k in sorted(gap, key=lambda k: -gap[k]))
-    check(u"行首 emoji（%d 处）都有图标" % total, not gap, u"露出来的：%s" % detail)
+            total_clean += 1
+            why = CONTENT_EMOJI_OK.get((rel, lit))
+            if why is None:
+                left.append((rel, line, u"".join(hits), lit[:44]))
+            else:
+                used[(rel, lit)] = used.get((rel, lit), 0) + 1
+    detail = u"；".join(u"%s:%d %s「%s」" % r for r in left[:8])
+    check(u"UI 源码里 emoji 出现次数 = 0（白名单外的 %d 处）" % len(left), not left, detail)
+    stale = [k for k in CONTENT_EMOJI_OK if k not in used]
+    check(u"白名单没有过期条目（%d 条全部仍在源码里）" % len(CONTENT_EMOJI_OK), not stale,
+          u"已经不存在：%s" % u"、".join(u"%s「%s」" % k for k in stale[:6]))
+    check(u"白名单每条都写了理由",
+          all(str(v).strip() for v in CONTENT_EMOJI_OK.values()))
+    check(u"白名单只剩「内容不是文案」的 %d 条（%d 个出现处）"
+          % (len(CONTENT_EMOJI_OK), sum(used.values())), len(CONTENT_EMOJI_OK) <= 24,
+          u"白名单又长长了：先想清楚是不是界面文案")
+    print(u"   （界面文案里 0 个 emoji；白名单内 %d 处全是 ChatMsg 内容 / 引擎协议 / 预设正文）"
+          % sum(used.values()))
 
     # ------------------------------------------------------------------
     # ⑦ 句子中间的 emoji（2026-12 用户重申「图标都换成谷歌那种」）

@@ -43,7 +43,7 @@ fun DeleteConfirmScreen(
     val label = if (kind == "role") "角色卡「$name」" else "世界卡「$name」"
     AlertDialog(
         onDismissRequest = { vm.pendingDelete.value = null },
-        title = { IconText("⚠️ 确认删除") },
+        title = { IconText("确认删除", icon = "warning") },
         text = {
             Column(Modifier.verticalScroll(rememberScrollState())) {
                 Text("确定删除$label 吗？")
@@ -58,7 +58,7 @@ fun DeleteConfirmScreen(
             TextButton(onClick = {
                 if (kind == "role") onDeleteRole(name) else onDeleteWorld(name)
                 vm.pendingDelete.value = null
-            }) { IconText("🗑️ 删除", color = danger, iconSize = 15.dp) }
+            }) { IconText("删除", color = danger, iconSize = 15.dp, icon = "delete") }
         },
         dismissButton = { TextButton(onClick = { vm.pendingDelete.value = null }) { Text("取消") } },
     )

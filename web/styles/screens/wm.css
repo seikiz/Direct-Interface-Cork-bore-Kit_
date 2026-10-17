@@ -1,4 +1,4 @@
-/* web/styles/screens/wm.css —— 🌍 世界书条目（世界卡编辑窗）的专属样式
+/* web/styles/screens/wm.css —— 世界书条目（世界卡编辑窗）的专属样式
  * 阶段 3 从 styles/panels.css 原样搬出：.wentry（条目卡片）+ .p-grid/.pcell（8 格世界参数网格）。
  *
  * 搬家只改了**存放位置**，一行声明都没动（tools/ui_snapshot.py 比的是全局规则集合，会核对）。
@@ -14,17 +14,17 @@
 .wentry .we-row input.narrow{ width:74px; flex:none; }
 .wentry .we-row select{ width:92px; flex:none; }
 .wentry .we-dot{ width:9px; height:9px; border-radius:50%; display:inline-block; flex:none;
-  background:var(--line); }
+ background:var(--line); }
 .wentry .we-dot.on{ background:#4ade80; }
 .wentry .we-dot.const{ background:#60a5fa; }
 .wentry .we-del{ background:none; border:none; color:var(--danger); cursor:pointer; font-size:14px; }
 .wentry .we-chk{ display:inline-flex; align-items:center; gap:4px; font-size:11px; color:var(--sub); }
 .wentry .we-chk input{ width:auto; }
 .wentry textarea{ width:100%; background:var(--bubble); border:1px solid var(--line); border-radius:8px;
-  color:var(--text); padding:7px 9px; font-size:13px; font-family:inherit; resize:vertical; }
+ color:var(--text); padding:7px 9px; font-size:13px; font-family:inherit; resize:vertical; }
 /* ---------- 世界参数：8 格网�� ---------- */
 .p-grid{ display:grid; grid-template-columns:1fr 1fr; gap:6px 8px; }
 .p-grid .pcell{ display:flex; flex-direction:column; }
 .p-grid .pcell span{ font-size:11px; color:var(--sub); margin-bottom:2px; }
 .p-grid input{ width:100%; background:var(--bubble); border:1px solid var(--line); border-radius:8px;
-  color:var(--text); padding:6px 8px; font-size:12px; }
+ color:var(--text); padding:6px 8px; font-size:12px; }

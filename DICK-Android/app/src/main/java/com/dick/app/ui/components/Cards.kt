@@ -81,7 +81,7 @@ fun DickCard(
 }
 
 /**
- * 标签 / 徽章 / 状态串：一行带语义色的短文本（可含行首 emoji，自动换图标）。
+ * 标签 / 徽章 / 状态串：一行带语义色的短文本（图标名由 `icon` 显式给，文案只留纯文本）。
  * 默认 `DickTone.Muted`（次要信息），`fontSize`/`iconSize` 不给就是 IconText 的默认值 ——
  * 这样"原调用点没写字号"的地方搬过来仍然没写字号。
  */
@@ -93,6 +93,7 @@ fun DickTag(
     fontSize: TextUnit = TextUnit.Unspecified,
     iconSize: Dp = 16.dp,
     maxLines: Int = Int.MAX_VALUE,
+    icon: String? = null,
 ) {
     IconText(
         text,
@@ -101,6 +102,7 @@ fun DickTag(
         color = tone.color(),
         iconSize = iconSize,
         maxLines = maxLines,
+        icon = icon,
     )
 }
 
@@ -117,9 +119,10 @@ fun DickCheckRow(
     modifier: Modifier = Modifier,
     topPadding: Dp = 14.dp,
     iconSize: Dp = 14.dp,
+    icon: String? = null,
 ) {
     Row(modifier) {
         Checkbox(checked = checked, onCheckedChange = onCheckedChange)
-        IconText(label, Modifier.padding(top = topPadding), iconSize = iconSize)
+        IconText(label, Modifier.padding(top = topPadding), iconSize = iconSize, icon = icon)
     }
 }

@@ -22,7 +22,7 @@ object Routes {
     /** 设置（API 配置 / 主题 / 语言 / 插件开关）—— 已搬到 ui/screens/settings/ */
     const val SETTINGS = "settings"
 
-    /** 📖 API 教程面板 —— 已搬到 ui/screens/api/（2026-11） */
+    /**  API 教程面板 —— 已搬到 ui/screens/api/（2026-11） */
     const val API_GUIDE = "apiGuide"
 
     /** 时间流速表盘（独立面板，不塞在设置里） */

@@ -1,17 +1,17 @@
-/* web/js/screens/gen.js —— 🎨 生图屏（阶段 2：从 index.html 的顶层代码整块搬出，零行为变化）
+/* web/js/screens/gen.js —— 生图屏（阶段 2：从 index.html 的顶层代码整块搬出，零行为变化）
  *
  * 归属
- *   结构：web/screens/gen.html（index.html 里原位只剩挂载点 <!--@screen:gen-->；
- *         注意它原来就嵌在 #inputbar 里，挂载点也在同一位置，DOM 层级一点没动）
- *   样式：没有专属 css 块（都是行内 style），所以不需要 web/styles/screens/gen.css。
+ * 结构：web/screens/gen.html（index.html 里原位只剩挂载点 <!--@screen:gen-->；
+ * 注意它原来就嵌在 #inputbar 里，挂载点也在同一位置，DOM 层级一点没动）
+ * 样式：没有专属 css 块（都是行内 style），所以不需要 web/styles/screens/gen.css。
  * 契约：router 注入片段后调 mount()。
  * 本屏依赖的外部符号（阶段 3/4/5 的收尾清单）
- *   · pywebview.api.gen_presets() / gen_image(…)：后端在 image_gen.py
- *   · alert()：错误提示还是原生弹窗（深色主题下会闪白框）——这是原有的行为，
- *     本轮只搬结构不改交互，所以原样留着；阶段 5 应该换成外壳的 toast。
- *   · #stImgBackend / #stImgBase：**设置屏的两个输入框**。genHintByBackend() 靠读它们
- *     判断「当前后端吃不吃负面提示词」—— 这是本屏唯一一处跨屏读 DOM，应该由设置屏
- *     set 到 DICK.state（例如 'img.backend'）后本屏订阅；留在阶段 3 收。
+ * · pywebview.api.gen_presets() / gen_image(…)：后端在 image_gen.py
+ * · alert()：错误提示还是原生弹窗（深色主题下会闪白框）——这是原有的行为，
+ * 本轮只搬结构不改交互，所以原样留着；阶段 5 应该换成外壳的 toast。
+ * · #stImgBackend / #stImgBase：**设置屏的两个输入框**。genHintByBackend() 靠读它们
+ * 判断「当前后端吃不吃负面提示词」—— 这是本屏唯一一处跨屏读 DOM，应该由设置屏
+ * set 到 DICK.state（例如 'img.backend'）后本屏订阅；留在阶段 3 收。
  */
 window.GenScreen = (function (global) {
   'use strict';
@@ -61,7 +61,7 @@ window.GenScreen = (function (global) {
     var prompt = document.getElementById('genPrompt').value.trim();
     if (!prompt) { alert('请输入画面内容'); return; }
     var go = document.getElementById('genGo');
-    go.disabled = true; go.textContent = '⏳ 生成中...';
+    go.disabled = true; go.textContent = '[ic:hourglass_empty] 生成中...';
     var preset = document.getElementById('genPreset').value;
     var size = document.getElementById('genSize').value;
     var neg = document.getElementById('genNegative').value.trim();
@@ -69,7 +69,7 @@ window.GenScreen = (function (global) {
     var seed = document.getElementById('genSeed').value.trim();
     document.getElementById('genNote').textContent = '生成中，本地模型可能要几十秒…';
     pywebview.api.gen_image(prompt, preset, size, neg, extra, seed).then(function (r) {
-      go.disabled = false; go.textContent = '✨ 生成';
+      go.disabled = false; go.textContent = '[ic:auto_awesome] 生成';
       if (r && r.ok && r.image) {
         document.getElementById('genResultImg').src = r.image;
         document.getElementById('genResult').style.display = 'block';
@@ -83,7 +83,7 @@ window.GenScreen = (function (global) {
         alert((r && r.err) || '生成失败');
       }
     }).catch(function () {
-      go.disabled = false; go.textContent = '✨ 生成';
+      go.disabled = false; go.textContent = '[ic:auto_awesome] 生成';
       document.getElementById('genNote').textContent = '生成异常，看控制台/日志';
     });
   }

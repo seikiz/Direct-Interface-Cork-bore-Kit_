@@ -140,7 +140,7 @@ fun SettingsScreen(vm: ChatViewModel, acts: SettingsActions) {
     }
     DickDialog(
         onDismissRequest = { vm.showApiSetup.value = false },
-        title = { IconText(I18n.t("st_api_title", "🔑 API 配置（模型商 / 模型 / Key）")) },
+        title = { IconText(I18n.t("st_api_title", "API 配置（模型商 / 模型 / Key）"), icon = "key") },
         text = {
             Column(Modifier.verticalScroll(rememberScrollState())) {
                 // ---- 步骤指示（三步一句一档，当前步用强调色） ----
@@ -197,7 +197,7 @@ fun SettingsScreen(vm: ChatViewModel, acts: SettingsActions) {
                     } else {
                         val where = curProvider?.buyUrl ?: ""
                         DickActionButton(
-                            label = I18n.t("btn_buy", "🔑 去官网注册/充值"),
+                            label = I18n.t("btn_buy", "去官网注册/充值"),
                             variant = DickButtonVariant.Plain,
                             fontSize = 12.sp,
                             onClick = {
@@ -207,7 +207,7 @@ fun SettingsScreen(vm: ChatViewModel, acts: SettingsActions) {
                                     } catch (_: Exception) {
                                     }
                                 }
-                            },
+                            }, icon = "key"
                         )
                         DickActionButton(
                             label = I18n.t("apiWizWhere", "去哪里拿 Key") + " → " + where,
@@ -351,15 +351,15 @@ fun SettingsScreen(vm: ChatViewModel, acts: SettingsActions) {
                 // 就在找这两个入口，塞到最底下等于没有。
                 Row {
                     DickActionButton(
-                        label = I18n.t("apiGuideBtn", "📖 API 教程"),
+                        label = I18n.t("apiGuideBtn", "API 教程"),
                         variant = DickButtonVariant.Secondary, fontSize = 12.sp,
-                        onClick = { vm.showApiGuide.value = true },
+                        onClick = { vm.showApiGuide.value = true }, icon = "menu_book"
                     )
                     Spacer(Modifier.width(6.dp))
                     DickActionButton(
-                        label = I18n.t("apiWizardBtn", "🧭 重新打开配置向导"),
+                        label = I18n.t("apiWizardBtn", "重新打开配置向导"),
                         variant = DickButtonVariant.Plain, fontSize = 12.sp,
-                        onClick = { vm.showApiSetup.value = true },
+                        onClick = { vm.showApiSetup.value = true }, icon = "explore"
                     )
                 }
                 Spacer(Modifier.height(6.dp))
@@ -410,14 +410,14 @@ fun SettingsScreen(vm: ChatViewModel, acts: SettingsActions) {
                     variant = DickButtonVariant.Primary,
                 )
                 Spacer(Modifier.height(6.dp))
-                // ⏳ 时间流速 / 生活空间 / 应用图标 / 壁纸 / 玩家卡：都是"进另一个面板"，
+                //  时间流速 / 生活空间 / 应用图标 / 壁纸 / 玩家卡：都是"进另一个面板"，
                 // 统一 Secondary（描边）—— 次级入口不该和"当前值"抢同一档视觉。
                 DickActionButton(
-                    label = I18n.t("st_timedial", "⏳ 时间流速") + "　" + TimeScale.describe(vm.timeScale.value),
+                    label = I18n.t("st_timedial", "时间流速") + "　" + TimeScale.describe(vm.timeScale.value),
                     onClick = { vm.showTimeDial.value = true },
                     variant = DickButtonVariant.Secondary,
                     modifier = Modifier.fillMaxWidth(),
-                    fontSize = 13.sp,
+                    fontSize = 13.sp, icon = "hourglass_empty"
                 )
                 Spacer(Modifier.height(6.dp))
                 DickActionButton(
@@ -429,58 +429,58 @@ fun SettingsScreen(vm: ChatViewModel, acts: SettingsActions) {
                 )
                 Spacer(Modifier.height(6.dp))
                 DickActionButton(
-                    label = I18n.t("st_appicon", "🎨 应用图标") +
+                    label = I18n.t("st_appicon", "应用图标") +
                         (if (appIcon != null) I18n.t("st_set_hint", "（已设置，点击更换）")
                          else I18n.t("st_pick_hint", "（点击从相册选择）")),
                     onClick = { appIconPicker.launch("image/*") },
                     variant = DickButtonVariant.Secondary,
                     modifier = Modifier.fillMaxWidth(),
-                    fontSize = 13.sp,
+                    fontSize = 13.sp, icon = "palette"
                 )
                 Spacer(Modifier.height(6.dp))
                 DickActionButton(
-                    label = I18n.t("st_wallpaper", "🖼️ 壁纸（聊天背景）") +
+                    label = I18n.t("st_wallpaper", "壁纸（聊天背景）") +
                         (if (wallpaper != null) I18n.t("st_set_hint", "（已设置，点击更换）")
                          else I18n.t("st_pick_hint", "（点击从相册选择）")),
                     onClick = { wallpaperPicker.launch("image/*") },
                     variant = DickButtonVariant.Secondary,
                     modifier = Modifier.fillMaxWidth(),
-                    fontSize = 13.sp,
+                    fontSize = 13.sp, icon = "image"
                 )
                 if (wallpaper != null) {
                     Spacer(Modifier.height(4.dp))
                     DickActionButton(
-                        label = I18n.t("st_wallpaper_clear", "🧹 恢复默认背景"),
+                        label = I18n.t("st_wallpaper_clear", "恢复默认背景"),
                         onClick = { clearWallpaper() },
                         variant = DickButtonVariant.Secondary,
                         modifier = Modifier.fillMaxWidth(),
-                        fontSize = 13.sp,
+                        fontSize = 13.sp, icon = "delete_sweep"
                     )
                 }
                 Spacer(Modifier.height(6.dp))
                 DickActionButton(
-                    label = "🧑 " + I18n.t("btn_persona_card", "玩家角色卡") +
+                    label = I18n.t("btn_persona_card", "玩家角色卡") +
                         (if (personaDisplayName().isNotBlank()) "：" + personaDisplayName() else ""),
                     onClick = { showPersonaEdit = true },
                     variant = DickButtonVariant.Secondary,
                     modifier = Modifier.fillMaxWidth(),
-                    fontSize = 13.sp,
+                    fontSize = 13.sp, icon = "person"
                 )
                 Spacer(Modifier.height(6.dp))
-                DickCheckRow(label = I18n.t("chk_auto", "🤖 自动接话（群聊时其他角色自动跟进）"),
-                    checked = autoTurn, onCheckedChange = { autoTurn = it })
+                DickCheckRow(label = I18n.t("chk_auto", "自动接话（群聊时其他角色自动跟进）"),
+                    checked = autoTurn, onCheckedChange = { autoTurn = it }, icon = "smart_toy")
                 DickCheckRow(label = I18n.t("chk_tts", "朗读 AI 回复（系统 TTS）"),
                     checked = speakReplies, onCheckedChange = { speakReplies = it })
-                DickCheckRow(label = I18n.t("st_dev", "🔧 开发者模式（解锁角色卡高级设置/内置游戏）"),
-                    checked = devMode, onCheckedChange = { devMode = it })
-                DickCheckRow(label = I18n.t("st_humanize", "🧍 去 AI 味（具体细节/生活有变化/口语不完美/引用共同记忆）"),
-                    checked = humanize, onCheckedChange = { humanize = it })
-                DickCheckRow(label = I18n.t("st_style", "🎛 风格闸（去文学化漂移：生活词/比喻→事实/拆长句）"),
-                    checked = styleGuard, onCheckedChange = { styleGuard = it }, topPadding = 8.dp)
-                DickCheckRow(label = I18n.t("st_long", "🌊 长句模式（不拆长句，允许更流畅/文学化表达）"),
-                    checked = styleGuardLong, onCheckedChange = { styleGuardLong = it }, topPadding = 4.dp)
+                DickCheckRow(label = I18n.t("st_dev", "开发者模式（解锁角色卡高级设置/内置游戏）"),
+                    checked = devMode, onCheckedChange = { devMode = it }, icon = "build")
+                DickCheckRow(label = I18n.t("st_humanize", "去 AI 味（具体细节/生活有变化/口语不完美/引用共同记忆）"),
+                    checked = humanize, onCheckedChange = { humanize = it }, icon = "accessibility_new")
+                DickCheckRow(label = I18n.t("st_style", "风格闸（去文学化漂移：生活词/比喻→事实/拆长句）"),
+                    checked = styleGuard, onCheckedChange = { styleGuard = it }, topPadding = 8.dp, icon = "tune")
+                DickCheckRow(label = I18n.t("st_long", "长句模式（不拆长句，允许更流畅/文学化表达）"),
+                    checked = styleGuardLong, onCheckedChange = { styleGuardLong = it }, topPadding = 4.dp, icon = "waves")
                 Spacer(Modifier.height(10.dp))
-                FoldHead(I18n.t("st_plugins", "🔌 插件"), state.foldPlugins, onToggle = { state.foldPlugins = !state.foldPlugins })
+                FoldHead(I18n.t("st_plugins", "插件"), state.foldPlugins, onToggle = { state.foldPlugins = !state.foldPlugins }, icon = "extension")
                 if (state.foldPlugins) {
                 for (p in registry.plugins) {
                     var enabled by remember(p) { mutableStateOf(p.enabled) }

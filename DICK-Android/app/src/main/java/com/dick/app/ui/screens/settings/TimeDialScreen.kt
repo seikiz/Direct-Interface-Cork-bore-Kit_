@@ -58,7 +58,7 @@ import com.dick.core.TimeScale
  */
 /** 设置（API 配置 + 主设置） */
 /**
- * ⏳ 时间流速表盘（手机端）。
+ *  时间流速表盘（手机端）。
  *
  * 为什么用对数刻度：10 ~ 1000万 跨 6 个数量级。线性表盘 98% 的行程都挤在
  * 最前几档上，手指一动就是几百万倍，根本没法用。对数下每转一格 = ×10，
@@ -212,15 +212,15 @@ fun TimeScaleDial(
         }
         if (draft >= 3600) {
             IconText(
-                "⚠ 高倍率下时间过得极快：现实几分钟就等于她那边好几天。适合「跳过一段时间」的玩法。",
-                fontSize = 11.sp, color = subCol, iconSize = 12.dp,
+                "高倍率下时间过得极快：现实几分钟就等于她那边好几天。适合「跳过一段时间」的玩法。",
+                fontSize = 11.sp, color = subCol, iconSize = 12.dp, icon = "warning"
             )
         }
     }
 }
 
 /**
- * ⏳ 时间流速面板（独立展开）。
+ *  时间流速面板（独立展开）。
  *
  * 为什么从设置弹窗里搬出来：
  *   ① 一块表盘夹在一长串设置项中间，既挤又不像"一个功能"；
@@ -249,7 +249,7 @@ fun TimeDialScreen(vm: ChatViewModel, deps: DialogDeps) {
         ) {
             Column(Modifier.padding(horizontal = 18.dp, vertical = 14.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    IconText("⏳ 时间流速", fontSize = 15.sp, color = theme.text, fontWeight = FontWeight.SemiBold, iconSize = 16.dp)
+                    IconText("时间流速", fontSize = 15.sp, color = theme.text, fontWeight = FontWeight.SemiBold, iconSize = 16.dp, icon = "hourglass_empty")
                     Spacer(Modifier.weight(1f))
                     TextButton(onClick = close) { Text("关闭", color = theme.muted, fontSize = 13.sp) }
                 }

@@ -1738,7 +1738,7 @@ class HtmlApp:
             self._start_fetch(node_id)
         else:
             self.busy = False
-            self._append_sys(i18n.t("vision_fail", "⚠️ 图片识别失败（免费视觉链被限流或网络问题），请稍后重试"))
+            self._append_sys(i18n.t("vision_fail", "图片识别失败（免费视觉链被限流或网络问题），请稍后重试"))
 
     def _vision_direct_done(self, node_id, direct):
         """DSFVE 直答完成：user 节点保持原样，新增 assistant 节点存 AI 回复。

@@ -1,26 +1,26 @@
-/* web/js/screens/bk.js —— 🔐 加密备份（阶段 3：从 index.html 的顶层代码整块搬出，零行为变化）
+/* web/js/screens/bk.js —— 加密备份（阶段 3：从 index.html 的顶层代码整块搬出，零行为变化）
  *
  * 这一屏没有状态：口令只在输入框里，不进 JS 变量、不进 localStorage（"口令不保存在任何地方"
  * 是这个功能的承诺，搬家时必须原样保住）。
  *
  * 归属
- *   结构：web/screens/bk.html（index.html 里原位只剩挂载点 <!--@screen:bk-->）
- *   样式：没有专属 css 块 —— 它用的是组件层的 .modal/.modal-box/.field/.row，
- *         所以不建 bk.css（多一个空文件比没有更糟）。
+ * 结构：web/screens/bk.html（index.html 里原位只剩挂载点 <!--@screen:bk-->）
+ * 样式：没有专属 css 块 —— 它用的是组件层的 .modal/.modal-box/.field/.row，
+ * 所以不建 bk.css（多一个空文件比没有更糟）。
  * 本屏依赖的外部符号（阶段 4/5 的收尾清单）
- *   · pywebview.api.backup_* / export_backup_encrypted / import_backup_encrypted
- *   · escapeHtml()     组件层转义
- *   · reloadRoles() / reloadWorlds()  还原成功后要重刷侧栏（外壳的函数，直接调用）
- *   · #btnBackup       入口按钮在外壳侧栏（本屏 mount 时绑它）
- *   · Esc 关窗         仍写在 index.html 的全局 keydown 里，它调兼容入口 bkClose()
+ * · pywebview.api.backup_* / export_backup_encrypted / import_backup_encrypted
+ * · escapeHtml() 组件层转义
+ * · reloadRoles() / reloadWorlds() 还原成功后要重刷侧栏（外壳的函数，直接调用）
+ * · #btnBackup 入口按钮在外壳侧栏（本屏 mount 时绑它）
+ * · Esc 关窗 仍写在 index.html 的全局 keydown 里，它调兼容入口 bkClose()
  */
 window.BkScreen = (function (global) {
   'use strict';
 
   var mounted = false;
 
-  // ================= 🔐 加<seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌密备份 =================
-  // ================= 🔐 加密备份 =================
+  // ================= 加<seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌密备份 =================
+  // ================= 加密备份 =================
   function bkStatus(html, kind) {
     var el = document.getElementById('bkStatus');
     if (!el) return;
@@ -36,7 +36,7 @@ window.BkScreen = (function (global) {
     document.getElementById('bkPwMsg').textContent = '';
     document.getElementById('bkGenHint').textContent = '';
     var warn = document.getElementById('bkWarn');
-    warn.innerHTML = '⚠️ 口令<b>不保存在任何地方</b>，忘了就打不开了。请单独记好（抄纸上 / 存密码管理器）。';
+    warn.innerHTML = '[ic:warning] 口令<b>不保存在任何地方</b>，忘了就打不开了。请单独记好（抄纸上 / 存密码管理器）。';
     warn.style.color = 'var(--sub)';
     bkStatus('');
     document.getElementById('backupModal').classList.add('open');
@@ -60,7 +60,7 @@ window.BkScreen = (function (global) {
       lvl.textContent = '已生成强口令（' + pw.length + ' 位随机）';
       lvl.style.color = '#5fd39a';
       var warn = document.getElementById('bkWarn');
-      warn.innerHTML = '⚠️ <b>现在就把下面这串抄下来</b>（纸上 / 密码管理器），' +
+      warn.innerHTML = '[ic:warning] <b>现在就把下面这串抄下来</b>（纸上 / 密码管理器），' +
                        '然后关掉本窗口。这个口令只显示这一次，我们不保存，' +
                        '丢了这份备份就永久打不开了。';
       warn.style.color = '#ffb454';
@@ -97,7 +97,7 @@ window.BkScreen = (function (global) {
         return;
       }
       var kb = (r.size / 1024).toFixed(1);
-      bkStatus('✅ 备份完成<br>' +
+      bkStatus('[ic:check_circle] 备份完成<br>' +
                '文件：<b>' + escapeHtml(r.name) + '</b><br>' +
                '共 ' + r.entries + ' 项，加密后 ' + kb + ' KB<br>' +
                '<span style="color:var(--sub)">存到网盘/U盘都可以 —— 没有口令谁也打不开。</span>', 'good');
@@ -116,14 +116,14 @@ window.BkScreen = (function (global) {
         if (r && r.err === 'cancelled') { bkStatus('已取消。'); return; }
         var e = (r && r.err) || '未知错误';
         if (e.indexOf('口令错误') >= 0 || e.indexOf('篡改') >= 0) {
-          bkStatus('❌ 口令错误，或这个文件被改动过。<br>' +
+          bkStatus('[ic:error] 口令错误，或这个文件被改动过。<br>' +
                    '<span style="color:var(--sub)">如果确定口令没错，换一份备份再试。</span>', 'bad');
         } else {
           bkStatus('还原失败：' + escapeHtml(e), 'bad');
         }
         return;
       }
-      bkStatus('✅ ' + escapeHtml(r.msg), 'good');
+      bkStatus('[ic:check_circle] ' + escapeHtml(r.msg), 'good');
       try { reloadRoles(); } catch (e) {}
       try { reloadWorlds(); } catch (e) {}
       try { pywebview.api.state().then(function () {}); } catch (e) {}
@@ -171,8 +171,8 @@ window.BkScreen = (function (global) {
 
 /* ===== 兼容入口（阶段 4/5 清理）=====
  * 搬家前这 7 个都是 index.html 的顶层全局函数。外部还在叫的有两个：
- *   · bkClose()  —— index.html 的 Esc keydown 处理器（那段本轮不动）
- *   · bkOpen()   —— 侧栏「🔐 加密备份」按钮（现在由本屏 mount() 绑）
+ * · bkClose() —— index.html 的 Esc keydown 处理器（那段本轮不动）
+ * · bkOpen() —— 侧栏「 加密备份」按钮（现在由本屏 mount() 绑）
  * 其余 5 个只在模块内部用。同名全局继续存在，内部只转调模块 —— 实现不再有第二份。 */
 function bkStatus(html, kind) { return window.BkScreen.status(html, kind); }
 function bkOpen() { return window.BkScreen.open(); }

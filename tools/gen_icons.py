@@ -50,9 +50,9 @@ AND_FONT = os.path.join(ROOT, "DICK-Android", "app", "src", "main", "res", "font
 LICENSE = os.path.join(ROOT, "web", "fonts", "LICENSE")
 INDEX = os.path.join(ROOT, "web", "index.html")
 
-HEADER_JS = (u"// ⚠ 生成物：由 tools/gen_icons.py 从 icons/icons.json 生成，别手改。\n"
+HEADER_JS = (u"// 生成物：由 tools/gen_icons.py 从 icons/icons.json 生成，别手改。\n"
              u"//   换图标：改 icons/icons.json（emoji → Material Symbols 名字），再跑一次生成器。\n")
-HEADER_KT = (u"// ⚠ 生成物：由 tools/gen_icons.py 从 icons/icons.json 生成，别手改。\n"
+HEADER_KT = (u"// 生成物：由 tools/gen_icons.py 从 icons/icons.json 生成，别手改。\n"
              u"//   换图标：改 icons/icons.json（emoji → Material Symbols 名字），再跑一次生成器。\n"
              u"//   字体：res/font/material_symbols_outlined.ttf（Material Symbols Outlined，Apache-2.0）\n")
 

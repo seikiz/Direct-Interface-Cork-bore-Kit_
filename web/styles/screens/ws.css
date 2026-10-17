@@ -1,23 +1,23 @@
-/* web/styles/screens/ws.css —— 🧰 创意工坊 / 世界卡库屏的专属样式
+/* web/styles/screens/ws.css —— 创意工坊 / 世界卡库屏的专属样式
  * 阶段 3 从 styles/panels.css 原样搬出：.ws-cols/.ws-col（三列本地列表）、.ws-cards/.ws-card*
  * （在线/插件卡片）、.ws-empty（空态）、.ws-tabbtn.active（当前 Tab）。
  *
  * 层叠顺序（别随手挪 <link>）：本文件排在 styles/screens/wm.css 之后（两个都是 panels.css 搬出来的，
  * 搬家前 panels.css 里也是 .wentry/.p-grid 在前、.ws-* 在后）。
  * 这里有一条**真的会和 components.css 抢**的规则：
- *   `.ws-card .btn2{ font-size:11px; padding:3px 8px }`  vs  `.modal-box .btn2{ padding:7px 16px }`
+ * `.ws-card .btn2{ font-size:11px; padding:3px 8px }` vs `.modal-box .btn2{ padding:7px 16px }`
  * 两者特异性相同（0,2,0），谁在后面谁赢 —— 搬家前 panels.css 在 components.css 之后，所以是
  * `.ws-card .btn2` 赢。本文件只要还排在 components.css 之后，卡片里的按钮就还是原来的小尺寸。
  *
  * 2026-12 卡片外显（用户：「角色卡 UI 应该是白的」+「外显应该结构化，不是一堆代码」）：
- *   ① `.ws-card` / `.ws-col select` 从 --bubble（surface_2）换成 --surface + --line 描边 ——
- *      浅色主题下才是「白底卡片」，暗色主题下是「看得出边界的卡片」而不是一块灰；
- *   ② `.ws-preview` + `.cv-*` 是结构化预览（标题 / 分区 / 两列键值 / 列表）；
- *      #wsPreview 原来那个等宽 <pre> 连同它的行内 style 一起删掉了；
- *   ③ 文字色只用令牌（--text / --text-sub），不引入浅色字（tests/test_no_dim_text.py 盯着）。 */
+ * ① `.ws-card` / `.ws-col select` 从 --bubble（surface_2）换成 --surface + --line 描边 ——
+ * 浅色主题下才是「白底卡片」，暗色主题下是「看得出边界的卡片」而不是一块灰；
+ * ② `.ws-preview` + `.cv-*` 是结构化预览（标题 / 分区 / 两列键值 / 列表）；
+ * #wsPreview 原来那个等宽 <pre> 连同它的行内 style 一起删掉了；
+ * ③ 文字色只用令牌（--text / --text-sub），不引入浅色字（tests/test_no_dim_text.py 盯着）。 */
 .ws-cols{ display:grid; grid-template-columns:1fr 1fr; gap:8px; }
 .ws-col select{ width:100%; background:var(--surface); border:1px solid var(--line); border-radius:8px;
-  color:var(--text); padding:6px; font-size:12px; }
+ color:var(--text); padding:6px; font-size:12px; }
 /* 原生列表的行底色：不写的话选项<seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌跟系统走，浅色主题下是一片系统灰 */
 .ws-col option{ background:var(--surface); color:var(--text); }
 .ws-col .section-label{ padding-left:0; }
@@ -38,8 +38,8 @@
  * design/card_fields.json → 生成物 web/card_fields.js），这里只管长相：
  * 白底卡片 + 分区小标题 + 两列键值 + 列表；**没有等宽字体、没有代码块**。 */
 .ws-preview{ background:var(--surface); border:1px solid var(--line); border-radius:var(--radius-md);
-  padding:10px 12px; max-height:220px; overflow:auto; font-size:12px; line-height:var(--lh-normal); }
-.ws-preview:empty{ display:none; }        /* 没选文件时不留一个空框 */
+ padding:10px 12px; max-height:220px; overflow:auto; font-size:12px; line-height:var(--lh-normal); }
+.ws-preview:empty{ display:none; } /* 没选文件时不留一个空框 */
 .ws-cardview{ color:var(--text); }
 .ws-cardview .cv-title{ font-size:15px; font-weight:700; color:var(--text); margin-bottom:2px; }
 .ws-cardview .cv-sec{ margin-top:10px; }

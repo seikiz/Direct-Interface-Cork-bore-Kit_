@@ -112,19 +112,19 @@ fun RolesScreen(vm: ChatViewModel, deps: DialogDeps) {
                             Text(n, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
                             Spacer(Modifier.weight(1f))
                             if (roleUnlocked[n] == true) {
-                                IconText("🔥", fontSize = 13.sp, color = theme.danger)
+                                IconText("", fontSize = 13.sp, color = theme.danger, icon = "local_fire_department")
                             }
                         }
                         Row(horizontalArrangement = Arrangement.spacedBy(2.dp), modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(start = 4.dp)) {
-                            TextButton(onClick = { avatarTarget = n; avatarPicker.launch("image/*") }, modifier = Modifier.heightIn(min = 44.dp)) { IconText("🖼️ 头像", fontSize = 12.sp) }
+                            TextButton(onClick = { avatarTarget = n; avatarPicker.launch("image/*") }, modifier = Modifier.heightIn(min = 44.dp)) { IconText("头像", fontSize = 12.sp, icon = "image") }
                             TextButton(onClick = { toggleRoleUnlock(n) }, modifier = Modifier.heightIn(min = 44.dp)) {
-                                IconText(if (roleUnlocked[n] == true) "🔥 破甲·开" else "🔥 破甲", fontSize = 12.sp, color = if (roleUnlocked[n] == true) theme.danger else Color.Unspecified)
+                                IconText(if (roleUnlocked[n] == true) "破甲·开" else "破甲", fontSize = 12.sp, color = if (roleUnlocked[n] == true) theme.danger else Color.Unspecified, icon = "local_fire_department")
                             }
-                            TextButton(onClick = { roleEditName = n }, modifier = Modifier.heightIn(min = 44.dp)) { IconText("✏️ 编辑", fontSize = 12.sp) }
-                            TextButton(onClick = { saveRole = n }, modifier = Modifier.heightIn(min = 44.dp)) { IconText("💾 档", fontSize = 12.sp) }
-                            TextButton(onClick = { exportTarget = n to "json"; exportCardLauncher.launch("application/json") }, modifier = Modifier.heightIn(min = 44.dp)) { IconText("⬇️ JSON", fontSize = 12.sp) }
-                            TextButton(onClick = { exportTarget = n to "png"; exportCardLauncher.launch("image/png") }, modifier = Modifier.heightIn(min = 44.dp)) { IconText("📤 PNG", fontSize = 12.sp) }
-                            TextButton(onClick = { pendingDelete = n to "role" }, modifier = Modifier.heightIn(min = 44.dp)) { IconText("🗑️", color = theme.danger, fontSize = 14.sp) }
+                            TextButton(onClick = { roleEditName = n }, modifier = Modifier.heightIn(min = 44.dp)) { IconText("编辑", fontSize = 12.sp, icon = "edit") }
+                            TextButton(onClick = { saveRole = n }, modifier = Modifier.heightIn(min = 44.dp)) { IconText("档", fontSize = 12.sp, icon = "save") }
+                            TextButton(onClick = { exportTarget = n to "json"; exportCardLauncher.launch("application/json") }, modifier = Modifier.heightIn(min = 44.dp)) { IconText("JSON", fontSize = 12.sp, icon = "download") }
+                            TextButton(onClick = { exportTarget = n to "png"; exportCardLauncher.launch("image/png") }, modifier = Modifier.heightIn(min = 44.dp)) { IconText("PNG", fontSize = 12.sp, icon = "upload") }
+                            TextButton(onClick = { pendingDelete = n to "role" }, modifier = Modifier.heightIn(min = 44.dp)) { IconText("", color = theme.danger, fontSize = 14.sp, icon = "delete") }
                         }
                     }
                 }
@@ -134,7 +134,7 @@ fun RolesScreen(vm: ChatViewModel, deps: DialogDeps) {
             Row {
                 TextButton(onClick = {
                     importCardLauncher.launch(arrayOf("image/png", "image/webp", "application/json"))
-                }) { IconText(I18n.t("btn_import_card", "📥 导入角色卡"), fontSize = 12.sp) }
+                }) { IconText(I18n.t("btn_import_card", "导入角色卡"), fontSize = 12.sp, icon = "inbox") }
                 Spacer(Modifier.weight(1f))
                 TextButton(onClick = { roleEditName = "" }) { IconText(I18n.t("btn_new_role", "新建角色"), iconSize = 15.dp) }
             }

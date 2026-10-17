@@ -72,7 +72,7 @@ fun BranchesScreen(
     if (showBranches) {
         AlertDialog(
             onDismissRequest = { showBranches = false },
-            title = { IconText("🌿 回档（二维分支 · 双指缩放/拖动 · 点节点跳到那里）") },
+            title = { IconText("回档（二维分支 · 双指缩放/拖动 · 点节点跳到那里）", icon = "account_tree") },
             text = { TreeGraph(vm, tree, mech, accent, saveTree, refreshChain, restoreOptions) },
             confirmButton = {},
             dismissButton = { TextButton(onClick = { showBranches = false }) { Text(I18n.t("btn_cancel", "取消")) } },
@@ -134,7 +134,7 @@ private fun computeTreeLayout(tree: ChatTree, leafId: String?): Pair<List<GNodeV
     return out to edges
 }
 
-/** 二维分支树图：叶子居中布局 + 双指缩放/拖动 + 选项点标 🎮/描边 + 点击即回档 */
+/** 二维分支树图：叶子居中布局 + 双指缩放/拖动 + 选项点标 /描边 + 点击即回档 */
 @Composable
 fun TreeGraph(vm: ChatViewModel, tree: ChatTree, mech: MechanicsEngine, accent: Color, saveTree: () -> Unit, refreshChain: () -> Unit, restoreOptions: (String?) -> Unit) {
     val (nodes, edges) = remember(tree) { computeTreeLayout(tree, tree.currentLeafId) }
@@ -162,8 +162,8 @@ fun TreeGraph(vm: ChatViewModel, tree: ChatTree, mech: MechanicsEngine, accent: 
     var branchMode by remember { mutableStateOf(false) }
     Column {
         Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 2.dp), verticalAlignment = Alignment.CenterVertically) {
-            TextButton(onClick = { branchMode = false }) { IconText("🔀 回档", fontSize = 12.sp, iconSize = 13.dp, fontWeight = if (!branchMode) FontWeight.Bold else null, color = if (!branchMode) accent else Color.Unspecified) }
-            TextButton(onClick = { branchMode = true }) { IconText("✏️ 建分支", fontSize = 12.sp, iconSize = 13.dp, fontWeight = if (branchMode) FontWeight.Bold else null, color = if (branchMode) accent else Color.Unspecified) }
+            TextButton(onClick = { branchMode = false }) { IconText("回档", fontSize = 12.sp, iconSize = 13.dp, fontWeight = if (!branchMode) FontWeight.Bold else null, color = if (!branchMode) accent else Color.Unspecified, icon = "shuffle") }
+            TextButton(onClick = { branchMode = true }) { IconText("建分支", fontSize = 12.sp, iconSize = 13.dp, fontWeight = if (branchMode) FontWeight.Bold else null, color = if (branchMode) accent else Color.Unspecified, icon = "edit") }
             Spacer(Modifier.weight(1f))
             Text(if (branchMode) "点节点=从这点继续 · 下一条会分出新分支" else "点节点=跳回那里", fontSize = 10.sp, color = pal.textSub)
         }
@@ -233,8 +233,9 @@ fun TreeGraph(vm: ChatViewModel, tree: ChatTree, mech: MechanicsEngine, accent: 
                 contentAlignment = Alignment.CenterStart,
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(horizontal = 6.dp)) {
-                    // 成就图标框（灰白像素格）
-                    val ic = if (n.role == "user") "〔你〕" else if (n.role == "system") "⚙" else if (n.isOption) "▣" else "〔AI〕"
+                    // 成就图标框（灰白像素格）：角色标识一律用文字签（〔你〕/〔系〕/〔AI〕），
+                    // 不再用  这种 emoji 字符当图标（文案里一个 emoji 都不许有）
+                    val ic = if (n.role == "user") "〔你〕" else if (n.role == "system") "〔系〕" else if (n.isOption) "▣" else "〔AI〕"
                     Box(
                         Modifier.size(width = 26.dp, height = 26.dp)
                             .clip(RoundedCornerShape(5.dp))

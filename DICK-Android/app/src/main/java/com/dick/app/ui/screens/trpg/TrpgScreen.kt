@@ -95,7 +95,7 @@ fun TrpgScreen(vm: ChatViewModel, deps: DialogDeps) {
 
     AlertDialog(
         onDismissRequest = { leaveAll() },
-        title = { IconText("🎭 跑团 · 房间") },
+        title = { IconText("跑团 · 房间", icon = "theater_comedy") },
         text = {
             Column(Modifier.verticalScroll(rememberScrollState())) {
                 if (base.isBlank()) {
@@ -112,19 +112,19 @@ fun TrpgScreen(vm: ChatViewModel, deps: DialogDeps) {
                         base = "local://gm"
                         roomId = roomId0
                         roomInfo = null
-                    }, modifier = Modifier.fillMaxWidth()) { IconText("🎤 我当 GM（本机开房）", iconSize = 15.dp) }
+                    }, modifier = Modifier.fillMaxWidth()) { IconText("我当 GM（本机开房）", iconSize = 15.dp, icon = "mic") }
                     Text("或连接局域网主机：", fontSize = 11.sp, color = theme.muted)
-                    Button(onClick = { sessions = Workshop.discoverTrpg() }, modifier = Modifier.fillMaxWidth()) { IconText("📡 查找附近跑团", iconSize = 15.dp) }
+                    Button(onClick = { sessions = Workshop.discoverTrpg() }, modifier = Modifier.fillMaxWidth()) { IconText("查找附近跑团", iconSize = 15.dp, icon = "radio") }
                     if (sessions.isEmpty()) Text("同一 Wi-Fi 让任一设备开房（PC 或手机当 GM），再查找；也可直接输入地址", fontSize = 11.sp, color = theme.muted)
                     sessions.forEach { s ->
                         TextButton(onClick = { base = s.fields["url"]?.str() ?: ""; rooms = Workshop.trpgRooms(base) }, modifier = Modifier.fillMaxWidth()) {
-                            IconText("🎲 " + (s.fields["gm"]?.str() ?: "房间") + " @ " + (s.fields["url"]?.str() ?: ""), fontSize = 13.sp, iconSize = 14.dp)
+                            IconText((s.fields["gm"]?.str() ?: "房间") + " @ " + (s.fields["url"]?.str() ?: ""), fontSize = 13.sp, iconSize = 14.dp, icon = "casino")
                         }
                     }
                 } else if (gmSession != null && !gmStarted) {
                     // ---- 二：本机当 GM 模式（未开始配置） ----
-                    IconText("🎤 本机 GM · 设 GM/队伍", fontSize = 12.sp, iconSize = 13.dp)
-                    if (lanAddr.isNotBlank()) IconText("🔗 别的设备连这里加入: http://$lanAddr", fontSize = 12.sp, color = deps.accent, iconSize = 13.dp)
+                    IconText("本机 GM · 设 GM/队伍", fontSize = 12.sp, iconSize = 13.dp, icon = "mic")
+                    if (lanAddr.isNotBlank()) IconText("别的设备连这里加入: http://$lanAddr", fontSize = 12.sp, color = deps.accent, iconSize = 13.dp, icon = "link")
                     OutlinedTextField(value = gmSession!!.gm, onValueChange = { gmSession!!.gm = it },
                         label = { Text("GM 卡名") }, singleLine = true, modifier = Modifier.fillMaxWidth())
                     Text("房间名：", fontSize = 11.sp)
@@ -149,7 +149,7 @@ fun TrpgScreen(vm: ChatViewModel, deps: DialogDeps) {
                         val n = r.fields["name"]?.str() ?: "未命名房间"
                         val g = r.fields["gm"]?.str() ?: ""; val j = r.fields["joined"]?.str() ?: "0"
                         TextButton(onClick = { roomId = r.fields["id"]?.str() ?: ""; roomInfo = r }, modifier = Modifier.fillMaxWidth()) {
-                            IconText("🏠 $n · GM:$g · ${j}人", fontSize = 13.sp, iconSize = 14.dp)
+                            IconText("$n · GM:$g · ${j}人", fontSize = 13.sp, iconSize = 14.dp, icon = "home")
                         }
                     }
                     // 创建房间（连到主机）
@@ -160,7 +160,7 @@ fun TrpgScreen(vm: ChatViewModel, deps: DialogDeps) {
                     Button(onClick = {
                         val id = Workshop.trpgCreateRoom(base, createName.value.ifBlank { "新房间" }, createGm.value.ifBlank { "咲" }, listOf("凛","咲"))
                         if (id != null) { roomId = id; rooms = Workshop.trpgRooms(base) }
-                    }, modifier = Modifier.fillMaxWidth()) { IconText("➕ 在此主机创建房间", iconSize = 15.dp) }
+                    }, modifier = Modifier.fillMaxWidth()) { IconText("在此主机创建房间", iconSize = 15.dp, icon = "add") }
                 } else {
                     // ---- 四：房间内游玩（成员或本地GM） ----
                     Text("已入房间：" + (roomInfo?.fields?.get("name")?.str() ?: roomId), fontSize = 11.sp, color = theme.muted)
@@ -170,7 +170,7 @@ fun TrpgScreen(vm: ChatViewModel, deps: DialogDeps) {
                             TextButton(onClick = {
                                 val ok = gmSession != null || Workshop.trpgRoomJoin(base, roomId, pc)
                                 if (ok) myPc = pc
-                            }, modifier = Modifier.fillMaxWidth()) { IconText("👤 " + pc, fontSize = 13.sp, iconSize = 14.dp) }
+                            }, modifier = Modifier.fillMaxWidth()) { IconText(pc, fontSize = 13.sp, iconSize = 14.dp, icon = "person") }
                         }
                         if (pcs.isEmpty()) Text("等待主机设置队伍…", fontSize = 11.sp, color = theme.muted)
                     } else {
@@ -178,8 +178,8 @@ fun TrpgScreen(vm: ChatViewModel, deps: DialogDeps) {
                         story.forEach { s ->
                             val actor = s.fields["actor"]?.str() ?: ""
                             val gm = s.fields["gm"]?.str() ?: ""
-                            IconText("👤 " + actor + "：" + (s.fields["action"]?.str() ?: ""), fontSize = 12.sp, color = theme.muted, iconSize = 13.dp)
-                            if (gm.isNotBlank()) IconText("🗣 GM：" + gm, fontSize = 13.sp, color = theme.text, iconSize = 14.dp)
+                            IconText(actor + "：" + (s.fields["action"]?.str() ?: ""), fontSize = 12.sp, color = theme.muted, iconSize = 13.dp, icon = "person")
+                            if (gm.isNotBlank()) IconText("GM：" + gm, fontSize = 13.sp, color = theme.text, iconSize = 14.dp, icon = "record_voice_over")
                         }
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             OutlinedTextField(value = action, onValueChange = { action = it },
@@ -195,7 +195,7 @@ fun TrpgScreen(vm: ChatViewModel, deps: DialogDeps) {
                                 action = ""; busy = false
                             }, enabled = !busy) { Text("行动") }
                         }
-                        TextButton(onClick = { leaveAll() }, modifier = Modifier.fillMaxWidth()) { IconText("🏁 退出本局", fontSize = 13.sp, color = theme.danger, iconSize = 14.dp) }
+                        TextButton(onClick = { leaveAll() }, modifier = Modifier.fillMaxWidth()) { IconText("退出本局", fontSize = 13.sp, color = theme.danger, iconSize = 14.dp, icon = "sports_score") }
                     }
                 }
             }

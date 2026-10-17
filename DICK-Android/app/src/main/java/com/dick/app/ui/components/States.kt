@@ -26,8 +26,9 @@ fun DickEmptyState(
     modifier: Modifier = Modifier,
     fontSize: TextUnit = 12.sp,
     iconSize: Dp = 13.dp,
+    icon: String? = null,
 ) {
-    IconText(text, modifier = modifier, fontSize = fontSize, color = DickTone.Muted.color(), iconSize = iconSize)
+    IconText(text, modifier = modifier, fontSize = fontSize, color = DickTone.Muted.color(), iconSize = iconSize, icon = icon)
 }
 
 /** 加载态：例如"自动连接中…"。现在与空状态同形，语义不同（以后加动画只动这里）。 */
@@ -37,6 +38,7 @@ fun DickLoading(
     modifier: Modifier = Modifier,
     fontSize: TextUnit = 12.sp,
     iconSize: Dp = 13.dp,
+    icon: String? = null,
 ) {
-    IconText(text, modifier = modifier, fontSize = fontSize, color = DickTone.Muted.color(), iconSize = iconSize)
+    IconText(text, modifier = modifier, fontSize = fontSize, color = DickTone.Muted.color(), iconSize = iconSize, icon = icon)
 }

@@ -239,9 +239,9 @@ fun CardEditScreen(vm: ChatViewModel, deps: DialogDeps) {
         text = {
             Column(Modifier.verticalScroll(rememberScrollState())) {
                 OutlinedTextField(value = rName, onValueChange = { rName = it }, label = { Text(I18n.t("lbl_name", "名字")) }, singleLine = true, enabled = editing.isBlank())
-                IconText("📜 完整设定（旧版原文，填了会整体覆盖，可留空）", fontSize = 11.sp, color = theme.muted, modifier = Modifier.padding(top = 6.dp))
+                IconText("完整设定（旧版原文，填了会整体覆盖，可留空）", fontSize = 11.sp, color = theme.muted, modifier = Modifier.padding(top = 6.dp), icon = "history_edu")
                 OutlinedTextField(value = rLegacy, onValueChange = { rLegacy = it }, label = { Text("Legacy 原文") }, minLines = 2)
-                IconText("🎨 结构化字段（精细设定）", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 10.dp))
+                IconText("结构化字段（精细设定）", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 10.dp), icon = "palette")
                 OutlinedTextField(value = rAppearance, onValueChange = { rAppearance = it }, label = { Text("外貌") }, minLines = 2)
                 OutlinedTextField(value = rPersonality, onValueChange = { rPersonality = it }, label = { Text("性格") }, minLines = 2)
                 OutlinedTextField(value = rBackground, onValueChange = { rBackground = it }, label = { Text("过去经历") }, minLines = 2)
@@ -251,9 +251,9 @@ fun CardEditScreen(vm: ChatViewModel, deps: DialogDeps) {
                 OutlinedTextField(value = rNotes, onValueChange = { rNotes = it }, label = { Text("备注") }, minLines = 2)
                 Row {
                     Checkbox(checked = rUnlocked, onCheckedChange = { rUnlocked = it })
-                    IconText("🔥 启用破甲模式（无限制对话）", Modifier.padding(top = 14.dp), fontSize = 12.sp)
+                    IconText("启用破甲模式（无限制对话）", Modifier.padding(top = 14.dp), fontSize = 12.sp, icon = "local_fire_department")
                 }
-                FoldHead("🎛️ 机制卡（好感度 / 事件）", foldMech, onToggle = { foldMech = !foldMech })
+                FoldHead("机制卡（好感度 / 事件）", foldMech, onToggle = { foldMech = !foldMech }, icon = "tune")
                 if (foldMech) {
                     Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.padding(bottom = 4.dp)) {
                         TextButton(onClick = {
@@ -261,7 +261,7 @@ fun CardEditScreen(vm: ChatViewModel, deps: DialogDeps) {
                             rMechSt = "mood|心情|enum|平静|平静,开心,害羞,生气,委屈\nenergy|精力|int|100|0-100"
                             rMechEv = "confess|告白|80|告白,喜欢|她鼓起勇气向你告白，请演出这一重要时刻"
                             foldMech = true; foldSt = true
-                        }) { IconText("💘 恋爱日常", fontSize = 12.sp, iconSize = 13.dp) }
+                        }) { IconText("恋爱日常", fontSize = 12.sp, iconSize = 13.dp, icon = "favorite") }
                         TextButton(onClick = {
                             rBattleEnabled = true
                             rBattleAttrs = "hp|生命|100|100\natk|攻击|10\ndef|防御|5"
@@ -270,21 +270,21 @@ fun CardEditScreen(vm: ChatViewModel, deps: DialogDeps) {
                             rBattleMoves = "fire|火球术|player_atk*3-def|mp:5||投掷火球\nstrike|平砍|player_atk-def|\nheal|治愈|20||regen:2|恢复体力"
                             rBattleBuffs = "regen|再生|2|hp:5|每回合恢复5生命\npoison|中毒|3|hp:-5|每回合损失5生命"
                             foldBattle = true
-                        }) { IconText("⚔️ 战斗冒险", fontSize = 12.sp, iconSize = 13.dp) }
+                        }) { IconText("战斗冒险", fontSize = 12.sp, iconSize = 13.dp, icon = "swords") }
                         TextButton(onClick = {
                             // 模板里带一个"可重复 + 好感加成"的例子，作者照着抄就会用
                             rMechEv = "meet|初遇|0|你好,初次见面|第一次相遇，自然演出|5\nstorm|风暴夜|30|暴风雨,打雷|暴风雨夜，她害怕地靠近你|10\nconfess|告白|80|告白,喜欢|她鼓起勇气向你告白|20\ndaily|日常闲聊|||来一段轻松的日常||可重复|3"
                             foldMech = true
-                        }) { IconText("🎬 事件剧本", fontSize = 12.sp, iconSize = 13.dp) }
+                        }) { IconText("事件剧本", fontSize = 12.sp, iconSize = 13.dp, icon = "movie") }
                         TextButton(onClick = {
                             rMechAff = false; rMechSt = ""; rMechEv = ""
                             rBattleEnabled = false; rBattleAttrs = ""; rBattleMech = ""
                             rBattleFormulas = ""; rBattleMoves = ""; rBattleBuffs = ""
-                        }) { IconText("🗑️ 清空", fontSize = 12.sp, iconSize = 13.dp) }
+                        }) { IconText("清空", fontSize = 12.sp, iconSize = 13.dp, icon = "delete") }
                     }
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Checkbox(checked = rMechAff, onCheckedChange = { rMechAff = it })
-                        IconText("❤ 启用好感度（AI 每轮用 [aff:+N] 标注变化）", fontSize = 12.sp, iconSize = 13.dp)
+                        IconText("启用好感度（AI 每轮用 [aff:+N] 标注变化）", fontSize = 12.sp, iconSize = 13.dp, icon = "favorite")
                     }
                     Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         OutlinedTextField(value = rMechAffInit, onValueChange = { rMechAffInit = it }, label = { Text("初始值") }, singleLine = true, modifier = Modifier.weight(1f))
@@ -293,11 +293,11 @@ fun CardEditScreen(vm: ChatViewModel, deps: DialogDeps) {
                     }
                     OutlinedTextField(value = rMechEv, onValueChange = { rMechEv = it }, label = { Text("事件（每行 ID|名称|好感≥|关键词,逗号|触发提示|好感加成|可重复|冷却）") }, minLines = 3)
                 }
-                FoldHead("📊 状态字段", foldSt, onToggle = { foldSt = !foldSt })
+                FoldHead("状态字段", foldSt, onToggle = { foldSt = !foldSt }, icon = "bar_chart")
                 if (foldSt) {
                     OutlinedTextField(value = rMechSt, onValueChange = { rMechSt = it }, label = { Text("状态字段（每行 键|显示名|类型|初始值|范围或选项）\n例：mood|心情|enum|平静|平静,开心,生气") }, minLines = 3)
                 }
-                FoldHead("⚔️ 战斗系统（可选）", foldBattle, onToggle = { foldBattle = !foldBattle })
+                FoldHead("战斗系统（可选）", foldBattle, onToggle = { foldBattle = !foldBattle }, icon = "swords")
                 if (foldBattle) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Checkbox(checked = rBattleEnabled, onCheckedChange = { rBattleEnabled = it })
@@ -311,48 +311,48 @@ fun CardEditScreen(vm: ChatViewModel, deps: DialogDeps) {
                     OutlinedTextField(value = rBattleMoves, onValueChange = { rBattleMoves = it }, label = { Text("招式（每行 ID|名称|公式|消耗键:值|效果:id:回合|描述）") }, minLines = 3)
                     OutlinedTextField(value = rBattleBuffs, onValueChange = { rBattleBuffs = it }, label = { Text("状态效果 buff（每行 ID|名称|回合|效果键:值|描述）") }, minLines = 3)
                 }
-                FoldHead("🏁 结局预设（达成事件链）", foldEndings, onToggle = { foldEndings = !foldEndings })
+                FoldHead("结局预设（达成事件链）", foldEndings, onToggle = { foldEndings = !foldEndings }, icon = "sports_score")
                 if (foldEndings) {
                     Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.padding(bottom = 2.dp)) {
                         TextButton(onClick = {
                             rEndings = "good|告白成功|初见,约会,告白|90||她终于说出了那句喜欢\nbad|形同陌路|争吵,决裂|20||你们最终还是走散了\nhidden|雨夜告白|初见,雨夜,告白|1|藏|只有走完整条线才会亮起的结局……"
-                        }) { IconText("💘 恋爱线", fontSize = 12.sp, iconSize = 13.dp) }
+                        }) { IconText("恋爱线", fontSize = 12.sp, iconSize = 13.dp, icon = "favorite") }
                         TextButton(onClick = {
                             rEndings = "bad|平淡收场|疏远,淡忘|30||日子照常，只是再也没了心动"
-                        }) { IconText("🌧 平淡/坏", fontSize = 12.sp, iconSize = 13.dp) }
+                        }) { IconText("平淡/坏", fontSize = 12.sp, iconSize = 13.dp, icon = "rainy") }
                         TextButton(onClick = {
                             rEndings = "hidden|雨夜告白|初见,雨夜,告白|1|藏|只有走完整条线才会亮起的隐藏结局……\n" +
                                 "hidden|真相大白|秘密,线索,摊牌|1|藏|你终于问出了那句藏在心底很久的话。\n" +
                                 "hidden|时间线|重来,循环,抉择|1|藏|这一次，你没有选择离开。\n" +
                                 "hidden|幻梦|沉睡,迷梦,醒来|1|藏|你睁开眼，分不清刚才是不是一场梦。\n" +
                                 "hidden|失控|占有,出格,失控|1|藏|她笑着看着你，眼里却没了光。"
-                        }) { IconText("🎁 隐藏结局", fontSize = 12.sp, iconSize = 13.dp) }
+                        }) { IconText("隐藏结局", fontSize = 12.sp, iconSize = 13.dp, icon = "redeem") }
                         TextButton(onClick = {
                             rEndings = "ghost|幻灭|误会,离开|10||你回头时，她已不在原处。"
-                        }) { IconText("👻 幻灭", fontSize = 12.sp, iconSize = 13.dp) }
+                        }) { IconText("幻灭", fontSize = 12.sp, iconSize = 13.dp, icon = "sentiment_dissatisfied") }
                     }
                     OutlinedTextField(value = rEndings, onValueChange = { rEndings = it }, label = { Text("结局（每行 id|结局名|事件链,逗号|好感≥|隐藏|描述）\n例：good|告白成功|初见,约会,告白|90||她终于说出了那句喜欢") }, minLines = 3)
                     Text("达成条件：按序触发全部事件链(id)即解锁结局；可与好感/隐藏条件叠加。", fontSize = 11.sp, color = theme.muted)
                 }
                 if (devMode) {
-                    IconText("⚙️ 高级设置（开发者模式）", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 10.dp))
+                    IconText("高级设置（开发者模式）", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 10.dp), icon = "settings")
                     OutlinedTextField(value = rGameName, onValueChange = { rGameName = it }, label = { Text("内置游戏名") }, singleLine = true)
                     OutlinedTextField(value = rGameRules, onValueChange = { rGameRules = it }, label = { Text("游戏规则（注入系统提示）") }, minLines = 3)
                     OutlinedTextField(value = rGameState, onValueChange = { rGameState = it }, label = { Text("初始状态（注入）") }, minLines = 2)
                     OutlinedTextField(value = rExtraPrompt, onValueChange = { rExtraPrompt = it }, label = { Text("额外系统提示") }, minLines = 2)
-                    FoldHead("🎴 卡面（HTML，可选）", foldCardFace, onToggle = { foldCardFace = !foldCardFace })
+                    FoldHead("卡面（HTML，可选）", foldCardFace, onToggle = { foldCardFace = !foldCardFace }, icon = "style")
                     if (foldCardFace) {
                         OutlinedTextField(value = rCardFace, onValueChange = { rCardFace = it },
                             label = { Text("卡面 HTML（导入或自写；聊天顶栏查看；非强制）") }, minLines = 4)
                         Row {
-                            TextButton(onClick = { cardFaceImpLauncher.launch(arrayOf("text/html", "text/plain", "*/*")) }) { IconText("📥 导入HTML文件", fontSize = 12.sp) }
-                            TextButton(onClick = { rCardFacePrev = true }) { IconText("👁 预览", fontSize = 12.sp) }
+                            TextButton(onClick = { cardFaceImpLauncher.launch(arrayOf("text/html", "text/plain", "*/*")) }) { IconText("导入HTML文件", fontSize = 12.sp, icon = "inbox") }
+                            TextButton(onClick = { rCardFacePrev = true }) { IconText("预览", fontSize = 12.sp, icon = "visibility") }
                             Spacer(Modifier.weight(1f))
-                            TextButton(onClick = { rCardFace = "" }) { IconText("🧹 清空", fontSize = 12.sp) }
+                            TextButton(onClick = { rCardFace = "" }) { IconText("清空", fontSize = 12.sp, icon = "delete_sweep") }
                         }
                     }
                     OutlinedTextField(value = rCardQr, onValueChange = { rCardQr = it }, label = { Text("卡片快捷回复（每行 按钮名|内容）") }, minLines = 3)
-                    OutlinedTextField(value = rRegex, onValueChange = { rRegex = it }, label = { IconText("🔤 角色专属正则（每行 id|名称|正则|替换|作用域，叠加全局）", iconSize = 14.dp) }, minLines = 3)
+                    OutlinedTextField(value = rRegex, onValueChange = { rRegex = it }, label = { IconText("角色专属正则（每行 id|名称|正则|替换|作用域，叠加全局）", iconSize = 14.dp, icon = "text_fields") }, minLines = 3)
                     OutlinedTextField(value = rDevNotes, onValueChange = { rDevNotes = it }, label = { Text("开发者备注（不注入）") }, minLines = 2)
                 }
             }

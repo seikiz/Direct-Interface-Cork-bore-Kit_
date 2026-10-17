@@ -1,15 +1,15 @@
-/* api_guide.js —— 📖 API 教程面板 + 🧭 首启配置向导（一屏的行为）
+/* api_guide.js —— API 教程面板 + 首启配置向导（一屏的行为）
  *
  * 两件事共用一份数据（服务商事实表）和三语文案：
- *   ① 教程面板：怎么选模型 / 服务商清单 / 三步配置 / 常见错误 / 免费链 / 省钱 / 官方搜索 / 免责小字；
- *   ② 首启向导：① 选服务商 → ② 填 Key → ③ 测试并保存（真实请求一次，通了才落盘）。
+ * ① 教程面板：怎么选模型 / 服务商清单 / 三步配置 / 常见错误 / 免费链 / 省钱 / 官方搜索 / 免责小字；
+ * ② 首启向导：① 选服务商 → ② 填 Key → ③ 测试并保存（真实请求一次，通了才落盘）。
  *
  * 硬边界（见 web/UI_ARCHITECTURE.md）：
- *   · 不 getElementById 别的屏的 id；打开/关闭只走 `DICK.bus`（settings.js 发事件，这里订阅）；
- *   · 按钮一律来自 web/js/components/Button.js（不新造按钮外观）；
- *   · 文案一律 `T.<key>`（lang/strings.json 的键，三语齐全）；这里不写死一句用户看得见的中文
- *     —— 唯一例外是 `data-i18n` 漏翻时的兜底（那种情况初始 HTML 里已经有一份中文）。
- *   · 颜色只来自 web/styles/screens/api_guide.css 的类名，这里不写行内 color。
+ * · 不 getElementById 别的屏的 id；打开/关闭只走 `DICK.bus`（settings.js 发事件，这里订阅）；
+ * · 按钮一律来自 web/js/components/Button.js（不新造按钮外观）；
+ * · 文案一律 `T.<key>`（lang/strings.json 的键，三语齐全）；这里不写死一句用户看得见的中文
+ * —— 唯一例外是 `data-i18n` 漏翻时的兜底（那种情况初始 HTML 里已经有一份中文）。
+ * · 颜色只来自 web/styles/screens/api_guide.css 的类名，这里不写行内 color。
  */
 window.ApiGuideScreen = (function (global) {
   'use strict';
@@ -23,8 +23,8 @@ window.ApiGuideScreen = (function (global) {
 
   /* ---------- 小工具：文案 / 元素 ---------- */
   /* 文案：一律写成 `pick(T.key)`，不写 `pick(动态键名)`。
-     理由：tools/gen_i18n.py 的"谁在用这个键"只认**字面量** `T.xxx` / `T['xxx']` /
-     `data-i18n`，写成 pick(T.xxx) 会让整套键被判成死键（tests/test_i18n_langs.py ⑤ 会红）。 */
+ 理由：tools/gen_i18n.py 的"谁在用这个键"只认**字面量** `T.xxx` / `T['xxx']` /
+ `data-i18n`，写成 pick(T.xxx) 会让整套键被判成死键（tests/test_i18n_langs.py ⑤ 会红）。 */
   function pick(v, fallback) {
     return (v == null || v === '') ? (fallback || '') : String(v);
   }
@@ -39,8 +39,8 @@ window.ApiGuideScreen = (function (global) {
   }
 
   /* ---------- 服务商事实表（教程用：6 家，含免 Key 那几家） ----------
-     URL / Base / 模型名是语言无关的事实，所以三语同串；说明性文字才翻译。
-     这张表与后端 PROVIDERS 是两回事：这里是"去哪注册、填什么"，那边是"程序真能连谁"。 */
+ URL / Base / 模型名是语言无关的事实，所以三语同串；说明性文字才翻译。
+ 这张表与后端 PROVIDERS 是两回事：这里是"去哪注册、填什么"，那边是"程序真能连谁"。 */
   function providerFacts() {
     return [
       { name: pick(T.guide_p1_name), url: pick(T.guide_p1_url), base: pick(T.guide_p1_base),
@@ -393,8 +393,8 @@ window.ApiGuideScreen = (function (global) {
 DICK.router.register('api_guide', { fragment: 'screens/api_guide.html', module: window.ApiGuideScreen });
 
 /* 兼容入口：
-   · apiGuideOpen()       —— 老代码/控制台直接开教程；
-   · apiWizardAutoOpen()  —— index.html 在拿到 state() 之后调：没 Key 且没选免费链就弹向导。 */
+ · apiGuideOpen() —— 老代码/控制台直接开教程；
+ · apiWizardAutoOpen() —— index.html 在拿到 state() 之后调：没 Key 且没选免费链就弹向导。 */
 function apiGuideOpen() { window.ApiGuideScreen.openGuide(); }
 function apiWizardOpen() { window.ApiGuideScreen.openWizard(true); }
 function apiWizardAutoOpen() { window.ApiGuideScreen.openWizard(false); }

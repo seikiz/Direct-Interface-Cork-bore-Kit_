@@ -1,23 +1,23 @@
-/* web/js/screens/go.js —— 🎴 围棋屏（阶段 2：从 index.html 的顶层代码整块搬出，零行为变化）
+/* web/js/screens/go.js —— 围棋屏（阶段 2：从 index.html 的顶层代码整块搬出，零行为变化）
  *
  * 归属
- *   结构：web/screens/go.html（index.html 里原位只剩挂载点 <!--@screen:go-->）
- *   样式：这屏没有专属 css 块 —— 布局全是行内 style，棋盘是 SVG 属性 + goPaint() 画出来的，
- *         所以 web/styles/screens/go.css 不存在，也不需要（新增一条规则时再建）。
+ * 结构：web/screens/go.html（index.html 里原位只剩挂载点 <!--@screen:go-->）
+ * 样式：这屏没有专属 css 块 —— 布局全是行内 style，棋盘是 SVG 属性 + goPaint() 画出来的，
+ * 所以 web/styles/screens/go.css 不存在，也不需要（新增一条规则时再建）。
  * 契约（见 web/UI_ARCHITECTURE.md）：router 注入片段后调 mount()；unmount() 收掉轮询定时器。
  * 本屏依赖的外部符号（搬的时候刻意原样留着，属于阶段 3/4/5 的收尾清单）
- *   · pywebview.api.go_*   规则引擎在 go_engine.py，这里只画棋盘/转坐标/轮询
- *   · galToast()           提示条（它其实是外壳级 toast，只是名字挂在 GAL 那边）
- *   · escapeHtml()         组件层的转义
- *   · #btnGo               入口按钮在外壳侧栏里 —— 本屏唯一一处碰别人 DOM 的地方，
- *                          阶段 3 应该换成 DICK.bus.emit('go:open') 由外壳转发。
+ * · pywebview.api.go_* 规则引擎在 go_engine.py，这里只画棋盘/转坐标/轮询
+ * · galToast() 提示条（它其实是外壳级 toast，只是名字挂在 GAL 那边）
+ * · escapeHtml() 组件层的转义
+ * · #btnGo 入口按钮在外壳侧栏里 —— 本屏唯一一处碰别人 DOM 的地方，
+ * 阶段 3 应该换成 DICK.bus.emit('go:open') 由外壳转发。
  */
 window.GoScreen = (function (global) {
   'use strict';
 
   var mounted = false;
 
-  // ================= 🎴 <seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌围棋 =================
+  // ================= <seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌围棋 =================
   // 规则全在 go_engine.py；这里只负责画棋盘、把点击转成坐标、轮询等角色落子。
   var goState = null, goTimer = null, goSize = 19, goHuman = 'black';
 
@@ -45,8 +45,8 @@ window.GoScreen = (function (global) {
   function goNew(size, human) {
     pywebview.api.go_new(size, human).then(function (r) {
       if (r && r.ok) { goState = r.state; goSize = r.state.size; goHuman = r.human || 'black'; goPaint(r); }
-      else galToast('❌ ' + ((r && r.err) || '开不了局'));
-    }).catch(function (e) { galToast('❌ ' + ((e && e.message) || '开不了局')); });
+      else galToast('[ic:error] ' + ((r && r.err) || '开不了局'));
+    }).catch(function (e) { galToast('[ic:error] ' + ((e && e.message) || '开不了局')); });
   }
   function goPlay(x, y) {
     if (!goState || goState.finished) return;
@@ -54,13 +54,13 @@ window.GoScreen = (function (global) {
     if ((goState.to_move === 'black' ? 1 : 2) !== mine) { galToast('等对方落子…'); return; }
     if (goState.grid[y][x]) { galToast('这里有子了'); return; }
     pywebview.api.go_play(x, y).then(function (r) {
-      if (!r || !r.ok) { galToast('❌ ' + ((r && r.err) || '下不了')); return; }
+      if (!r || !r.ok) { galToast('[ic:error] ' + ((r && r.err) || '下不了')); return; }
       goState = r.state; goPaint({ state: r.state, log: r.log });
-    }).catch(function (e) { galToast('❌ ' + ((e && e.message) || '下不了')); });
+    }).catch(function (e) { galToast('[ic:error] ' + ((e && e.message) || '下不了')); });
   }
   function goAct(api, label) {
     pywebview.api[api]().then(function (r) {
-      if (!r || !r.ok) { galToast('❌ ' + ((r && r.err) || (label + '失败'))); return; }
+      if (!r || !r.ok) { galToast('[ic:error] ' + ((r && r.err) || (label + '失败'))); return; }
       if (r.state) { goState = r.state; goPaint(r); }
       if (r.score) {
         var s = r.score;
@@ -68,7 +68,7 @@ window.GoScreen = (function (global) {
               ' = ' + s.white_total.toFixed(1) + '\n\n' + s.winner +
               '\n（提子：黑 ' + s.captured.black + ' / 白 ' + s.captured.white + '）');
       }
-    }).catch(function (e) { galToast('❌ ' + ((e && e.message) || (label + '失败'))); });
+    }).catch(function (e) { galToast('[ic:error] ' + ((e && e.message) || (label + '失败'))); });
   }
   function goPaint(r) {
     var st = (r && r.state) || goState;
@@ -131,9 +131,9 @@ window.GoScreen = (function (global) {
     }
     var txt;
     if (st.finished) {
-      txt = '🏁 ' + (st.result || '终局');
+      txt = '[ic:sports_score] ' + (st.result || '终局');
     } else {
-      var who = (st.to_move === 'black' ? '⚫ 黑方' : '⚪ 白方');
+      var who = (st.to_move === 'black' ? '[ic:circle] 黑方' : '[ic:radio_button_unchecked] 白方');
       txt = who + '走' + (myTurn ? '（你）' : '（对方思考中…）') +
             ' · 第 ' + (st.moves + 1) + ' 手 · 提子 黑' + st.captured.black + ' / 白' + st.captured.white;
     }
@@ -145,7 +145,7 @@ window.GoScreen = (function (global) {
       if (gs) {
         var deal = gs.handicap ? ('让你 ' + gs.handicap + ' 子')
                  : (gs.komi_extra ? ('多贴 ' + (gs.komi_extra).toFixed(1) + ' 目') : '分先');
-        infoEl.textContent = '💗 好感度 ' + gs.aff + '　·　' + deal +
+        infoEl.textContent = '[ic:favorite] 好感度 ' + gs.aff + '　·　' + deal +
           '　·　棋风：' + String(gs.style_label || '均衡').split(' —— ')[0] +
           '　·　' + (gs.mood || '');
       } else {

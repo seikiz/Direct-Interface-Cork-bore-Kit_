@@ -76,12 +76,12 @@ class ChatViewModel : ViewModel() {
      *  知道在等；开局本来就是空的，空白就等于「坏了」。所以开局要单独给一个加载态。 */
     var openingLoading = mutableStateOf(false)
     var showSettings = mutableStateOf(false)
-    /** ⏳ 时间流速独立面板（不再塞在设置弹窗里 —— 见 Dialogs.kt 的 TimeScalePanel） */
+    /**  时间流速独立面板（不再塞在设置弹窗里 —— 见 Dialogs.kt 的 TimeScalePanel） */
     var showTimeDial = mutableStateOf(false)
     /** 生活 / 空间 / 世界卡库设置面板（见 LifeSpaceSettings.kt） */
     var showLifeSpace = mutableStateOf(false)
     var showApiSetup = mutableStateOf(false)
-    /** 📖 API 教程面板（2026-11）：与网页端 web/screens/api_guide.html 同一份内容 */
+    /**  API 教程面板（2026-11）：与网页端 web/screens/api_guide.html 同一份内容 */
     var showApiGuide = mutableStateOf(false)
     var showTrpg = mutableStateOf(false)
     var showCardFace = mutableStateOf(false)
@@ -105,6 +105,9 @@ class ChatViewModel : ViewModel() {
     var wsServerInput = mutableStateOf("")
     var wsKeyInput = mutableStateOf("")
     var wsStatus = mutableStateOf("")
+    // 状态行的图标名（Material Symbols）：文案只留纯文本，图标由产生状态的那一处点名，
+    // 渲染点（WorkshopScreen 的 DickTag）直接接过去 —— 界面文案里不再出现 emoji 字符。
+    var wsStatusIcon = mutableStateOf<String?>(null)
     val wsOnlineList = mutableStateListOf<J.Obj>()
     var wsOnlineIdx = mutableStateOf(-1)
     var wsSearchInput = mutableStateOf("")

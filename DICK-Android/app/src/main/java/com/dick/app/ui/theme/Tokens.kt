@@ -1,4 +1,4 @@
-// ⚠ 生成物：由 tools/gen_tokens.py <seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌从 design/tokens.json 生成，别手改。
+// 生成物：由 tools/gen_tokens.py 从 <seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌design/tokens.json 生成，别手改。
 //   改配色：改 design/tokens.json，再跑 python tools/gen_tokens.py。
 //   验收：python tools/audit_contrast.py。
 

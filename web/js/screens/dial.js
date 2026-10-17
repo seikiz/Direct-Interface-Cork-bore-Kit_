@@ -1,16 +1,16 @@
-/* web/js/screens/dial.js —— ⏳ 时间流速表盘屏（阶段 2：从 index.html 的顶层代码整块搬出，零行为变化）
+/* web/js/screens/dial.js —— 时间流速表盘屏（阶段 2：从 index.html 的顶层代码整块搬出，零行为变化）
  *
  * 归属
- *   结构：web/screens/dial.html（index.html 里原位只剩挂载点 <!--@screen:dial-->）
- *   样式：没有专属 css 块 —— 表盘是 dialRender() 现画的 SVG，颜色全走 CSS 变量。
+ * 结构：web/screens/dial.html（index.html 里原位只剩挂载点 <!--@screen:dial-->）
+ * 样式：没有专属 css 块 —— 表盘是 dialRender() 现画的 SVG，颜色全走 CSS 变量。
  * 契约：router 注入片段后调 mount()；mount() 只做一件事：绑「保存这个流速」按钮
- *       （表盘本身是打开时 dialRender() 现生成的，静态 DOM 里只有一个空 #dialWrap）。
+ * （表盘本身是打开时 dialRender() 现生成的，静态 DOM 里只有一个空 #dialWrap）。
  * 本屏依赖的外部符号（阶段 3/4/5 的收尾清单）
- *   · pywebview.api.get_time_scale() / set_time_scale(x)：后端在 time_scale.py，
- *     口径（对数刻度、一轮 30 秒）必须和 Python 侧一致，见 tests/test_web_dom.py ⑤。
- *   · treeStatus()：保存成功后往**树状回溯面板**里打一行提示 —— 又一处跨屏调用，
- *     应该是 DICK.bus.emit('toast', …) 由外壳统一点；留在阶段 3 收。
- *   · alert()：保存失败还是原生弹窗（原有行为，本轮不改交互）。
+ * · pywebview.api.get_time_scale() / set_time_scale(x)：后端在 time_scale.py，
+ * 口径（对数刻度、一轮 30 秒）必须和 Python 侧一致，见 tests/test_web_dom.py ⑤。
+ * · treeStatus()：保存成功后往**树状回溯面板**里打一行提示 —— 又一处跨屏调用，
+ * 应该是 DICK.bus.emit('toast', …) 由外壳统一点；留在阶段 3 收。
+ * · alert()：保存失败还是原生弹窗（原有行为，本轮不改交互）。
  */
 window.DialScreen = (function (global) {
   'use strict';
@@ -159,7 +159,7 @@ window.DialScreen = (function (global) {
         : '<span style="color:var(--sub)">' + perRoundText(s) + '（不在预设档上，也可用）</span>';
     }
     el.textContent = (s >= 3600)
-      ? '⚠ 高倍率下时间过得极快：现实几分钟就等于她那边好几天。适合"跳过一段时间"的玩法，'
+      ? '[ic:warning] 高倍率下时间过得极快：现实几分钟就等于她那边好几天。适合"跳过一段时间"的玩法，'
         + '不适合慢慢聊。'
       : '低倍率更像实时聊天：现实里的间隔基本等于她那边的间隔。';
   }
@@ -201,7 +201,7 @@ window.DialScreen = (function (global) {
       pywebview.api.set_time_scale(TIME_DIAL.draft).then(function (r) {
         if (!r || !r.ok) { alert('保存失败：' + ((r && r.err) || '未知')); return; }
         TIME_DIAL.cur = r.scale;
-        treeStatus('⏳ 时间流速已设为 ' + r.describe);
+        treeStatus('[ic:hourglass_empty] 时间流速已设为 ' + r.describe);
         document.getElementById('timeDialModal').classList.remove('open');
       });
     };
@@ -220,7 +220,7 @@ window.DialScreen = (function (global) {
 })(window);
 
 /* ===== 兼容入口（阶段 3/4/5 清理）=====
- * timeDialOpen 由聊天头部那个「⏳ 流速」小按钮（外壳侧栏生成的）直接调；
+ * timeDialOpen 由聊天头部那个「 流速」小按钮（外壳侧栏生成的）直接调；
  * dialRender 是原来就有的全局名（tests/test_web_dom.py ③④ 也认它）。 */
 function timeDialOpen() { return window.DialScreen.open(); }
 function dialRender() { return window.DialScreen.render(); }

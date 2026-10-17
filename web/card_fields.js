@@ -1,4 +1,4 @@
-// ⚠ 生成物：由 tools/gen_card_fields.py <seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌从 design/card_fields.json 生成，别手改。
+// 生成物：由 tools/gen_card_fields.py 从 <seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌design/card_fields.json 生成，别手改。
 //   改分区/字段/折叠阈值：改 design/card_fields.json，再跑一次生成器。
 
 // 分区/字段/阈值：与安卓 CardFields.kt 同一份（tools/gen_card_fields.py --check 盯着）

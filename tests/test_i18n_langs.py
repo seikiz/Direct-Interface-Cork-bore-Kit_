@@ -270,7 +270,7 @@ def main():
         bare.set_lang("ja")
         check(u"缺 json 时 t() 回退调用点中文", bare.t("btn_send", u"发送") == u"发送",
               bare.t("btn_send", u"发送"))
-        check(u"缺 json 时 welcome() 不炸", bare.welcome("X") == u"👋 欢迎使用 X！",
+        check(u"缺 json 时 welcome() 不炸", bare.welcome("X") == u"欢迎使用 X！",
               bare.welcome("X"))
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
@@ -356,6 +356,43 @@ def main():
     id_sets = len(re.findall(r"getElementById\('[^']+'\)\s*\.textContent", setT_body))
     check(u"setT() 里不再逐 id 改文案（现在 %d 处，阶段4 之前 68 处）" % id_sets,
           i_set >= 0 and id_sets <= 1, u"%d 处" % id_sets)
+
+    # ---------------- ⑩ 文案表里一个 emoji 字符都没有 ----------------
+    # 2026-12 用户要求：界面文案里**一个 emoji 字符都不许有**，图标走内置 Material Symbols。
+    # 文案表是三端唯一真相，所以这里是总闸：表里带了 emoji，web/安卓/i18n.py 三端一起回潮。
+    # 图标进界面靠两处（都不进文案表）：
+    #   · 网页：`data-i18n-prefix="[ic:名字] "` + index.html 的 iconifyText；
+    #   · 安卓：调用点 `IconText(文案, icon = "名字")`。
+    print(u"\n-- ⑩ 文案表（三语 + _legacy）里 emoji 出现次数 = 0 --")
+    EMOJI_RE = re.compile(u"[\U0001F000-\U0001FAFF\u2600-\u27BF\u2B00-\u2BFF"
+                          u"\u2300-\u23FF\u2190-\u21FF\U0001F1E6-\U0001F1FF]")
+    # 排版符号交给字体直接画（和 Ui.kt 的 TYPO_GLYPHS、web 的 _ICON_SKIP 同一口径）
+    TYPO_RE = set(u"→←↑↓↔↻◀▶▸▾★☆·")
+
+    def emojis(s):
+        return [c for c in EMOJI_RE.findall(s or u"") if c not in TYPO_RE]
+
+    bad = []
+    for section in ("keys", "_legacy"):
+        for k, row in (doc.get(section) or {}).items():
+            if not isinstance(row, dict):
+                continue
+            for lg in G.LANGS:
+                hit = emojis(row.get(lg))
+                if hit:
+                    bad.append(u"%s.%s@%s=%s" % (section, k, lg, u"".join(hit)))
+    check(u"文案表里 emoji 出现次数 = 0（%d 处残留）" % len(bad), not bad,
+          u"%s" % u"、".join(bad[:8]))
+    # 判定器自检：拿已知样本喂进去，该红必须红（防止把判定改成"什么都能过"）
+    for sample, want in ((u"🔑 Key", True), (u"📂 存档列表", True), (u"✅ 已连接", True),
+                         (u"强调色：", False), (u"→ 下一步", False), (u"A · B", False)):
+        got = bool(emojis(sample))
+        check(u"判定器自检：%r → %s" % (sample, u"判红" if want else u"放行"), got == want)
+    # 两个生成物也跟着查一遍（它们就是发到 web / 安卓的那些字符串）
+    for label, path in ((u"web/i18n.js", G.JS_OUT), (u"I18nStrings.kt", G.KT_OUT)):
+        hit = [c for c in EMOJI_RE.findall(read(path)) if c not in TYPO_RE]
+        check(u"生成物 %s 里 emoji = 0（实际 %d）" % (label, len(hit)), not hit,
+              u"%s" % u"".join(hit[:10]))
 
     print(u"\n" + "=" * 60)
     for n in NOTE:

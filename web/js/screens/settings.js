@@ -1,51 +1,51 @@
-/* web/js/screens/settings.js —— ⚙️ 设置屏（阶段 4：DOM 全搬出来，JS 先搬"自成一体"的那几段）
+/* web/js/screens/settings.js —— 设置屏（阶段 4：DOM 全搬出来，JS 先搬"自成一体"的那几段）
  *
  * 阶段 4 对设置屏做了两件事：
- *   ① 文案从"setT() 里逐个 getElementById 改名"改成元素上的 `data-i18n` 标注
- *      （见 index.html 的 applyI18n + web/UI_ARCHITECTURE.md）。所以本屏 label 一个都不用 JS 管。
- *   ② DOM 整块搬到 web/screens/settings.html；JS 里**自成一体**的那几段搬到这里：
- *      预算 / 自动接话 / 字体 / 插件管理（原 index.html 的"前版功能"段）。
+ * ① 文案从"setT() 里逐个 getElementById 改名"改成元素上的 `data-i18n` 标注
+ * （见 index.html 的 applyI18n + web/UI_ARCHITECTURE.md）。所以本屏 label 一个都不用 JS 管。
+ * ② DOM 整块搬到 web/screens/settings.html；JS 里**自成一体**的那几段搬到这里：
+ * 预算 / 自动接话 / 字体 / 插件管理（原 index.html 的"前版功能"段）。
  *
  * 为什么只搬这几段（诚实说明）
- *   设置屏的 JS 跟外壳缠得很深，硬拆会连带重写外壳：
- *     · loadStateFill()（94 行）一边填设置控件、一边刷聊天状态 —— 它是外壳的状态泵；
- *     · fillProvider / renderProviderSel / renderModelSel / closeOverlays 是"下拉浮层"组件，
- *       预设菜单也在用（同 .dd-overlay 结构），属于组件层不属于设置屏；
- *     · applyTheme / applyChatWallpaper 是观感层，聊天屏也在调。
- *   所以本轮搬的是"只服务设置屏、且没有外部调用者"的部分，其余留在 index.html，
- *   靠下面这些兼容入口互通 —— 这也正是阶段 5 之后要继续收的活。
+ * 设置屏的 JS 跟外壳缠得很深，硬拆会连带重写外壳：
+ * · loadStateFill()（94 行）一边填设置控件、一边刷聊天状态 —— 它是外壳的状态泵；
+ * · fillProvider / renderProviderSel / renderModelSel / closeOverlays 是"下拉浮层"组件，
+ * 预设菜单也在用（同 .dd-overlay 结构），属于组件层不属于设置屏；
+ * · applyTheme / applyChatWallpaper 是观感层，聊天屏也在调。
+ * 所以本轮搬的是"只服务设置屏、且没有外部调用者"的部分，其余留在 index.html，
+ * 靠下面这些兼容入口互通 —— 这也正是阶段 5 之后要继续收的活。
  *
  * 归属
- *   结构：web/screens/settings.html（index.html 里原位只剩挂载点 <!--@screen:settings-->）
- *   样式：没有专属 css 块 —— 设置屏用的是组件层的 .modal/.modal-box/.field/.prow/.chipgrid，
- *         规则都在 styles/components.css 与 styles/panels.css 里，按"一屏不要自造样式"的规矩
- *         本轮不新建 settings.css。
+ * 结构：web/screens/settings.html（index.html 里原位只剩挂载点 <!--@screen:settings-->）
+ * 样式：没有专属 css 块 —— 设置屏用的是组件层的 .modal/.modal-box/.field/.prow/.chipgrid，
+ * 规则都在 styles/components.css 与 styles/panels.css 里，按"一屏不要自造样式"的规矩
+ * 本轮不新建 settings.css。
  * 本屏依赖的外部符号
- *   · pywebview.api.set_budget / set_auto_turn / set_font / set_dev_mode / set_plugin / set_plugin_setting
- *   · setFinEnabled()      财报模式开关 → 快捷面板的财报折叠区（快捷面板那屏的）
- *   · #nrAdv              开发者模式开关要顺带改「新建角色」里那块高级区（角色屏的 DOM，跨屏摸了一把）
- *   · currentBudget / currentFont / BUDGETS / FONT_SIZES / FONT_LABELS
- *                         仍是 index.html 的顶层 var（loadStateFill 会写 currentBudget），
- *                         本轮不动它们，只把它们的使用者搬进来。
+ * · pywebview.api.set_budget / set_auto_turn / set_font / set_dev_mode / set_plugin / set_plugin_setting
+ * · setFinEnabled() 财报模式开关 → 快捷面板的财报折叠区（快捷面板那屏的）
+ * · #nrAdv 开发者模式开关要顺带改「新建角色」里那块高级区（角色屏的 DOM，跨屏摸了一把）
+ * · currentBudget / currentFont / BUDGETS / FONT_SIZES / FONT_LABELS
+ * 仍是 index.html 的顶层 var（loadStateFill 会写 currentBudget），
+ * 本轮不动它们，只把它们的使用者搬进来。
  */
 window.SettingsScreen = (function (global) {
   'use strict';
 
   var mounted = false;
 
-  // ================= ⚙️ 预算 / <seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌字体 / 插件管理 =================
+  // ================= 预算 / <seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌字体 / 插件管理 =================
   function budgetLabel(t) {
     return t === 0 ? T.budgetUnlimited : Math.round(t / 1024) + 'K';
   }
 
   function renderBudget() {
-    document.getElementById('stBudgetBtn').textContent = T.stBudget.replace('🧮 ', '🧮 ') + '：' + budgetLabel(currentBudget);
+    document.getElementById('stBudgetBtn').textContent = T.stBudget.replace('[ic:calculate] ', '[ic:calculate] ') + '：' + budgetLabel(currentBudget);
   }
 
   function applyFont(idx) {
     currentFont = idx;
     document.body.style.fontSize = FONT_SIZES[idx];
-    document.getElementById('stFontBtn').textContent = T.stFont.replace('🔤 ', '🔤 ') + '：' + FONT_LABELS[idx];
+    document.getElementById('stFontBtn').textContent = T.stFont.replace('[ic:text_fields] ', '[ic:text_fields] ') + '：' + FONT_LABELS[idx];
   }
 
   function renderPlugins(plugins) {
@@ -182,9 +182,9 @@ window.SettingsScreen = (function (global) {
 
 /* ===== 兼容入口（阶段 4/5 清理）=====
  * 搬家前这四个都是 index.html 的顶层全局函数，外壳的 loadStateFill() 在状态刷新时直接叫它们：
- *   renderBudget()         刷新"预算：不限/32K"那个按钮
- *   applyFont(idx)         应用字号（顺带改 body 的 font-size）
- *   renderPlugins(list)    插件管理列表（含"财报助手"开关联动快捷面板）
+ * renderBudget() 刷新"预算：不限/32K"那个按钮
+ * applyFont(idx) 应用字号（顺带改 body 的 font-size）
+ * renderPlugins(list) 插件管理列表（含"财报助手"开关联动快捷面板）
  * 同名全局继续存在，内部只转调模块 —— 实现不再有第二份。 */
 function renderBudget() { return window.SettingsScreen.renderBudget(); }
 function applyFont(idx) { return window.SettingsScreen.applyFont(idx); }

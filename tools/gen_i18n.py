@@ -60,9 +60,9 @@ PY_SKIP_DIRS = SKIP_DIRS | {"tests", "tools"}
 # icons.js / icon_scope.js 是图标表与图标替换器。扫它们只会引入噪声。
 WEB_JS_SKIP = {"i18n.js", "icons.js", "icon_scope.js"}
 
-HEADER_JS = ("// ⚠ 生成物：由 tools/gen_i18n.py 从 lang/strings.json 生成，别手改。\n"
+HEADER_JS = ("// 生成物：由 tools/gen_i18n.py 从 lang/strings.json 生成，别手改。\n"
              "//   改文案改 json；改完跑 python tools/gen_i18n.py\n")
-HEADER_KT = ("// ⚠ 生成物：由 tools/gen_i18n.py 从 lang/strings.json 生成，别手改。\n"
+HEADER_KT = ("// 生成物：由 tools/gen_i18n.py 从 lang/strings.json 生成，别手改。\n"
              "//   改文案改 json；改完跑 python tools/gen_i18n.py\n")
 
 ZW = re.compile(u"[\u200b-\u200f\u2060\ufeff\u00ad]+")

@@ -5,19 +5,19 @@
  * 以前一屏要影响另一屏，只有两条路：拿对方的 DOM id 去 getElementById，或者改一个谁都能写的
  * 顶层 var。两种都没有"谁改的、什么时候改的"记录 —— 改坏了只能靠肉眼找。
  * 这里把这两条路收成一条：
- *   · DICK.state  只存**有名字的状态域**（键名登记在下面 SCHEMA 里，不许临时起名）；
- *                 set() 之后订阅者才知道值变了，屏自己决定要不要重画。
- *   · DICK.bus    只传"发生了一件事"（不存值），用于一次性的动作请求（比如"编辑这条消息"）。
+ * · DICK.state 只存**有名字的状态域**（键名登记在下面 SCHEMA 里，不许临时起名）；
+ * set() 之后订阅者才知道值变了，屏自己决定要不要重画。
+ * · DICK.bus 只传"发生了一件事"（不存值），用于一次性的动作请求（比如"编辑这条消息"）。
  * 规矩：屏之间**不许**互相 getElementById，也不许互相调内部函数；要嘛 set 状态要嘛 emit 事件。
  *
  * 用法
  * ----
- *   DICK.state.set('editMsg.target', { seq: 3, kind: 'ai' });   // 写（值没变就不惊动任何人）
- *   var t = DICK.state.get('editMsg.target', null);             // 读（可以带默认值）
- *   var off = DICK.state.on('editMsg.target', fn);              // 订阅，返回退订函数
- *   DICK.state.bindGlobal('wsCurLocal', 'ws.curLocal', null);   // 阶段3：老名字 → 状态域（兼容入口）
- *   DICK.bus.emit('msg:edit', { seq: 3, kind: 'ai', text: '…' });   // 一次性动作
- *   DICK.bus.on('msg:edit', fn);
+ * DICK.state.set('editMsg.target', { seq: 3, kind: 'ai' }); // 写（值没变就不惊动任何人）
+ * var t = DICK.state.get('editMsg.target', null); // 读（可以带默认值）
+ * var off = DICK.state.on('editMsg.target', fn); // 订阅，返回退订函数
+ * DICK.state.bindGlobal('wsCurLocal', 'ws.curLocal', null); // 阶段3：老名字 → 状态域（兼容入口）
+ * DICK.bus.emit('msg:edit', { seq: 3, kind: 'ai', text: '…' }); // 一次性动作
+ * DICK.bus.on('msg:edit', fn);
  *
  * 设计上的克制
  * ------------
@@ -34,25 +34,25 @@
   }
 
   /* 已登记的状态域（新加一条要写清"谁写谁读"，否则它就是下一个裸全局）
-   *   editMsg.target  {seq, kind} | null   em 屏写/读（原来那个顶层 var editTarget）
-   *   router.ready    true                  router 注入完片段后写（屏可以据此判断"能挂了吗"）
-   *   router.open     'go' | …              router 记最后挂上的是哪一屏（排查用，不参与渲染）
-   *
-   * 阶段 3 收口的四个面板屏（键名 = 屏前缀.字段；都还是"本屏独占"的编辑态，
-   * 跨屏只经 bus 通知，所以这里的域暂时只有各自的写在用）：
-   *   ws.curLocal       {rtype, filename} | null   ws 写/读：「本地」页选中的那个文件
-   *   ws.curOnline      作品对象 | null            ws 写/读：在线列表里选中的那个作品
-   *   ws.onlineCache    [作品]                     ws 写/读：上次拉到的在线列表（渲染+选中都靠它）
-   *   wm.entries        [条目]                     wm 写/读：编辑中的世界书条目（未落盘）
-   *   wm.params         {key: 值}                  wm 写/读：编辑中的世界参数（未落盘）
-   *   wm.editingWorld   '世界名' | null            wm 写/读：正在编辑哪个世界（null = 新建）
-   *   save.current      '角色名' | null            save 写/读：多存档面板正在看哪个角色的存档
-   *
-   * 阶段 5 抽出的两个数据层（注册在 web/js/store/codex.js 与 store/gal.js，
-   * 键名 codex.* / gal.*，语义见那两个文件头部 —— 这里只保证"有个明确的域"）：
-   *   codex.cur / script / player / volume / typeSpeed / exeTimer / gScript / gSel
-   *   gal.script / bodies / drag / keyOnly / dragNode / dragged / pan / scale / u / r /
-   *   connecting / connTarget / raf / allOpen / assets */
+ * editMsg.target {seq, kind} | null em 屏写/读（原来那个顶层 var editTarget）
+ * router.ready true router 注入完片段后写（屏可以据此判断"能挂了吗"）
+ * router.open 'go' | … router 记最后挂上的是哪一屏（排查用，不参与渲染）
+ *
+ * 阶段 3 收口的四个面板屏（键名 = 屏前缀.字段；都还是"本屏独占"的编辑态，
+ * 跨屏只经 bus 通知，所以这里的域暂时只有各自的写在用）：
+ * ws.curLocal {rtype, filename} | null ws 写/读：「本地」页选中的那个文件
+ * ws.curOnline 作品对象 | null ws 写/读：在线列表里选中的那个作品
+ * ws.onlineCache [作品] ws 写/读：上次拉到的在线列表（渲染+选中都靠它）
+ * wm.entries [条目] wm 写/读：编辑中的世界书条目（未落盘）
+ * wm.params {key: 值} wm 写/读：编辑中的世界参数（未落盘）
+ * wm.editingWorld '世界名' | null wm 写/读：正在编辑哪个世界（null = 新建）
+ * save.current '角色名' | null save 写/读：多存档面板正在看哪个角色的存档
+ *
+ * 阶段 5 抽出的两个数据层（注册在 web/js/store/codex.js 与 store/gal.js，
+ * 键名 codex.* / gal.*，语义见那两个文件头部 —— 这里只保证"有个明确的域"）：
+ * codex.cur / script / player / volume / typeSpeed / exeTimer / gScript / gSel
+ * gal.script / bodies / drag / keyOnly / dragNode / dragged / pan / scale / u / r /
+ * connecting / connTarget / raf / allOpen / assets */
   var SCHEMA = {
     'editMsg.target': null,
     'router.ready': false,
@@ -159,21 +159,21 @@
   }
 
   /* ---- 阶段 3 兼容入口：把老的顶层变量名接到状态域上 ----
-   *
-   * 为什么要这么绕：搬家前那些名字是 `var wsCurLocal = null;` 这样的顶层 var，全仓库
-   * 有几十处 `wsCurLocal = …` / `if (!wsCurLocal)` 的裸名字读写。搬一屏就把这些调用点
-   * 全改一遍，风险和收益不成比例 —— 所以让**名字继续能用**，但值只存在 state 里：
-   * 唯一的真身是 store[key]，window 上的同名属性只是通往它的一个访问器。
-   *
-   * 两个坑（都是真踩过的）：
-   *   ① 先 defineProperty、后 `var` 声明 → TypeError：顶层 `var` 会在 window 上占一个
-   *      **不可配置**的属性，访问器定义不上去。所以调用方必须先把 `var x = …` 删掉
-   *      （本阶段就是删掉换成这一句）。
-   *   ② 默认值必须是**同一份引用**：`[]` / `{}` 要在这里落进 store 一次，不能每次
-   *      get 时现造一个新的 —— 否则 `wmEntries.push(...)` 推进一个临时数组，下一秒就没了。
-   *
-   * 阶段 4/5 把旧引用清完之后，这些 alias 连同这个函数一起删。
-   */
+ *
+ * 为什么要这么绕：搬家前那些名字是 `var wsCurLocal = null;` 这样的顶层 var，全仓库
+ * 有几十处 `wsCurLocal = …` / `if (!wsCurLocal)` 的裸名字读写。搬一屏就把这些调用点
+ * 全改一遍，风险和收益不成比例 —— 所以让**名字继续能用**，但值只存在 state 里：
+ * 唯一的真身是 store[key]，window 上的同名属性只是通往它的一个访问器。
+ *
+ * 两个坑（都是真踩过的）：
+ * ① 先 defineProperty、后 `var` 声明 → TypeError：顶层 `var` 会在 window 上占一个
+ * **不可配置**的属性，访问器定义不上去。所以调用方必须先把 `var x = …` 删掉
+ * （本阶段就是删掉换成这一句）。
+ * ② 默认值必须是**同一份引用**：`[]` / `{}` 要在这里落进 store 一次，不能每次
+ * get 时现造一个新的 —— 否则 `wmEntries.push(...)` 推进一个临时数组，下一秒就没了。
+ *
+ * 阶段 4/5 把旧引用清完之后，这些 alias 连同这个函数一起删。
+ */
   function bindGlobal(name, key, dflt) {
     if (!Object.prototype.hasOwnProperty.call(store, key)) {
       store[key] = dflt;

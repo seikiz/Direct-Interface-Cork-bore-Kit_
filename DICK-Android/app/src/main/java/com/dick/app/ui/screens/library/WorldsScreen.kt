@@ -57,8 +57,9 @@ fun WorldsScreen(vm: ChatViewModel, deps: DialogDeps) {
                             Text(n, Modifier.padding(top = 14.dp))
                             if (n == currentWorld) Text("★", Modifier.padding(top = 14.dp), color = accent, fontSize = 12.sp)
                             Spacer(Modifier.weight(1f))
-                            TextButton(onClick = { currentWorld = n }, modifier = Modifier.heightIn(min = 44.dp)) { IconText("🚀", fontSize = 14.sp) }
-                            TextButton(onClick = { showWorldEdit = n }, modifier = Modifier.heightIn(min = 44.dp)) { IconText(I18n.t("btn_edit", "✏️"), fontSize = 14.sp) }
+                            TextButton(onClick = { currentWorld = n }, modifier = Modifier.heightIn(min = 44.dp)) { IconText("", fontSize = 14.sp, icon = "rocket_launch") }
+                            // 图标按钮：文案本来就只有图标，图标名走 icon（文案表里不再有 btn_edit 这个 emoji 键）
+                            TextButton(onClick = { showWorldEdit = n }, modifier = Modifier.heightIn(min = 44.dp)) { IconText("", fontSize = 14.sp, icon = "edit") }
                             TextButton(onClick = { pendingDelete = n to "world" }, modifier = Modifier.heightIn(min = 44.dp)) { Text(I18n.t("btn_delete", "删除"), color = theme.danger, fontSize = 12.sp) }
                         }
                     }

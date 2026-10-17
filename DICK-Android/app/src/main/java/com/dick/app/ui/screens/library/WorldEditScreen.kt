@@ -100,7 +100,8 @@ fun WorldEditScreen(vm: ChatViewModel, deps: DialogDeps) {
                                 Text(I18n.t("entry_constant", "常驻"), Modifier.padding(top = 14.dp), fontSize = 12.sp)
                                 Spacer(Modifier.weight(1f))
                                 TextButton(onClick = { entriesState.removeAt(idx) }) {
-                                    IconText(I18n.t("entry_delete", "✕"), color = theme.danger, fontSize = 12.sp, iconSize = 13.dp)
+                                    // 图标按钮：图标名走 icon（文案表里不再有 entry_delete 这个 emoji 键）
+                                    IconText("", color = theme.danger, fontSize = 12.sp, iconSize = 13.dp, icon = "close")
                                 }
                             }
                             OutlinedTextField(

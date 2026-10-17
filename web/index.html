@@ -5,11 +5,11 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Direct-Interface Cork-bore Kit</title>
 <!-- 配色令牌（唯一真相 design/tokens.json 的生成物，由 tools/gen_tokens.py 生成，别手改）：
-     暗色默认 + @media (prefers-color-scheme:light) 跟随系统 + body.dark/.light/.oled 显式覆写。 -->
+ 暗色默认 + @media (prefers-color-scheme:light) 跟随系统 + body.dark/.light/.oled 显式覆写。 -->
 <link rel="stylesheet" href="theme.css">
 <!-- 样式已按层叠顺序拆到 web/styles/（2026-11 阶段 1）。顺序 = 原页面 style 标签里的物理顺序，
-     别按语义重排：`.modal-box .btn2` 与 `.ws-card .btn2` 特异性相同，靠顺序覆盖。
-     目录职责与「新增一屏要动的文件」见 web/UI_ARCHITECTURE.md。 -->
+ 别按语义重排：`.modal-box .btn2` 与 `.ws-card .btn2` 特异性相同，靠顺序覆盖。
+ 目录职责与「新增一屏要动的文件」见 web/UI_ARCHITECTURE.md。 -->
 <link rel="stylesheet" href="styles/tokens.css">
 <link rel="stylesheet" href="styles/screens.css">
 <link rel="stylesheet" href="styles/screens/save.css">
@@ -27,40 +27,40 @@
 <div id="app">
   <aside id="sidebar">
     <div class="side-head">
-      <button id="sideToggle" title="collapse">☰</button>
+      <button id="sideToggle" title="collapse">[ic:menu]</button>
       <span class="title">Direct-Interface Cork-bore Kit</span>
     </div>
     <div class="cards-head" id="cardsHead">
-      <span data-i18n="sidebar" data-i18n-prefix="🎭 " id="cardsTitle">🎭 角色与世界</span><span class="arrow">▸</span>
+      <span data-i18n="sidebar" data-i18n-prefix="[ic:theater_comedy] " id="cardsTitle">[ic:theater_comedy] 角色与世界</span><span class="arrow">▸</span>
     </div>
     <div class="cards-body" id="cardsBody">
-      <div data-i18n="roles" class="section-label" id="lblRoles">📂 存档列表</div>
+      <div data-i18n="roles" class="section-label" id="lblRoles" data-i18n-prefix="[ic:folder] ">[ic:folder] 存档列表</div>
       <div id="roleList"></div>
-      <button data-i18n="newRole" class="btn" id="btnNewRole">➕ 新建角色</button>
-      <button data-i18n="importCard" class="btn" id="btnImportCard">📥 导入角色卡</button>
-      <button data-i18n="btnWorkshop" class="btn" id="btnWorkshop">🧰 创意工坊</button>
-      <button class="btn" id="btnPlugins">🔌 插件</button>
-      <div data-i18n="worlds" class="section-label" id="lblWorlds">🌍 世界卡（多选 = 平行世界）</div>
+      <button data-i18n="newRole" class="btn" id="btnNewRole" data-i18n-prefix="[ic:add] ">[ic:add] 新建角色</button>
+      <button data-i18n="importCard" class="btn" id="btnImportCard" data-i18n-prefix="[ic:inbox] ">[ic:inbox] 导入角色卡</button>
+      <button data-i18n="btnWorkshop" class="btn" id="btnWorkshop" data-i18n-prefix="[ic:home_repair_service] ">[ic:home_repair_service] 创意工坊</button>
+      <button class="btn" id="btnPlugins">[ic:extension] 插件</button>
+      <div data-i18n="worlds" class="section-label" id="lblWorlds" data-i18n-prefix="[ic:public] ">[ic:public] 世界卡（多选 = 平行世界）</div>
       <div id="worldList"></div>
-      <button data-i18n="newWorld" class="btn" id="btnNewWorld">➕ 新建世界</button>
+      <button data-i18n="newWorld" class="btn" id="btnNewWorld" data-i18n-prefix="[ic:add] ">[ic:add] 新建世界</button>
     </div>
-    <div data-i18n="persona" class="section-label" id="lblPersona">🧑 玩家角色</div>
-    <button data-i18n="editPersona" class="btn" id="btnPersona">⚙️ 编辑玩家角色</button>
-    <button class="btn" id="btnCodex">📕 GAL制作器</button>
+    <div data-i18n="persona" class="section-label" id="lblPersona" data-i18n-prefix="[ic:person] ">[ic:person] 玩家角色</div>
+    <button data-i18n="editPersona" class="btn" id="btnPersona" data-i18n-prefix="[ic:settings] ">[ic:settings] 编辑玩家角色</button>
+    <button class="btn" id="btnCodex">[ic:book] GAL制作器</button>
     <button class="btn" id="btnGo">[ic:go] 围棋</button>
-    <button class="btn" id="btnBackup">🔐 加密备份</button>
-    <button data-i18n="settings" class="btn" id="btnSettings">⚙️ 设置</button>
+    <button class="btn" id="btnBackup">[ic:vpn_key] 加密备份</button>
+    <button data-i18n="settings" class="btn" id="btnSettings" data-i18n-prefix="[ic:settings] ">[ic:settings] 设置</button>
   </aside>
   <div id="main">
     <div class="topbar">
-      <button id="sideOpen" title="menu">☰</button>
+      <button id="sideOpen" title="menu">[ic:menu]</button>
       <div style="position:relative">
         <button class="btn2 ghost" id="presetBtn" style="font-size:12px;padding:5px 10px">预设：— ▾</button>
         <div class="dd-overlay" id="presetMenu" style="display:none"></div>
       </div>
       <span style="flex:1"></span>
       <div id="branchWrap">
-        <button id="btnBranches" title="回溯">🌿</button>
+        <button id="btnBranches" title="回溯">[ic:account_tree]</button>
         <div id="branchPanel"></div>
       </div>
     </div>
@@ -70,40 +70,40 @@
     <div id="chat"></div>
     <div id="imgprev" style="display:none">
       <img id="imgprevImg"><span data-i18n="imgAttached" id="imgprevText"></span>
-      <button data-i18n="remove" class="btn" style="width:auto;margin:0" id="imgprevRemove">✕ 移除</button>
+      <button data-i18n="remove" class="btn" style="width:auto;margin:0" id="imgprevRemove" data-i18n-prefix="[ic:close] ">[ic:close] 移除</button>
     </div>
     <div id="quickpanel">
       <div class="row">
-        <button data-i18n="image" class="chip" id="qcImage">📷 图片</button>
-        <button class="chip" data-cmd="/搜索 ">🔍 搜索</button>
-        <button class="chip" data-cmd="/深搜 ">🔍 深搜</button>
-        <button class="chip" data-cmd="/r 2d6">🎲 骰子</button>
+        <button data-i18n="image" class="chip" id="qcImage" data-i18n-prefix="[ic:photo_camera] ">[ic:photo_camera] 图片</button>
+        <button class="chip" data-cmd="/搜索 ">[ic:search] 搜索</button>
+        <button class="chip" data-cmd="/深搜 ">[ic:search] 深搜</button>
+        <button class="chip" data-cmd="/r 2d6">[ic:casino] 骰子</button>
       </div>
       <div class="row">
-        <button class="chip" data-cmd="/memory recall 3">🧠 记忆</button>
-        <button class="chip" data-cmd="/cyoa">🎮 选项</button>
-        <button data-i18n="qcRead" class="chip" id="qcRead">📄 读文档</button>
-        <button data-i18n="qcClearDoc" class="chip" id="qcClearDoc">🧹 清文档</button>
+        <button class="chip" data-cmd="/memory recall 3">[ic:memory] 记忆</button>
+        <button class="chip" data-cmd="/cyoa">[ic:sports_esports] 选项</button>
+        <button data-i18n="qcRead" class="chip" id="qcRead" data-i18n-prefix="[ic:description] ">[ic:description] 读文档</button>
+        <button data-i18n="qcClearDoc" class="chip" id="qcClearDoc" data-i18n-prefix="[ic:delete_sweep] ">[ic:delete_sweep] 清文档</button>
       </div>
       <div class="row">
-        <button data-i18n="qcExport" class="chip" id="qcExport">💾 导出Word</button>
-      <button class="chip" id="qcNovel" title="把这段对话按你实际走过的剧情线导出成小说（未选的分支收成脚注）；格式 EPUB，手机/阅读器都能看">📖 导出小说</button>
-        <button data-i18n="qcTheme" class="chip" id="qcTheme">🎨 主题</button>
+        <button data-i18n="qcExport" class="chip" id="qcExport" data-i18n-prefix="[ic:save] ">[ic:save] 导出Word</button>
+      <button class="chip" id="qcNovel" title="把这段对话按你实际走过的剧情线导出成小说（未选的分支收成脚注）；格式 EPUB，手机/阅读器都能看">[ic:menu_book] 导出小说</button>
+        <button data-i18n="qcTheme" class="chip" id="qcTheme" data-i18n-prefix="[ic:palette] ">[ic:palette] 主题</button>
       </div>
       <!-- 财报：折叠区块，仅启用财报模式才显示（未启用隐藏，不铺满面板） -->
       <div id="finFold" class="fold" style="display:none">
-        <div class="fold-head" id="finFoldHead">📊 财报 <span class="fold-arrow" id="finFoldArrow">▸</span></div>
+        <div class="fold-head" id="finFoldHead">[ic:bar_chart] 财报 <span class="fold-arrow" id="finFoldArrow">▸</span></div>
         <div class="fold-body" id="finFoldBody" style="display:none">
           <div class="row">
-            <button class="chip" data-cmd="/股票 ">📊 个股</button>
-            <button class="chip" data-cmd="/全市场 ">🔍 全市场</button>
-            <button class="chip" data-cmd="/联动 ">🔗 联动</button>
-            <button class="chip" data-cmd="/财报 爬取">📈 爬政策</button>
+            <button class="chip" data-cmd="/股票 ">[ic:bar_chart] 个股</button>
+            <button class="chip" data-cmd="/全市场 ">[ic:search] 全市场</button>
+            <button class="chip" data-cmd="/联动 ">[ic:link] 联动</button>
+            <button class="chip" data-cmd="/财报 爬取">[ic:trending_up] 爬政策</button>
           </div>
           <div class="row">
-            <button class="chip" data-cmd="/财报 入库">📚 入库</button>
-            <button class="chip" data-cmd="/财报 检索 ">📚 检索</button>
-            <button class="chip" data-cmd="/爬取 ">🌐 爬网页</button>
+            <button class="chip" data-cmd="/财报 入库">[ic:menu_book] 入库</button>
+            <button class="chip" data-cmd="/财报 检索 ">[ic:menu_book] 检索</button>
+            <button class="chip" data-cmd="/爬取 ">[ic:language] 爬网页</button>
           </div>
         </div>
       </div>
@@ -112,23 +112,23 @@
     <!-- ROLL 卡 / GAL 选项：与手机版一致，快捷面板之后、输入框正上方 -->
     <div id="choices"></div>
     <div id="inputbar">
-      <button class="plus" id="plusBtn">➕</button>
+      <button class="plus" id="plusBtn">[ic:add]</button>
       <textarea data-i18n-placeholder="placeholder" id="input" placeholder="输入消息... (使用 @角色名 指定说话者)"></textarea>
-      <button id="cardFaceBtn" title="卡面" onclick="cardFaceShow()" style="background:none;border:none;color:var(--text);font-size:18px;cursor:pointer;padding:0 8px">🎴</button>
-      <button id="genImgBtn" title="生图" style="background:none;border:none;color:var(--text);font-size:18px;cursor:pointer;padding:0 8px">🎨</button>
+      <button id="cardFaceBtn" title="卡面" onclick="cardFaceShow()" style="background:none;border:none;color:var(--text);font-size:18px;cursor:pointer;padding:0 8px">[ic:style]</button>
+      <button id="genImgBtn" title="生图" style="background:none;border:none;color:var(--text);font-size:18px;cursor:pointer;padding:0 8px">[ic:palette]</button>
       <button data-i18n="send" id="send">发送</button>
       <input type="file" id="fileInput" accept="image/*" style="display:none">
 <!--@screen:gen-->  <!-- 这一屏的 DOM 在 web/screens/gen.html，由 web/js/router.js 同步注入；JS 在 web/js/screens/gen.js -->
 <!-- 离线推进模态：你不在的时候世界自己走了一小步（先看方案，再决定要不要应用） -->
 <div class="modal" id="offlineModal">
   <div class="modal-box" style="width:460px">
-    <h3>🕰 你不在的时候</h3>
+    <h3>[ic:history] 你不在的时候</h3>
     <div id="offlineSummary" style="font-size:13px;line-height:1.7;margin:6px 0 10px"></div>
     <div id="offlineDetail" style="font-size:11px;color:var(--sub);line-height:1.6"></div>
     <div class="row" style="margin-top:12px">
       <button class="btn2 ghost" id="offlineIgnoreBtn">忽略</button>
-      <button class="btn2 ghost" id="offlineUndoBtn" style="display:none">↺ 撤销结算</button>
-      <button class="btn2" id="offlineApplyBtn" style="width:auto;margin:0">✅ 让它发生</button>
+      <button class="btn2 ghost" id="offlineUndoBtn" style="display:none">[ic:settings_backup_restore] 撤销结算</button>
+      <button class="btn2" id="offlineApplyBtn" style="width:auto;margin:0">[ic:check_circle] 让它发生</button>
     </div>
   </div>
 </div>
@@ -142,17 +142,17 @@
 <!-- CODEX 专属 GALGAME 管理器 -->
 <div class="modal" id="codexModal">
   <div class="modal-box" style="width:720px">
-    <h3 id="codexTitle">📕 GAL制作器</h3>
+    <h3 id="codexTitle">[ic:book] GAL制作器</h3>
     <div style="font-size:11px;color:var(--sub);margin-bottom:8px">电脑端独有：选个文件夹自动归类立绘/背景/音乐/配音，改 codex.json 就能做出你的专属视觉小说</div>
     <div class="row" style="justify-content:flex-start">
-      <button class="btn2" id="codexNewBtn">➕ 新建</button>
-      <button class="btn2" id="codexSampleBtn">🎬 一键示例包</button>
-      <button class="btn2" id="codexDraftBtn">🤖 AI 起草</button>
-      <button class="btn2 ghost" id="codexPasteBtn">📝 粘贴剧本</button>
-      <button class="btn2 ghost" id="codexImportBtn">📁 导入文件夹</button>
-      <button class="btn2 ghost" id="codexImportZipBtn">📦 导入 zip</button>
-      <button class="btn2 ghost" id="codexImportCodexBtn">📥 导入 .codex</button>
-      <button class="btn2 ghost" id="codexAssocBtn">🔗 注册双击打开</button>
+      <button class="btn2" id="codexNewBtn">[ic:add] 新建</button>
+      <button class="btn2" id="codexSampleBtn">[ic:movie] 一键示例包</button>
+      <button class="btn2" id="codexDraftBtn">[ic:smart_toy] AI 起草</button>
+      <button class="btn2 ghost" id="codexPasteBtn">[ic:note] 粘贴剧本</button>
+      <button class="btn2 ghost" id="codexImportBtn">[ic:folder] 导入文件夹</button>
+      <button class="btn2 ghost" id="codexImportZipBtn">[ic:inventory] 导入 zip</button>
+      <button class="btn2 ghost" id="codexImportCodexBtn">[ic:inbox] 导入 .codex</button>
+      <button class="btn2 ghost" id="codexAssocBtn">[ic:link] 注册双击打开</button>
       <span style="flex:1"></span>
       <span id="codexStatus" style="font-size:12px;color:var(--sub)"></span>
     </div>
@@ -163,18 +163,18 @@
         <b id="codexDetailName" style="font-size:14px"></b>
         <span style="flex:1"></span>
         <button class="btn2" id="codexPlayBtn">[ic:play] 播放</button>
-        <button class="btn2" id="codexReleaseBtn">🚀 发布</button>
-        <button class="btn2" id="codexPackBtn">📦 打包 HTML</button>
-        <button class="btn2" id="codexExeBtn">🖥️ 打包 EXE</button>
-        <button class="btn2 ghost" id="codexPackSaveBtn">📄 另存为…</button>
-        <button class="btn2 ghost" id="codexEditBtn">🎬 编辑(线-点-分支)</button>
-        <button class="btn2 ghost" id="codexVoiceBtn">🎙️ 一键配音</button>
-        <button class="btn2 ghost" id="codexSpriteBtn">🎴 导入立绘</button>
-        <button class="btn2 ghost" id="codexAdvancedBtn">⚙️ 高级</button>
-        <button class="btn2 ghost" id="codexExportBtn">📤 导出 zip</button>
-        <button class="btn2 ghost" id="codexExportCodexBtn">📦 导出 .codex</button>
-        <button class="btn2 ghost" id="codexFilesBtn">🗂️ 资源</button>
-        <button class="btn2 ghost" id="codexDelBtn" style="color:var(--danger)">🗑️ 删除</button>
+        <button class="btn2" id="codexReleaseBtn">[ic:rocket_launch] 发布</button>
+        <button class="btn2" id="codexPackBtn">[ic:inventory] 打包 HTML</button>
+        <button class="btn2" id="codexExeBtn">[ic:desktop_windows] 打包 EXE</button>
+        <button class="btn2 ghost" id="codexPackSaveBtn">[ic:description] 另存为…</button>
+        <button class="btn2 ghost" id="codexEditBtn">[ic:movie] 编辑(线-点-分支)</button>
+        <button class="btn2 ghost" id="codexVoiceBtn">[ic:mic] 一键配音</button>
+        <button class="btn2 ghost" id="codexSpriteBtn">[ic:style] 导入立绘</button>
+        <button class="btn2 ghost" id="codexAdvancedBtn">[ic:settings] 高级</button>
+        <button class="btn2 ghost" id="codexExportBtn">[ic:upload] 导出 zip</button>
+        <button class="btn2 ghost" id="codexExportCodexBtn">[ic:inventory] 导出 .codex</button>
+        <button class="btn2 ghost" id="codexFilesBtn">[ic:folder_open] 资源</button>
+        <button class="btn2 ghost" id="codexDelBtn" style="color:var(--danger)">[ic:delete] 删除</button>
       </div>
       <div id="codexIntro" style="font-size:12px;color:var(--sub);margin:6px 0;white-space:pre-wrap"></div>
       <div id="codexPackInfo" style="display:none;font-size:12px;color:var(--sub);margin:6px 0;padding:8px;background:rgba(46,160,67,.1);border:1px solid rgba(46,160,67,.4);border-radius:6px"></div>
@@ -182,10 +182,10 @@
       <div id="codexEditor" style="display:none;margin-top:8px">
         <textarea id="codexJsonInput" rows="14" style="width:100%;font-family:monospace;font-size:12px;background:var(--bg,#111);color:var(--text,#ddd);border:1px solid var(--line);border-radius:6px;padding:8px"></textarea>
         <div class="row" style="margin-top:6px">
-          <button class="btn2 ghost" id="codexFmtBtn">🎨 格式化</button>
-          <button class="btn2 ghost" id="codexCheckBtn">🔍 校验</button>
-          <button class="btn2 ghost" id="codexGraphBtn">🎬 节点图</button>
-          <button class="btn2" id="codexSaveBtn">💾 保存</button>
+          <button class="btn2 ghost" id="codexFmtBtn">[ic:palette] 格式化</button>
+          <button class="btn2 ghost" id="codexCheckBtn">[ic:search] 校验</button>
+          <button class="btn2 ghost" id="codexGraphBtn">[ic:movie] 节点图</button>
+          <button class="btn2" id="codexSaveBtn">[ic:save] 保存</button>
           <span style="flex:1"></span>
           <span id="codexEditorStatus" style="font-size:12px;color:var(--sub)"></span>
         </div>
@@ -193,14 +193,14 @@
       <!-- 节点图编辑器（线-点-分支 剪辑，GAL 制作器主界面） -->
       <div id="codexGraphWrap" style="display:none;margin-top:8px">
         <div class="row" style="justify-content:flex-start;margin-bottom:6px">
-          <button class="btn2" id="cxGraphSaveBtn">💾 保存</button>
-          <button class="btn2" id="cxGraphAddBtn">➕ 加线(场景)</button>
-          <button class="btn2 ghost" id="cxGraphJsonBtn">📝 JSON 高级</button>
+          <button class="btn2" id="cxGraphSaveBtn">[ic:save] 保存</button>
+          <button class="btn2" id="cxGraphAddBtn">[ic:add] 加线(场景)</button>
+          <button class="btn2 ghost" id="cxGraphJsonBtn">[ic:note] JSON 高级</button>
           <span style="flex:1"></span>
           <span id="cxGraphStatus" style="font-size:12px;color:var(--sub)"></span>
         </div>
         <div class="row" style="justify-content:flex-start;margin-bottom:6px;font-size:11px;color:var(--sub)">
-          <span>🎬 线=过程 · 点=节拍 · 分支=岔口（🔀 选项 / 🔒 条件）。点「线」或任意「点」即可编辑该线步骤。</span>
+          <span>[ic:movie] 线=过程 · 点=节拍 · 分支=岔口（[ic:shuffle] 选项 / [ic:lock] 条件）。点「线」或任意「点」即可编辑该线步骤。</span>
         </div>
         <div id="cxGraphCanvas" style="width:100%;height:320px;overflow:auto;background:var(--bg,#0d0d12);border:1px solid var(--line);border-radius:8px"></div>
         <!-- 场景步骤编辑器 -->
@@ -217,33 +217,33 @@
 <!--@screen:go-->  <!-- 这一屏的 DOM 在 web/screens/go.html，由 web/js/router.js 同步注入；JS 在 web/js/screens/go.js -->
 <div id="galEditor" style="display:none;position:fixed;inset:0;z-index:9999;background:var(--bg,#0b0e14);flex-direction:column">
   <div class="gal-top">
-    <b id="galTitle" style="font-size:16px;color:var(--text,#eee)">📕 GAL制作器</b>
+    <b id="galTitle" style="font-size:16px;color:var(--text,#eee)">[ic:book] GAL制作器</b>
     <select id="galPkgSel" style="max-width:260px;background:var(--panel);border:1px solid var(--line);border-radius:8px;color:var(--text);padding:7px 10px;font-size:13px"></select>
-    <button class="btn2" id="galNewBtn">➕ 新建</button>
+    <button class="btn2" id="galNewBtn">[ic:add] 新建</button>
     <span id="galStats" style="font-size:12px;color:var(--sub,#8a93a3)"></span>
     <div class="gal-actions">
       <button class="btn2 ghost" id="galUndoBtn" title="撤销 (Ctrl+Z)">[ic:undo] 撤销</button>
       <button class="btn2 ghost" id="galRedoBtn" title="重做 (Ctrl+Shift+Z)">[ic:redo] 重做</button>
       <button class="btn2" id="galPlayBtn">[ic:play] 预览</button>
-      <button class="btn2 ghost" id="galImportBtn">📥 导入</button>
-      <button class="btn2 ghost" id="galExeBtn">🖥️ EXE</button>
-      <button class="btn2 ghost" id="galPlayerBtn" title="导出成原生播放器（真正的软件，不是网页；可再打包成 EXE / APK）">🎬 播放器</button>
-      <button class="btn2" id="galSaveBtn">💾 保存</button>
-      <button class="btn2 ghost" id="galCheckBtn" title="剧本体检：不可达场景 / 死行 / 走不到结局 / 素材缺失 / 预览与导出不一致">🔍 体检</button>
-      <button class="btn2" id="galRoleBtn">👥 角色</button>
-      <button class="btn2" id="galAddLineBtn">➕ 加线</button>
-      <button class="btn2 ghost" id="galKeyBtn">⭐ 仅看关键</button>
-      <button class="btn2 ghost" id="galJsonBtn">📝 JSON</button>
-      <button class="btn2 ghost" id="galCloseBtn">✕</button>
+      <button class="btn2 ghost" id="galImportBtn">[ic:inbox] 导入</button>
+      <button class="btn2 ghost" id="galExeBtn">[ic:desktop_windows] EXE</button>
+      <button class="btn2 ghost" id="galPlayerBtn" title="导出成原生播放器（真正的软件，不是网页；可再打包成 EXE / APK）">[ic:movie] 播放器</button>
+      <button class="btn2" id="galSaveBtn">[ic:save] 保存</button>
+      <button class="btn2 ghost" id="galCheckBtn" title="剧本体检：不可达场景 / 死行 / 走不到结局 / 素材缺失 / 预览与导出不一致">[ic:search] 体检</button>
+      <button class="btn2" id="galRoleBtn">[ic:group] 角色</button>
+      <button class="btn2" id="galAddLineBtn">[ic:add] 加线</button>
+      <button class="btn2 ghost" id="galKeyBtn">[ic:star] 仅看关键</button>
+      <button class="btn2 ghost" id="galJsonBtn">[ic:note] JSON</button>
+      <button class="btn2 ghost" id="galCloseBtn">[ic:close]</button>
     </div>
   </div>
-  <div style="padding:6px 16px;font-size:11px;color:var(--sub,#8a93a3);border-bottom:1px solid var(--line)">▸ <b style="color:var(--text-sub)">进行</b>=点击继续到下一节点(灰蓝实线) · 🔀 <b style="color:var(--warn)">选项</b>=玩家选择分支(橙线) · 🔒=带条件 · 点「节点」编它内部，拖节点移动</div>
+  <div style="padding:6px 16px;font-size:11px;color:var(--sub,#8a93a3);border-bottom:1px solid var(--line)">▸ <b style="color:var(--text-sub)">进行</b>=点击继续到下一节点(灰蓝实线) · [ic:shuffle] <b style="color:var(--warn)">选项</b>=玩家选择分支(橙线) · [ic:lock]=带条件 · 点「节点」编它内部，拖节点移动</div>
   <div id="galToast" style="display:none;position:fixed;right:20px;top:20px;z-index:10001;background:rgba(34,197,94,.18);border:1px solid rgba(34,197,94,.6);color:var(--ok);padding:8px 14px;border-radius:8px;font-size:13px;opacity:0;transition:opacity .3s"></div>
   <div id="galOptPop" style="display:none;position:fixed;z-index:10002;min-width:300px;background:var(--panel);border:1px solid color-mix(in srgb, #f59e0b 55%, var(--line));border-radius:10px;padding:10px 12px;box-shadow:0 10px 40px rgba(0,0,0,.6)"></div>
   <div id="galLines" style="flex:1;overflow:auto;padding:12px 16px;position:relative;background:radial-gradient(circle, var(--line) 1px, transparent 1px);background-size:22px 22px;background-position:0 0"></div>
   <div id="galScenePanel" style="display:none;border-top:1px solid var(--line);min-height:200px;max-height:56vh;overflow:auto;resize:vertical;background:var(--panel)"></div>
   <div id="galRolePanel" style="display:none;border-top:1px solid var(--line);max-height:320px;overflow:auto;background:var(--panel)"></div>
-  <!-- 🔍 剧本体检结果（见 galCheckRun）：结构问题 / 预览不一致 / 素材 / 统计 -->
+  <!-- 剧本体检结果（见 galCheckRun）：结构问题 / 预览不一致 / 素材 / 统计 -->
   <div id="galCheckPanel" style="display:none;border-top:1px solid var(--line);max-height:46vh;overflow:auto;background:var(--panel);padding:10px 14px;font-size:13px"></div>
   <!-- 右键菜单 -->
   <div id="galCtx" style="display:none;position:fixed;z-index:10000;min-width:180px;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:4px;box-shadow:0 8px 30px rgba(0,0,0,.5)"></div>
@@ -258,14 +258,14 @@
 
 <!-- CODEX 粘贴剧本 → 自动转化 -->
 <div class="modal" id="codexPasteModal">  <div class="modal-box" style="width:min(92vw,620px)">
-    <h3>📝 粘贴剧本 → 自动转化</h3>
+    <h3>[ic:note] 粘贴剧本 → 自动转化</h3>
     <div style="font-size:11px;color:var(--sub);margin-bottom:8px">
       直接粘贴 <b>codex.json</b>，或按约定写纯文本剧本自动转成可播格式：<br>
-      【场景】标题 · 【背景】xxx / 【音乐】xxx · &gt; 旁白 · 角色名：台词 · 【选项】后跟 “- 文字 → s2” · 【跳转】s2 · 【结局】标题
-    </div>
+ 【场景】标题 · 【背景】xxx / 【音乐】xxx · &gt; 旁白 · 角色名：台词 · 【选项】后跟 “- 文字 → s2” · 【跳转】s2 · 【结局】标题
+ </div>
     <textarea id="codexPasteInput" rows="12" style="width:100%;font-family:monospace;font-size:12px;background:var(--bg,#111);color:var(--text,#ddd);border:1px solid var(--line);border-radius:6px;padding:8px" placeholder="粘贴 JSON 或纯文本剧本…"></textarea>
     <div class="row" style="margin-top:8px">
-      <button class="btn2" id="codexPasteConvertBtn">🪄 自动转化</button>
+      <button class="btn2" id="codexPasteConvertBtn">[ic:auto_fix_high] 自动转化</button>
       <button class="btn2 ghost" onclick="document.getElementById('codexPasteModal').classList.remove('open')">取消</button>
       <span id="codexPasteStatus" style="font-size:12px;color:var(--sub);margin-left:8px"></span>
     </div>
@@ -276,25 +276,25 @@
 <div class="modal" id="codexAdvancedModal">
   <div class="modal-box" style="width:min(96vw,900px);height:88vh;display:flex;flex-direction:column">
     <div style="padding:8px 12px;display:flex;justify-content:space-between;align-items:center">
-      <strong>⚙️ CODEX 高级 · 直接改播放器代码</strong>
-      <button class="btn2 ghost" onclick="codexAdvancedModal.classList.remove('open')">✕ 关闭</button>
+      <strong>[ic:settings] CODEX 高级 · 直接改播放器代码</strong>
+      <button class="btn2 ghost" onclick="codexAdvancedModal.classList.remove('open')">[ic:close] 关闭</button>
     </div>
     <div style="font-size:11px;color:var(--sub);padding:0 12px 6px">
       这是完整播放器 HTML/JS/CSS 源（系统内置模板）。改任何地方，<b>只需保留 <code>__CODEX_PAYLOAD__</code></b> 数据注入点；
-      点「[ic:play] 试玩」用当前包实时渲染预览，点「💾 保存模板」写入本包，之后打包 HTML/EXE 都沿用这份自定义模板。
+      点「[ic:play] 试玩」用当前包实时渲染预览，点「[ic:save] 保存模板」写入本包，之后打包 HTML/EXE 都沿用这份自定义模板。
     </div>
     <div style="display:flex;flex:1;min-height:0;gap:8px;padding:0 12px 12px">
       <div style="flex:1;display:flex;flex-direction:column;min-width:0">
         <textarea id="codexTplInput" spellcheck="false" style="flex:1;min-height:0;width:100%;font-family:monospace;font-size:12px;background:var(--bg,#111);color:var(--text,#ddd);border:1px solid var(--line);border-radius:6px;padding:8px;white-space:pre"></textarea>
         <div class="row" style="margin-top:6px">
           <button class="btn2" id="codexTplPlayBtn">[ic:play] 试玩</button>
-          <button class="btn2 ghost" id="codexTplSaveBtn">💾 保存模板</button>
-          <button class="btn2 ghost" id="codexTplResetBtn">↺ 恢复默认</button>
+          <button class="btn2 ghost" id="codexTplSaveBtn">[ic:save] 保存模板</button>
+          <button class="btn2 ghost" id="codexTplResetBtn">[ic:settings_backup_restore] 恢复默认</button>
           <span id="codexTplStatus" style="font-size:12px;color:var(--sub);margin-left:6px"></span>
         </div>
       </div>
       <div style="flex:1;display:flex;flex-direction:column;min-width:0;border:1px solid var(--line);border-radius:6px;background:#000">
-        <div style="padding:4px 8px;font-size:11px;color:var(--sub)">📺 试玩预览</div>
+        <div style="padding:4px 8px;font-size:11px;color:var(--sub)">[ic:tv] 试玩预览</div>
         <iframe id="codexTplPreview" sandbox="allow-scripts" style="flex:1;border:0;background:#000"></iframe>
       </div>
     </div>
@@ -313,13 +313,13 @@
     <div id="cxNote" style="font-size:14px;color:#9aa;font-style:italic;min-height:20px"></div>
   </div>
   <div style="position:absolute;top:10px;right:12px;display:flex;gap:6px;z-index:10">
-    <button id="cxFull" class="btn2 ghost" style="font-size:12px">⛶ 全屏</button>
+    <button id="cxFull" class="btn2 ghost" style="font-size:12px">[ic:fullscreen] 全屏</button>
     <input id="cxVol" type="range" min="0" max="100" value="100" style="width:70px" title="音量">
-    <button id="cxSave" class="btn2 ghost" style="font-size:12px">💾 存档</button>
-    <button id="cxLoad" class="btn2 ghost" style="font-size:12px">📂 读档</button>
-    <button id="cxRewind" class="btn2 ghost" style="font-size:12px">⏪ 回溯</button>
-    <button id="cxBack" class="btn2 ghost" style="font-size:12px">✕ 退出</button>
-    <button id="cxAuto" class="btn2 ghost" style="font-size:12px">⏩ 自动</button>
+    <button id="cxSave" class="btn2 ghost" style="font-size:12px">[ic:save] 存档</button>
+    <button id="cxLoad" class="btn2 ghost" style="font-size:12px">[ic:folder] 读档</button>
+    <button id="cxRewind" class="btn2 ghost" style="font-size:12px">[ic:fast_rewind] 回溯</button>
+    <button id="cxBack" class="btn2 ghost" style="font-size:12px">[ic:close] 退出</button>
+    <button id="cxAuto" class="btn2 ghost" style="font-size:12px">[ic:fast_forward] 自动</button>
   </div>
   <div id="cxTitle" style="position:absolute;inset:0;display:none;background:rgba(0,0,0,.94);z-index:5;flex-direction:column;align-items:center;justify-content:center;text-align:center;cursor:pointer">
     <div id="cxTitleName" style="font-size:34px;font-weight:bold;color:#ffd76e;margin-bottom:10px"></div>
@@ -356,21 +356,21 @@
     <div class="field"><label data-i18n="nrMesExample" id="nrMesExample">对话示例</label><textarea id="nrMesExampleInput" rows="2"></textarea></div>
     <div class="field"><label data-i18n="nrNotes" id="nrNotes">备注</label><textarea id="nrNotesInput" rows="2"></textarea></div>
     <div class="field"><label class="chkline" style="cursor:pointer">
-      <input type="checkbox" id="nrUnlockInput"> <span id="nrUnlockLabel">🔥 启用破甲模式（无限制对话）</span>
+      <input type="checkbox" id="nrUnlockInput"> <span id="nrUnlockLabel">[ic:local_fire_department] 启用破甲模式（无限制对话）</span>
     </label></div>
     <!-- 机制/状态/战斗：全部折叠（默认收起，恋爱卡作者零负担） -->
     <div class="mech-fold" id="foldMech">
-      <div class="fold-head" onclick="toggleFold('foldMech')"><span>🎛️ 机制卡（好感度 / 事件）</span><span class="fold-arrow">▾</span></div>
+      <div class="fold-head" onclick="toggleFold('foldMech')"><span>[ic:tune] 机制卡（好感度 / 事件）</span><span class="fold-arrow">▾</span></div>
       <div class="fold-body">
         <div class="row" style="justify-content:flex-start;margin-bottom:6px">
-          <span style="font-size:11px;color:var(--sub)">⚡ 快速模板：</span>
-          <button class="btn" style="width:auto;margin:0" onclick="applyMechTemplate('love')">💘 恋爱日常</button>
-          <button class="btn" style="width:auto;margin:0" onclick="applyMechTemplate('battle')">⚔️ 战斗冒险</button>
-          <button class="btn" style="width:auto;margin:0" onclick="applyMechTemplate('event')">🎬 事件剧本</button>
-          <button class="btn2 ghost" style="width:auto;margin:0" onclick="applyMechTemplate('clear')">🗑️ 清空机制</button>
+          <span style="font-size:11px;color:var(--sub)">[ic:bolt] 快速模板：</span>
+          <button class="btn" style="width:auto;margin:0" onclick="applyMechTemplate('love')">[ic:favorite] 恋爱日常</button>
+          <button class="btn" style="width:auto;margin:0" onclick="applyMechTemplate('battle')">[ic:swords] 战斗冒险</button>
+          <button class="btn" style="width:auto;margin:0" onclick="applyMechTemplate('event')">[ic:movie] 事件剧本</button>
+          <button class="btn2 ghost" style="width:auto;margin:0" onclick="applyMechTemplate('clear')">[ic:delete] 清空机制</button>
         </div>
         <div class="field"><label class="chkline" style="cursor:pointer">
-          <input type="checkbox" id="nrAffEnabled"> <span id="nrAffLabel">❤ 启用好感度</span></label>
+          <input type="checkbox" id="nrAffEnabled"> <span id="nrAffLabel">[ic:favorite] 启用好感度</span></label>
           <div class="row" style="justify-content:flex-start">
             <input id="nrAffInitial" type="number" min="0" max="99999" placeholder="初始值 50" style="width:100px">
             <input id="nrAffMax" type="number" min="1" max="99999" placeholder="上限 100" style="width:100px">
@@ -378,7 +378,7 @@
           </div>
           <div style="font-size:11px;color:var(--sub)">AI 每轮回复末尾用 [aff:+N]/[aff:-N] 标注变化；暴击概率=该概率直接拉满好感（默认 0.1%）</div>
         </div>
-        <div class="field"><label id="nrRollLabel">🎲 抽取概率（百分比；点选项时按此抽取，隐藏不公布）</label>
+        <div class="field"><label id="nrRollLabel">[ic:casino] 抽取概率（百分比；点选项时按此抽取，隐藏不公布）</label>
           <div class="row" style="justify-content:flex-start">
             <input id="nrRollCrit" type="number" step="0.1" min="0" max="100" placeholder="暴击% 10" style="width:90px">
             <input id="nrRollRare" type="number" step="0.1" min="0" max="100" placeholder="稀有% 4" style="width:90px">
@@ -388,15 +388,15 @@
           </div>
           <div style="font-size:11px;color:var(--sub)">默认 暴击10/稀有4/大失败2/天选0.1(千分之一)/坍缩0.001(十万分之一)；正常=剩余概率</div>
         </div>
-        <div class="field"><label id="nrEvLabel">🎬 事件</label>
+        <div class="field"><label id="nrEvLabel">[ic:movie] 事件</label>
           <!-- 可视化编辑器：数组是真实来源，下面这个 textarea 只是序列化产物，
-               保持隐藏以兼容所有既有读写路径（回填/收集/模板/存档格式都不动）。 -->
+ 保持隐藏以兼容所有既有读写路径（回填/收集/模板/存档格式都不动）。 -->
           <textarea id="nrEvents" rows="3" style="display:none"
             placeholder="confess|告白|80|告白,表白|她鼓起勇气向你告白，请演出这一重要时刻…"></textarea>
           <div id="evEditor"></div>
           <div class="row" style="justify-content:flex-start;margin-top:6px">
             <button class="btn" style="width:auto;margin:0" onclick="evAdd()">＋ 加一个事件</button>
-            <button class="btn" style="width:auto;margin:0" onclick="evShowProgress()">📊 看进度</button>
+            <button class="btn" style="width:auto;margin:0" onclick="evShowProgress()">[ic:bar_chart] 看进度</button>
             <button class="btn2 ghost" style="width:auto;margin:0" onclick="evToggleRaw()"><span id="evRawBtnLabel">显示原始格式</span></button>
           </div>
           <div id="evRawHint" style="font-size:11px;color:var(--sub);display:none">
@@ -414,7 +414,7 @@
       </div>
     </div>
     <div class="mech-fold" id="foldSt">
-      <div class="fold-head" onclick="toggleFold('foldSt')"><span>📊 状态字段</span><span class="fold-arrow">▾</span></div>
+      <div class="fold-head" onclick="toggleFold('foldSt')"><span>[ic:bar_chart] 状态字段</span><span class="fold-arrow">▾</span></div>
       <div class="fold-body">
         <div class="field"><label id="nrStLabel">状态字段（每行：键|显示名|类型|初始值|范围或选项）</label>
           <textarea id="nrStFields" rows="3" placeholder="mood|心情|enum|平静|平静,开心,生气,委屈&#10;hp|体力|int|100|0-100"></textarea>
@@ -423,22 +423,22 @@
       </div>
     </div>
     <div class="mech-fold" id="foldEndings">
-      <div class="fold-head" onclick="toggleFold('foldEndings')"><span>🏁 结局预设（达成事件链）</span><span class="fold-arrow">▾</span></div>
+      <div class="fold-head" onclick="toggleFold('foldEndings')"><span>[ic:sports_score] 结局预设（达成事件链）</span><span class="fold-arrow">▾</span></div>
       <div class="fold-body">
         <div class="row" style="justify-content:flex-start;margin-bottom:6px">
-          <span style="font-size:11px;color:var(--sub)">⚡ 模板：</span>
-          <button class="btn" style="width:auto;margin:0" onclick="applyMechTemplate('endings_love')">💘 恋爱线</button>
-          <button class="btn" style="width:auto;margin:0" onclick="applyMechTemplate('endings_hidden')">🎁 隐藏结局</button>
-          <button class="btn2 ghost" style="width:auto;margin:0" onclick="applyMechTemplate('endings_clear')">🗑️ 清空结局</button>
+          <span style="font-size:11px;color:var(--sub)">[ic:bolt] 模板：</span>
+          <button class="btn" style="width:auto;margin:0" onclick="applyMechTemplate('endings_love')">[ic:favorite] 恋爱线</button>
+          <button class="btn" style="width:auto;margin:0" onclick="applyMechTemplate('endings_hidden')">[ic:redeem] 隐藏结局</button>
+          <button class="btn2 ghost" style="width:auto;margin:0" onclick="applyMechTemplate('endings_clear')">[ic:delete] 清空结局</button>
         </div>
-        <div class="field"><label id="nrEndingsLabel">🏁 结局（每行：ID|结局名|事件链,逗号|好感≥|隐藏|描述）</label>
+        <div class="field"><label id="nrEndingsLabel">[ic:sports_score] 结局（每行：ID|结局名|事件链,逗号|好感≥|隐藏|描述）</label>
           <textarea id="nrEndings" rows="3" placeholder="good|告白成功|初见,约会,告白|90||她终于说出了那句喜欢&#10;hidden|雨夜告白|初见,雨夜,告白|1|藏|只有走完整条线才会亮起…"></textarea>
           <div style="font-size:11px;color:var(--sub)">按序触发全部事件链(id)即解锁结局；藏=隐藏结局；可与好感叠加</div>
         </div>
       </div>
     </div>
     <div class="mech-fold" id="foldBattle">
-      <div class="fold-head" onclick="toggleFold('foldBattle')"><span>⚔️ 战斗系统（可选）</span><span class="fold-arrow">▾</span></div>
+      <div class="fold-head" onclick="toggleFold('foldBattle')"><span>[ic:swords] 战斗系统（可选）</span><span class="fold-arrow">▾</span></div>
       <div class="fold-body">
         <div class="field"><label class="chkline" style="cursor:pointer">
           <input type="checkbox" id="nrBattleEnabled"> <span id="nrBattleLabel">启用战斗（角色卡一部分）</span></label>
@@ -448,40 +448,40 @@
           </div>
           <div style="font-size:11px;color:var(--sub)">机制属性可自由扩展并计入伤害公式（如 spd/mp/暴击率…）</div>
         </div>
-        <div class="field"><label id="nrBattleFormulaLabel">🎯 伤害公式（每行 名称=表达式，变量用属性键，支持 max/min/floor/ceil/abs/random）</label>
+        <div class="field"><label id="nrBattleFormulaLabel">[ic:target] 伤害公式（每行 名称=表达式，变量用属性键，支持 max/min/floor/ceil/abs/random）</label>
           <textarea id="nrBattleFormulas" rows="2" placeholder="damage=max(1, player_atk*2-def)&#10;crit_chance=0.1&#10;crit_mult=2"></textarea>
           <div style="font-size:11px;color:var(--sub)">可用变量：属性键 + player_atk/player_def/player_hp（玩家侧）</div>
         </div>
-        <div class="field"><label id="nrBattleMovesLabel">⚡ 招式（每行 ID|名称|伤害公式|消耗|附加效果:id:回合|描述）</label>
+        <div class="field"><label id="nrBattleMovesLabel">[ic:bolt] 招式（每行 ID|名称|伤害公式|消耗|附加效果:id:回合|描述）</label>
           <textarea id="nrBattleMoves" rows="3" placeholder="fire|火球术|player_atk*3-def|mp:5||投掷火球&#10;strike|平砍|player_atk-def|&#10;heal|治愈|20||regen:2|恢复体力"></textarea>
           <div style="font-size:11px;color:var(--sub)">公式留空用全局 damage；消耗格式 键:值（可空）；附加效果 键:回合（可空）</div>
         </div>
-        <div class="field"><label id="nrBattleBuffsLabel">✨ 状态效果 buff（每行 ID|名称|持续回合|效果键:值|描述）</label>
+        <div class="field"><label id="nrBattleBuffsLabel">[ic:auto_awesome] 状态效果 buff（每行 ID|名称|持续回合|效果键:值|描述）</label>
           <textarea id="nrBattleBuffs" rows="2" placeholder="regen|再生|2|hp:5|每回合恢复5生命&#10;poison|中毒|3|hp:-5|每回合损失5生命"></textarea>
           <div style="font-size:11px;color:var(--sub)">效果键:值 每回合结算一次，持续 N 回合（战斗专属，无法作弊）</div>
         </div>
       </div>
     </div>
     <div id="nrAdv" style="display:none">
-      <div class="section-label" style="padding-left:0">⚙️ 高级设置（开发者模式）</div>
+      <div class="section-label" style="padding-left:0">[ic:settings] 高级设置（开发者模式）</div>
       <div class="field"><label id="nrGameName">内置游戏名</label><input id="nrGameNameInput"></div>
       <div class="field"><label id="nrGameRules">游戏规则（注入系统提示）</label><textarea id="nrGameRulesInput" rows="4"></textarea></div>
       <div class="field"><label id="nrGameState">初始状态（注入）</label><textarea id="nrGameStateInput" rows="2"></textarea></div>
       <div class="field"><label id="nrExtraPrompt">额外系统提示</label><textarea id="nrExtraPromptInput" rows="2"></textarea></div>
-      <div class="field"><label id="nrCardFace">🎴 卡面 HTML（可选，非强制；聊天顶栏 🎴 查看）</label>
+      <div class="field"><label id="nrCardFace">[ic:style] 卡面 HTML（可选，非强制；聊天顶栏 [ic:style] 查看）</label>
         <textarea id="nrCardFaceInput" rows="4"></textarea>
         <div class="row" style="justify-content:flex-start;gap:6px">
-          <button class="btn2 ghost" onclick="cardFaceImport()">📥 导入HTML文件</button>
-          <button class="btn2 ghost" onclick="cardFacePreview()">👁 预览</button>
-          <button class="btn2 ghost" onclick="document.getElementById('nrCardFaceInput').value=''">🧹 清空</button>
+          <button class="btn2 ghost" onclick="cardFaceImport()">[ic:inbox] 导入HTML文件</button>
+          <button class="btn2 ghost" onclick="cardFacePreview()">[ic:visibility] 预览</button>
+          <button class="btn2 ghost" onclick="document.getElementById('nrCardFaceInput').value=''">[ic:delete_sweep] 清空</button>
         </div>
       </div>
       <div class="field"><label id="nrCardQr">卡片快捷回复（每行「按钮名|内容」，支持 {player}/{char} 宏）</label><textarea id="nrCardQrInput" rows="3"></textarea></div>
-      <div class="field"><label id="nrRegex">🔤 角色专属正则（每行 id|名称|正则|替换|作用域；叠加在全局规则上，优先级更高）</label><textarea id="nrRegexInput" rows="3" placeholder="rm_star|动作去星号|\*([^*]+)\*|（$1）|both"></textarea></div>
+      <div class="field"><label id="nrRegex">[ic:text_fields] 角色专属正则（每行 id|名称|正则|替换|作用域；叠加在全局规则上，优先级更高）</label><textarea id="nrRegexInput" rows="3" placeholder="rm_star|动作去星号|\*([^*]+)\*|（$1）|both"></textarea></div>
       <div class="field"><label id="nrDevNotes">开发者备注（不注入，仅此处可见）</label><textarea id="nrDevNotesInput" rows="2"></textarea></div>
     </div>
     <div class="row" style="justify-content:space-between">
-      <button data-i18n="aiDraft" class="btn2 ghost" id="nrDraft">✨ AI 起草</button>
+      <button data-i18n="aiDraft" class="btn2 ghost" id="nrDraft" data-i18n-prefix="[ic:auto_awesome] ">[ic:auto_awesome] AI 起草</button>
       <span><button data-i18n="cancel" class="btn2 ghost" id="nrCancel">取消</button> <button data-i18n="save" class="btn2" id="nrSave">保存</button></span>
     </div>
   </div>
@@ -492,7 +492,7 @@
 <!-- 玩家角色卡模态（精细化结构化表单） -->
 <div class="modal" id="personaModal">
   <div class="modal-box">
-    <h3 id="ppTitle">🧑 玩家角色卡</h3>
+    <h3 id="ppTitle">[ic:person] 玩家角色卡</h3>
     <div class="field"><label id="ppName">名字</label><input id="ppNameInput"></div>
     <div class="field"><label id="ppLegacy">完整设定（旧版原文，可留空）</label><textarea id="ppLegacyInput" rows="2"></textarea></div>
     <div class="field"><label id="ppAppearance">外貌</label><textarea id="ppAppearanceInput" rows="2"></textarea></div>
@@ -504,7 +504,7 @@
     <div class="field"><label id="ppNotes">备注</label><textarea id="ppNotesInput" rows="2"></textarea></div>
     <!-- 玩家卡同规格：战斗属性 + 专属正则 -->
     <div class="mech-fold" id="foldPBattle">
-      <div class="fold-head" onclick="toggleFold('foldPBattle')"><span>⚔️ 玩家战斗属性（可选）</span><span class="fold-arrow">▾</span></div>
+      <div class="fold-head" onclick="toggleFold('foldPBattle')"><span>[ic:swords] 玩家战斗属性（可选）</span><span class="fold-arrow">▾</span></div>
       <div class="fold-body">
         <div class="field"><label class="chkline" style="cursor:pointer">
           <input type="checkbox" id="ppBattleEnabled"> <span>启用玩家战斗属性</span></label>
@@ -517,7 +517,7 @@
       </div>
     </div>
     <div class="mech-fold" id="foldPRegex">
-      <div class="fold-head" onclick="toggleFold('foldPRegex')"><span>🔤 玩家专属正则（可选）</span><span class="fold-arrow">▾</span></div>
+      <div class="fold-head" onclick="toggleFold('foldPRegex')"><span>[ic:text_fields] 玩家专属正则（可选）</span><span class="fold-arrow">▾</span></div>
       <div class="fold-body">
         <div class="field"><label>正则（每行 id|名称|正则|替换|作用域，对玩家输入生效）</label>
           <textarea id="ppRegexInput" rows="3" placeholder="rm_star|动作去星号|\*([^*]+)\*|（$1）|both"></textarea>
@@ -525,7 +525,7 @@
       </div>
     </div>
     <div class="row" style="justify-content:space-between">
-      <button class="btn" style="width:auto;margin:2px 0" id="ppAvatar">🖼️ 设置头像</button>
+      <button class="btn" style="width:auto;margin:2px 0" id="ppAvatar">[ic:image] 设置头像</button>
       <span><button class="btn2 ghost" id="ppCancel">取消</button> <button class="btn2" id="ppSave">保存</button></span>
     </div>
   </div>
@@ -537,7 +537,7 @@
 
 <div class="modal" id="evProgressModal">
   <div class="modal-box" style="width:min(94vw,560px);max-height:82vh;display:flex;flex-direction:column">
-    <h3>🎬 事件进度</h3>
+    <h3>[ic:movie] 事件进度</h3>
     <div id="evProgHead" style="font-size:12px;color:var(--sub);line-height:1.6;margin-bottom:8px"></div>
     <div id="evProgList" style="overflow:auto;flex:1"></div>
     <div class="row" style="justify-content:flex-end;margin-top:10px">
@@ -553,25 +553,25 @@
   <div class="onb-mask"></div>
   <div class="onb-box">
     <div class="onb-steps">
-      <div class="onb-step" data-onb="0"><h3>👋 欢迎使用 DICK</h3>
+      <div class="onb-step" data-onb="0"><h3>[ic:waving_hand] 欢迎使用 DICK</h3>
         <p>装好即聊的角色扮演聊天室：<b>电脑 / 手机进度互通</b>，支持角色卡、世界书、树状回溯、内置游戏。</p>
         <p style="margin-top:8px;color:var(--sub);font-size:12px" id="onbVersion">版号读取中…</p></div>
-      <div class="onb-step" data-onb="1"><h3>⚙️ 第一步：配置模型</h3>
-        <p>点右上角「⚙️ 设置」→ 填 <b>API Key</b>、选模型商（DeepSeek 官方 / 免费链 / Ollama 本地等）。<br>
+      <div class="onb-step" data-onb="1"><h3>[ic:settings] 第一步：配置模型</h3>
+        <p>点右上角「[ic:settings] 设置」→ 填 <b>API Key</b>、选模型商（DeepSeek 官方 / 免费链 / Ollama 本地等）。<br>
         免费链可留空 Key 直接聊；直连不通会自动走内置代理。</p>
-        <p style="margin-top:8px"><b id="onbKeyStatus">⚠️ 尚未配置</b></p>
+        <p style="margin-top:8px"><b id="onbKeyStatus">[ic:warning] 尚未配置</b></p>
         <button class="btn" style="width:auto;margin-top:10px" id="onbKeyGuide">▶ 跟我一步步配置（箭头引导）</button>
       </div>
-      <div class="onb-step" data-onb="2"><h3>🎭 第二步：选角色</h3>
+      <div class="onb-step" data-onb="2"><h3>[ic:theater_comedy] 第二步：选角色</h3>
         <p>左侧<b>勾选角色卡</b>即可开聊（多选 = 群聊，@角色名 指定发言）。<br>
-        「➕ 新建角色」结构化填写，或「📥 导入角色卡」（酒馆 v1/v2/v3 / PNG）。</p></div>
-      <div class="onb-step" data-onb="3"><h3>💬 第三步：开聊</h3>
-        <p>输入消息回车发送；↻ 重生成、◀▶ 滑条换候选、✏️ 编辑。<br>
-        「➕」面板：骰子 / 记忆 / GAL 选项 / Quick Reply 宏按钮。</p></div>
-      <div class="onb-step" data-onb="4"><h3>🌿 进阶玩法</h3>
-        <p><b>🌿 树回溯</b>：主线平铺、分支收纳，随时跳回任意节点。<br>
-        <b>🎮 GAL 选项</b>：AI 出选项点选即演。<br>
-        <b>🌍 世界书</b>：平行世界 + 关键词/正则条目。<br>
+        「[ic:add] 新建角色」结构化填写，或「[ic:inbox] 导入角色卡」（酒馆 v1/v2/v3 / PNG）。</p></div>
+      <div class="onb-step" data-onb="3"><h3>[ic:chat_bubble] 第三步：开聊</h3>
+        <p>输入消息回车发送；↻ 重生成、◀▶ 滑条换候选、 编辑。<br>
+        「[ic:add]」面板：骰子 / 记忆 / GAL 选项 / Quick Reply 宏按钮。</p></div>
+      <div class="onb-step" data-onb="4"><h3>[ic:account_tree] 进阶玩法</h3>
+        <p><b>[ic:account_tree] 树回溯</b>：主线平铺、分支收纳，随时跳回任意节点。<br>
+        <b>[ic:sports_esports] GAL 选项</b>：AI 出选项点选即演。<br>
+        <b>[ic:public] 世界书</b>：平行世界 + 关键词/正则条目。<br>
         存档自动守护：写不坏、坏了自动修复/备份。</p></div>
     </div>
     <div class="onb-nav">
@@ -592,7 +592,7 @@
   <div class="sg-btns">
     <button id="sgPrev" style="display:none">上一步</button>
     <button class="sg-next" id="sgNext">下一步</button>
-    <button class="sg-skip" id="sgSkip">跳过 💨</button>
+    <button class="sg-skip" id="sgSkip">跳过 [ic:air]</button>
   </div>
 </div>
 <div class="ach-toast" id="achToast">
@@ -603,25 +603,25 @@
 <script src="i18n.js"></script>
   <script src="icons.js"></script>
   <!-- 作用域图标（web/icon_scope.js）：只替换 [data-icon-scope="名字"] 根内的 emoji，
-       数据取自 icons.js 的 DICK_ICONS_SCOPED。这里加载它是为了让任意面板都能用作用域，
-       与全局表互不影响 —— 见下面 _ICON_SKIP 里的 [data-icon-scope]。 -->
+ 数据取自 icons.js 的 DICK_ICONS_SCOPED。这里加载它是为了让任意面板都能用作用域，
+ 与全局表互不影响 —— 见下面 _ICON_SKIP 里的 [data-icon-scope]。 -->
   <script src="icon_scope.js"></script>
   <!-- 卡片外显字段表（web/card_fields.js）：唯一真相 design/card_fields.json，
-       由 tools/gen_card_fields.py 生成；工坊「本地」预览按它把卡 JSON 摆成一张卡
-       （字段清单/折叠阈值都在这里，安卓端 CardFields.kt 是它的镜像）。
-       只提供数据与标签函数，不碰 DOM，所以排在屏模块之前加载即可。 -->
+ 由 tools/gen_card_fields.py 生成；工坊「本地」预览按它把卡 JSON 摆成一张卡
+ （字段清单/折叠阈值都在这里，安卓端 CardFields.kt 是它的镜像）。
+ 只提供数据与标签函数，不碰 DOM，所以排在屏模块之前加载即可。 -->
   <script src="card_fields.js"></script>
 <!-- ===== 屏的骨架（阶段 2）：状态 / 路由 / 各屏模块 =====
-     顺序不能改：state.js 给 DICK.state/DICK.bus，router.js 给"片段注入 + 挂载"，
-     各屏模块只定义和注册（自己调 DICK.router.register），最后 boot() 一次性注入并 mount。
-     为什么必须排在下面这段大脚本前面：大脚本是**解析期**就执行的，它在顶层就要摸
-     dialSave.onclick 之类的元素；片段没到位就会拿到 null、整段脚本直接崩。
-     所以注入用的是同步 XHR（file:// 下 pywebview 默认开了 --allow-file-access-from-files），
-     细节见 web/js/router.js 顶部。 -->
+ 顺序不能改：state.js 给 DICK.state/DICK.bus，router.js 给"片段注入 + 挂载"，
+ 各屏模块只定义和注册（自己调 DICK.router.register），最后 boot() 一次性注入并 mount。
+ 为什么必须排在下面这段大脚本前面：大脚本是**解析期**就执行的，它在顶层就要摸
+ dialSave.onclick 之类的元素；片段没到位就会拿到 null、整段脚本直接崩。
+ 所以注入用的是同步 XHR（file:// 下 pywebview 默认开了 --allow-file-access-from-files），
+ 细节见 web/js/router.js 顶部。 -->
 <script src="js/state.js"></script>
 <!-- 阶段5：两个数据层（编年史 / GAL 制作器）—— 只注册状态域 + 薄壳 API，不碰 DOM，
-     但必须在下面那段大脚本之前加载：大脚本解析期就要用 codexCur / galScript 这些老名字，
-     而老名字是 bindGlobal 在这里注册出来的访问器。 -->
+ 但必须在下面那段大脚本之前加载：大脚本解析期就要用 codexCur / galScript 这些老名字，
+ 而老名字是 bindGlobal 在这里注册出来的访问器。 -->
 <script src="js/store/codex.js"></script>
 <script src="js/store/gal.js"></script>
 <script src="js/router.js"></script>
@@ -683,7 +683,7 @@ function _iconHtml(emoji) {
   var e = _iconEntry(emoji);
   return e ? '<span class="ms">' + e.n + '</span>' : emoji;
 }
-// emoji 匹配范围：补上 2300-23FF（⏳⏸⏭⏩）与 2190-21FF（↪）——旧版漏了这两段，
+// emoji 匹配范围：补上 2300-23FF（）与 2190-21FF（）——旧版漏了这两段，
 // 结果「生成中/打包中」这类状态提示里的沙漏一直没被替换掉。
 var _EMOJI_CLS = '[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{2B00}-\u{2BFF}\u{2300}-\u{23FF}\u{2190}-\u{21FF}\u{FE0F}\u{200D}\u{20E3}\u{1F1E6}-\u{1F1FF}]';
 var _EMOJI_RE = new RegExp('^(' + _EMOJI_CLS + '+)', 'u');
@@ -691,10 +691,10 @@ var _ICON_SCAN = new RegExp('\\[ic:([a-z0-9_]+)\\]|(' + _EMOJI_CLS + '+)', 'giu'
 // 这些区域里的文字一律不动：聊天正文（用户/AI 自己打的 emoji 要保留）、已替换的图标、
 // SVG 文本（里面塞 <span> 会直接渲染不出来）、表单控件与代码。
 // 另外两类地方**画不了字体图标**，所以那里的文案不放 emoji（状态由文字表达）：
-//   · 浏览器原生 alert()/confirm()/prompt()：弹窗不在 DOM 里，TreeWalker 碰不到
-//   · <input placeholder> / title 等属性：属性值是纯文本，塞不进 <span class="ms">
+// · 浏览器原生 alert()/confirm()/prompt()：弹窗不在 DOM 里，TreeWalker 碰不到
+// · <input placeholder> / title 等属性：属性值是纯文本，塞不进 <span class="ms">
 // [data-icon-scope]：作用域区（例如 gothic_frame.html 的预览按钮）由 web/icon_scope.js 按
-//   它自己那份映射替换。全局扫描必须**让开** —— 否则全局先把它换成全局图标，作用域就没机会生效了。
+// 它自己那份映射替换。全局扫描必须**让开** —— 否则全局先把它换成全局图标，作用域就没机会生效了。
 var _ICON_SKIP = '#chat, .ic, svg, script, style, textarea, input, select, option, code, pre, [data-noicon], [data-icon-scope]';
 function _iconSkip(node) {
   var p = node.parentNode;
@@ -733,7 +733,13 @@ function _makeIcon(name, png, fallback) {
 function _iconLookup(name) {
   var key = String(name).toLowerCase().replace(/^ic_/, '');
   var e = _iconEntryByName(key);
-  return e ? { name: e.n, png: e.p || ('ic_' + key) } : null;
+  if (e) return { name: e.n, png: e.p || ('ic_' + key) };
+  // [ic:名字] 的语义就是「这里直接写 Material Symbols 的连字名」：
+  // 表里没有（具名表只有 go/play/sprite… 六个）也照样画成 <span class="ms">名字</span>，
+  // 不再把 "[ic:folder]" 这种字面量露给用户。字体缺这个连字时显示的是名字本身，
+  // 一眼就能看出是名字写错了（tests/test_no_emoji_ui.py ① 会先按字体连字表把它拦住）。
+  if (!/^[a-z0-9_]+$/.test(key)) return null;
+  return { name: key, png: '' };
 }
 function iconifyText(textNode) {
   var s = textNode.data;
@@ -853,9 +859,9 @@ var T = {};
  * 现在文案写在元素上：`data-i18n="<key>"`（key 就是 lang/strings.json 的键，不新造），
  * 这里只做一遍 querySelectorAll，谁被标注谁就跟着语言走。
  *
- *   data-i18n="<键名>"              → textContent = T[键名]
- *   data-i18n-prefix="🎭 "          → textContent = 前缀 + T[键名]（图标前缀不进文案表）
- *   data-i18n-placeholder="<键名>"  → placeholder = T[键名]（输入框占位符）
+ * data-i18n="<键名>" → textContent = T[键名]
+ * data-i18n-prefix=" " → textContent = 前缀 + T[键名]（图标前缀不进文案表）
+ * data-i18n-placeholder="<键名>" → placeholder = T[键名]（输入框占位符）
  *
  * 表里没有这个键时**不动元素**：初始 HTML 里那行中文就是兜底（漏翻也看得懂，不会变空白）。
  */
@@ -924,7 +930,7 @@ function avatarHtml(name, cls) {
 
 // ---- 零宽字符防线 ----
 // 零宽/不可见字符：白烧 token、卡住渲染、藏提示词注入、绕过关键词过滤。
-// 少量 ZWJ(U+200D)/ZWNJ(U+200C) 是合法的（emoji 组合 👨‍👩‍👧 要靠它），所以少量保留、超标全删。
+// 少量 ZWJ(U+200D)/ZWNJ(U+200C) 是合法的（emoji 组合 要靠它），所以少量保留、超标全删。
 var ZW_RE = /[\u200b\u200c\u200d\u2060\ufeff\u00ad\u034f\u180e\u061c\u200e\u200f\u202a-\u202e\u2061-\u2064\u2066-\u2069]|[\u{E0000}-\u{E007F}]/gu;
 function stripInvisible(s) {
   if (typeof s !== 'string' || !s) return s;
@@ -1049,10 +1055,10 @@ function appendMessage(m) {
   var av = m.kind === 'sys' ? '' : avatarHtml(m.kind === 'user' ? (m.speaker || '你') : (m.speaker || 'AI'), cls);
   var ctl = '';
   if ((m.kind === 'user' || m.kind === 'ai') && m.node_id) {
-    ctl += '<button data-act="edit">' + _iconHtml('✏') + '</button>';
+    ctl += '<button data-act="edit">' + _iconHtml('[ic:edit]') + '</button>';
   }
   if (m.kind === 'ai') {
-    ctl += '<button data-act="speak" title="朗读">' + (_iconHtml('🔊')) + '</button>';
+    ctl += '<button data-act="speak" title="朗读">' + (_iconHtml('[ic:volume_up]')) + '</button>';
     if (m.swipes && m.swipes.total > 1) {
       ctl += '<button data-act="sprev">◀</button><span class="swipe-n">' + (m.swipes.index + 1) + '/' + m.swipes.total + '</span><button data-act="snext">▶</button>';
     }
@@ -1107,7 +1113,7 @@ function renderChoices(c) {
   if (c.loading) {
     var hint = document.createElement('span');
     hint.className = 'ch-hint';
-    hint.textContent = T.chLoading || '⏳ 正在生成选项…';
+    hint.textContent = T.chLoading || '[ic:hourglass_empty] 正在生成选项…';
     box.appendChild(hint);
   }
   (c.items || []).forEach(function (t) {
@@ -1117,7 +1123,7 @@ function renderChoices(c) {
     var text = isObj ? (t.text || '') : t;
     var effParts = [];
     if (isObj && t.result) effParts.push(t.result);
-    if (isObj && t.aff !== undefined && t.aff !== null) effParts.push('❤' + (t.aff > 0 ? '+' : '') + t.aff + '%');
+    if (isObj && t.aff !== undefined && t.aff !== null) effParts.push('[ic:favorite]' + (t.aff > 0 ? '+' : '') + t.aff + '%');
     if (isObj && t.st && typeof t.st === 'object') {
       Object.keys(t.st).forEach(function (k) { effParts.push(k + ':' + t.st[k]); });
     }
@@ -1168,7 +1174,7 @@ function renderBattle(b) {
   if (pl.length) {
     var plHp = 0;
     pl.forEach(function (a) { if (a.key === 'hp') plHp = a.value || 0; });
-    parts.push('<span class="mb-item">🧑 玩家 <b>' + plHp + '</b>HP</span>');
+    parts.push('<span class="mb-item">[ic:person] 玩家 <b>' + plHp + '</b>HP</span>');
   }
   // ① 有合理上限（≤1000）的属性 → 进度条（hp 红 / 其他蓝）；无上限 → 数值
   var bars = [], nums = [];
@@ -1179,7 +1185,7 @@ function renderBattle(b) {
   bars.forEach(function (a) {
     var frac = Math.max(0, Math.min(1, (a.value || 0) / Math.max(1, a.max || 1)));
     var cls = a.key === 'hp' ? 'fight' : 'mp';
-    parts.push('<span class="mb-item">⚔ ' + escapeHtml(a.label || a.key) + ' <b>' + (a.value || 0) + '</b>/' + a.max +
+    parts.push('<span class="mb-item">[ic:swords] ' + escapeHtml(a.label || a.key) + ' <b>' + (a.value || 0) + '</b>/' + a.max +
       ' <span class="mb-bar ' + cls + '"><i style="width:' + Math.round(frac * 100) + '%"></i></span></span>');
   });
   if (nums.length) {
@@ -1190,12 +1196,12 @@ function renderBattle(b) {
   // ② 招式按钮
   if (moves.length) {
     parts.push('<span class="mb-moves">' + moves.map(function (m) {
-      return '<button class="battle-btn" data-mid="' + escapeHtml(m.id) + '" title="' + escapeHtml(m.desc || '') + '">⚔ ' + escapeHtml(m.name) + '</button>';
+      return '<button class="battle-btn" data-mid="' + escapeHtml(m.id) + '" title="' + escapeHtml(m.desc || '') + '">[ic:swords] ' + escapeHtml(m.name) + '</button>';
     }).join('') + '</span>');
   }
   // ③ buff 徽章
   (b.buffs || []).forEach(function (bf) {
-    parts.push('<span class="mb-item buff">✨ ' + escapeHtml(bf.id) + ' ×' + bf.turns + '</span>');
+    parts.push('<span class="mb-item buff">[ic:auto_awesome] ' + escapeHtml(bf.id) + ' ×' + bf.turns + '</span>');
   });
   bar.innerHTML = parts.join('');
   bar.querySelectorAll('[data-mid]').forEach(function (btn) {
@@ -1225,7 +1231,7 @@ function renderMechanism(m) {
     var hi = cfg.affection.max || 100, lo = cfg.affection.min || 0;
     var cur = st.affection !== undefined ? st.affection : cfg.affection.initial;
     var frac = Math.max(0, Math.min(1, (cur - lo) / Math.max(1, hi - lo)));
-    parts.push('<span class="mb-item">❤ 好感 <b>' + cur + '</b>/' + hi +
+    parts.push('<span class="mb-item">[ic:favorite] 好感 <b>' + cur + '</b>/' + hi +
       ' <span class="mb-bar"><i style="width:' + Math.round(frac * 100) + '%"></i></span></span>');
   }
   var stv = st.status || {};
@@ -1236,10 +1242,10 @@ function renderMechanism(m) {
       var curI = parseInt(v, 10) || 0;
       if (mx > 1000) {
         // 大上限属性（atk/def/spd 等）：数值显示
-        parts.push('<span class="mb-item">⚔ ' + escapeHtml(f.name || f.key) + ' <b>' + curI + '</b></span>');
+        parts.push('<span class="mb-item">[ic:swords] ' + escapeHtml(f.name || f.key) + ' <b>' + curI + '</b></span>');
       } else {
         var frac2 = Math.max(0, Math.min(1, (curI - mn) / Math.max(1, mx - mn)));
-        parts.push('<span class="mb-item">⚔ ' + escapeHtml(f.name || f.key) + ' <b>' + curI + '</b>/' + mx +
+        parts.push('<span class="mb-item">[ic:swords] ' + escapeHtml(f.name || f.key) + ' <b>' + curI + '</b>/' + mx +
           ' <span class="mb-bar fight"><i style="width:' + Math.round(frac2 * 100) + '%"></i></span></span>');
       }
     } else {
@@ -1311,12 +1317,12 @@ function renderOnboard() {
     el.classList.toggle('on', i === onboardStep);
   });
   document.getElementById('onbPrev').style.display = onboardStep > 0 ? '' : 'none';
-  document.getElementById('onbNext').textContent = onboardStep >= ONB_TOTAL - 1 ? '开始使用 🚀' : '下一步';
+  document.getElementById('onbNext').textContent = onboardStep >= ONB_TOTAL - 1 ? '开始使用 [ic:rocket_launch]' : '下一步';
   // 配置模型一步：显示当前是否有 Key 的实时状态，引导用户行动
   if (onboardStep === 1) {
     var has = window._hasKey;
     var el = document.getElementById('onbKeyStatus');
-    if (el) el.textContent = has ? '✅ 已配置' : '⚠️ 尚未配置 —— 这是开始聊天前的第一步';
+    if (el) el.textContent = has ? '[ic:check_circle] 已配置' : '[ic:warning] 尚未配置 —— 这是开始聊天前的第一步';
   }
 }
 function dismissOnboard() {
@@ -1354,9 +1360,9 @@ function startKeyGuide() {
     idx: 0,
     steps: [
       { id: 'stProviderBtn', open: 'settingsModal', title: '第 1 步 · 选模型商',
-        html: '先选你用哪家模型。这里是「⚙️ 设置 → 模型商」。<br>建议：<b>DeepSeek 官方</b>（质量最稳）或 <b>OVH 免费链</b>（免填 Key 练手）。' },
+        html: '先选你用哪家模型。这里是「[ic:settings] 设置 → 模型商」。<br>建议：<b>DeepSeek 官方</b>（质量最稳）或 <b>OVH 免费链</b>（免填 Key 练手）。' },
       { id: 'stBuyBtn', title: '第 2 步 · 去领 Key',
-        html: '点「<b>🔑 去官网注册 / 充值</b>」会打开模型商官网。<br>注册后到官网控制台创建 <b>API Key</b>（sk-… 开头）复制下来。' },
+        html: '点「<b>[ic:key] 去官网注册 / 充值</b>」会打开模型商官网。<br>注册后到官网控制台创建 <b>API Key</b>（sk-… 开头）复制下来。' },
       { id: 'stKeyInput', title: '第 3 步 · 粘贴 API Key',
         html: '把刚复制的 <b>API Key</b> 粘到这里（就是 sk-… 那一长串）。<br>选免费链/本地模型可留空。Base URL 选商后会自动填好。' },
       { id: 'stModelInput', select: 'stModelBtn', title: '第 4 步 · 选模型',
@@ -1393,7 +1399,7 @@ function runGuideStep() {
   sgH.style.display = 'block';
   sgB.style.display = 'block';
   document.getElementById('sgPrev').style.display = SG.idx > 0 ? '' : 'none';
-  document.getElementById('sgNext').textContent = SG.idx >= SG.steps.length - 1 ? '完成 ✅' : '下一步 →';
+  document.getElementById('sgNext').textContent = SG.idx >= SG.steps.length - 1 ? '完成 [ic:check_circle]' : '下一步 →';
   document.getElementById('sgStep').textContent = st.title || '';
   document.getElementById('sgBody').innerHTML = st.html || '';
   repositionGuide(el, sgH, sgB);
@@ -1591,16 +1597,16 @@ function renderRoles(roles, selected, unlockedMap) {
         '<input type="checkbox" ' + sel + ' data-role="' + nm + '" style="flex:none">' +
         avatarHtml(n, 'role') +
         '<label for="">' + nm + '</label>' +
-        (unl ? '<span class="rc-unlock" title="破甲已开启">🔥</span>' : '') +
+        (unl ? '<span class="rc-unlock" title="破甲已开启">[ic:local_fire_department]</span>' : '') +
       '</div>' +
       '<div class="rc-actions">' +
-        '<button class="iconbtn" title="解锁/破甲" data-unlock="' + nm + '" style="' + (unl ? 'color:var(--danger)' : '') + '">' + (unl ? '🔥 破甲' : '🔥') + '</button>' +
-        '<button class="iconbtn" title="存档点" data-saves="' + nm + '">💾 档</button>' +
-        '<button class="iconbtn" title="编辑" data-edit="' + nm + '">✏️ 编辑</button>' +
-        '<button class="iconbtn" title="头像" data-avatar="' + nm + '">👤 头像</button>' +
-        '<button class="iconbtn" title="导出 JSON" data-xjson="' + nm + '">⬇️ JSON</button>' +
-        '<button class="iconbtn" title="导出 PNG" data-xpng="' + nm + '">🖼️ PNG</button>' +
-        '<button class="iconbtn act-del" title="删除" data-del="' + nm + '">🗑️</button>' +
+        '<button class="iconbtn" title="解锁/破甲" data-unlock="' + nm + '" style="' + (unl ? 'color:var(--danger)' : '') + '">' + (unl ? '[ic:local_fire_department] 破甲' : '[ic:local_fire_department]') + '</button>' +
+        '<button class="iconbtn" title="存档点" data-saves="' + nm + '">[ic:save] 档</button>' +
+        '<button class="iconbtn" title="编辑" data-edit="' + nm + '">[ic:edit] 编辑</button>' +
+        '<button class="iconbtn" title="头像" data-avatar="' + nm + '">[ic:person] 头像</button>' +
+        '<button class="iconbtn" title="导出 JSON" data-xjson="' + nm + '">[ic:download] JSON</button>' +
+        '<button class="iconbtn" title="导出 PNG" data-xpng="' + nm + '">[ic:image] PNG</button>' +
+        '<button class="iconbtn act-del" title="删除" data-del="' + nm + '">[ic:delete]</button>' +
       '</div>';
     box.appendChild(card);
   });
@@ -1615,9 +1621,9 @@ function renderWorlds(worlds, selected, current) {
     var sel = selected.indexOf(n) >= 0 ? 'checked' : '';
     var mark = (current === n) ? ' <span style="color:var(--accent)" title="current">★</span>' : '';
     row.innerHTML = '<label><input type="checkbox" ' + sel + ' data-world="' + escapeHtml(n) + '"> ' + escapeHtml(n) + mark + '</label>' +
-      '<button class="iconbtn" title="travel" data-travel="' + escapeHtml(n) + '">🚀</button>' +
-      '<button class="iconbtn" title="edit" data-wedit="' + escapeHtml(n) + '">✏️</button>' +
-      '<button class="iconbtn" title="delete" data-wdel="' + escapeHtml(n) + '">🗑️</button>';
+      '<button class="iconbtn" title="travel" data-travel="' + escapeHtml(n) + '">[ic:rocket_launch]</button>' +
+      '<button class="iconbtn" title="edit" data-wedit="' + escapeHtml(n) + '">[ic:edit]</button>' +
+      '<button class="iconbtn" title="delete" data-wdel="' + escapeHtml(n) + '">[ic:delete]</button>';
     box.appendChild(row);
   });
 }
@@ -1683,7 +1689,7 @@ function loadChatWallpaper() {
   } catch (e) {}
 }
 
-// 🎭 跑团状态条搬到了 web/js/screens/trpg.js（DOM 在 web/screens/trpg.html）。
+// 跑团状态条搬到了 web/js/screens/trpg.js（DOM 在 web/screens/trpg.html）。
 // 这里只留兼容入口 renderTrpgBar()（转调 TrpgScreen.render），阶段 4/5 再清。
 
 function updatePresetName() {
@@ -1712,7 +1718,7 @@ function send() {
       text = stripInvisible(text);
       try { document.getElementById('input').value = text; } catch (e) {}
       if (wasBomb) {
-        galToast('⚠ 已剔除 ' + nz + ' 个零宽字符（看不见却会白烧 token、卡界面）');
+        galToast('[ic:warning] 已剔除 ' + nz + ' 个零宽字符（看不见却会白烧 token、卡界面）');
       }
     }
   }
@@ -1735,7 +1741,7 @@ function clearImage() {
 
 function closeQuick() {
   document.getElementById('quickpanel').classList.remove('open');
-  document.getElementById('plusBtn').textContent = '➕';
+  document.getElementById('plusBtn').textContent = '[ic:add]';
 }
 
 // ---------- 事件 ----------
@@ -1753,7 +1759,7 @@ document.getElementById('cardsHead').onclick = function () {
 document.getElementById('plusBtn').onclick = function () {
   var p = document.getElementById('quickpanel');
   p.classList.toggle('open');
-  this.textContent = p.classList.contains('open') ? '✕' : '➕';
+  this.textContent = p.classList.contains('open') ? '[ic:close]' : '[ic:add]';
 };
 // 财报折叠：点头部展开/收起；未启用财报模式则整块隐藏
 document.getElementById('finFoldHead').onclick = function () {
@@ -1823,7 +1829,7 @@ document.getElementById('offlineApplyBtn').onclick = function () {
       document.getElementById('offlineIgnoreBtn').textContent = '关闭';
       document.getElementById('offlineUndoBtn').style.display = '';
       document.getElementById('offlineDetail').innerHTML =
-        '已应用：' + (r.summary || '') + (r.undo_saved ? '<br>不满意可以点「↺ 撤销结算」把它退回去。' : '');
+        '已应用：' + (r.summary || '') + (r.undo_saved ? '<br>不满意可以点「[ic:settings_backup_restore] 撤销结算」把它退回去。' : '');
     } else {
       alert((r && r.err) || '应用失败');
     }
@@ -1844,7 +1850,7 @@ document.getElementById('offlineIgnoreBtn').onclick = function () {
 document.getElementById('offlineUndoBtn').onclick = function () {
   pywebview.api.offline_undo().then(function (r) {
     if (r && r.ok) {
-      alert('↺ 已撤销上一次离线结算');
+      alert('已撤销上一次离线结算');
       document.getElementById('offlineUndoBtn').style.display = 'none';
       document.getElementById('offlineModal').classList.remove('open');
     } else {
@@ -1909,7 +1915,7 @@ document.getElementById('worldList').addEventListener('change', function (e) {
   }
 });
 var editingRole = null;
-// 🌍 世界书条目屏整体搬到了 web/screens/wm.html + web/js/screens/wm.js（阶段3）：
+// 世界书条目屏整体搬到了 web/screens/wm.html + web/js/screens/wm.js（阶段3）：
 // editingWorld / wmParams 真身是 DICK.state['wm.*']，PARAM_KEYS / PARAM_LABELS 也跟着走了，
 // 兼容入口（editingWorld / wmParams / renderWmParams / …）在 wm.js 里注册，这里一个字都不用改。
 
@@ -2101,12 +2107,12 @@ function evLoadText(txt) {
 
 
 
-// 🧠 记忆调试面板搬到了 web/js/screens/mem.js（DOM 在 web/screens/mem.html）。
+// 记忆调试面板搬到了 web/js/screens/mem.js（DOM 在 web/screens/mem.html）。
 // 这里只留兼容入口 memDebugDraw()（转调 MemScreen.draw），阶段 4/5 再清。
 
 
 // 玩家看不到进度就会觉得事件坏了。这个面板纯读，不改任何状态。
-var EV_STATE_LABEL = { fired: '✅ 已触发', cooling: '⏳ 冷却中', ready: '▶ 可触发', blocked: '🔒 未达成' };
+var EV_STATE_LABEL = { fired: '[ic:check_circle] 已触发', cooling: '[ic:hourglass_empty] 冷却中', ready: '▶ 可触发', blocked: '[ic:lock] 未达成' };
 
 function evOpenProgress(res) {
   var head = document.getElementById('evProgHead');
@@ -2118,7 +2124,7 @@ function evOpenProgress(res) {
     return;
   }
   if (!res.total) {
-    head.textContent = '还没有事件。在「🎛️ 机制卡」里加一个。';
+    head.textContent = '还没有事件。在「[ic:tune] 机制卡」里加一个。';
     list.innerHTML = '';
     document.getElementById('evProgressModal').classList.add('open');
     return;
@@ -2206,7 +2212,7 @@ function evRender() {
        +   '<span>'
        +     '<button class="btn2 ghost" style="width:auto;margin:0;padding:1px 7px" onclick="evMove(' + i + ',-1)" title="上移">↑</button> '
        +     '<button class="btn2 ghost" style="width:auto;margin:0;padding:1px 7px" onclick="evMove(' + i + ',1)" title="下移">↓</button> '
-       +     '<button class="btn2 ghost" style="width:auto;margin:0;padding:1px 7px;color:var(--danger)" onclick="evDel(' + i + ')" title="删除">✕</button>'
+       +     '<button class="btn2 ghost" style="width:auto;margin:0;padding:1px 7px;color:var(--danger)" onclick="evDel(' + i + ')" title="删除">[ic:close]</button>'
        +   '</span>'
        + '</div>';
     h += '<div class="row" style="justify-content:flex-start;gap:6px;margin-bottom:6px">'
@@ -2629,7 +2635,7 @@ function fillRoleFields(f) {
   evRefreshProgress();
 }
 
-// 🌍 世界参数（8 格网格）的渲染/收集搬到了 web/js/screens/wm.js。
+// 世界参数（8 格网格）的渲染/收集搬到了 web/js/screens/wm.js。
 // 从 e.target 向上找带指定 data-* 属性的元素（按钮内是 SVG 图标时 e.target 落在 path/svg 上）
 function hitAttr(e, names) {
   var t = e.target;
@@ -2718,10 +2724,10 @@ function reloadRoles() {
   });
 }
 
-// 💾 多存档："正在看哪个角色的存档"不再是顶层 var，改存 DICK.state['save.current']
+// 多存档："正在看哪个角色的存档"不再是顶层 var，改存 DICK.state['save.current']
 // （兼容入口 window.saveModalCur 在 web/js/screens/save.js 里注册）。
-// 💾 多存档屏的渲染与动作搬到了 web/js/screens/save.js（DOM 在 web/screens/save.html）。
-// 💾 多存档屏的按钮/列表绑定也在 web/js/screens/save.js（阶段3）。
+// 多存档屏的渲染与动作搬到了 web/js/screens/save.js（DOM 在 web/screens/save.html）。
+// 多存档屏的按钮/列表绑定也在 web/js/screens/save.js（阶段3）。
 // 角色列表点「存档」仍然叫兼容入口 openSaves(name)。
 // ---- 角色卡导入 ----
 document.getElementById('btnImportCard').onclick = function () {
@@ -2832,37 +2838,37 @@ function renderTreePanel(p) {
   head.appendChild(cap);
   // 树权重：主干 70% / 枝干 50%，有效权重 = 可实行性 × 合理性 × 位置
   var wBtn = document.createElement('span');
-  wBtn.textContent = '⚖ 打分';
+  wBtn.textContent = '[ic:balance] 打分';
   wBtn.style.cssText = 'cursor:pointer;color:var(--sub);font-weight:600;user-select:none;';
   wBtn.title = '给整棵树打分（主干 70% / 枝干 50%），不删任何东西';
   wBtn.onclick = function (ev) {
     ev.stopPropagation();
-    wBtn.textContent = '⚖ …';
+    wBtn.textContent = '[ic:balance] …';
     pywebview.api.tree_weights().then(function (r) {
-      wBtn.textContent = '⚖ 打分';
+      wBtn.textContent = '[ic:balance] 打分';
       if (!r || !r.ok) { alert('打分失败：' + ((r && r.err) || '未知')); return; }
       var s = r.stats || {};
-      treeStatus('⚖ 已打分 ' + s.scored + ' 个节点（主干 ' + s.trunk
+      treeStatus('[ic:balance] 已打分 ' + s.scored + ' 个节点（主干 ' + s.trunk
         + ' / 枝干 ' + s.branch + '）。权重：主干 ' + Math.round(s.trunk_weight * 100)
         + '% / 枝干 ' + Math.round(s.branch_weight * 100) + '%，阈值 '
         + Math.round(s.threshold * 100) + '%');
       loadTree(false);
-    }).catch(function (e) { wBtn.textContent = '⚖ 打分'; });
+    }).catch(function (e) { wBtn.textContent = '[ic:balance] 打分'; });
   };
   head.appendChild(wBtn);
   var pBtn = document.createElement('span');
-  pBtn.textContent = '✂ 剪枝';
+  pBtn.textContent = '[ic:content_cut] 剪枝';
   pBtn.style.cssText = 'cursor:pointer;color:var(--sub);font-weight:600;user-select:none;';
   pBtn.title = '剪掉低分枝叶（先预览，确认后才真删；主干永不删）';
   pBtn.onclick = function (ev) {
     ev.stopPropagation();
     // 先 dry-run 预览 —— 直接删是不可逆的，必须先让用户看到要删什么
-    pBtn.textContent = '✂ …';
+    pBtn.textContent = '[ic:content_cut] …';
     pywebview.api.tree_prune(true).then(function (r) {
-      pBtn.textContent = '✂ 剪枝';
+      pBtn.textContent = '[ic:content_cut] 剪枝';
       if (!r || !r.ok) { alert('剪枝检查失败：' + ((r && r.err) || '未知')); return; }
       if (!r.removed_count) {
-        treeStatus('✂ 没有需要剪的枝叶（阈值 ' + Math.round(r.threshold * 100)
+        treeStatus('[ic:content_cut] 没有需要剪的枝叶（阈值 ' + Math.round(r.threshold * 100)
           + '%，主干与最新候选都受保护）');
         return;
       }
@@ -2873,17 +2879,17 @@ function renderTreePanel(p) {
         + '\n\n主干（你正在读的这条）不会被删。确定吗？')) return;
       pywebview.api.tree_prune(false).then(function (r2) {
         if (!r2 || !r2.ok) { alert('剪枝失败：' + ((r2 && r2.err) || '未知')); return; }
-        treeStatus('✂ 已剪掉 ' + r2.removed_count + ' 个节点（'
+        treeStatus('[ic:content_cut] 已剪掉 ' + r2.removed_count + ' 个节点（'
           + r2.before + ' → ' + r2.after + '）');
         loadTree(false);
       });
-    }).catch(function () { pBtn.textContent = '✂ 剪枝'; });
+    }).catch(function () { pBtn.textContent = '[ic:content_cut] 剪枝'; });
   };
   head.appendChild(pBtn);
   // 漂移核查：三态（正常 / 有嫌疑 / 定案漂移）+ 延迟定案
   // 为什么不自动剪：漂移有时候正是用户想要的走向，判定先给人看
   var dBtn = document.createElement('span');
-  dBtn.textContent = '🔍 漂移';
+  dBtn.textContent = '[ic:search] 漂移';
   dBtn.style.cssText = 'cursor:pointer;color:var(--sub);font-weight:600;user-select:none;';
   dBtn.title = '核查有没有偏离本场目标（先在上面输入框填本场关键词）';
   dBtn.onclick = function (ev) {
@@ -2896,12 +2902,12 @@ function renderTreePanel(p) {
     if (!keys.length) { treeStatus('没填关键词，不做判定（不填就不会乱定罪）'); return; }
     window.__driftKeys = keys;
     pywebview.api.set_drift_keys(JSON.stringify(keys)).then(function () {
-      dBtn.textContent = '🔍 …';
+      dBtn.textContent = '[ic:search] …';
       pywebview.api.tree_drift(true).then(function (r) {
-        dBtn.textContent = '🔍 漂移';
+        dBtn.textContent = '[ic:search] 漂移';
         if (!r || !r.ok) { treeStatus('核查失败：' + ((r && r.err) || '未知')); return; }
         var c = r.counts || {};
-        treeStatus('🔍 核查 ' + r.audited + ' 轮 → 正常 ' + (c.cleared || 0)
+        treeStatus('[ic:search] 核查 ' + r.audited + ' 轮 → 正常 ' + (c.cleared || 0)
           + ' / 有嫌疑 ' + (c.suspected || 0) + ' / 定案漂移 ' + (c.drifted || 0)
           + '（只记状态，没有删任何东西）');
         var bad = (r.verdicts || []).filter(function (v) { return v.state === 'drifted'; });
@@ -2910,14 +2916,14 @@ function renderTreePanel(p) {
             return { node: v.node, coverage: v.coverage, why: v.reasons };
           }));
         }
-      }).catch(function () { dBtn.textContent = '🔍 漂移'; });
+      }).catch(function () { dBtn.textContent = '[ic:search] 漂移'; });
     });
   };
   head.appendChild(dBtn);
   // 前瞻展开：把树从"生成后的仓库"挪到"生成之中"
   // 代价是每轮多 K×D 次调用，所以默认关，且必须显式确认
   var lBtn = document.createElement('span');
-  lBtn.textContent = '🧭 前瞻';
+  lBtn.textContent = '[ic:explore] 前瞻';
   lBtn.style.cssText = 'cursor:pointer;color:var(--sub);font-weight:600;user-select:none;';
   lBtn.title = '先生成几条路、往前探几轮，挑端点最正的给你（会多花 token）';
   lBtn.onclick = function (ev) {
@@ -2932,35 +2938,35 @@ function renderTreePanel(p) {
       + '· 判据还是启发式：搜得越深，判错的代价越大\n\n确定开启吗？')) return;
     pywebview.api.set_lookahead(true, b, d).then(function (r) {
       if (!r || !r.ok) { alert('开启失败：' + ((r && r.err) || '未知')); return; }
-      lBtn.textContent = '🧭 前瞻开';
+      lBtn.textContent = '[ic:explore] 前瞻开';
       lBtn.style.color = '#5fd39a';
-      treeStatus('🧭 前瞻已开：' + r.note);
+      treeStatus('[ic:explore] 前瞻已开：' + r.note);
     });
   };
   head.appendChild(lBtn);
   // 偏好导出：把树里已经在产生、但不导出就永远拿不到的偏好信号接住
   var xBtn = document.createElement('span');
-  xBtn.textContent = '📤 偏好';
+  xBtn.textContent = '[ic:upload] 偏好';
   xBtn.style.cssText = 'cursor:pointer;color:var(--sub);font-weight:600;user-select:none;';
   xBtn.title = '把「同一问下你选了哪条、放弃了哪条」导出成 JSONL（只读，不改任何东西）';
   xBtn.onclick = function (ev) {
     ev.stopPropagation();
-    xBtn.textContent = '📤 …';
+    xBtn.textContent = '[ic:upload] …';
     pywebview.api.export_preferences().then(function (r) {
-      xBtn.textContent = '📤 偏好';
+      xBtn.textContent = '[ic:upload] 偏好';
       if (!r || !r.ok) { treeStatus('导出失败：' + ((r && r.err) || '未知')); return; }
-      if (!r.samples && !r.written) { treeStatus('📤 ' + (r.msg || '还没有样本')); return; }
+      if (!r.samples && !r.written) { treeStatus('[ic:upload] ' + (r.msg || '还没有样本')); return; }
       var s = r.stats || {};
       var agree = (s.agreement === null || s.agreement === undefined)
-        ? '一致率未知（先跑一次 ⚖ 打分）' : ('启发式与你的一致率 ' + Math.round(s.agreement * 100) + '%');
-      treeStatus('📤 ' + r.msg + '；' + agree
+        ? '一致率未知（先跑一次 [ic:balance] 打分）' : ('启发式与你的一致率 ' + Math.round(s.agreement * 100) + '%');
+      treeStatus('[ic:upload] ' + r.msg + '；' + agree
         + '；正样本 ' + (s.samples || 0) + ' 条 / 负样本 ' + (s.rejected_total || 0) + ' 条');
-    }).catch(function () { xBtn.textContent = '📤 偏好'; });
+    }).catch(function () { xBtn.textContent = '[ic:upload] 偏好'; });
   };
   head.appendChild(xBtn);
   // 价值声明（rubric）：第 2 步。声明错了比不声明更糟 —— 搜索会忠实放大它
   var rBtn = document.createElement('span');
-  rBtn.textContent = '📋 标准';
+  rBtn.textContent = '[ic:content_paste] 标准';
   rBtn.style.cssText = 'cursor:pointer;color:var(--sub);font-weight:600;user-select:none;';
   rBtn.title = '声明本场的评分标准（每行一条）。有这个，前瞻才会按你的标准挑，而不只是避开硬故障';
   rBtn.onclick = function (ev) {
@@ -2968,26 +2974,26 @@ function renderTreePanel(p) {
     var cur = (window.__rubric || []).join('\n');
     var inp = prompt('本场评分标准（每行一条，最多 8 条）\n'
       + '例：\n每轮必须推进一点，不能原地抒情\n不解释来历，悬念要留住\n不写成说明文，不回答案卷\n\n'
-      + '⚠ 写不好比不写更糟 —— 声明错了，搜索会忠实地放大它。', cur);
+      + '[ic:warning] 写不好比不写更糟 —— 声明错了，搜索会忠实地放大它。', cur);
     if (inp === null) return;
     var items = inp.split('\n').map(function (x) { return x.trim(); })
       .filter(function (x) { return x; });
     window.__rubric = items;
     pywebview.api.set_rubric(items.join('\n')).then(function (r) {
       if (!r || !r.ok) { alert('保存失败：' + ((r && r.err) || '未知')); return; }
-      if (!items.length) { treeStatus('📋 已清空标准（前瞻退回只用启发式）'); return; }
-      treeStatus('📋 已存 ' + items.length + ' 条标准（' + r.role + '）。'
+      if (!items.length) { treeStatus('[ic:content_paste] 已清空标准（前瞻退回只用启发式）'); return; }
+      treeStatus('[ic:content_paste] 已存 ' + items.length + ' 条标准（' + r.role + '）。'
         + '开着前瞻时，每条分支的端点会按这些标准判一次分');
     });
   };
   head.appendChild(rBtn);
   /** 记忆调试：看每条历史的清晰度、年龄、隐藏衰减率。
-   *  遗忘被设计成不可建模的，所以不给你看内部数字的话，你判断不出它坏没坏。 */
+ * 遗忘被设计成不可建模的，所以不给你看内部数字的话，你判断不出它坏没坏。 */
   var memBtn = document.createElement('span');
-  memBtn.textContent = '🧠 记忆';
+  memBtn.textContent = '[ic:memory] 记忆';
   memBtn.style.cssText = 'cursor:pointer;color:var(--sub);font-weight:600;user-select:none;';
   memBtn.title = '看当前历史的记忆清晰度：还记得哪些、忘了哪些、每条各自多久忘一次'
-    + '（和快捷栏那个「🧠 记忆」回溯命令不同：那个是把旧消息捞回来，这个是看记忆状态）';
+    + '（和快捷栏那个「[ic:memory] 记忆」回溯命令不同：那个是把旧消息捞回来，这个是看记忆状态）';
   memBtn.onclick = function (ev) {
     ev.stopPropagation();
     if (!window.pywebview || !pywebview.api || !pywebview.api.memory_debug) return;
@@ -2998,17 +3004,17 @@ function renderTreePanel(p) {
   };
   head.appendChild(memBtn);
   /** 时间流速表盘：世界那边比现实快多少倍。
-   *  对数刻度（每转一格 ×10）—— 线性的话 98% 行程都挤在最前几档上，没法用。 */
+ * 对数刻度（每转一格 ×10）—— 线性的话 98% 行程都挤在最前几档上，没法用。 */
   var dialBtn = document.createElement('span');
-  dialBtn.textContent = '⏳ 流速';
+  dialBtn.textContent = '[ic:hourglass_empty] 流速';
   dialBtn.style.cssText = 'cursor:pointer;color:var(--sub);font-weight:600;user-select:none;';
   dialBtn.title = '世界那边过得比现实快多少倍（10 ~ 1000万）。拖表盘调，不用输数字';
   dialBtn.onclick = function (ev) { ev.stopPropagation(); timeDialOpen(); };
   head.appendChild(dialBtn);
   /** 调试面板（非开发者向）：把"训练"这件事变成看数、点一下、看结果。
-   *  它不该出现在开发者入口里 —— 训练排序器不需要懂编程，只需要有偏好数据。 */
+ * 它不该出现在开发者入口里 —— 训练排序器不需要懂编程，只需要有偏好数据。 */
   var dbgBtn = document.createElement('span');
-  dbgBtn.textContent = '🛠 调试';
+  dbgBtn.textContent = '[ic:terminal] 调试';
   dbgBtn.style.cssText = 'cursor:pointer;color:var(--sub);font-weight:600;user-select:none;';
   dbgBtn.title = '数据够不够 / 本地训练排序器 / 它学到了什么（不需要服务器）';
   dbgBtn.onclick = function (ev) {
@@ -3016,8 +3022,8 @@ function renderTreePanel(p) {
     pywebview.api.ranker_status().then(function (r) {
       if (!r || !r.ok) { treeStatus('调试面板打不开：' + ((r && r.err) || '未知')); return; }
       var d = r.readiness || {};
-      var msg = '📊 偏好数据：' + (d.samples || 0) + ' 条（正样本），需 ' + (d.need_more ? (d.samples + d.need_more) : d.samples) + ' 条才够训。\n';
-      if (d.warnings && d.warnings.length) msg += '\n⚠ ' + d.warnings.join('\n⚠ ') + '\n';
+      var msg = '[ic:bar_chart] 偏好数据：' + (d.samples || 0) + ' 条（正样本），需 ' + (d.need_more ? (d.samples + d.need_more) : d.samples) + ' 条才够训。\n';
+      if (d.warnings && d.warnings.length) msg += '\n[ic:warning] ' + d.warnings.join('\n[ic:warning] ') + '\n';
       if (r.heuristic_agreement !== null && r.heuristic_agreement !== undefined) {
         msg += '\n启发式与你的一致率：' + Math.round(r.heuristic_agreement * 100) + '%\n';
       }
@@ -3033,17 +3039,17 @@ function renderTreePanel(p) {
                                         : '（数据还不够，训出来是噪声 —— 建议先多滑几次）');
       if (!confirm(msg)) return;
       if (!d.ready && !confirm('数据确实不够，还是要训吗？')) return;
-      treeStatus('🛠 训练中…');
+      treeStatus('[ic:terminal] 训练中…');
       pywebview.api.train_ranker().then(function (t) {
-        if (!t || !t.ok) { treeStatus('🛠 训练没成：' + ((t && t.err) || '未知')); return; }
+        if (!t || !t.ok) { treeStatus('[ic:terminal] 训练没成：' + ((t && t.err) || '未知')); return; }
         var top = (t.top || []).map(function (x) {
           return x[0] + ' ' + (x[1] > 0 ? '+' : '') + x[1].toFixed(2);
         }).join('、');
-        treeStatus('🛠 ' + t.msg + '；训练准确率 ' + t.train_acc
+        treeStatus('[ic:terminal] ' + t.msg + '；训练准确率 ' + t.train_acc
           + '，留出 ' + t.holdout_acc + '；权重最大：' + top);
         if (confirm('要启用它来给前瞻打分吗？\n\n会用你训出来的权重替代我手搓的那套判据。')) {
           pywebview.api.set_ranker(true).then(function () {
-            treeStatus('🛠 排序器已启用（前瞻时按你训出来的权重挑分支）');
+            treeStatus('[ic:terminal] 排序器已启用（前瞻时按你训出来的权重挑分支）');
           });
         }
       });
@@ -3051,7 +3057,7 @@ function renderTreePanel(p) {
   };
   head.appendChild(dbgBtn);
   var tg = document.createElement('span');
-  tg.textContent = (treeScope === 'choices') ? '🔖 只看选项' : '📄 全部节点';
+  tg.textContent = (treeScope === 'choices') ? '[ic:bookmark] 只看选项' : '[ic:description] 全部节点';
   tg.style.cssText = 'cursor:pointer;color:var(--accent);font-weight:600;user-select:none;';
   tg.onclick = function (ev) {
     ev.stopPropagation();
@@ -3075,7 +3081,7 @@ function renderTreePanel(p) {
     it.className = 'b-item' + (n.on_path ? ' on-path' : '') + (n.is_current ? ' cur' : '') + (branchHeader ? ' brh' : '');
     it.style.paddingLeft = (10 + indent * 14) + 'px';
     // 成就图标（灰白系）：角色/分支/选项 各配一个灰度图标
-    var icon = n.role === 'user' ? '〔你〕' : (n.role === 'system' ? '⚙' : '〔AI〕');
+    var icon = n.role === 'user' ? '〔你〕' : (n.role === 'system' ? '[ic:settings]' : '〔AI〕');
     if (n.is_choice) icon = '▣';
     var badge = n.is_current ? '<span class="b-cur">当前</span>' : '';
     var who = '<span class="b-who">' + icon + '</span>';
@@ -3327,7 +3333,7 @@ document.getElementById('nrDraft').onclick = function () {
 document.getElementById('btnSettings').onclick = function () {
   document.getElementById('settingsModal').classList.add('open');
 };
-// 侧边栏「🔌 插件」：直接打开设置（插件管理所在），作为插件抽屉的便捷入口
+// 侧边栏「 插件」：直接打开设置（插件管理所在），作为插件抽屉的便捷入口
 document.getElementById('btnPlugins').onclick = function () {
   document.getElementById('settingsModal').classList.add('open');
 };
@@ -3543,7 +3549,7 @@ document.getElementById('worldList').addEventListener('click', function (e) {
     pywebview.api.delete_world(d).then(function () { reloadWorlds(); });
   }
 });
-// 🌍 世界书条目的列表渲染/收集（entryHtml/renderWmEntries/collectWmEntries）
+// 世界书条目的列表渲染/收集（entryHtml/renderWmEntries/collectWmEntries）
 // 也搬到了 web/js/screens/wm.js。
 function reloadWorlds() {
   pywebview.api.state().then(function (s) {
@@ -3664,7 +3670,7 @@ document.getElementById('ppAvatar').onclick = function () {
   document.getElementById('fileInput').click();
 };
 
-// 🧰 创意工坊（世界卡库）：wsCurLocal/wsCurOnline/wsOnlineCache 改存 DICK.state['ws.*']，
+// 创意工坊（世界卡库）：wsCurLocal/wsCurOnline/wsOnlineCache 改存 DICK.state['ws.*']，
 // 兼容入口在 web/js/screens/ws.js 里注册；开关窗与三个 Tab 的绑定也搬过去了。
 
 
@@ -3672,7 +3678,7 @@ document.getElementById('ppAvatar').onclick = function () {
 
 
 // ================= CODEX 专属 GALGAME（PC 端独有） =================
-// 📦 📕 编年史 codex 的数据层收进 DICK.state（5 个：codexCur、codexScript、codexPlayer、codexVolume、codexTypeSpeed）；注册在 web/js/store/codex.js
+// 编年史 codex 的数据层收进 DICK.state（5 个：codexCur、codexScript、codexPlayer、codexVolume、codexTypeSpeed）；注册在 web/js/store/codex.js
 
 function codexSetStatus(s) {
   var el = document.getElementById('codexStatus');
@@ -3689,26 +3695,26 @@ function codexOpen() {
 function codexLoadList() {
   codexSetStatus('加载中…');
   pywebview.api.codex_list().then(function (r) {
-    if (!r || !r.ok) { codexSetStatus('❌ ' + ((r && r.err) || '加载失败')); return; }
+    if (!r || !r.ok) { codexSetStatus('[ic:error] ' + ((r && r.err) || '加载失败')); return; }
     codexSetStatus('共 ' + r.packages.length + ' 个 CODEX 包');
     renderCodexList(r.packages || []);
-  }).catch(function (e) { codexSetStatus('❌ ' + (e && e.message ? e.message : '加载失败')); });
+  }).catch(function (e) { codexSetStatus('[ic:error] ' + (e && e.message ? e.message : '加载失败')); });
 }
 function renderCodexList(pkgs) {
   var box = document.getElementById('codexList');
   box.innerHTML = '';
   if (!pkgs.length) {
-    box.innerHTML = '<div style="color:var(--sub);padding:14px;text-align:center">还没有 CODEX 包 —— 点「📁 导入文件夹」选一个含有立绘/音乐/背景/配音的文件夹，或「➕ 新建」从模板开始</div>';
+    box.innerHTML = '<div style="color:var(--sub);padding:14px;text-align:center">还没有 CODEX 包 —— 点「[ic:folder] 导入文件夹」选一个含有立绘/音乐/背景/配音的文件夹，或「[ic:add] 新建」从模板开始</div>';
     return;
   }
   pkgs.forEach(function (p) {
     var card = document.createElement('div');
     card.className = 'role-card';
     var sel = p.name === codexCur ? 'style="border-color:var(--accent,#f59e0b)"' : '';
-    var res = '[ic:sprite]' + p.sprites + ' [ic:image]' + p.bg + ' [ic:music]' + p.bgm + ' [ic:mic]' + p.voice;
+    var res = '[ic:sprite]' + p.sprites + ' [ic:image]' + p.bg + ' [ic:music_note]' + p.bgm + ' [ic:mic]' + p.voice;
     card.innerHTML =
       '<div class="rc-name" ' + sel + '>' +
-        '<label for="">📕 ' + escapeHtml(p.name) + (p.has_script ? '' : ' <span style="color:var(--danger)">(缺剧本)</span>') + '</label>' +
+        '<label for="">[ic:book] ' + escapeHtml(p.name) + (p.has_script ? '' : ' <span style="color:var(--danger)">(缺剧本)</span>') + '</label>' +
         '<span style="flex:1"></span>' +
         '<span style="font-size:11px;color:var(--sub)">' + res + '</span>' +
       '</div>' +
@@ -3724,14 +3730,14 @@ function codexSelect(name) {
   document.getElementById('codexDetail').style.display = 'block';
   document.getElementById('codexEditor').style.display = 'none';
   document.getElementById('codexFiles').style.display = 'none';
-  document.getElementById('codexDetailName').textContent = '📕 ' + name;
+  document.getElementById('codexDetailName').textContent = '[ic:book] ' + name;
   codexLoadList(); // 刷新高亮 + 简介
   pywebview.api.codex_get(name).then(function (r) {
-    if (!r || !r.ok) { codexSetStatus('❌ ' + ((r && r.err) || '读取失败')); return; }
+    if (!r || !r.ok) { codexSetStatus('[ic:error] ' + ((r && r.err) || '读取失败')); return; }
     var intro = (r.script && r.script.intro) || '';
     document.getElementById('codexIntro').textContent = intro || '（无简介）';
     if (!r.valid && r.issues && r.issues.length) {
-      codexSetStatus('⚠️ 剧本问题: ' + r.issues.slice(0, 2).join('; '));
+      codexSetStatus('[ic:warning] 剧本问题: ' + r.issues.slice(0, 2).join('; '));
     }
   });
 }
@@ -3746,9 +3752,9 @@ function codexNew() {
 function codexSample() {
   var n = prompt('示例包名称（将生成带占位立绘/背景/音乐/配音的完整示例，可直接播放）:', '示例·夏日祭');
   if (!n || !n.trim()) return;
-  codexSetStatus('⏳ 生成示例包…');
+  codexSetStatus('[ic:hourglass_empty] 生成示例包…');
   pywebview.api.codex_sample(n.trim()).then(function (r) {
-    if (r && r.ok) { codexSetStatus('✅ 示例包已生成'); codexLoadList(); codexSelect(r.name); }
+    if (r && r.ok) { codexSetStatus('[ic:check_circle] 示例包已生成'); codexLoadList(); codexSelect(r.name); }
     else { codexSetStatus(''); alert((r && r.err) || '生成失败'); }
   });
 }
@@ -3758,14 +3764,14 @@ function codexDraft() {
   if (!n || !n.trim()) return;
   var idea = prompt('一句话主题（如：雨天的咖啡店，内向少女鼓起勇气搭话）:', '雨天的咖啡店，内向少女鼓起勇气搭话');
   if (!idea || !idea.trim()) return;
-  codexSetStatus('⏳ AI 起草剧本中…（约 30-60 秒）');
+  codexSetStatus('[ic:hourglass_empty] AI 起草剧本中…（约 30-60 秒）');
   pywebview.api.codex_draft(n.trim(), idea.trim()).then(function (r) {
     if (!r || !r.ok) { codexSetStatus(''); alert((r && r.err) || '起草失败'); return; }
     // 生成包 + 把 AI 剧本写进去
     pywebview.api.codex_create(n.trim()).then(function (cr) {
       if (!cr || !cr.ok) { codexSetStatus(''); alert('建包失败'); return; }
       pywebview.api.codex_save(cr.name, JSON.stringify(r.script)).then(function (sr) {
-        codexSetStatus('✅ AI 剧本已生成' + (sr && sr.valid ? '' : '（有结构提示，可编辑修正）'));
+        codexSetStatus('[ic:check_circle] AI 剧本已生成' + (sr && sr.valid ? '' : '（有结构提示，可编辑修正）'));
         codexLoadList();
         codexCur = cr.name;
         codexEdit();
@@ -3776,21 +3782,21 @@ function codexDraft() {
 function codexImport() {
   pywebview.api.codex_import_folder().then(function (r) {
     if (!r) return;
-    if (r.ok) { codexSetStatus('✅ ' + (r.msg || '导入成功')); codexLoadList(); if (r.name) codexSelect(r.name); }
+    if (r.ok) { codexSetStatus('[ic:check_circle] ' + (r.msg || '导入成功')); codexLoadList(); if (r.name) codexSelect(r.name); }
     else if (r.err !== 'cancelled') alert(r.err || '导入失败');
   });
 }
 function codexImportZip() {
   pywebview.api.codex_import_zip().then(function (r) {
     if (!r) return;
-    if (r.ok) { codexSetStatus('✅ ' + (r.msg || '导入成功')); codexLoadList(); if (r.name) codexSelect(r.name); }
+    if (r.ok) { codexSetStatus('[ic:check_circle] ' + (r.msg || '导入成功')); codexLoadList(); if (r.name) codexSelect(r.name); }
     else if (r.err !== 'cancelled') alert(r.err || '导入失败');
   });
 }
 function codexImportCodex() {
   pywebview.api.codex_import_codex().then(function (r) {
     if (!r) return;
-    if (r.ok) { codexSetStatus('✅ ' + (r.msg || '导入成功')); codexLoadList(); if (r.name) codexSelect(r.name); }
+    if (r.ok) { codexSetStatus('[ic:check_circle] ' + (r.msg || '导入成功')); codexLoadList(); if (r.name) codexSelect(r.name); }
     else if (r.err !== 'cancelled') alert(r.err || '导入失败');
   });
 }
@@ -3803,13 +3809,13 @@ function codexPasteStatus(s) { var el = document.getElementById('codexPasteStatu
 function codexPasteConvert() {
   var text = document.getElementById('codexPasteInput').value.trim();
   if (!text) { codexPasteStatus('请先粘贴剧本'); return; }
-  codexPasteStatus('⏳ 转化中…');
+  codexPasteStatus('[ic:hourglass_empty] 转化中…');
   pywebview.api.codex_import_script(text).then(function (r) {
-    if (!r || !r.ok) { codexPasteStatus('❌ ' + ((r && r.err) || '转化失败')); return; }
-    codexPasteStatus('✅ 已识别为 ' + (r.kind === 'json' ? 'JSON' : '纯文本') + ' 剧本' + (r.valid ? '' : '，有结构提示，可修正后保存'));
+    if (!r || !r.ok) { codexPasteStatus('[ic:error] ' + ((r && r.err) || '转化失败')); return; }
+    codexPasteStatus('[ic:check_circle] 已识别为 ' + (r.kind === 'json' ? 'JSON' : '纯文本') + ' 剧本' + (r.valid ? '' : '，有结构提示，可修正后保存'));
     var doSave = function (pkgName) {
       pywebview.api.codex_save(pkgName, JSON.stringify(r.script)).then(function (sr) {
-        codexPasteStatus('✅ 已保存到「' + pkgName + '」' + (sr && sr.valid ? '' : '（有结构提示）'));
+        codexPasteStatus('[ic:check_circle] 已保存到「' + pkgName + '」' + (sr && sr.valid ? '' : '（有结构提示）'));
         document.getElementById('codexPasteModal').classList.remove('open');
         codexCur = pkgName;
         codexSelect(pkgName);
@@ -3820,18 +3826,18 @@ function codexPasteConvert() {
     else {
       pywebview.api.codex_create(r.autoName || '我的剧本').then(function (cr) {
         if (cr && cr.ok) doSave(cr.name);
-        else codexPasteStatus('❌ 建包失败：' + ((cr && cr.err) || ''));
+        else codexPasteStatus('[ic:error] 建包失败：' + ((cr && cr.err) || ''));
       });
     }
-  }).catch(function (e) { codexPasteStatus('❌ ' + (e && e.message ? e.message : '转化失败')); });
+  }).catch(function (e) { codexPasteStatus('[ic:error] ' + (e && e.message ? e.message : '转化失败')); });
 }
 function codexImportSprites() {
   if (!codexCur) return;
-  codexSetStatus('⏳ 导入立绘…');
+  codexSetStatus('[ic:hourglass_empty] 导入立绘…');
   pywebview.api.codex_import_sprites(codexCur).then(function (r) {
     codexSetStatus('');
     if (r && r.ok) {
-      codexSetStatus('✅ ' + (r.msg || ('导入 ' + r.added.length + ' 张立绘')));
+      codexSetStatus('[ic:check_circle] ' + (r.msg || ('导入 ' + r.added.length + ' 张立绘')));
       codexLoadList();
     } else if (r && r.err !== 'cancelled') {
       alert(r.err || '导入失败');
@@ -3845,19 +3851,19 @@ function codexAdvancedOpen() {
   codexTplStatus('');
   document.getElementById('codexAdvancedModal').classList.add('open');
   document.getElementById('codexTplPreview').srcdoc = '';
-  codexTplStatus('⏳ 加载播放器模板…');
+  codexTplStatus('[ic:hourglass_empty] 加载播放器模板…');
   pywebview.api.codex_get_player_template(codexCur).then(function (r) {
-    if (!r || !r.ok) { codexTplStatus('❌ ' + ((r && r.err) || '加载失败')); return; }
+    if (!r || !r.ok) { codexTplStatus('[ic:error] ' + ((r && r.err) || '加载失败')); return; }
     document.getElementById('codexTplInput').value = r.html || '';
-    codexTplStatus(r.is_custom ? '✏️ 自定义模板（来自本包 player.html）' : '✅ 系统内置模板');
+    codexTplStatus(r.is_custom ? '[ic:edit] 自定义模板（来自本包 player.html）' : '[ic:check_circle] 系统内置模板');
   });
 }
 function codexAdvancedPlay() {
   if (!codexCur) return;
   var tpl = document.getElementById('codexTplInput').value;
-  codexTplStatus('⏳ 渲染中…');
+  codexTplStatus('[ic:hourglass_empty] 渲染中…');
   pywebview.api.codex_render(codexCur, tpl).then(function (r) {
-    if (!r || !r.ok) { codexTplStatus('❌ ' + ((r && r.err) || '渲染失败')); return; }
+    if (!r || !r.ok) { codexTplStatus('[ic:error] ' + ((r && r.err) || '渲染失败')); return; }
     document.getElementById('codexTplPreview').srcdoc = r.html || '';
     codexTplStatus('[ic:play] 已渲染（试玩预览）');
   });
@@ -3865,19 +3871,19 @@ function codexAdvancedPlay() {
 function codexAdvancedSave() {
   if (!codexCur) return;
   var tpl = document.getElementById('codexTplInput').value;
-  codexTplStatus('⏳ 保存中…');
+  codexTplStatus('[ic:hourglass_empty] 保存中…');
   pywebview.api.codex_save_player_template(codexCur, tpl).then(function (r) {
-    if (r && r.ok) codexTplStatus('✅ ' + (r.msg || '模板已保存'));
-    else codexTplStatus('❌ ' + ((r && r.err) || '保存失败'));
+    if (r && r.ok) codexTplStatus('[ic:check_circle] ' + (r.msg || '模板已保存'));
+    else codexTplStatus('[ic:error] ' + ((r && r.err) || '保存失败'));
   });
 }
 function codexAdvancedReset() {
   if (!codexCur) return;
-  codexTplStatus('⏳ 恢复默认…');
+  codexTplStatus('[ic:hourglass_empty] 恢复默认…');
   pywebview.api.codex_get_player_template('').then(function (r) {
-    if (!r || !r.ok) { codexTplStatus('❌ ' + ((r && r.err) || '失败')); return; }
+    if (!r || !r.ok) { codexTplStatus('[ic:error] ' + ((r && r.err) || '失败')); return; }
     document.getElementById('codexTplInput').value = r.html || '';
-    codexTplStatus('↺ 已载入系统内置模板，点「💾 保存模板」才会写入本包');
+    codexTplStatus('[ic:settings_backup_restore] 已载入系统内置模板，点「[ic:save] 保存模板」才会写入本包');
   });
 }
 function codexExportCodex() {
@@ -3886,14 +3892,14 @@ function codexExportCodex() {
     if (r && !r.ok && r.err !== 'cancelled') alert(r.err);
     else if (r && r.ok) {
       var info = document.getElementById('codexPackInfo');
-      info.innerHTML = '✅ 已导出 .codex 包：' + escapeHtml(r.file) + ' —— 发给任何人，对方双击（注册关联后）即可在 DICK 打开播放。';
+      info.innerHTML = '[ic:check_circle] 已导出 .codex 包：' + escapeHtml(r.file) + ' —— 发给任何人，对方双击（注册关联后）即可在 DICK 打开播放。';
       info.style.display = 'block';
     }
   });
 }
 function codexAssoc() {
   pywebview.api.codex_register_assoc().then(function (r) {
-    if (r && r.ok) codexSetStatus(r.msg || '✅ 已注册');
+    if (r && r.ok) codexSetStatus(r.msg || '[ic:check_circle] 已注册');
     else alert((r && r.err) || '注册失败');
   });
 }
@@ -3901,12 +3907,12 @@ function codexVoice() {
   // 一键配音：UTAU 批量合成台词 → voice/ + 更新剧本引用
   if (!codexCur) return;
   if (!confirm('为「' + codexCur + '」的所有台词一键合成配音？（需启用 UTAU 语音插件 + 声库，逐句合成较慢）')) return;
-  codexSetStatus('⏳ 逐句配音中…（每句约 3-10 秒）');
+  codexSetStatus('[ic:hourglass_empty] 逐句配音中…（每句约 3-10 秒）');
   pywebview.api.codex_auto_voice(codexCur).then(function (r) {
     codexSetStatus('');
     if (r && r.ok) {
       var info = document.getElementById('codexPackInfo');
-      info.innerHTML = '✅ ' + escapeHtml(r.msg || '配音完成') + ' —— 播放时自动读出台词。';
+      info.innerHTML = '[ic:check_circle] ' + escapeHtml(r.msg || '配音完成') + ' —— 播放时自动读出台词。';
       info.style.display = 'block';
       codexLoadList();
     } else alert((r && r.err) || '配音失败');
@@ -3927,38 +3933,42 @@ function codexEdit() {
 function codexEditorStatus(s) { document.getElementById('codexEditorStatus').textContent = s || ''; }
 function codexFormat() {
   var box = document.getElementById('codexJsonInput');
-  try { box.value = JSON.stringify(JSON.parse(box.value), null, 2); codexEditorStatus('🎨 已格式化'); }
-  catch (e) { codexEditorStatus('❌ ' + e.message); }
+  try { box.value = JSON.stringify(JSON.parse(box.value), null, 2); codexEditorStatus('[ic:palette] 已格式化'); }
+  catch (e) { codexEditorStatus('[ic:error] ' + e.message); }
 }
 function codexCheck() {
   var box = document.getElementById('codexJsonInput');
   try {
     var obj = JSON.parse(box.value);
     pywebview.api.codex_save(codexCur, JSON.stringify(obj)).then(function (r) {
-      if (r && r.ok) codexEditorStatus(r.valid ? '✅ 结构正常' : '⚠️ ' + ((r.issues || []).slice(0, 3).join('; ')));
-      else codexEditorStatus('❌ ' + ((r && r.err) || '校验失败'));
+      if (r && r.ok) codexEditorStatus(r.valid ? '[ic:check_circle] 结构正常' : '[ic:warning] ' + ((r.issues || []).slice(0, 3).join('; ')));
+      else codexEditorStatus('[ic:error] ' + ((r && r.err) || '校验失败'));
     });
-  } catch (e) { codexEditorStatus('❌ JSON 解析失败: ' + e.message); }
+  } catch (e) { codexEditorStatus('[ic:error] JSON 解析失败: ' + e.message); }
 }
 function codexSave() {
   var box = document.getElementById('codexJsonInput');
-  try { JSON.parse(box.value); } catch (e) { codexEditorStatus('❌ JSON 解析失败: ' + e.message); return; }
+  try { JSON.parse(box.value); } catch (e) { codexEditorStatus('[ic:error] JSON 解析失败: ' + e.message); return; }
   pywebview.api.codex_save(codexCur, box.value).then(function (r) {
-    if (r && r.ok) { codexEditorStatus(r.valid ? '✅ 已保存，结构正常' : '⚠️ 已保存但: ' + ((r.issues || []).slice(0, 2).join('; '))); codexLoadList(); }
-    else codexEditorStatus('❌ ' + ((r && r.err) || '保存失败'));
+    if (r && r.ok) { codexEditorStatus(r.valid ? '[ic:check_circle] 已保存，结构正常' : '[ic:warning] 已保存但: ' + ((r.issues || []).slice(0, 2).join('; '))); codexLoadList(); }
+    else codexEditorStatus('[ic:error] ' + ((r && r.err) || '保存失败'));
   });
 }
 
 // ===== GAL 叙事引擎 · 节点图编辑器（线-点-分支 剪辑） =====
-// 📦 📕 编年史 codex 的数据层收进 DICK.state（2 个：_gScript、_gSel）；注册在 web/js/store/codex.js
+// 编年史 codex 的数据层收进 DICK.state（2 个：_gScript、_gSel）；注册在 web/js/store/codex.js
 // 注意：这张表同时被 SVG <text>（节点图）和 <option>（下拉）消费，两处都放不进 <span> 图标，
 // 所以只放纯文字（节点图本来就按 kind 上色）；DOM 场景要用图标请取 _gKindIcon。
 var _gKindNames = { say:'台词', note:'旁白', show:'显示立绘', hide:'隐藏立绘', bg:'背景', bgm:'音乐', sfx:'音效', effect:'特效', wait:'等待', setflag:'设标记', roll:'抽取', choice:'分支', jump:'跳转', end:'结局', action:'动作' };
-var _gKindIcon = { say:'[ic:chat]', note:'[ic:memo]', show:'[ic:sprite]', hide:'[ic:sprite_off]', bg:'[ic:image]', bgm:'[ic:music]', sfx:'[ic:bell]', effect:'[ic:burst]', wait:'[ic:hourglass]', setflag:'[ic:flag]', roll:'[ic:dice]', choice:'[ic:shuffle]', jump:'[ic:arrow_right]', end:'[ic:flag_end]', action:'[ic:settings]' };
+// 每种节点一个图标。名字必须是 Material Symbols 里**真的有的连字**（tests/test_no_emoji_ui.py ①
+// 按字体连字表把关）—— 原来的 memo/music/bell/burst/dice/flag_end 六个名字字体里没有，
+// 界面上只会画成名字本身，这次一并换成 fonts 里有的：description / music_note /
+// notifications / flare / casino / sports_score。
+var _gKindIcon = { say:'[ic:chat]', note:'[ic:description]', show:'[ic:sprite]', hide:'[ic:sprite_off]', bg:'[ic:image]', bgm:'[ic:music_note]', sfx:'[ic:notifications]', effect:'[ic:flare]', wait:'[ic:hourglass]', setflag:'[ic:flag]', roll:'[ic:casino]', choice:'[ic:shuffle]', jump:'[ic:arrow_right]', end:'[ic:sports_score]', action:'[ic:settings]' };
 function codexGraphStatus(s) { document.getElementById('cxGraphStatus').textContent = s || ''; }
 function codexGraphOpen() {
   var box = document.getElementById('codexJsonInput');
-  try { _gScript = JSON.parse(box.value || 'null'); } catch (e) { codexGraphStatus('❌ JSON 解析失败: ' + e.message); return; }
+  try { _gScript = JSON.parse(box.value || 'null'); } catch (e) { codexGraphStatus('[ic:error] JSON 解析失败: ' + e.message); return; }
   if (!_gScript || typeof _gScript !== 'object') _gScript = { name: codexCur || '我的故事', scenes: [] };
   if (!_gScript.scenes) _gScript.scenes = [];
   _gSel = null;
@@ -3966,7 +3976,7 @@ function codexGraphOpen() {
   document.getElementById('codexGraphWrap').style.display = 'block';
   document.getElementById('cxSceneEdit').style.display = 'none';
   codexRenderGraph();
-  codexGraphStatus('🎬 线-点-分支 · ' + (_gScript.scenes || []).length + ' 条线 · 点「线」编步骤，点分支边改条件');
+  codexGraphStatus('[ic:movie] 线-点-分支 · ' + (_gScript.scenes || []).length + ' 条线 · 点「线」编步骤，点分支边改条件');
 }
 function codexGraphJson() {
   document.getElementById('codexGraphWrap').style.display = 'none';
@@ -4032,7 +4042,7 @@ function codexRenderGraph() {
       if (!ln || typeof ln !== 'object') return;
       var kind = ln.kind || 'say';
       if (kind === 'choice') (ln.choice || []).forEach(function (o, k) {
-        if (o && o.goto && L.byId[o.goto]) edge(o.goto, o.if ? 'cond' : 'line', (o.if ? '🔒' : '🔀') + ' ' + (o.text || ''), 265 + k * 90, p.y + 22);
+        if (o && o.goto && L.byId[o.goto]) edge(o.goto, o.if ? 'cond' : 'line', (o.if ? '[ic:lock]' : '[ic:shuffle]') + ' ' + (o.text || ''), 265 + k * 90, p.y + 22);
       });
       if (ln.jump && L.byId[ln.jump]) edge(ln.jump, 'line', '跳', 265, p.y + 22);
     });
@@ -4094,13 +4104,13 @@ function codexEditSceneGraph(sid) {
     lines.forEach(function (ln, i) { renderStepRow(sc, ln, i); });
     var add = document.createElement('button');
     add.className = 'btn2 ghost';
-    add.textContent = '➕ 加一步';
+    add.textContent = '[ic:add] 加一步';
     add.style.cssText = 'margin-top:6px';
     add.onclick = function () { sc.lines.push({ kind: 'say', text: '' }); renderSteps(); };
     list.appendChild(add);
     var delScene = document.createElement('button');
     delScene.className = 'btn2 ghost';
-    delScene.textContent = '🗑️ 删除本场景';
+    delScene.textContent = '[ic:delete] 删除本场景';
     delScene.style.cssText = 'margin-top:6px;color:var(--danger);margin-left:8px';
     delScene.onclick = function () { _gScript.scenes = _gScript.scenes.filter(function (s) { return s.id !== sc.id; }); _gSel = null; codexRenderGraph(); document.getElementById('cxSceneEdit').style.display = 'none'; };
     list.appendChild(delScene);
@@ -4117,7 +4127,7 @@ function codexEditSceneGraph(sid) {
     if (ln.kind === 'choice') {
       var ci = document.createElement('span'); ci.textContent = '分支：'; row.appendChild(ci);
       (ln.choice || []).forEach(function (o) { renderChoiceItem(row, ln, o); });
-      var addOpt = document.createElement('button'); addOpt.className = 'btn2 ghost'; addOpt.textContent = '➕ 选项'; addOpt.style.cssText = 'font-size:11px;padding:3px 8px'; addOpt.onclick = function () { ln.choice = ln.choice || []; ln.choice.push({ text: '', goto: '' }); renderSteps(); }; row.appendChild(addOpt);
+      var addOpt = document.createElement('button'); addOpt.className = 'btn2 ghost'; addOpt.textContent = '[ic:add] 选项'; addOpt.style.cssText = 'font-size:11px;padding:3px 8px'; addOpt.onclick = function () { ln.choice = ln.choice || []; ln.choice.push({ text: '', goto: '' }); renderSteps(); }; row.appendChild(addOpt);
       row.appendChild(delBtn(ln, i));
       list.appendChild(row); return;
     }
@@ -4151,11 +4161,11 @@ function codexEditSceneGraph(sid) {
     var ot = document.createElement('input'); ot.value = o.text || ''; ot.placeholder = '选项文字'; ot.style.cssText = 'background:var(--bubble,#161b22);border:1px solid var(--line);border-radius:6px;color:var(--text,#ddd);padding:3px 6px;font-size:12px;width:110px'; ot.oninput = function () { o.text = ot.value; }; box.appendChild(ot);
     var og = document.createElement('input'); og.value = o.goto || ''; og.placeholder = 'goto'; og.style.cssText = 'background:var(--bubble,#161b22);border:1px solid var(--line);border-radius:6px;color:var(--text,#ddd);padding:3px 6px;font-size:12px;width:70px'; og.oninput = function () { o.goto = og.value; }; box.appendChild(og);
     var oc = document.createElement('input'); oc.value = o.if ? JSON.stringify(o.if) : ''; oc.placeholder = '条件 {aff:>=85}'; oc.style.cssText = 'background:var(--bubble,#161b22);border:1px solid rgba(245,158,11,.4);border-radius:6px;color:var(--warn);padding:3px 6px;font-size:12px;width:150px'; oc.oninput = function () { try { o.if = oc.value.trim() ? JSON.parse(oc.value) : undefined; } catch (e) { o.if = undefined; } }; box.appendChild(oc);
-    var del = document.createElement('button'); del.textContent = '✕'; del.className = 'btn2 ghost'; del.style.cssText = 'color:var(--danger);font-size:11px;padding:2px 6px'; del.onclick = function () { ln.choice = ln.choice.filter(function (x) { return x !== o; }); renderSteps(); }; box.appendChild(del);
+    var del = document.createElement('button'); del.textContent = '[ic:close]'; del.className = 'btn2 ghost'; del.style.cssText = 'color:var(--danger);font-size:11px;padding:2px 6px'; del.onclick = function () { ln.choice = ln.choice.filter(function (x) { return x !== o; }); renderSteps(); }; box.appendChild(del);
     row.appendChild(box);
   }
   function delBtn(ln, i) {
-    var d = document.createElement('button'); d.textContent = '🗑️'; d.className = 'btn2 ghost'; d.style.cssText = 'color:var(--danger);font-size:12px;padding:2px 6px'; d.onclick = function () { sc.lines.splice(i, 1); renderSteps(); }; return d;
+    var d = document.createElement('button'); d.textContent = '[ic:delete]'; d.className = 'btn2 ghost'; d.style.cssText = 'color:var(--danger);font-size:12px;padding:2px 6px'; d.onclick = function () { sc.lines.splice(i, 1); renderSteps(); }; return d;
   }
   function mkInput(val, ph, cb) {
     var x = document.createElement('input'); x.value = val; x.placeholder = ph; firstInput(x); return x;
@@ -4165,8 +4175,8 @@ function codexEditSceneGraph(sid) {
   codexRenderGraph();
 }
 function codexSaveGraph() {
-  try { var box = document.getElementById('codexJsonInput'); box.value = JSON.stringify(_gScript, null, 2); codexSave(); codexGraphStatus('✅ 已保存到剧本'); }
-  catch (e) { codexGraphStatus('❌ ' + e.message); }
+  try { var box = document.getElementById('codexJsonInput'); box.value = JSON.stringify(_gScript, null, 2); codexSave(); codexGraphStatus('[ic:check_circle] 已保存到剧本'); }
+  catch (e) { codexGraphStatus('[ic:error] ' + e.message); }
 }
 document.getElementById('codexGraphBtn').onclick = codexGraphOpen;
 document.getElementById('cxGraphSaveBtn').onclick = codexSaveGraph;
@@ -4174,7 +4184,7 @@ document.getElementById('cxGraphAddBtn').onclick = codexGraphAddScene;
 document.getElementById('cxGraphJsonBtn').onclick = codexGraphJson;
 
 // ===== GAL 制作器 · 全屏「线-点-分支」编辑器（单独界面，在线内编辑） =====
-// 📦 🎬 GAL 制作器 gal 的数据层收进 DICK.state（10 个：galScript、galBodies、galDrag、galKeyOnly、galDragNode、galDragged、galPan、galScale、galU、galR）；注册在 web/js/store/gal.js
+// GAL 制作器 gal 的数据层收进 DICK.state（10 个：galScript、galBodies、galDrag、galKeyOnly、galDragNode、galDragged、galPan、galScale、galU、galR）；注册在 web/js/store/gal.js
 
 function galSnap() { try { return JSON.stringify(galScript); } catch (e) { return null; } }
 function galPushUndo() { var s = galSnap(); if (s) { galU.push(s); if (galU.length > 100) galU.shift(); galR = []; } }
@@ -4198,7 +4208,7 @@ function galToast(msg) {
   clearTimeout(t._tm);
   t._tm = setTimeout(function () { t.style.opacity = '0'; setTimeout(function () { t.style.display = 'none'; }, 300); }, 1600);
 }
-// 📦 🎬 GAL 制作器 gal 的数据层收进 DICK.state（3 个：galConnecting、galConnTarget、galRAF）；注册在 web/js/store/gal.js
+// GAL 制作器 gal 的数据层收进 DICK.state（3 个：galConnecting、galConnTarget、galRAF）；注册在 web/js/store/gal.js
 function galNodeDown(ev, id, baseX, baseY) {
   if (ev.button !== 0) return;   // 右/中键不触发拖节点（给右键菜单用）
   ev.stopPropagation();
@@ -4284,7 +4294,7 @@ function galConnectScene(srcId, tgtId, mode) {
     var cp = (sc.lines || []).find(function (l) { return l && l.choice; });
     if (cp) { cp.choice = cp.choice || []; cp.choice.push({ text: '选项', goto: tgtId }); }
     else { sc.lines = sc.lines || []; sc.lines.push({ kind: 'choice', choice: [{ text: '选项', goto: tgtId }] }); }
-    galToast('🔀 已添加选项分支');
+    galToast('[ic:shuffle] 已添加选项分支');
   };
   if (mode === 'choice') { assertChoice(); }
   else if (mode === 'next') { sc.next = tgtId; galToast('▸ 已设为进行(下一步)'); }
@@ -4309,7 +4319,7 @@ function galToggleKey(id) {
   sc.key = !galIsKey(sc);
   galRenderGraph();
 }
-// 📦 🎬 GAL 制作器 gal 的数据层收进 DICK.state（1 个：galAllOpen）；注册在 web/js/store/gal.js
+// GAL 制作器 gal 的数据层收进 DICK.state（1 个：galAllOpen）；注册在 web/js/store/gal.js
 function galInput(val, ph, cb) {
   var x = document.createElement('input');
   x.value = val; x.placeholder = ph;
@@ -4317,8 +4327,8 @@ function galInput(val, ph, cb) {
   x.oninput = function () { cb(x.value); };
   return x;
 }
-// 素材下拉：从包里已有的文件里挑，旁边带「📥 导入」直接从电脑导进包
-// 📦 🎬 GAL 制作器 gal 的数据层收进 DICK.state（1 个：_galAssets）；注册在 web/js/store/gal.js
+// 素材下拉：从包里已有的文件里挑，旁边带「 导入」直接从电脑导进包
+// GAL 制作器 gal 的数据层收进 DICK.state（1 个：_galAssets）；注册在 web/js/store/gal.js
 function galLoadAssets(cb) {
   if (!codexCur) { cb && cb(); return; }
   pywebview.api.codex_script_files(codexCur).then(function (r) {
@@ -4344,23 +4354,23 @@ function galAssetSelect(kind, val, ph, cb) {
   sel.value = val || '';
   sel.onchange = function () { cb(sel.value); };
   var imp = document.createElement('button');
-  imp.className = 'btn2 ghost'; imp.textContent = '📥 导入'; imp.title = '从电脑里选' + ph + '，导进这个包';
+  imp.className = 'btn2 ghost'; imp.textContent = '[ic:inbox] 导入'; imp.title = '从电脑里选' + ph + '，导进这个包';
   imp.style.cssText = 'font-size:12px;padding:6px 10px;white-space:nowrap;flex:0 0 auto';
   imp.onclick = function () {
     imp.disabled = true; imp.textContent = '导入中…';
     pywebview.api.codex_import_asset(codexCur, kind).then(function (r) {
-      imp.disabled = false; imp.textContent = '📥 导入';
+      imp.disabled = false; imp.textContent = '[ic:inbox] 导入';
       if (!r || !r.ok) {
-        if (r && r.err !== 'cancelled') galToast('❌ ' + ((r && r.err) || '导入失败'));
+        if (r && r.err !== 'cancelled') galToast('[ic:error] ' + ((r && r.err) || '导入失败'));
         return;
       }
       _galAssets = r.files || {};
       var add = (r.added || [])[0] || '';
       cb(add ? (kind + '/' + add) : sel.value);
-      galToast('✅ 已导入 ' + (r.added || []).length + ' 个文件');
+      galToast('[ic:check_circle] 已导入 ' + (r.added || []).length + ' 个文件');
     }).catch(function (e) {
-      imp.disabled = false; imp.textContent = '📥 导入';
-      galToast('❌ ' + ((e && e.message) || '导入失败'));
+      imp.disabled = false; imp.textContent = '[ic:inbox] 导入';
+      galToast('[ic:error] ' + ((e && e.message) || '导入失败'));
     });
   };
   wrap.appendChild(sel); wrap.appendChild(imp);
@@ -4370,10 +4380,10 @@ function galOpenEditor(name) {
   codexCur = name;
   galScript = null;
   document.getElementById('galEditor').style.display = 'flex';
-  document.getElementById('galTitle').textContent = '📕 GAL 制作器 · ' + name;
+  document.getElementById('galTitle').textContent = '[ic:book] GAL 制作器 · ' + name;
   document.getElementById('galStats').textContent = '加载中…';
   pywebview.api.codex_get(name).then(function (r) {
-    if (!r || !r.ok) { document.getElementById('galStats').textContent = '❌ ' + ((r && r.err) || '加载失败'); return; }
+    if (!r || !r.ok) { document.getElementById('galStats').textContent = '[ic:error] ' + ((r && r.err) || '加载失败'); return; }
     galScript = r.script;
     if (!galScript.scenes) galScript.scenes = [];
     galEnsureRoles();
@@ -4400,8 +4410,8 @@ function galRenderRoles() {
   p.innerHTML = '';
   var h = document.createElement('div');
   h.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:8px 12px;border-bottom:1px solid var(--line)';
-  h.innerHTML = '<b style="font-size:13px;color:var(--text)">👥 角色（独立实体）</b>';
-  var close = document.createElement('button'); close.className = 'btn2 ghost'; close.textContent = '✕'; close.onclick = function () { p.style.display = 'none'; };
+  h.innerHTML = '<b style="font-size:13px;color:var(--text)">[ic:group] 角色（独立实体）</b>';
+  var close = document.createElement('button'); close.className = 'btn2 ghost'; close.textContent = '[ic:close]'; close.onclick = function () { p.style.display = 'none'; };
   h.appendChild(close);
   p.appendChild(h);
   var wrap = document.createElement('div'); wrap.style.cssText = 'padding:8px 12px';
@@ -4413,10 +4423,10 @@ function galRenderRoles() {
     row.appendChild(galInput(r.name || '', '角色名', function (v) { r.name = v; }));
     row.appendChild(galInput(r.sprite || '', '立绘', function (v) { r.sprite = v; }));
     row.appendChild(galInput(r.voice || '', '语音', function (v) { r.voice = v; }));
-    var del = document.createElement('button'); del.className = 'btn2 ghost'; del.textContent = '✕'; del.style.cssText = 'color:var(--danger);font-size:12px;padding:2px 6px'; del.onclick = function () { galPushUndo(); galScript.roles.splice(i, 1); galRenderRoles(); }; row.appendChild(del);
+    var del = document.createElement('button'); del.className = 'btn2 ghost'; del.textContent = '[ic:close]'; del.style.cssText = 'color:var(--danger);font-size:12px;padding:2px 6px'; del.onclick = function () { galPushUndo(); galScript.roles.splice(i, 1); galRenderRoles(); }; row.appendChild(del);
     wrap.appendChild(row);
   });
-  var add = document.createElement('button'); add.className = 'btn2'; add.textContent = '➕ 加角色'; add.onclick = function () { galPushUndo(); galScript.roles.push({ name: '', sprite: '', voice: '' }); galRenderRoles(); };
+  var add = document.createElement('button'); add.className = 'btn2'; add.textContent = '[ic:add] 加角色'; add.onclick = function () { galPushUndo(); galScript.roles.push({ name: '', sprite: '', voice: '' }); galRenderRoles(); };
   wrap.appendChild(add);
   p.appendChild(wrap);
 }
@@ -4454,7 +4464,7 @@ function galGraphLayout() {
 function galRenderGraph() {
   var box = document.getElementById('galLines');
   var panel = document.getElementById('galScenePanel'); if (panel) panel.style.display = 'none';
-  if (!galScript || !galScript.scenes || !galScript.scenes.length) { box.innerHTML = '<div style="color:var(--sub);padding:30px;text-align:center">还没有线(场景)。点「➕ 加线」开始。</div>'; return; }
+  if (!galScript || !galScript.scenes || !galScript.scenes.length) { box.innerHTML = '<div style="color:var(--sub);padding:30px;text-align:center">还没有线(场景)。点「[ic:add] 加线」开始。</div>'; return; }
   var L = galGraphLayout();
   var nodeW = 180, nodeH = 84, gx = 260, gy = 150;
   var pos = {};
@@ -4496,7 +4506,7 @@ function galRenderGraph() {
       var ln = lines[i]; if (!ln || typeof ln !== 'object') continue;
       if (ln.choice) ln.choice.forEach(function (o, k) {
         var gt = L.byId[o.goto];
-        if (o && o.goto && gt && pos[o.goto]) edge(p.x + nodeW, p.y + nodeH / 2 + (k - (ln.choice.length - 1) / 2) * 10, pos[o.goto].x, pos[o.goto].y + nodeH / 2, ((o.if ? '🔒 ' : '🔀 ') + (o.text || '')), o.if ? 1 : 0, galKeyOnly ? (srcKey && galIsKey(gt) ? 1 : 0.25) : 1, sc.id, i, 'choice', k);
+        if (o && o.goto && gt && pos[o.goto]) edge(p.x + nodeW, p.y + nodeH / 2 + (k - (ln.choice.length - 1) / 2) * 10, pos[o.goto].x, pos[o.goto].y + nodeH / 2, ((o.if ? '[ic:lock] ' : '[ic:shuffle] ') + (o.text || '')), o.if ? 1 : 0, galKeyOnly ? (srcKey && galIsKey(gt) ? 1 : 0.25) : 1, sc.id, i, 'choice', k);
       });
       if (ln.jump && L.byId[ln.jump] && pos[ln.jump]) edge(p.x + nodeW, p.y + nodeH / 2, pos[ln.jump].x, pos[ln.jump].y + nodeH / 2, '▸ 跳', 0, galKeyOnly ? (srcKey && galIsKey(L.byId[ln.jump]) ? 1 : 0.25) : 1, sc.id, i, 'jump', 0);
     }
@@ -4601,15 +4611,15 @@ function galEditOption(srcId, idx, eo, ev) {
   var o = opts && opts[eo];
   var p = document.getElementById('galOptPop');
   if (!p || !sc || !o) return;
-  p.innerHTML = '<b style="font-size:13px;color:var(--warn)">✏️ 编辑选项</b>';
+  p.innerHTML = '<b style="font-size:13px;color:var(--warn)">[ic:edit] 编辑选项</b>';
   var t = galInput(o.text || '', '选项文字', function (v) { o.text = v; }); t.style.cssText = 'display:block;width:100%;margin-top:6px;background:var(--bubble,#161b22);border:1px solid var(--line);border-radius:6px;color:var(--text,#ddd);padding:6px 8px;font-size:12px'; p.appendChild(t);
   var g = galInput(o.goto || '', '目标场景 id (goto)', function (v) { o.goto = v; }); g.style.cssText = 'display:block;width:100%;margin-top:6px;background:var(--bubble,#161b22);border:1px solid var(--line);border-radius:6px;color:var(--text,#ddd);padding:6px 8px;font-size:12px'; p.appendChild(g);
-  var c = galInput(o.if ? JSON.stringify(o.if) : '', '🔒 条件 {"aff":">=85"}（可留空）', function (v) { try { o.if = v.trim() ? JSON.parse(v) : undefined; } catch (e) { o.if = undefined; } }); c.style.cssText = 'display:block;width:100%;margin-top:6px;background:var(--bubble,#161b22);border:1px solid rgba(245,158,11,.4);border-radius:6px;color:var(--warn);padding:6px 8px;font-size:12px'; p.appendChild(c);
+  var c = galInput(o.if ? JSON.stringify(o.if) : '', '[ic:lock] 条件 {"aff":">=85"}（可留空）', function (v) { try { o.if = v.trim() ? JSON.parse(v) : undefined; } catch (e) { o.if = undefined; } }); c.style.cssText = 'display:block;width:100%;margin-top:6px;background:var(--bubble,#161b22);border:1px solid rgba(245,158,11,.4);border-radius:6px;color:var(--warn);padding:6px 8px;font-size:12px'; p.appendChild(c);
   var btns = document.createElement('div'); btns.style.cssText = 'display:flex;justify-content:space-between;align-items:center;margin-top:8px';
-  var del = document.createElement('button'); del.className = 'btn2 ghost'; del.textContent = '🗑 删选项'; del.style.cssText = 'color:var(--danger);padding:5px 12px'; del.onclick = function () { galPushUndo(); opts.splice(eo, 1); galOptPopClose(); galRenderGraph(); }; btns.appendChild(del);
+  var del = document.createElement('button'); del.className = 'btn2 ghost'; del.textContent = '[ic:delete] 删选项'; del.style.cssText = 'color:var(--danger);padding:5px 12px'; del.onclick = function () { galPushUndo(); opts.splice(eo, 1); galOptPopClose(); galRenderGraph(); }; btns.appendChild(del);
   var right = document.createElement('div');
-  var add1 = document.createElement('button'); add1.className = 'btn2'; add1.textContent = '➕ 加选项'; add1.style.cssText = 'padding:5px 12px'; add1.onclick = function () { galPushUndo(); opts.push({ text: '选项', goto: '' }); galOptPopClose(); galRenderGraph(); }; right.appendChild(add1);
-  var done = document.createElement('button'); done.className = 'btn2'; done.textContent = '✅ 完成'; done.style.cssText = 'padding:5px 12px;margin-left:6px'; done.onclick = function () { galOptPopClose(); galRenderGraph(); }; right.appendChild(done);
+  var add1 = document.createElement('button'); add1.className = 'btn2'; add1.textContent = '[ic:add] 加选项'; add1.style.cssText = 'padding:5px 12px'; add1.onclick = function () { galPushUndo(); opts.push({ text: '选项', goto: '' }); galOptPopClose(); galRenderGraph(); }; right.appendChild(add1);
+  var done = document.createElement('button'); done.className = 'btn2'; done.textContent = '[ic:check_circle] 完成'; done.style.cssText = 'padding:5px 12px;margin-left:6px'; done.onclick = function () { galOptPopClose(); galRenderGraph(); }; right.appendChild(done);
   btns.appendChild(right);
   p.appendChild(btns);
   p.style.display = 'block';
@@ -4641,22 +4651,22 @@ function galSetupCtx() {
     if (edge) {
       var src = edge.getAttribute('data-esrc'), role = edge.getAttribute('data-erole'), idx = parseInt(edge.getAttribute('data-eidx'), 10), eo = parseInt(edge.getAttribute('data-eo'), 10);
       galMenuShow([
-        { label: '✏️ 编辑此分支', fn: function () { galOpenScenePanel(src, idx); } },
-        { label: '🗑 删除此连接', fn: function () { galDeleteEdge(src, role, idx, eo); } },
+        { label: '[ic:edit] 编辑此分支', fn: function () { galOpenScenePanel(src, idx); } },
+        { label: '[ic:delete] 删除此连接', fn: function () { galDeleteEdge(src, role, idx, eo); } },
       ], e.clientX, e.clientY);
     } else if (node) {
       var sc = (galScript.scenes || []).find(function (s) { return s.id === node; });
       galMenuShow([
-        { label: '✏️ 编辑点', fn: function () { galOpenScenePanel(node); } },
-        { label: galIsKey(sc) ? '☆ 标为叙事线' : '⭐ 标为关键节点', fn: function () { galToggleKey(node); } },
-        { label: '✏️ 重命名线', fn: function () { var n = prompt('线标题：', (sc && sc.title) || ''); if (n !== null && sc) { sc.title = n; galRenderGraph(); } } },
-        { label: '🗑 删除线(场景)', fn: function () { if (confirm('删除线「' + ((sc && sc.title) || node) + '」？')) { galScript.scenes = galScript.scenes.filter(function (s) { return s.id !== node; }); galRenderGraph(); } } },
+        { label: '[ic:edit] 编辑点', fn: function () { galOpenScenePanel(node); } },
+        { label: galIsKey(sc) ? '☆ 标为叙事线' : '[ic:star] 标为关键节点', fn: function () { galToggleKey(node); } },
+        { label: '[ic:edit] 重命名线', fn: function () { var n = prompt('线标题：', (sc && sc.title) || ''); if (n !== null && sc) { sc.title = n; galRenderGraph(); } } },
+        { label: '[ic:delete] 删除线(场景)', fn: function () { if (confirm('删除线「' + ((sc && sc.title) || node) + '」？')) { galScript.scenes = galScript.scenes.filter(function (s) { return s.id !== node; }); galRenderGraph(); } } },
       ], e.clientX, e.clientY);
     } else {
       galMenuShow([
-        { label: '➕ 加线(场景)', fn: galAddLine },
-        { label: galKeyOnly ? '⭐ 全部' : '⭐ 仅看关键', fn: function () { galKeyOnly = !galKeyOnly; var b = document.getElementById('galKeyBtn'); if (b) b.textContent = galKeyOnly ? '⭐ 全部' : '⭐ 仅看关键'; galRenderGraph(); } },
-        { label: '🔍 缩放 100%', fn: function () { galScale = 1; galRenderGraph(); } },
+        { label: '[ic:add] 加线(场景)', fn: galAddLine },
+        { label: galKeyOnly ? '[ic:star] 全部' : '[ic:star] 仅看关键', fn: function () { galKeyOnly = !galKeyOnly; var b = document.getElementById('galKeyBtn'); if (b) b.textContent = galKeyOnly ? '[ic:star] 全部' : '[ic:star] 仅看关键'; galRenderGraph(); } },
+        { label: '[ic:search] 缩放 100%', fn: function () { galScale = 1; galRenderGraph(); } },
       ], e.clientX, e.clientY);
     }
   });
@@ -4675,9 +4685,9 @@ function galOpenScenePanel(sid, focusIdx) {
   var h = document.createElement('div');
   h.style.cssText = 'display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--line)';
   h.innerHTML = '<b style="font-size:14px;color:var(--warn)">线 ' + escapeHtml(sc.id) + ' 「' + escapeHtml(sc.title || '') + '」 · 编辑点</b>';
-  var keyBtn = document.createElement('button'); keyBtn.className = 'btn2'; keyBtn.textContent = galIsKey(sc) ? '⭐ 关键节点' : '☆ 叙事线'; keyBtn.onclick = function () { galToggleKey(sc.id); galOpenScenePanel(sc.id, focusIdx); };
+  var keyBtn = document.createElement('button'); keyBtn.className = 'btn2'; keyBtn.textContent = galIsKey(sc) ? '[ic:star] 关键节点' : '☆ 叙事线'; keyBtn.onclick = function () { galToggleKey(sc.id); galOpenScenePanel(sc.id, focusIdx); };
   h.appendChild(keyBtn);
-  var close = document.createElement('button'); close.className = 'btn2 ghost'; close.textContent = '✕ 收起'; close.onclick = function () { panel.style.display = 'none'; galRenderGraph(); };
+  var close = document.createElement('button'); close.className = 'btn2 ghost'; close.textContent = '[ic:close] 收起'; close.onclick = function () { panel.style.display = 'none'; galRenderGraph(); };
   h.appendChild(close);
   panel.appendChild(h);
   // 场景级图片（进入该线即显示，可被点内图片覆盖/退出）
@@ -4689,21 +4699,21 @@ function galOpenScenePanel(sid, focusIdx) {
     sList.innerHTML = '';
     sc.images.forEach(function (f, i) {
       var inp = galInput(f, '图片文件', function (v) { sc.images[i] = v; }); inp.style.cssText = 'width:150px;background:var(--bubble,#161b22);border:1px solid var(--line);border-radius:6px;color:var(--text,#ddd);padding:6px 8px;font-size:12px';
-      var rm = document.createElement('button'); rm.textContent = '✕'; rm.className = 'btn2 ghost'; rm.style.cssText = 'color:var(--danger);font-size:12px;padding:4px 8px'; rm.onclick = function () { galPushUndo(); sc.images.splice(i, 1); renderS(); };
+      var rm = document.createElement('button'); rm.textContent = '[ic:close]'; rm.className = 'btn2 ghost'; rm.style.cssText = 'color:var(--danger);font-size:12px;padding:4px 8px'; rm.onclick = function () { galPushUndo(); sc.images.splice(i, 1); renderS(); };
       sList.appendChild(inp); sList.appendChild(rm);
     });
   };
   renderS();
   sImg.appendChild(sList);
-  var addS = document.createElement('button'); addS.className = 'btn2 ghost'; addS.textContent = '➕ 加场景图'; addS.style.cssText = 'font-size:12px;padding:5px 10px;margin-left:8px'; addS.onclick = function () { galPushUndo(); sc.images.push(''); renderS(); }; sImg.appendChild(addS);
+  var addS = document.createElement('button'); addS.className = 'btn2 ghost'; addS.textContent = '[ic:add] 加场景图'; addS.style.cssText = 'font-size:12px;padding:5px 10px;margin-left:8px'; addS.onclick = function () { galPushUndo(); sc.images.push(''); renderS(); }; sImg.appendChild(addS);
   panel.appendChild(sImg);
   // 快速插入调色板：点一下插一个对应类型的点（尽量简化）
   var pal = document.createElement('div'); pal.style.cssText = 'display:flex;flex-wrap:wrap;gap:8px;padding:12px 16px;border-bottom:1px solid var(--line);font-size:12px;color:var(--sub)';
   pal.appendChild(document.createTextNode('快速加点: '));
-  [['💬 台词', {kind:'say', text:''}], ['📝 旁白', {kind:'note', note:''}], ['🖼 换景', {kind:'bg', bg:''}],
-   ['🎵 换BGM', {kind:'bgm', bgm:''}], ['🎙 配音', {kind:'say', voice:''}], ['💥 特效', {kind:'effect', effect:'shake'}],
-   ['⏳ 等待', {kind:'wait', ms:500}], ['🔀 分支', {kind:'choice', choice:[{text:'', goto:''}]}],
-   ['[ic:arrow_right] 跳转', {kind:'jump', goto:''}], ['🏁 结局', {kind:'end', end:''}], ['⚙️ 动作', {kind:'action', action:''}]
+  [['[ic:chat_bubble] 台词', {kind:'say', text:''}], ['[ic:note] 旁白', {kind:'note', note:''}], ['[ic:image] 换景', {kind:'bg', bg:''}],
+   ['[ic:music_note] 换BGM', {kind:'bgm', bgm:''}], ['[ic:mic] 配音', {kind:'say', voice:''}], ['[ic:flare] 特效', {kind:'effect', effect:'shake'}],
+   ['[ic:hourglass_empty] 等待', {kind:'wait', ms:500}], ['[ic:shuffle] 分支', {kind:'choice', choice:[{text:'', goto:''}]}],
+   ['[ic:arrow_right] 跳转', {kind:'jump', goto:''}], ['[ic:sports_score] 结局', {kind:'end', end:''}], ['[ic:settings] 动作', {kind:'action', action:''}]
   ].forEach(function (p) {
     var b = document.createElement('button'); b.className = 'btn2 ghost'; b.textContent = p[0];
     b.style.cssText = 'font-size:12px;padding:5px 12px';
@@ -4722,7 +4732,7 @@ function galOpenScenePanel(sid, focusIdx) {
       if (i === focusIdx) { r.style.outline = '2px solid #f59e0b'; r.style.outlineOffset = '2px'; focused = r; }
       body.appendChild(r);
     }
-    var add = document.createElement('button'); add.className = 'btn2'; add.textContent = '➕ 加一点'; add.onclick = function () { galPushUndo(); lines.push({ kind: 'say', text: '' }); render(); };
+    var add = document.createElement('button'); add.className = 'btn2'; add.textContent = '[ic:add] 加一点'; add.onclick = function () { galPushUndo(); lines.push({ kind: 'say', text: '' }); render(); };
     body.appendChild(add);
   }
   render();
@@ -4746,13 +4756,13 @@ function galScenePointRow(sc, ln, re) {
         var r = document.createElement('div'); r.className = 'row';
         r.appendChild(galInput(o.text || '', '选项文字', function (v) { o.text = v; }));
         r.appendChild(galInput(o.goto || '', 'goto', function (v) { o.goto = v; }));
-        var c = galInput(o.if ? JSON.stringify(o.if) : '', '🔒 条件', function (v) { try { o.if = v.trim() ? JSON.parse(v) : undefined; } catch (e) { o.if = undefined; } });
+        var c = galInput(o.if ? JSON.stringify(o.if) : '', '[ic:lock] 条件', function (v) { try { o.if = v.trim() ? JSON.parse(v) : undefined; } catch (e) { o.if = undefined; } });
         c.style.cssText = 'flex:1;min-width:150px;background:var(--bubble,#161b22);border:1px solid rgba(245,158,11,.4);border-radius:6px;color:var(--warn);padding:5px 8px;font-size:12px';
         r.appendChild(c);
-        var del = document.createElement('button'); del.className = 'btn2 ghost'; del.textContent = '✕'; del.style.cssText = 'color:var(--danger);font-size:11px;padding:2px 6px'; del.onclick = function () { galPushUndo(); ln.choice.splice(k, 1); ro(); }; r.appendChild(del);
+        var del = document.createElement('button'); del.className = 'btn2 ghost'; del.textContent = '[ic:close]'; del.style.cssText = 'color:var(--danger);font-size:11px;padding:2px 6px'; del.onclick = function () { galPushUndo(); ln.choice.splice(k, 1); ro(); }; r.appendChild(del);
         optBox.appendChild(r);
       });
-      var add = document.createElement('button'); add.className = 'btn2 ghost'; add.textContent = '➕ 选项'; add.style.cssText = 'font-size:11px;padding:3px 8px'; add.onclick = function () { galPushUndo(); ln.choice = ln.choice || []; ln.choice.push({ text: '', goto: '' }); ro(); }; optBox.appendChild(add);
+      var add = document.createElement('button'); add.className = 'btn2 ghost'; add.textContent = '[ic:add] 选项'; add.style.cssText = 'font-size:11px;padding:3px 8px'; add.onclick = function () { galPushUndo(); ln.choice = ln.choice || []; ln.choice.push({ text: '', goto: '' }); ro(); }; optBox.appendChild(add);
     };
     ro(); row.appendChild(optBox);
   } else {
@@ -4774,42 +4784,42 @@ function galScenePointRow(sc, ln, re) {
   }
   // 点内图片（可多张，自动适配）+ 退出图片
   var imgWrap = document.createElement('div'); imgWrap.className = 'row'; imgWrap.style.cssText = 'flex-wrap:wrap;align-items:center;gap:8px;margin-top:8px;flex-basis:100%';
-  imgWrap.appendChild(document.createTextNode('🖼️ 图片:'));
+  imgWrap.appendChild(document.createTextNode('[ic:image] 图片:'));
   var imgList = document.createElement('span'); imgList.style.cssText = 'display:inline-flex;flex-wrap:wrap;gap:8px';
   ln.images = ln.images || [];
   var renderImgs = function () {
     imgList.innerHTML = '';
     ln.images.forEach(function (f, i) {
       var inp = galInput(f, '图片文件', function (v) { ln.images[i] = v; }); inp.style.cssText = 'width:150px;background:var(--bubble,#161b22);border:1px solid var(--line);border-radius:6px;color:var(--text,#ddd);padding:6px 8px;font-size:12px';
-      var rm = document.createElement('button'); rm.textContent = '✕'; rm.className = 'btn2 ghost'; rm.style.cssText = 'color:var(--danger);font-size:12px;padding:4px 8px'; rm.onclick = function () { galPushUndo(); ln.images.splice(i, 1); renderImgs(); };
+      var rm = document.createElement('button'); rm.textContent = '[ic:close]'; rm.className = 'btn2 ghost'; rm.style.cssText = 'color:var(--danger);font-size:12px;padding:4px 8px'; rm.onclick = function () { galPushUndo(); ln.images.splice(i, 1); renderImgs(); };
       imgList.appendChild(inp); imgList.appendChild(rm);
     });
   };
   renderImgs();
   imgWrap.appendChild(imgList);
-  var addImg = document.createElement('button'); addImg.className = 'btn2 ghost'; addImg.textContent = '➕ 图'; addImg.style.cssText = 'font-size:11px;padding:3px 8px'; addImg.onclick = function () { galPushUndo(); ln.images.push(''); renderImgs(); }; imgWrap.appendChild(addImg);
+  var addImg = document.createElement('button'); addImg.className = 'btn2 ghost'; addImg.textContent = '[ic:add] 图'; addImg.style.cssText = 'font-size:11px;padding:3px 8px'; addImg.onclick = function () { galPushUndo(); ln.images.push(''); renderImgs(); }; imgWrap.appendChild(addImg);
   var clearImg = document.createElement('label'); clearImg.style.cssText = 'font-size:11px;color:var(--sub);display:inline-flex;align-items:center;gap:4px;margin-left:6px;cursor:pointer';
   var cb = document.createElement('input'); cb.type = 'checkbox'; cb.checked = !!ln.clearImages; cb.onchange = function () { galPushUndo(); ln.clearImages = cb.checked; };
   clearImg.appendChild(cb); clearImg.appendChild(document.createTextNode('退出图片'));
   imgWrap.appendChild(clearImg);
   row.appendChild(imgWrap);
-  var del = document.createElement('button'); del.className = 'btn2 ghost'; del.textContent = '🗑'; del.style.cssText = 'color:var(--danger);font-size:11px;padding:2px 6px'; del.onclick = function () { galPushUndo(); sc.lines = (sc.lines || []).filter(function (x) { return x !== ln; }); re(); }; row.appendChild(del);
+  var del = document.createElement('button'); del.className = 'btn2 ghost'; del.textContent = '[ic:delete]'; del.style.cssText = 'color:var(--danger);font-size:11px;padding:2px 6px'; del.onclick = function () { galPushUndo(); sc.lines = (sc.lines || []).filter(function (x) { return x !== ln; }); re(); }; row.appendChild(del);
   return row;
 }
-// 干净专用界面入口：📕 GAL制作器 → 直接进入全屏编辑器 + 包选择
+// 干净专用界面入口： GAL制作器 → 直接进入全屏编辑器 + 包选择
 function galOpenInterface() {
   document.getElementById('galEditor').style.display = 'flex';
-  document.getElementById('galTitle').textContent = '📕 GAL制作器';
+  document.getElementById('galTitle').textContent = '[ic:book] GAL制作器';
   document.getElementById('galStats').textContent = '';
   var sel = document.getElementById('galPkgSel');
   sel.innerHTML = '<option>加载中…</option>';
   pywebview.api.codex_list().then(function (r) {
-    if (!r || !r.ok) { document.getElementById('galStats').textContent = '❌ ' + ((r && r.err) || '加载失败'); return; }
+    if (!r || !r.ok) { document.getElementById('galStats').textContent = '[ic:error] ' + ((r && r.err) || '加载失败'); return; }
     var pkgs = r.packages || [];
     sel.innerHTML = '';
     if (!pkgs.length) {
       sel.innerHTML = '<option value="">（无包）</option>';
-      document.getElementById('galLines').innerHTML = '<div style="color:var(--sub);padding:30px;text-align:center">还没有剧本。<br>点「➕ 新建」生成示例，再进来改成你的故事。</div>';
+      document.getElementById('galLines').innerHTML = '<div style="color:var(--sub);padding:30px;text-align:center">还没有剧本。<br>点「[ic:add] 新建」生成示例，再进来改成你的故事。</div>';
       return;
     }
     pkgs.forEach(function (p) { var o = document.createElement('option'); o.value = p.name; o.textContent = p.name + (p.scenes ? ' · ' + p.scenes + '线' : ''); sel.appendChild(o); });
@@ -4817,7 +4827,7 @@ function galOpenInterface() {
     if (codexCur && pkgs.some(function (p) { return p.name === codexCur; })) pick = codexCur;
     sel.value = pick;
     galOpenEditor(pick);
-  }).catch(function (e) { document.getElementById('galStats').textContent = '❌ ' + (e && e.message ? e.message : '加载失败'); });
+  }).catch(function (e) { document.getElementById('galStats').textContent = '[ic:error] ' + (e && e.message ? e.message : '加载失败'); });
 }
 function galNewPkg() {
   var n = prompt('新建 GAL 包名称（生成示例剧本，可立即编辑/播放）:', '我的故事');
@@ -4837,29 +4847,29 @@ function galPlay() {
 function galImport() {
   pywebview.api.codex_import_folder().then(function (r) {
     if (!r) return;
-    if (r.ok) { galToast('✅ ' + (r.msg || '导入成功')); if (r.name) galOpenEditor(r.name); }
+    if (r.ok) { galToast('[ic:check_circle] ' + (r.msg || '导入成功')); if (r.name) galOpenEditor(r.name); }
     else if (r.err && r.err !== 'cancelled') alert(r.err || '导入失败');
   });
 }
 function galPackExe() {
   if (!codexCur) return;
   if (!confirm('把「' + codexCur + '」打包成独立 EXE（双击即玩，首次约 1-2 分钟）？')) return;
-  galToast('⏳ 正在启动打包…');
+  galToast('[ic:hourglass_empty] 正在启动打包…');
   pywebview.api.codex_pack_exe(codexCur).then(function (r) {
-    if (!r || !r.ok) { galToast('❌ ' + ((r && r.err) || '启动失败')); return; }
+    if (!r || !r.ok) { galToast('[ic:error] ' + ((r && r.err) || '启动失败')); return; }
     var t = setInterval(function () {
       pywebview.api.codex_pack_exe_status(codexCur).then(function (s) {
         if (!s || !s.ok) return;
-        if (s.state === 'building') galToast('⏳ ' + ((s.msg || '打包中…')).slice(0, 40));
-        else if (s.state === 'done') { clearInterval(t); galToast('✅ 打包完成'); }
-        else if (s.state === 'error') { clearInterval(t); galToast('❌ ' + ((s.msg || '打包失败')).slice(0, 40)); }
+        if (s.state === 'building') galToast('[ic:hourglass_empty] ' + ((s.msg || '打包中…')).slice(0, 40));
+        else if (s.state === 'done') { clearInterval(t); galToast('[ic:check_circle] 打包完成'); }
+        else if (s.state === 'error') { clearInterval(t); galToast('[ic:error] ' + ((s.msg || '打包失败')).slice(0, 40)); }
       });
     }, 1500);
-  }).catch(function (e) { galToast('❌ ' + (e && e.message ? e.message : '启动失败')); });
+  }).catch(function (e) { galToast('[ic:error] ' + (e && e.message ? e.message : '启动失败')); });
 }
 function galCloseEditor() { document.getElementById('galEditor').style.display = 'none'; }
 // ---- 导出到原生播放器（Kotlin 叙事引擎）----
-// 和「🖥️ EXE」的区别：那个是 HTML 套壳，这个是真正的原生窗口程序，
+// 和「 EXE」的区别：那个是 HTML 套壳，这个是真正的原生窗口程序，
 // 同一份 codex.json 还能喂给安卓 APK 和 DICK 主程序。
 function galPackPlayer() {
   if (!codexCur) return;
@@ -4878,21 +4888,21 @@ function galPackPlayer() {
                    '会生成一个文件夹：里面是播放器 + 你的故事和素材，\n' +
                    '整个文件夹一起拷走就能给别人玩（约 130 MB）。\n\n' +
                    '下一步先让你选放在哪儿（默认桌面）。')) return;
-      galToast('⏳ 正在导出…');
+      galToast('[ic:hourglass_empty] 正在导出…');
       pywebview.api.codex_export_player(codexCur).then(function (r2) {
         if (!r2 || !r2.ok) {
           if (r2 && r2.err === 'cancelled') { galToast('已取消'); return; }
-          galToast('❌ 导出失败');
+          galToast('[ic:error] 导出失败');
           alert('导出失败：\n' + ((r2 && r2.err) || '未知错误'));
           return;
         }
         var t = setInterval(function () {
           pywebview.api.codex_player_status(codexCur).then(function (s) {
             if (!s || !s.ok) return;
-            if (s.state === 'building') { galToast('⏳ ' + ((s.msg || '导出中…')).slice(0, 40)); }
+            if (s.state === 'building') { galToast('[ic:hourglass_empty] ' + ((s.msg || '导出中…')).slice(0, 40)); }
             else if (s.state === 'done') {
               clearInterval(t);
-              galToast('✅ 导出完成 · ' + (s.size || '?') + ' MB');
+              galToast('[ic:check_circle] 导出完成 · ' + (s.size || '?') + ' MB');
               var c = s.counts || {};
               alert('导出完成！\n\n位置：\n' + (s.dest || '') +
                     '\n\n' + (s.size || '?') + ' MB\n' +
@@ -4901,12 +4911,12 @@ function galPackPlayer() {
                     '\n\n双击里面的 DICK-Narrative.exe 就能玩。');
             } else if (s.state === 'error') {
               clearInterval(t);
-              galToast('❌ ' + ((s.msg || '导出失败')).slice(0, 40));
+              galToast('[ic:error] ' + ((s.msg || '导出失败')).slice(0, 40));
               alert('导出失败：\n' + (s.msg || ''));
             }
           });
         }, 1200);
-      }).catch(function (e) { galToast('❌ ' + ((e && e.message) || '导出失败')); });
+      }).catch(function (e) { galToast('[ic:error] ' + ((e && e.message) || '导出失败')); });
     });
   }).catch(function (e) { alert('保存失败：' + ((e && e.message) || '')); });
 }
@@ -4915,7 +4925,7 @@ function galRenderLines() {
   box.innerHTML = '';
   galBodies = {};
   if (!galScript || !galScript.scenes || !galScript.scenes.length) {
-    box.innerHTML = '<div style="color:var(--sub,#8a93a3);padding:30px;text-align:center">还没有线(场景)。点右上角「➕ 加线(场景)」开始。</div>';
+    box.innerHTML = '<div style="color:var(--sub,#8a93a3);padding:30px;text-align:center">还没有线(场景)。点右上角「[ic:add] 加线(场景)」开始。</div>';
     return;
   }
   galScript.scenes.forEach(function (sc) { box.appendChild(galLineEl(sc)); });
@@ -4925,7 +4935,7 @@ function galLineEl(sc) {
   var head = document.createElement('div'); head.className = 'gal-line-head';
   head.innerHTML = '<b>线 ' + escapeHtml(sc.id || '') + '</b><span class="gal-count">「' + escapeHtml((sc.title || '').slice(0, 20)) + '」</span>' +
     '<span class="gal-count"> ' + ((sc.lines || []).length) + ' 点</span>' +
-    '<span class="gal-count">' + (galAllOpen[sc.id] ? ' ⬏ 收起' : ' ⬍ 展开') + '</span><span style="flex:1"></span>';
+    '<span class="gal-count">' + (galAllOpen[sc.id] ? ' [ic:keyboard_arrow_up] 收起' : ' [ic:keyboard_arrow_down] 展开') + '</span><span style="flex:1"></span>';
   head.title = '点击整条展开/收起';
   head.setAttribute('data-head', sc.id);
   line.appendChild(head);
@@ -4941,7 +4951,7 @@ function galToggleLine(sc, body, head) {
   galRenderBody(sc, body, galAllOpen[sc.id] ? -2 : -1);
   if (head) {
     var sp = head.querySelector ? head.querySelector('.gal-count:last-of-type') : null;
-    if (sp) sp.textContent = galAllOpen[sc.id] ? ' ⬏ 收起' : ' ⬍ 展开';
+    if (sp) sp.textContent = galAllOpen[sc.id] ? ' [ic:keyboard_arrow_up] 收起' : ' [ic:keyboard_arrow_down] 展开';
   }
 }
 function galRenderBody(sc, body, openIdx) {
@@ -4960,7 +4970,7 @@ function galRenderBody(sc, body, openIdx) {
         var f = document.createElement('span'); f.className = 'gal-fork';
         f.setAttribute('data-goto', o.goto || '');
         f.setAttribute('data-cond', o.if ? '1' : '');
-        f.textContent = ((o.if ? '🔒 ' : '🔀 ') + (o.text || '') + ' → ' + (o.goto || ''));
+        f.textContent = ((o.if ? '[ic:lock] ' : '[ic:shuffle] ') + (o.text || '') + ' → ' + (o.goto || ''));
         body.appendChild(f);
       });
     }
@@ -5037,7 +5047,7 @@ function galDrawConnectors() {
     var fr = f.getBoundingClientRect(), tr = tgt.getBoundingClientRect();
     var x1 = fr.left - ctr.left + ct.scrollLeft, y1 = (fr.top + fr.height / 2) - ctr.top + ct.scrollTop;
     var x2 = tr.left - ctr.left + ct.scrollLeft, y2 = (tr.top + tr.height / 2) - ctr.top + ct.scrollTop;
-    draw(x1, y1, x2, y2, (f.getAttribute('data-cond') ? '🔒 ' : '🔀 ') + (f.textContent || ''), !!f.getAttribute('data-cond'));
+    draw(x1, y1, x2, y2, (f.getAttribute('data-cond') ? '[ic:lock] ' : '[ic:shuffle] ') + (f.textContent || ''), !!f.getAttribute('data-cond'));
   }
   ct.appendChild(svg);
 }
@@ -5068,14 +5078,14 @@ function galEditorEl(sc, i, body) {
         var r = document.createElement('div'); r.className = 'row';
         r.appendChild(galInput(o.text || '', '选项文字', function (v) { o.text = v; }));
         r.appendChild(galInput(o.goto || '', 'goto', function (v) { o.goto = v; }));
-        var c = galInput(o.if ? JSON.stringify(o.if) : '', '🔒 条件 {"aff":">=85"}', function (v) { try { o.if = v.trim() ? JSON.parse(v) : undefined; } catch (e) { o.if = undefined; } });
+        var c = galInput(o.if ? JSON.stringify(o.if) : '', '[ic:lock] 条件 {"aff":">=85"}', function (v) { try { o.if = v.trim() ? JSON.parse(v) : undefined; } catch (e) { o.if = undefined; } });
         c.style.cssText = 'flex:1;min-width:150px;background:var(--bubble,#161b22);border:1px solid rgba(245,158,11,.4);border-radius:6px;color:var(--warn);padding:5px 8px;font-size:12px';
         r.appendChild(c);
-        var del = document.createElement('button'); del.className = 'btn2 ghost'; del.textContent = '✕'; del.style.cssText = 'font-size:11px;padding:2px 6px;color:var(--danger)'; del.onclick = function () { opts.splice(k, 1); renderOpts(); };
+        var del = document.createElement('button'); del.className = 'btn2 ghost'; del.textContent = '[ic:close]'; del.style.cssText = 'font-size:11px;padding:2px 6px;color:var(--danger)'; del.onclick = function () { opts.splice(k, 1); renderOpts(); };
         r.appendChild(del);
         optBox.appendChild(r);
       });
-      var add = document.createElement('button'); add.className = 'btn2 ghost'; add.textContent = '➕ 选项'; add.style.cssText = 'font-size:11px;padding:3px 8px';
+      var add = document.createElement('button'); add.className = 'btn2 ghost'; add.textContent = '[ic:add] 选项'; add.style.cssText = 'font-size:11px;padding:3px 8px';
       add.onclick = function () { opts.push({ text: '', goto: '' }); renderOpts(); };
       optBox.appendChild(add);
     };
@@ -5095,9 +5105,9 @@ function galEditorEl(sc, i, body) {
     box.appendChild(galInput(ln.text || '', '台词/内容', function (v) { ln.text = v; }));
   }
   var ops = document.createElement('div'); ops.className = 'row';
-  var done = document.createElement('button'); done.className = 'btn2'; done.textContent = '✅ 完成'; done.onclick = function () { galRenderBody(sc, body, -1); };
-  var del = document.createElement('button'); del.className = 'btn2 ghost'; del.textContent = '🗑 删本点'; del.style.cssText = 'color:var(--danger)'; del.onclick = function () { galDeleteAt(sc, i, body); };
-  var after = document.createElement('button'); after.className = 'btn2 ghost'; after.textContent = '➕ 其后插入'; after.onclick = function () { galInsertAt(sc, i + 1, body); };
+  var done = document.createElement('button'); done.className = 'btn2'; done.textContent = '[ic:check_circle] 完成'; done.onclick = function () { galRenderBody(sc, body, -1); };
+  var del = document.createElement('button'); del.className = 'btn2 ghost'; del.textContent = '[ic:delete] 删本点'; del.style.cssText = 'color:var(--danger)'; del.onclick = function () { galDeleteAt(sc, i, body); };
+  var after = document.createElement('button'); after.className = 'btn2 ghost'; after.textContent = '[ic:add] 其后插入'; after.onclick = function () { galInsertAt(sc, i + 1, body); };
   ops.appendChild(done); ops.appendChild(del); ops.appendChild(after);
   box.appendChild(ops);
   return box;
@@ -5119,7 +5129,7 @@ function galSave() {
     codexSave();
     galStatsSet();
     galPushUndo();
-    galToast('✅ 已保存');
+    galToast('[ic:check_circle] 已保存');
   } catch (e) { alert('保存失败: ' + e.message); }
 }
 function galJson() {
@@ -5134,7 +5144,7 @@ function galJson() {
 document.getElementById('galSaveBtn').onclick = galSave;
 document.getElementById('galRoleBtn').onclick = galToggleRoles;
 document.getElementById('galCheckBtn').onclick = galCheckRun;
-// ---------- 🔍 剧本体检（结构 / 预览一致性 / 素材 / 统计）----------
+// ---------- 剧本体检（结构 / 预览一致性 / 素材 / 统计）----------
 function galCheckRender(r) {
   var box = document.getElementById('galCheckPanel');
   if (!r || r.err) {
@@ -5145,7 +5155,7 @@ function galCheckRender(r) {
   var st = r.stats || {};
   var h = [];
   h.push('<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">' +
-    '<b>🔍 剧本体检</b>' +
+    '<b>[ic:search] 剧本体检</b>' +
     '<span style="color:var(--sub);font-size:12px">线 ' + (st.scenes || 0) + ' · 点 ' + (st.lines || 0) +
     ' · 选项 ' + (st.choices || 0) + ' · 结局 ' + (st.endings || 0) +
     ' · 约 ' + (st.est_minutes || 0) + ' 分钟' + (r.checked_pkg ? ' · 已查素材' : ' · 未查素材（先保存）') + '</span>' +
@@ -5153,7 +5163,7 @@ function galCheckRender(r) {
     '<button class="btn2 ghost" style="width:auto;margin:0;padding:3px 10px" onclick="galCheckHide()">收起</button></div>');
   var issues = r.issues || [], warns = r.warnings || [];
   if (!issues.length && !warns.length) {
-    h.push('<div style="color:var(--ok)">✅ 没查出问题：场景都可达、没有死行、能走到结局、素材引用完整。</div>');
+    h.push('<div style="color:var(--ok)">[ic:check_circle] 没查出问题：场景都可达、没有死行、能走到结局、素材引用完整。</div>');
   }
   if (issues.length) {
     h.push('<div style="color:var(--danger);margin:6px 0 4px"><b>结构问题 ' + issues.length + ' 条（会真的坏）</b></div>');
@@ -5221,7 +5231,7 @@ document.getElementById('galImportBtn').onclick = galImport;
 document.getElementById('galExeBtn').onclick = galPackExe;
 document.getElementById('galPlayerBtn').onclick = galPackPlayer;
 document.getElementById('galNewBtn').onclick = galNewPkg;
-document.getElementById('galKeyBtn').onclick = function () { galKeyOnly = !galKeyOnly; this.textContent = galKeyOnly ? '⭐ 全部' : '⭐ 仅看关键'; galRenderGraph(); };
+document.getElementById('galKeyBtn').onclick = function () { galKeyOnly = !galKeyOnly; this.textContent = galKeyOnly ? '[ic:star] 全部' : '[ic:star] 仅看关键'; galRenderGraph(); };
 document.getElementById('galPkgSel').onchange = function () { var n = this.value; if (n) galOpenEditor(n); };
 function codexExport() {
   if (!codexCur) return;
@@ -5233,19 +5243,19 @@ function codexPack(showInfo) {
   // 打包：生成独立单文件 GALGAME（HTML，双击即玩，可分发）
   if (!codexCur) return;
   document.getElementById('codexPackInfo').style.display = 'none';
-  codexSetStatus('⏳ 打包中…');
+  codexSetStatus('[ic:hourglass_empty] 打包中…');
   pywebview.api.codex_pack(codexCur).then(function (r) {
     codexSetStatus('');
     if (!r || !r.ok) { alert((r && r.err) || '打包失败'); return; }
     var info = document.getElementById('codexPackInfo');
     var parts = [];
     if (r.counts) {
-      parts.push('🎴立绘 ' + (r.counts.sprites || 0) + ' · 🖼背景 ' + (r.counts.bg || 0) +
-                 ' · 🎵音乐 ' + (r.counts.bgm || 0) + ' · 🎙配音 ' + (r.counts.voice || 0));
+      parts.push('[ic:style]立绘 ' + (r.counts.sprites || 0) + ' · [ic:image]背景 ' + (r.counts.bg || 0) +
+                 ' · [ic:music_note]音乐 ' + (r.counts.bgm || 0) + ' · [ic:mic]配音 ' + (r.counts.voice || 0));
     }
     parts.push('单文件 ' + (r.size ? (r.size / 1024 / 1024).toFixed(1) : '?') + ' MB');
-    info.innerHTML = '✅ 打包成功：' + parts.join(' · ') +
-      '<br>📄 已保存到包内 <b>' + escapeHtml(r.rel || '') + '</b> —— 双击该 HTML 即可独立游玩（无需 DICK，可发给任何人）。';
+    info.innerHTML = '[ic:check_circle] 打包成功：' + parts.join(' · ') +
+      '<br>[ic:description] 已保存到包内 <b>' + escapeHtml(r.rel || '') + '</b> —— 双击该 HTML 即可独立游玩（无需 DICK，可发给任何人）。';
     info.style.display = 'block';
     if (showInfo !== false && window.pywebview.api.open_path) {
       try { pywebview.api.open_path(r.path).then(function () {}); } catch (e) {}
@@ -5258,29 +5268,29 @@ function codexPackSaveAs() {
     if (r && !r.ok && r.err !== 'cancelled') alert(r.err);
     else if (r && r.ok) {
       var info = document.getElementById('codexPackInfo');
-      info.innerHTML = '✅ 已另存为：' + escapeHtml(r.path) + '（' + (r.size / 1024 / 1024).toFixed(1) + ' MB）—— 独立 GALGAME，双击即玩。';
+      info.innerHTML = '[ic:check_circle] 已另存为：' + escapeHtml(r.path) + '（' + (r.size / 1024 / 1024).toFixed(1) + ' MB）—— 独立 GALGAME，双击即玩。';
       info.style.display = 'block';
     }
   });
 }
-// 📦 📕 编年史 codex 的数据层收进 DICK.state（1 个：codexExeTimer）；注册在 web/js/store/codex.js
+// 编年史 codex 的数据层收进 DICK.state（1 个：codexExeTimer）；注册在 web/js/store/codex.js
 function codexRelease() {
   // 两步发布：一键打包 EXE + HTML + .codex 三件套（决战兵器·分发闭环）
   if (!codexCur) return;
   var info = document.getElementById('codexPackInfo');
   info.style.display = 'block';
-  info.innerHTML = '🚀 正在发布（打包 EXE 首次约 1-2 分钟）…';
+  info.innerHTML = '[ic:rocket_launch] 正在发布（打包 EXE 首次约 1-2 分钟）…';
   document.getElementById('codexReleaseBtn').disabled = true;
   pywebview.api.codex_release(codexCur).then(function (r) {
     if (!r || !r.ok) {
-      info.innerHTML = '❌ ' + ((r && r.err) || '发布启动失败');
+      info.innerHTML = '[ic:error] ' + ((r && r.err) || '发布启动失败');
       document.getElementById('codexReleaseBtn').disabled = false;
       return;
     }
     if (codexExeTimer) clearInterval(codexExeTimer);
     codexExeTimer = setInterval(function () { codexReleasePoll(); }, 1500);
   }).catch(function (e) {
-    info.innerHTML = '❌ ' + (e && e.message ? e.message : '发布失败');
+    info.innerHTML = '[ic:error] ' + (e && e.message ? e.message : '发布失败');
     document.getElementById('codexReleaseBtn').disabled = false;
   });
 }
@@ -5290,21 +5300,21 @@ function codexReleasePoll() {
     if (!r || !r.ok) return;
     var info = document.getElementById('codexPackInfo');
     if (r.state === 'building') {
-      info.innerHTML = '🚀 ' + escapeHtml(r.msg || '发布中…');
+      info.innerHTML = '[ic:rocket_launch] ' + escapeHtml(r.msg || '发布中…');
     } else if (r.state === 'done') {
       if (codexExeTimer) { clearInterval(codexExeTimer); codexExeTimer = null; }
       document.getElementById('codexReleaseBtn').disabled = false;
       var mb = function (b) { return b ? (b / 1024 / 1024).toFixed(1) : '?'; };
       info.innerHTML =
-        '✅ 发布完成 —— 三件套已生成到包内 <b>dist/</b>：<br>' +
-        '🖥️ EXE：' + escapeHtml(r.exe || '') + '（' + mb(r.size_exe) + ' MB）—— 零依赖，双击即玩，可发给任何人<br>' +
-        '🌐 HTML：' + escapeHtml(r.html || '') + '（' + mb(r.size_html) + ' MB）—— 浏览器即玩<br>' +
-        '📦 .codex：' + escapeHtml(r.codex || '') + '（' + mb(r.size_codex) + ' MB）—— 双击（注册关联后）用 DICK 打开';
+        '[ic:check_circle] 发布完成 —— 三件套已生成到包内 <b>dist/</b>：<br>' +
+        '[ic:desktop_windows] EXE：' + escapeHtml(r.exe || '') + '（' + mb(r.size_exe) + ' MB）—— 零依赖，双击即玩，可发给任何人<br>' +
+        '[ic:language] HTML：' + escapeHtml(r.html || '') + '（' + mb(r.size_html) + ' MB）—— 浏览器即玩<br>' +
+        '[ic:inventory] .codex：' + escapeHtml(r.codex || '') + '（' + mb(r.size_codex) + ' MB）—— 双击（注册关联后）用 DICK 打开';
       codexLoadList();
     } else if (r.state === 'error') {
       if (codexExeTimer) { clearInterval(codexExeTimer); codexExeTimer = null; }
       document.getElementById('codexReleaseBtn').disabled = false;
-      info.innerHTML = '❌ 发布失败：' + escapeHtml((r.msg || r.err || '未知错误').slice(0, 300)) +
+      info.innerHTML = '[ic:error] 发布失败：' + escapeHtml((r.msg || r.err || '未知错误').slice(0, 300)) +
         '<br><span style="font-size:11px">EXE 需要本机 Python + pyinstaller；HTML/.codex 不依赖。</span>';
     }
   }).catch(function () {});
@@ -5314,18 +5324,18 @@ function codexPackExe() {
   if (!codexCur) return;
   var info = document.getElementById('codexPackInfo');
   info.style.display = 'block';
-  info.innerHTML = '⏳ 正在启动打包…（需要本机 Python 含 PyInstaller，首次约 1-2 分钟，请稍候）';
+  info.innerHTML = '[ic:hourglass_empty] 正在启动打包…（需要本机 Python 含 PyInstaller，首次约 1-2 分钟，请稍候）';
   codexExeBtn.disabled = true;
   pywebview.api.codex_pack_exe(codexCur).then(function (r) {
     if (!r || !r.ok) {
-      info.innerHTML = '❌ ' + ((r && r.err) || '启动失败');
+      info.innerHTML = '[ic:error] ' + ((r && r.err) || '启动失败');
       codexExeBtn.disabled = false;
       return;
     }
     if (codexExeTimer) clearInterval(codexExeTimer);
     codexExeTimer = setInterval(function () { codexExePoll(); }, 1500);
   }).catch(function (e) {
-    info.innerHTML = '❌ ' + (e && e.message ? e.message : '启动失败');
+    info.innerHTML = '[ic:error] ' + (e && e.message ? e.message : '启动失败');
     codexExeBtn.disabled = false;
   });
 }
@@ -5335,21 +5345,21 @@ function codexExePoll() {
     if (!r || !r.ok) return;
     var info = document.getElementById('codexPackInfo');
     if (r.state === 'building') {
-      info.innerHTML = '⏳ ' + escapeHtml(r.msg || '打包中…');
+      info.innerHTML = '[ic:hourglass_empty] ' + escapeHtml(r.msg || '打包中…');
     } else if (r.state === 'done') {
       if (codexExeTimer) { clearInterval(codexExeTimer); codexExeTimer = null; }
       document.getElementById('codexExeBtn').disabled = false;
-      var parts = ['🖥️ EXE 打包完成'];
-      if (r.counts) parts.push('🎴' + (r.counts.sprites || 0) + ' 🖼' + (r.counts.bg || 0) +
-        ' 🎵' + (r.counts.bgm || 0) + ' 🎙' + (r.counts.voice || 0));
+      var parts = ['[ic:desktop_windows] EXE 打包完成'];
+      if (r.counts) parts.push('[ic:style]' + (r.counts.sprites || 0) + ' [ic:image]' + (r.counts.bg || 0) +
+        ' [ic:music_note]' + (r.counts.bgm || 0) + ' [ic:mic]' + (r.counts.voice || 0));
       if (r.size) parts.push((r.size / 1024 / 1024).toFixed(1) + ' MB');
-      info.innerHTML = '✅ ' + parts.join(' · ') +
-        '<br>📄 已保存到 <b>' + escapeHtml(r.rel || r.exe || '') + '</b> —— 双击该 EXE 即可独立游玩（无需 DICK、无需浏览器，可发给任何人）。';
+      info.innerHTML = '[ic:check_circle] ' + parts.join(' · ') +
+        '<br>[ic:description] 已保存到 <b>' + escapeHtml(r.rel || r.exe || '') + '</b> —— 双击该 EXE 即可独立游玩（无需 DICK、无需浏览器，可发给任何人）。';
       codexLoadList();
     } else if (r.state === 'error') {
       if (codexExeTimer) { clearInterval(codexExeTimer); codexExeTimer = null; }
       document.getElementById('codexExeBtn').disabled = false;
-      info.innerHTML = '❌ 打包失败：' + escapeHtml((r.msg || r.err || '未知错误').slice(0, 300)) +
+      info.innerHTML = '[ic:error] 打包失败：' + escapeHtml((r.msg || r.err || '未知错误').slice(0, 300)) +
         '<br><span style="font-size:11px">需要本机安装 Python 且 <code>pip install pyinstaller</code>。'
     }
   }).catch(function () {});
@@ -5362,7 +5372,7 @@ function codexShowFiles() {
     var box = document.getElementById('codexFiles');
     if (!r || !r.ok) { box.innerHTML = '<div style="color:var(--danger)">加载失败</div>'; return; }
     var html = '';
-    var labels = { sprites: '🎴 立绘', bg: '🖼 背景', bgm: '🎵 音乐', voice: '🎙 配音' };
+    var labels = { sprites: '[ic:style] 立绘', bg: '[ic:image] 背景', bgm: '[ic:music_note] 音乐', voice: '[ic:mic] 配音' };
     for (var k in labels) {
       var files = (r.files && r.files[k]) || [];
       html += '<div class="section-label">' + labels[k] + '（' + files.length + '）</div>';
@@ -5401,7 +5411,7 @@ function codexPlay() {
     (r.script.scenes || []).forEach(function (sc, idx) {
       var lbl = sc.title || sc.id || ('章节 ' + (idx + 1));
       var b = document.createElement('button');
-      b.textContent = (idx === 0 ? '▶ ' : '📖 ') + lbl;
+      b.textContent = (idx === 0 ? '▶ ' : '[ic:menu_book] ') + lbl;
       b.style.cssText = 'display:block;width:100%;text-align:left;margin:3px 0;padding:5px 10px;font-size:13px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.15);color:var(--text);border-radius:6px;cursor:pointer';
       b.onclick = function (e) {
         e.stopPropagation();
@@ -5442,7 +5452,7 @@ function codexSaveSlot() {
   try {
     localStorage.setItem('codex_save_' + codexCur, JSON.stringify(slot));
     var b = document.getElementById('cxSave');
-    if (b) { b.textContent = '💾 已存档'; setTimeout(function () { if (b) b.textContent = '💾 存档'; }, 1200); }
+    if (b) { b.textContent = '[ic:save] 已存档'; setTimeout(function () { if (b) b.textContent = '[ic:save] 存档'; }, 1200); }
   } catch (e) {}
 }
 function codexLoadSlot() {
@@ -5496,7 +5506,7 @@ function codexRewind() {
   if (!targetScene) return;
   codexPlayer.lastChoicePoint = null;
   var lb = document.getElementById('cxRewind');
-  if (lb) lb.textContent = '⏪ 回溯';
+  if (lb) lb.textContent = '[ic:fast_rewind] 回溯';
   codexPlayer.scene = targetScene;
   codexPlayer.curSceneId = targetScene.id;
   codexPlayer.lineIdx = targetLine;
@@ -5611,7 +5621,7 @@ function codexStartScene(id) {
   }
   if (!found) {
     // 场景不存在（剧本被改坏/跳转失效）→ 显示结束页，避免卡死
-    codexShowEnd('⚠️ 场景不存在: ' + id);
+    codexShowEnd('[ic:warning] 场景不存在: ' + id);
     return;
   }
   codexPlayer.curSceneId = codexPlayer.scene.id;
@@ -5637,13 +5647,13 @@ function codexShowChoice(opts, hiddenCount, totalCount) {
   if (codexPlayer) {
     codexPlayer.lastChoicePoint = { sceneId: codexPlayer.curSceneId, lineIdx: codexPlayer.lineIdx };
     var lb = document.getElementById('cxRewind');
-    if (lb) lb.textContent = '⏪ 回到选项';
+    if (lb) lb.textContent = '[ic:fast_rewind] 回到选项';
   }
   if (hiddenCount) {
     // 让作者一眼看出"这里有条件分支被门住了"，而不是以为剧本漏写了选项
     var hint = document.createElement('div');
     hint.style.cssText = 'font-size:12px;color:var(--warn);margin:2px 0 6px';
-    hint.textContent = '🔒 ' + hiddenCount + '/' + (totalCount || 0) +
+    hint.textContent = '[ic:lock] ' + hiddenCount + '/' + (totalCount || 0) +
       ' 个选项因条件不满足被隐藏　' + codexVarsHint();
     box.appendChild(hint);
   } else if (codexPlayer && codexPlayer.vars && codexPlayer.vars.available) {
@@ -5661,7 +5671,7 @@ function codexShowChoice(opts, hiddenCount, totalCount) {
       box.style.display = 'none';
       codexStopAuto();
       var lb2 = document.getElementById('cxRewind');
-      if (lb2) lb2.textContent = '⏪ 回溯';
+      if (lb2) lb2.textContent = '[ic:fast_rewind] 回溯';
       codexGoto(o.goto || '');
     };
     box.appendChild(b);
@@ -5681,8 +5691,8 @@ var mechSnapshot = null;   // renderMechanism 每次收到 state 都会更新它
 
 function codexSnapshotVars() {
   // 为什么用快照而不是实时状态：
-  //   ① 试玩时 setflag/roll 只改快照 —— 绝不能污染玩家真实存档的好感/标志；
-  //   ② 快照保留当前好感度 →“好感 85 才出现的隐藏选项”在预览里当场就能验证。
+  // ① 试玩时 setflag/roll 只改快照 —— 绝不能污染玩家真实存档的好感/标志；
+  // ② 快照保留当前好感度 →“好感 85 才出现的隐藏选项”在预览里当场就能验证。
   var m = mechSnapshot || {};
   var st = m.state || null;
   if (!st) return { available: false, affection: null, status: {}, flags: {} };
@@ -5915,7 +5925,7 @@ function codexStopAuto() {
   codexPlayer.auto = false;
   if (codexPlayer.autoTimer) { clearTimeout(codexPlayer.autoTimer); codexPlayer.autoTimer = null; }
   var b = document.getElementById('cxAuto');
-  if (b) b.textContent = '⏩ 自动';
+  if (b) b.textContent = '[ic:fast_forward] 自动';
 }
 function codexShowEnd(title) {
   codexStopAuto();
@@ -5981,7 +5991,7 @@ document.getElementById('cxEnd').onclick = function () {
 document.getElementById('cxAuto').onclick = function () {
   if (!codexPlayer) return;
   codexPlayer.auto = !codexPlayer.auto;
-  this.textContent = codexPlayer.auto ? '⏸ 停止自动' : '⏩ 自动';
+  this.textContent = codexPlayer.auto ? '[ic:pause] 停止自动' : '[ic:fast_forward] 自动';
   if (codexPlayer.auto) codexScheduleAuto();
   else codexStopAuto();
 };
@@ -6006,7 +6016,7 @@ document.addEventListener('keydown', function (e) {
     codexPlayerExit();
   }
 });
-// 🧰 创意工坊本地/在线两个 Tab 的按钮绑定搬到了 web/js/screens/ws.js（阶段3）。
+// 创意工坊本地/在线两个 Tab 的按钮绑定搬到了 web/js/screens/ws.js（阶段3）。
 
 // ---- 前版功能：预算 / 自动接话 / 字体 / 插件管理 / 文档 / 导出 ----
 var BUDGETS = [0, 4096, 16384, 32768, 65536, 131072];
@@ -6015,10 +6025,10 @@ var FONT_SIZES = ['13px', '14.5px', '16px'];
 var FONT_LABELS = ['小', '中', '大'];
 var currentFont = 1;
 
-// ⚙️ 预算 / 字体 / 插件管理的渲染与动作搬到了 web/js/screens/settings.js（阶段4）。
+// 预算 / 字体 / 插件管理的渲染与动作搬到了 web/js/screens/settings.js（阶段4）。
 // 兼容入口 renderBudget()/applyFont()/renderPlugins() 在那里注册，loadStateFill 照旧调用。
 
-// ⚙️ 设置屏的那几个按钮/列表绑定也在 web/js/screens/settings.js（阶段4）。
+// 设置屏的那几个按钮/列表绑定也在 web/js/screens/settings.js（阶段4）。
 document.getElementById('qcRead').onclick = function () {
   pywebview.api.read_document(null).then(function (r) {
     if (r && !r.ok && r.err !== 'cancelled') alert(r.err);
@@ -6116,7 +6126,7 @@ var L2D = {
     var probe = new Image();
     probe.onerror = function () {
       self.loading = false;
-      self.showHint('⚠️ Live2D 资源缺失：请将渲染库放入 web/live2d/vendor/（pixi.min.js / live2dcubismcore.min.js / pixi-live2d-display.min.js），模型放入 web/live2d/models/');
+      self.showHint('[ic:warning] Live2D 资源缺失：请将渲染库放入 web/live2d/vendor/（pixi.min.js / live2dcubismcore.min.js / pixi-live2d-display.min.js），模型放入 web/live2d/models/');
     };
     probe.onload = function () {
       self.loading = false;
@@ -6139,7 +6149,7 @@ var L2D = {
       s.src = scripts[idx] + '?' + Date.now();
       s.onload = function () { idx++; next(); };
       s.onerror = function () {
-        self.showHint('⚠️ 加载失败: ' + scripts[idx] + '（请检查 web/live2d/vendor/ 目录）');
+        self.showHint('[ic:warning] 加载失败: ' + scripts[idx] + '（请检查 web/live2d/vendor/ 目录）');
         idx = scripts.length;
       };
       document.head.appendChild(s);
@@ -6150,13 +6160,13 @@ var L2D = {
   initModel: function () {
     var self = this;
     if (!window.PIXI || !window.Live2DModel) {
-      this.showHint('⚠️ Live2D 渲染库加载失败（pixi / live2d-display 未就绪）');
+      this.showHint('[ic:warning] Live2D 渲染库加载失败（pixi / live2d-display 未就绪）');
       return;
     }
     var stageEl = document.getElementById('l2d-stage');
     if (!stageEl) return;
     if (!this.modelFile) {
-      this.showHint('⚠️ 未选择模型：请在 ⚙️ 设置 → 插件 → Live2D 看板娘 的「模型」里选择（web/live2d/models/）');
+      this.showHint('[ic:warning] 未选择模型：请在 [ic:settings] 设置 → 插件 → Live2D 看板娘 的「模型」里选择（web/live2d/models/）');
       return;
     }
     var modelUrl = 'live2d/models/' + encodeURIComponent(this.modelFile);
@@ -6176,14 +6186,14 @@ var L2D = {
         self.applySettings();
         model.on('hit', function (hitAreas) {
           if (hitAreas && hitAreas.length) {
-            self.showHint('🎯 触发了：' + hitAreas.join(', '));
+            self.showHint('[ic:target] 触发了：' + hitAreas.join(', '));
           }
         });
       }).catch(function (e) {
-        self.showHint('⚠️ 模型加载失败: ' + (e && e.message ? e.message : e));
+        self.showHint('[ic:warning] 模型加载失败: ' + (e && e.message ? e.message : e));
       });
     } catch (e) {
-      this.showHint('⚠️ Live2D 初始化失败: ' + (e && e.message ? e.message : e));
+      this.showHint('[ic:warning] Live2D 初始化失败: ' + (e && e.message ? e.message : e));
     }
   },
 
@@ -6219,7 +6229,7 @@ var L2D = {
 /* ================= 架构级水印（隐蔽，反抄袭溯源） ================= */
 (function () {
   // 1) 控制台标识（开发者可见，用户无感）。版号不写死：由 state() 带回
-  //    （唯一真相在仓库根目录 version.json），拿到后补一行带版号的。
+  // （唯一真相在仓库根目录 version.json），拿到后补一行带版号的。
   try { console.log("%cDICK %cCODEX engine — 本产品由 DICK 架构驱动", "color:#f59e0b;font-weight:bold", "color:#888"); } catch (e) {}
   // 2) DOM 属性标记（抄界面 DOM 即带走）
   try {
@@ -6236,9 +6246,9 @@ var L2D = {
   } catch (e) {}
 })();
 
-// 🔐 加密备份屏的动作搬到了 web/js/screens/bk.js（DOM 在 web/screens/bk.html）。
+// 加密备份屏的动作搬到了 web/js/screens/bk.js（DOM 在 web/screens/bk.html）。
 
-// 🔐 加密备份屏的按钮绑定也在 web/js/screens/bk.js（阶段3）。
+// 加密备份屏的按钮绑定也在 web/js/screens/bk.js（阶段3）。
 // 事件进度弹窗：点背景 / Esc 关闭
 document.getElementById('evProgressModal').addEventListener('click', function (e) {
   if (e.target === this) this.classList.remove('open');
@@ -6254,8 +6264,8 @@ document.addEventListener('keydown', function (e) {
 <div class="modal" id="cardFaceModal">
   <div class="modal-box" style="width:min(90vw,760px);height:70vh;display:flex;flex-direction:column">
     <div style="padding:8px 12px;display:flex;justify-content:space-between;align-items:center">
-      <strong>🎴 卡面</strong>
-      <button class="btn2 ghost" onclick="cardFaceClose()">✕ 关闭</button>
+      <strong>[ic:style] 卡面</strong>
+      <button class="btn2 ghost" onclick="cardFaceClose()">[ic:close] 关闭</button>
     </div>
     <iframe id="cardFaceFrame" style="flex:1;border:0;background:#fff" sandbox="allow-same-origin"></iframe>
   </div>

@@ -1,17 +1,17 @@
-<!-- 🎴 围棋：规则由 go_engi<seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌ne 判定，角色靠提示词注入陪下 -->
+<!-- 围棋：规则由 go_engi<seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌ne 判定，角色靠提示词注入陪下 -->
 <div id="goPanel" style="display:none;position:fixed;inset:0;z-index:9998;background:var(--bg,#0b0e14);flex-direction:column">
   <div class="gal-top">
-    <b style="font-size:16px;color:var(--text,#eee)">🎴 围棋</b>
+    <b style="font-size:16px;color:var(--text,#eee)">[ic:style] 围棋</b>
     <span id="goStatus" style="font-size:13px;color:var(--sub,#8a93a3);white-space:nowrap"></span>    <div class="gal-actions">
-      <button class="btn2" id="goNew19">🆕 19 路</button>
-      <button class="btn2 ghost" id="goNew9">🆕 9 路</button>
-      <button class="btn2 ghost" id="goSwap">🔄 换执色</button>
+      <button class="btn2" id="goNew19">[ic:add_circle] 19 路</button>
+      <button class="btn2 ghost" id="goNew9">[ic:add_circle] 9 路</button>
+      <button class="btn2 ghost" id="goSwap">[ic:refresh] 换执色</button>
       <button class="btn2 ghost" id="goUndo">[ic:undo] 悔棋</button>
-      <button class="btn2 ghost" id="goPass">⏭ 停一手</button>
+      <button class="btn2 ghost" id="goPass">[ic:skip_next] 停一手</button>
       <button class="btn2 ghost" id="goResume">[ic:play] 催一手</button>
-      <button class="btn2 ghost" id="goScore">🧮 数目</button>
-      <button class="btn2 ghost" id="goResign">🏳️ 认输</button>
-      <button class="btn2 ghost" id="goClose">✕</button>
+      <button class="btn2 ghost" id="goScore">[ic:calculate] 数目</button>
+      <button class="btn2 ghost" id="goResign">[ic:outlined_flag] 认输</button>
+      <button class="btn2 ghost" id="goClose">[ic:close]</button>
     </div>
   </div>
   <div style="flex:1;display:flex;gap:16px;padding:16px;overflow:auto;min-height:0">

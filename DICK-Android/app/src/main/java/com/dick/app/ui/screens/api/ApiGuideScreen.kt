@@ -17,7 +17,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 /**
- * 📖 API 教程（安卓侧）
+ *  API 教程（安卓侧）
  *
  * 和网页端 `web/screens/api_guide.html` + `web/js/screens/api_guide.js` **同一份内容**：
  * 同一批 `lang/strings.json` 键（guide_* / apiWiz* / apiGuideTitle），同一张服务商事实表。

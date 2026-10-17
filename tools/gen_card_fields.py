@@ -55,9 +55,9 @@ MODES = ("body", "kv", "list")          # 没有 json 模式：卡片外显不�
 ID_RE = re.compile(r"^[a-z][a-z0-9_]*$")
 ZW = re.compile(u"[\u200b-\u200f\u2060\ufeff\u00ad]+")
 
-HEADER_JS = (u"// ⚠ 生成物：由 tools/gen_card_fields.py 从 design/card_fields.json 生成，别手改。\n"
+HEADER_JS = (u"// 生成物：由 tools/gen_card_fields.py 从 design/card_fields.json 生成，别手改。\n"
              u"//   改分区/字段/折叠阈值：改 design/card_fields.json，再跑一次生成器。\n")
-HEADER_KT = (u"// ⚠ 生成物：由 tools/gen_card_fields.py 从 design/card_fields.json 生成，别手改。\n"
+HEADER_KT = (u"// 生成物：由 tools/gen_card_fields.py 从 design/card_fields.json 生成，别手改。\n"
              u"//   改分区/字段/折叠阈值：改 design/card_fields.json，再跑一次生成器。\n"
              u"//   标签文案在 lang/strings.json（本文件里的中文只是 I18n.t 的调用点默认值）。\n")
 

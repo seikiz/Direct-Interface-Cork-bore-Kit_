@@ -64,7 +64,7 @@ fun AvatarCropScreen(vm: ChatViewModel, deps: DialogDeps) {
         val bmp = cropBitmap.value!!
         AlertDialog(
             onDismissRequest = { vm.cropBitmap.value = null; vm.avatarTarget.value = null },
-            title = { IconText("✂️ 裁剪头像") },
+            title = { IconText("裁剪头像", icon = "content_cut") },
             text = {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Box(
@@ -106,14 +106,14 @@ fun AvatarCropScreen(vm: ChatViewModel, deps: DialogDeps) {
                         }
                     }
                     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp)) {
-                        IconText("🔍", fontSize = 12.sp)
+                        IconText("", fontSize = 12.sp, icon = "search")
                         Slider(
                             value = cropScale,
                             onValueChange = { cropScale = it },
                             valueRange = 0.4f..6f,
                             modifier = Modifier.weight(1f).padding(horizontal = 4.dp)
                         )
-                        IconText("🔍", fontSize = 16.sp)
+                        IconText("", fontSize = 16.sp, icon = "search")
                     }
                     Text("拖动调整位置 · 双指/滑条缩放（0.4x 焦距拉远 ~ 6x 放大）", fontSize = 11.sp, color = theme.muted)
                 }
@@ -163,7 +163,7 @@ fun AvatarCropScreen(vm: ChatViewModel, deps: DialogDeps) {
                     }
                     vm.cropBitmap.value = null
                     vm.avatarTarget.value = null
-                }) { IconText("✅ 确认") }
+                }) { IconText("确认", icon = "check_circle") }
             },
             dismissButton = { TextButton(onClick = { vm.cropBitmap.value = null; vm.avatarTarget.value = null }) { Text("取消") } },
         )

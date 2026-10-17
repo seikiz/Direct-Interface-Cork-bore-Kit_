@@ -1,16 +1,16 @@
-/* web/js/screens/crop.js —— ✂️ 图片裁剪屏（阶段 2：从 index.html 的顶层代码整块搬出，零行为变化）
+/* web/js/screens/crop.js —— 图片裁剪屏（阶段 2：从 index.html 的顶层代码整块搬出，零行为变化）
  *
  * 归属
- *   结构：web/screens/crop.html（index.html 里原位只剩挂载点 <!--@screen:crop-->；
- *         它原来也嵌在 #inputbar 里，挂载点就在同一位置）
- *   样式：没有专属 css 块（舞台/遮罩/缩放条都是行内 style），所以不需要 screens/crop.css。
+ * 结构：web/screens/crop.html（index.html 里原位只剩挂载点 <!--@screen:crop-->；
+ * 它原来也嵌在 #inputbar 里，挂载点就在同一位置）
+ * 样式：没有专属 css 块（舞台/遮罩/缩放条都是行内 style），所以不需要 screens/crop.css。
  * 契约：router 注入片段后调 mount()。
  * 本屏依赖的外部符号（阶段 3/4/5 的收尾清单）
- *   · pywebview.api.set_avatar(target, b64, 'png')：后端落头像文件
- *   · avatarCache / reloadRoles()：**角色列表所在的聊天屏的东西**。裁剪完要让角色列表
- *     重画头像，现在是直接写对方的缓存、调对方的函数 —— 应该改成
- *     DICK.bus.emit('avatar:changed', {target})，由聊天屏自己订阅重画。留在阶段 3 收。
- *   · 入口是 #fileInput 的 change（聊天屏的隐藏文件框）：cropOpen(target, dataUrl, ext)。
+ * · pywebview.api.set_avatar(target, b64, 'png')：后端落头像文件
+ * · avatarCache / reloadRoles()：**角色列表所在的聊天屏的东西**。裁剪完要让角色列表
+ * 重画头像，现在是直接写对方的缓存、调对方的函数 —— 应该改成
+ * DICK.bus.emit('avatar:changed', {target})，由聊天屏自己订阅重画。留在阶段 3 收。
+ * · 入口是 #fileInput 的 change（聊天屏的隐藏文件框）：cropOpen(target, dataUrl, ext)。
  */
 window.CropScreen = (function (global) {
   'use strict';

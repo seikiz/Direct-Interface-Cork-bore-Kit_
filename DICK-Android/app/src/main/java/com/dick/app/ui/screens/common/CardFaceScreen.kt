@@ -36,7 +36,7 @@ fun CardFaceScreen(vm: ChatViewModel, muted: Color) {
         val html = role?.let { vm.advancedByRole[it]?.fields?.get("card_face")?.str() } ?: ""
         AlertDialog(
             onDismissRequest = { vm.showCardFace.value = false },
-            title = { IconText("🎴 卡面") },
+            title = { IconText("卡面", icon = "style") },
             text = {
                 if (html.isNotBlank()) {
                     HtmlCard(html, Modifier.fillMaxWidth().height(420.dp))

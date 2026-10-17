@@ -23,9 +23,9 @@
       ]
     },
     "aiDraft": {
-      "zh": "✨ AI 起草",
-      "en": "✨ AI Draft",
-      "ja": "✨ AI 下書き",
+      "zh": "AI 起草",
+      "en": "AI Draft",
+      "ja": "AI 下書き",
       "used_by": [
         "desktop_web"
       ]
@@ -47,9 +47,9 @@
       ]
     },
     "btnWorkshop": {
-      "zh": "🧰 创意工坊",
-      "en": "🧰 Workshop",
-      "ja": "🧰 ワークショップ",
+      "zh": "创意工坊",
+      "en": "Workshop",
+      "ja": "ワークショップ",
       "used_by": [
         "desktop_web"
       ]
@@ -63,25 +63,25 @@
       ]
     },
     "btn_avatar_persona": {
-      "zh": "🧑 玩家头像",
-      "en": "🧑 Player Avatar",
-      "ja": "🧑 プレイヤーアイコン",
+      "zh": "玩家头像",
+      "en": "Player Avatar",
+      "ja": "プレイヤーアイコン",
       "used_by": [
         "android"
       ]
     },
     "btn_branch": {
-      "zh": "🌿 回档",
-      "en": "🌿",
-      "ja": "🌿",
+      "zh": "回档",
+      "en": "Restore",
+      "ja": "復元",
       "used_by": [
         "android"
       ]
     },
     "btn_buy": {
-      "zh": "🔑 去官网注册/充值",
-      "en": "🔑 Official site (sign up / top up)",
-      "ja": "🔑 公式サイト（登録 / チャージ）",
+      "zh": "去官网注册/充值",
+      "en": "Official site (sign up / top up)",
+      "ja": "公式サイト（登録 / チャージ）",
       "used_by": [
         "android"
       ]
@@ -111,50 +111,34 @@
         "android"
       ]
     },
-    "btn_edit": {
-      "zh": "✏️",
-      "en": "✏️",
-      "ja": "✏️",
-      "used_by": [
-        "android"
-      ]
-    },
-    "btn_edit_msg": {
-      "zh": "✏️",
-      "en": "✏️",
-      "ja": "✏️",
-      "used_by": [
-        "android"
-      ]
-    },
     "btn_export_json": {
       "zh": "导出完成",
-      "en": "⬇️ JSON",
-      "ja": "⬇️ JSON",
+      "en": "JSON",
+      "ja": "JSON",
       "used_by": [
         "android"
       ]
     },
     "btn_import_card": {
-      "zh": "📥 导入角色卡",
-      "en": "📥 Import",
-      "ja": "📥 読み込み",
+      "zh": "导入角色卡",
+      "en": "Import",
+      "ja": "読み込み",
       "used_by": [
         "android"
       ]
     },
     "btn_new_role": {
-      "zh": "➕ 新建角色",
-      "en": "➕ New Role",
-      "ja": "➕ 新規キャラ",
+      "zh": "新建角色",
+      "en": "New Role",
+      "ja": "新規キャラ",
       "used_by": [
         "android"
       ]
     },
     "btn_new_world": {
-      "zh": "➕ 新建世界",
-      "en": "➕ New World",
-      "ja": "➕ 新規ワールド",
+      "zh": "新建世界",
+      "en": "New World",
+      "ja": "新規ワールド",
       "used_by": [
         "android"
       ]
@@ -176,9 +160,9 @@
       ]
     },
     "btn_remove": {
-      "zh": "✕ 移除",
-      "en": "✕ Remove",
-      "ja": "✕ 削除",
+      "zh": "移除",
+      "en": "Remove",
+      "ja": "削除",
       "used_by": [
         "android"
       ]
@@ -200,9 +184,9 @@
       ]
     },
     "btn_workshop": {
-      "zh": "🧰 创意工坊",
-      "en": "🧰 Workshop",
-      "ja": "🧰 ワークショップ",
+      "zh": "创意工坊",
+      "en": "Workshop",
+      "ja": "ワークショップ",
       "used_by": [
         "android"
       ]
@@ -276,9 +260,9 @@
       ]
     },
     "card_export_fail": {
-      "zh": "⚠️ 导出失败：",
-      "en": "⚠️ Export failed",
-      "ja": "⚠️ 書き出しに失敗",
+      "zh": "导出失败：",
+      "en": "Export failed",
+      "ja": "書き出しに失敗",
       "used_by": [
         "android"
       ]
@@ -482,9 +466,9 @@
       ]
     },
     "card_import_fail": {
-      "zh": "⚠️ 导入失败：",
-      "en": "⚠️ Unrecognized character card format",
-      "ja": "⚠️ 認識できないキャラカード形式",
+      "zh": "导入失败：",
+      "en": "Unrecognized character card format",
+      "ja": "認識できないキャラカード形式",
       "used_by": [
         "android"
       ]
@@ -579,17 +563,17 @@
       ]
     },
     "chLoading": {
-      "zh": "⏳ 正在生成选项…",
-      "en": "⏳ Generating options…",
-      "ja": "⏳ 選択肢を生成中…",
+      "zh": "正在生成选项…",
+      "en": "Generating options…",
+      "ja": "選択肢を生成中…",
       "used_by": [
         "desktop_web"
       ]
     },
     "chk_auto": {
-      "zh": "🤖 自动接话（群聊时其他角色自动跟进）",
-      "en": "🤖 Auto Reply (other roles follow up in group chat)",
-      "ja": "🤖 自動応答（グループチャットで他のキャラが続ける）",
+      "zh": "自动接话（群聊时其他角色自动跟进）",
+      "en": "Auto Reply (other roles follow up in group chat)",
+      "ja": "自動応答（グループチャットで他のキャラが続ける）",
       "used_by": [
         "android"
       ]
@@ -643,9 +627,9 @@
       ]
     },
     "editPersona": {
-      "zh": "⚙️ 编辑玩家角色",
-      "en": "⚙️ Edit Player Persona",
-      "ja": "⚙️ プレイヤー設定を編集",
+      "zh": "编辑玩家角色",
+      "en": "Edit Player Persona",
+      "ja": "プレイヤー設定を編集",
       "used_by": [
         "desktop_web"
       ]
@@ -686,14 +670,6 @@
       "zh": "内容",
       "en": "Content",
       "ja": "内容",
-      "used_by": [
-        "android"
-      ]
-    },
-    "entry_delete": {
-      "zh": "✕",
-      "en": "✕",
-      "ja": "✕",
       "used_by": [
         "android"
       ]
@@ -755,9 +731,9 @@
       ]
     },
     "image": {
-      "zh": "📷 图片",
-      "en": "📷 Image",
-      "ja": "📷 画像",
+      "zh": "图片",
+      "en": "Image",
+      "ja": "画像",
       "used_by": [
         "desktop_web"
       ]
@@ -779,9 +755,9 @@
       ]
     },
     "importCard": {
-      "zh": "📥 导入角色卡",
-      "en": "📥 Import Card",
-      "ja": "📥 カードを読み込み",
+      "zh": "导入角色卡",
+      "en": "Import Card",
+      "ja": "カードを読み込み",
       "used_by": [
         "desktop_web"
       ]
@@ -795,9 +771,9 @@
       ]
     },
     "item_api": {
-      "zh": "🔑 API 配置",
-      "en": "🔑 API Settings",
-      "ja": "🔑 API 設定",
+      "zh": "API 配置",
+      "en": "API Settings",
+      "ja": "API 設定",
       "used_by": [
         "android"
       ]
@@ -923,9 +899,9 @@
       ]
     },
     "newRole": {
-      "zh": "➕ 新建角色",
-      "en": "➕ New Role",
-      "ja": "➕ 新規キャラ",
+      "zh": "新建角色",
+      "en": "New Role",
+      "ja": "新規キャラ",
       "used_by": [
         "desktop_web"
       ]
@@ -939,9 +915,9 @@
       ]
     },
     "newWorld": {
-      "zh": "➕ 新建世界",
-      "en": "➕ New World",
-      "ja": "➕ 新規ワールド",
+      "zh": "新建世界",
+      "en": "New World",
+      "ja": "新規ワールド",
       "used_by": [
         "desktop_web"
       ]
@@ -1011,9 +987,9 @@
       ]
     },
     "persona": {
-      "zh": "🧑 玩家角色",
-      "en": "🧑 Player Persona",
-      "ja": "🧑 プレイヤー設定",
+      "zh": "玩家角色",
+      "en": "Player Persona",
+      "ja": "プレイヤー設定",
       "used_by": [
         "desktop_web"
       ]
@@ -1035,33 +1011,33 @@
       ]
     },
     "qcClearDoc": {
-      "zh": "🧹 清文档",
-      "en": "🧹 Clear doc",
-      "ja": "🧹 資料をクリア",
+      "zh": "清文档",
+      "en": "Clear doc",
+      "ja": "資料をクリア",
       "used_by": [
         "desktop_web"
       ]
     },
     "qcExport": {
-      "zh": "💾 导出Word",
-      "en": "💾 Export Word",
-      "ja": "💾 Word を書き出し",
+      "zh": "导出Word",
+      "en": "Export Word",
+      "ja": "Word を書き出し",
       "used_by": [
         "desktop_web"
       ]
     },
     "qcRead": {
-      "zh": "📄 读文档",
-      "en": "📄 Read doc",
-      "ja": "📄 資料を読む",
+      "zh": "读文档",
+      "en": "Read doc",
+      "ja": "資料を読む",
       "used_by": [
         "desktop_web"
       ]
     },
     "qcTheme": {
-      "zh": "🎨 主题",
-      "en": "🎨 Theme",
-      "ja": "🎨 テーマ",
+      "zh": "主题",
+      "en": "Theme",
+      "ja": "テーマ",
       "used_by": [
         "desktop_web"
       ]
@@ -1075,17 +1051,17 @@
       ]
     },
     "remove": {
-      "zh": "✕ 移除",
-      "en": "✕ Remove",
-      "ja": "✕ 削除",
+      "zh": "移除",
+      "en": "Remove",
+      "ja": "削除",
       "used_by": [
         "desktop_web"
       ]
     },
     "roles": {
-      "zh": "📂 存档列表",
-      "en": "📂 Archives",
-      "ja": "📂 アーカイブ",
+      "zh": "存档列表",
+      "en": "Archives",
+      "ja": "アーカイブ",
       "used_by": [
         "desktop_web"
       ]
@@ -1115,9 +1091,9 @@
       ]
     },
     "settings": {
-      "zh": "⚙️ 设置",
-      "en": "⚙️ Settings",
-      "ja": "⚙️ 設定",
+      "zh": "设置",
+      "en": "Settings",
+      "ja": "設定",
       "used_by": [
         "desktop_web"
       ]
@@ -1131,9 +1107,9 @@
       ]
     },
     "stAuto": {
-      "zh": "🤖 自动接话",
-      "en": "🤖 Auto follow-up",
-      "ja": "🤖 自動応答",
+      "zh": "自动接话",
+      "en": "Auto follow-up",
+      "ja": "自動応答",
       "used_by": [
         "desktop_web"
       ]
@@ -1147,33 +1123,33 @@
       ]
     },
     "stBudget": {
-      "zh": "🧮 上下文预算",
-      "en": "🧮 Context budget",
-      "ja": "🧮 コンテキスト予算",
+      "zh": "上下文预算",
+      "en": "Context budget",
+      "ja": "コンテキスト予算",
       "used_by": [
         "desktop_web"
       ]
     },
     "stBuy": {
-      "zh": "🔑 去官网注册 / 充值",
-      "en": "🔑 Official site (sign up / top up)",
-      "ja": "🔑 公式サイト（登録 / チャージ）",
+      "zh": "去官网注册 / 充值",
+      "en": "Official site (sign up / top up)",
+      "ja": "公式サイト（登録 / チャージ）",
       "used_by": [
         "desktop_web"
       ]
     },
     "stFont": {
-      "zh": "🔤 字体大小",
-      "en": "🔤 Font size",
-      "ja": "🔤 文字サイズ",
+      "zh": "字体大小",
+      "en": "Font size",
+      "ja": "文字サイズ",
       "used_by": [
         "desktop_web"
       ]
     },
     "stPlugins": {
-      "zh": "🔌 插件管理",
-      "en": "🔌 Plugins",
-      "ja": "🔌 プラグイン",
+      "zh": "插件管理",
+      "en": "Plugins",
+      "ja": "プラグイン",
       "used_by": [
         "desktop_web"
       ]
@@ -1244,9 +1220,9 @@
       ]
     },
     "vision_fail": {
-      "zh": "⚠️ 图片识别失败（免费视觉链被限流或网络问题），请稍后重试",
-      "en": "⚠️ Image recognition failed (rate limit or network). Try again later.",
-      "ja": "⚠️ 画像の認識に失敗しました（制限またはネットワーク）。後でもう一度。",
+      "zh": "图片识别失败（免费视觉链被限流或网络问题），请稍后重试",
+      "en": "Image recognition failed (rate limit or network). Try again later.",
+      "ja": "画像の認識に失敗しました（制限またはネットワーク）。後でもう一度。",
       "used_by": [
         "desktop_py",
         "android"
@@ -1317,9 +1293,9 @@
       ]
     },
     "welcome": {
-      "zh": "👋 欢迎使用 %s！",
-      "en": "👋 Welcome to %s!",
-      "ja": "👋 %s へようこそ！",
+      "zh": "欢迎使用 %s！",
+      "en": "Welcome to %s!",
+      "ja": "%s へようこそ！",
       "used_by": [
         "desktop_py"
       ]
@@ -1389,9 +1365,9 @@
       ]
     },
     "worlds": {
-      "zh": "🌍 世界卡（多选 = 平行世界）",
-      "en": "🌍 Worlds (multi-select = parallel worlds)",
-      "ja": "🌍 ワールド（複数選択 = 並行世界）",
+      "zh": "世界卡（多选 = 平行世界）",
+      "en": "Worlds (multi-select = parallel worlds)",
+      "ja": "ワールド（複数選択 = 並行世界）",
       "used_by": [
         "desktop_web"
       ]
@@ -1405,65 +1381,65 @@
       ]
     },
     "wsDel": {
-      "zh": "🗑️ 删除",
-      "en": "🗑️ Delete",
-      "ja": "🗑️ 削除",
+      "zh": "删除",
+      "en": "Delete",
+      "ja": "削除",
       "used_by": [
         "desktop_web"
       ]
     },
     "wsDownload": {
-      "zh": "⬇️ 下载到本地",
-      "en": "⬇️ Download",
-      "ja": "⬇️ ダウンロード",
+      "zh": "下载到本地",
+      "en": "Download",
+      "ja": "ダウンロード",
       "used_by": [
         "desktop_web"
       ]
     },
     "wsExport": {
-      "zh": "📤 导出文件",
-      "en": "📤 Export file",
-      "ja": "📤 ファイルを書き出し",
+      "zh": "导出文件",
+      "en": "Export file",
+      "ja": "ファイルを書き出し",
       "used_by": [
         "desktop_web"
       ]
     },
     "wsKey": {
-      "zh": "🔑 Key（可选，只有删除/管理才要；上传不用）",
-      "en": "🔑 Key (optional — only for delete/admin, not upload)",
-      "ja": "🔑 Key（任意・削除/管理のみ。アップロードは不要）",
+      "zh": "Key（可选，只有删除/管理才要；上传不用）",
+      "en": "Key (optional — only for delete/admin, not upload)",
+      "ja": "Key（任意・削除/管理のみ。アップロードは不要）",
       "used_by": [
         "desktop_web"
       ]
     },
     "wsLike": {
-      "zh": "❤️ 点赞",
-      "en": "❤️ Like",
-      "ja": "❤️ いいね",
+      "zh": "点赞",
+      "en": "Like",
+      "ja": "いいね",
       "used_by": [
         "desktop_web"
       ]
     },
     "wsLocal": {
-      "zh": "📂 本地",
-      "en": "📂 Local",
-      "ja": "📂 ローカル",
+      "zh": "本地",
+      "en": "Local",
+      "ja": "ローカル",
       "used_by": [
         "desktop_web"
       ]
     },
     "wsOnline": {
-      "zh": "🌐 在线",
-      "en": "🌐 Online",
-      "ja": "🌐 オンライン",
+      "zh": "在线",
+      "en": "Online",
+      "ja": "オンライン",
       "used_by": [
         "desktop_web"
       ]
     },
     "wsOpen": {
-      "zh": "📂 打开目录",
-      "en": "📂 Open folder",
-      "ja": "📂 フォルダを開く",
+      "zh": "打开目录",
+      "en": "Open folder",
+      "ja": "フォルダを開く",
       "used_by": [
         "desktop_web"
       ]
@@ -1477,57 +1453,57 @@
       ]
     },
     "wsProxy": {
-      "zh": "🛰️ 代理（一般留空直连；上传失败才考虑填）",
-      "en": "🛰️ Proxy (leave empty to connect directly)",
-      "ja": "🛰️ プロキシ（通常は空欄＝直接接続）",
+      "zh": "代理（一般留空直连；上传失败才考虑填）",
+      "en": "Proxy (leave empty to connect directly)",
+      "ja": "プロキシ（通常は空欄＝直接接続）",
       "used_by": [
         "desktop_web"
       ]
     },
     "wsTest": {
-      "zh": "🔌 测试连接",
-      "en": "🔌 Test",
-      "ja": "🔌 テスト",
+      "zh": "测试连接",
+      "en": "Test",
+      "ja": "テスト",
       "used_by": [
         "desktop_web"
       ]
     },
     "wsTitle": {
-      "zh": "🧰 创意工坊",
-      "en": "🧰 Workshop",
-      "ja": "🧰 ワークショップ",
+      "zh": "创意工坊",
+      "en": "Workshop",
+      "ja": "ワークショップ",
       "used_by": [
         "desktop_web"
       ]
     },
     "wsUpload": {
-      "zh": "📤 上传本地",
-      "en": "📤 Upload local",
-      "ja": "📤 ローカルを送信",
+      "zh": "上传本地",
+      "en": "Upload local",
+      "ja": "ローカルを送信",
       "used_by": [
         "desktop_web"
       ]
     },
     "ws_delete": {
-      "zh": "🗑️ 删除",
-      "en": "🗑️ Delete",
-      "ja": "🗑️ 削除",
+      "zh": "删除",
+      "en": "Delete",
+      "ja": "削除",
       "used_by": [
         "android"
       ]
     },
     "ws_download": {
-      "zh": "⬇️ 下载",
-      "en": "⬇️ Download",
-      "ja": "⬇️ ダウンロード",
+      "zh": "下载",
+      "en": "Download",
+      "ja": "ダウンロード",
       "used_by": [
         "android"
       ]
     },
     "ws_export": {
-      "zh": "📤 导出",
-      "en": "📤 Export",
-      "ja": "📤 書き出し",
+      "zh": "导出",
+      "en": "Export",
+      "ja": "書き出し",
       "used_by": [
         "android"
       ]
@@ -1541,25 +1517,25 @@
       ]
     },
     "ws_like": {
-      "zh": "❤️ 点赞",
-      "en": "❤️ Like",
-      "ja": "❤️ いいね",
+      "zh": "点赞",
+      "en": "Like",
+      "ja": "いいね",
       "used_by": [
         "android"
       ]
     },
     "ws_local": {
-      "zh": "📂 本地 ▾",
-      "en": "📂 Local",
-      "ja": "📂 ローカル",
+      "zh": "本地 ▾",
+      "en": "Local",
+      "ja": "ローカル",
       "used_by": [
         "android"
       ]
     },
     "ws_online": {
-      "zh": "🌐 在线 ▾",
-      "en": "🌐 Online",
-      "ja": "🌐 オンライン",
+      "zh": "在线 ▾",
+      "en": "Online",
+      "ja": "オンライン",
       "used_by": [
         "android"
       ]
@@ -1573,17 +1549,17 @@
       ]
     },
     "ws_test": {
-      "zh": "🔄 重新检测",
-      "en": "🔄 Test",
-      "ja": "🔄 テスト",
+      "zh": "重新检测",
+      "en": "Test",
+      "ja": "テスト",
       "used_by": [
         "android"
       ]
     },
     "ws_upload": {
-      "zh": "📤 上传",
-      "en": "📤 Upload",
-      "ja": "📤 送信",
+      "zh": "上传",
+      "en": "Upload",
+      "ja": "送信",
       "used_by": [
         "android"
       ]
@@ -1597,9 +1573,9 @@
       ]
     },
     "st_api_title": {
-      "zh": "🔑 API 配置（模型商 / 模型 / Key）",
-      "en": "🔑 API Settings (provider / model / key)",
-      "ja": "🔑 API 設定（プロバイダー / モデル / Key）",
+      "zh": "API 配置（模型商 / 模型 / Key）",
+      "en": "API Settings (provider / model / key)",
+      "ja": "API 設定（プロバイダー / モデル / Key）",
       "used_by": [
         "android"
       ]
@@ -1807,9 +1783,9 @@
       ]
     },
     "st_timedial": {
-      "zh": "⏳ 时间流速",
-      "en": "⏳ Time speed",
-      "ja": "⏳ 時間速度",
+      "zh": "时间流速",
+      "en": "Time speed",
+      "ja": "時間速度",
       "used_by": [
         "android"
       ]
@@ -1823,17 +1799,17 @@
       ]
     },
     "st_appicon": {
-      "zh": "🎨 应用图标",
-      "en": "🎨 App icon",
-      "ja": "🎨 アプリアイコン",
+      "zh": "应用图标",
+      "en": "App icon",
+      "ja": "アプリアイコン",
       "used_by": [
         "android"
       ]
     },
     "st_wallpaper": {
-      "zh": "🖼️ 壁纸（聊天背景）",
-      "en": "🖼️ Wallpaper (chat background)",
-      "ja": "🖼️ 壁紙（チャット背景）",
+      "zh": "壁纸（聊天背景）",
+      "en": "Wallpaper (chat background)",
+      "ja": "壁紙（チャット背景）",
       "used_by": [
         "android"
       ]
@@ -1855,49 +1831,49 @@
       ]
     },
     "st_wallpaper_clear": {
-      "zh": "🧹 恢复默认背景",
-      "en": "🧹 Reset to the default background",
-      "ja": "🧹 既定の背景に戻す",
+      "zh": "恢复默认背景",
+      "en": "Reset to the default background",
+      "ja": "既定の背景に戻す",
       "used_by": [
         "android"
       ]
     },
     "st_dev": {
-      "zh": "🔧 开发者模式（解锁角色卡高级设置/内置游戏）",
-      "en": "🔧 Developer mode (unlocks advanced card settings / built-in games)",
-      "ja": "🔧 開発者モード（カード詳細設定・内蔵ゲームを解放）",
+      "zh": "开发者模式（解锁角色卡高级设置/内置游戏）",
+      "en": "Developer mode (unlocks advanced card settings / built-in games)",
+      "ja": "開発者モード（カード詳細設定・内蔵ゲームを解放）",
       "used_by": [
         "android"
       ]
     },
     "st_humanize": {
-      "zh": "🧍 去 AI 味（具体细节/生活有变化/口语不完美/引用共同记忆）",
-      "en": "🧍 De-AI (concrete detail / life changes / imperfect speech / shared memories)",
-      "ja": "🧍 AI っぽさを消す（具体的な描写・生活の変化・不完全な口語・共有の記憶）",
+      "zh": "去 AI 味（具体细节/生活有变化/口语不完美/引用共同记忆）",
+      "en": "De-AI (concrete detail / life changes / imperfect speech / shared memories)",
+      "ja": "AI っぽさを消す（具体的な描写・生活の変化・不完全な口語・共有の記憶）",
       "used_by": [
         "android"
       ]
     },
     "st_style": {
-      "zh": "🎛 风格闸（去文学化漂移：生活词/比喻→事实/拆长句）",
-      "en": "🎛 Style guard (stop literary drift: life words / metaphors → facts / split long sentences)",
-      "ja": "🎛 スタイルガード（文学化の揺れを止める：生活語・比喩→事実、長文の分割）",
+      "zh": "风格闸（去文学化漂移：生活词/比喻→事实/拆长句）",
+      "en": "Style guard (stop literary drift: life words / metaphors → facts / split long sentences)",
+      "ja": "スタイルガード（文学化の揺れを止める：生活語・比喩→事実、長文の分割）",
       "used_by": [
         "android"
       ]
     },
     "st_long": {
-      "zh": "🌊 长句模式（不拆长句，允许更流畅/文学化表达）",
-      "en": "🌊 Long sentences (do not split; allow smoother / more literary prose)",
-      "ja": "🌊 長文モード（分割せず、より流暢で文学的な表現を許可）",
+      "zh": "长句模式（不拆长句，允许更流畅/文学化表达）",
+      "en": "Long sentences (do not split; allow smoother / more literary prose)",
+      "ja": "長文モード（分割せず、より流暢で文学的な表現を許可）",
       "used_by": [
         "android"
       ]
     },
     "st_plugins": {
-      "zh": "🔌 插件",
-      "en": "🔌 Plugins",
-      "ja": "🔌 プラグイン",
+      "zh": "插件",
+      "en": "Plugins",
+      "ja": "プラグイン",
       "used_by": [
         "android"
       ]
@@ -2048,18 +2024,18 @@
       ]
     },
     "apiGuideBtn": {
-      "zh": "📖 API 教程",
-      "en": "📖 API guide",
-      "ja": "📖 API ガイド",
+      "zh": "API 教程",
+      "en": "API guide",
+      "ja": "API ガイド",
       "used_by": [
         "desktop_web",
         "android"
       ]
     },
     "apiWizardBtn": {
-      "zh": "🧭 重新打开配置向导",
-      "en": "🧭 Reopen the setup wizard",
-      "ja": "🧭 セットアップを開き直す",
+      "zh": "重新打开配置向导",
+      "en": "Reopen the setup wizard",
+      "ja": "セットアップを開き直す",
       "used_by": [
         "desktop_web",
         "android"
@@ -2767,15 +2743,15 @@
       "from": "kt"
     },
     "btn_avatar": {
-      "zh": "🖼️ 角色头像",
-      "en": "🖼️ Avatar",
-      "ja": "🖼️ アイコン",
+      "zh": "角色头像",
+      "en": "Avatar",
+      "ja": "アイコン",
       "from": "py"
     },
     "btn_buy_api": {
-      "zh": "💰 购买API",
-      "en": "💰 Buy API",
-      "ja": "💰 API を購入",
+      "zh": "购买API",
+      "en": "Buy API",
+      "ja": "API を購入",
       "from": "py"
     },
     "btn_close": {
@@ -2791,51 +2767,51 @@
       "from": "py"
     },
     "btn_del": {
-      "zh": "🗑️ 删除",
-      "en": "🗑️ Delete",
-      "ja": "🗑️ 削除",
+      "zh": "删除",
+      "en": "Delete",
+      "ja": "削除",
       "from": "py"
     },
     "btn_del_role": {
-      "zh": "🗑️ 删除角色",
-      "en": "🗑️ Delete Role",
-      "ja": "🗑️ キャラを削除",
+      "zh": "删除角色",
+      "en": "Delete Role",
+      "ja": "キャラを削除",
       "from": "py"
     },
     "btn_del_world": {
-      "zh": "🗑️ 删除世界",
-      "en": "🗑️ Delete World",
-      "ja": "🗑️ ワールドを削除",
+      "zh": "删除世界",
+      "en": "Delete World",
+      "ja": "ワールドを削除",
       "from": "py"
     },
     "btn_disable": {
-      "zh": "❌ 停用",
-      "en": "❌ Disable",
-      "ja": "❌ 無効",
+      "zh": "停用",
+      "en": "Disable",
+      "ja": "無効",
       "from": "py"
     },
     "btn_edit_last": {
-      "zh": "✏️ 编辑上一条",
-      "en": "✏️ Edit Last",
-      "ja": "✏️ 最後を編集",
+      "zh": "编辑上一条",
+      "en": "Edit Last",
+      "ja": "最後を編集",
       "from": "py"
     },
     "btn_enable": {
-      "zh": "✅ 启用",
-      "en": "✅ Enable",
-      "ja": "✅ 有効",
+      "zh": "启用",
+      "en": "Enable",
+      "ja": "有効",
       "from": "py"
     },
     "btn_exp_role": {
-      "zh": "📤 导出角色",
-      "en": "📤 Export Role",
-      "ja": "📤 キャラを書き出し",
+      "zh": "导出角色",
+      "en": "Export Role",
+      "ja": "キャラを書き出し",
       "from": "py"
     },
     "btn_exp_world": {
-      "zh": "📤 导出世界",
-      "en": "📤 Export World",
-      "ja": "📤 ワールドを書き出し",
+      "zh": "导出世界",
+      "en": "Export World",
+      "ja": "ワールドを書き出し",
       "from": "py"
     },
     "btn_expand": {
@@ -2846,8 +2822,8 @@
     },
     "btn_export_png": {
       "zh": "",
-      "en": "🖼️ PNG",
-      "ja": "🖼️ PNG",
+      "en": "PNG",
+      "ja": "PNG",
       "from": "kt"
     },
     "btn_get_started": {
@@ -2857,15 +2833,15 @@
       "from": "py"
     },
     "btn_imp_role": {
-      "zh": "📥 导入角色",
-      "en": "📥 Import Role",
-      "ja": "📥 キャラを読み込み",
+      "zh": "导入角色",
+      "en": "Import Role",
+      "ja": "キャラを読み込み",
       "from": "py"
     },
     "btn_imp_world": {
-      "zh": "📥 导入世界",
-      "en": "📥 Import World",
-      "ja": "📥 ワールドを読み込み",
+      "zh": "导入世界",
+      "en": "Import World",
+      "ja": "ワールドを読み込み",
       "from": "py"
     },
     "btn_lang_switch": {
@@ -2875,45 +2851,45 @@
       "from": "py"
     },
     "btn_manage_preset": {
-      "zh": "✏️ 管理",
-      "en": "✏️ Manage",
-      "ja": "✏️ 管理",
+      "zh": "管理",
+      "en": "Manage",
+      "ja": "管理",
       "from": "py"
     },
     "btn_new": {
-      "zh": "➕ 新建",
-      "en": "➕ New",
-      "ja": "➕ 新規",
+      "zh": "新建",
+      "en": "New",
+      "ja": "新規",
       "from": "py"
     },
     "btn_open_saves": {
-      "zh": "📂 打开存档位置",
-      "en": "📂 Open Saves Folder",
-      "ja": "📂 セーブフォルダを開く",
+      "zh": "打开存档位置",
+      "en": "Open Saves Folder",
+      "ja": "セーブフォルダを開く",
       "from": "py"
     },
     "btn_open_worlds": {
-      "zh": "📂 打开世界卡位置",
-      "en": "📂 Open Worlds Folder",
-      "ja": "📂 ワールドフォルダを開く",
+      "zh": "打开世界卡位置",
+      "en": "Open Worlds Folder",
+      "ja": "ワールドフォルダを開く",
       "from": "py"
     },
     "btn_retry": {
-      "zh": "🔄 重试",
-      "en": "🔄 Retry",
-      "ja": "🔄 再生成",
+      "zh": "重试",
+      "en": "Retry",
+      "ja": "再生成",
       "from": "py"
     },
     "btn_settings": {
-      "zh": "⚙️ 设置",
-      "en": "⚙️ Settings",
-      "ja": "⚙️ 設定",
+      "zh": "设置",
+      "en": "Settings",
+      "ja": "設定",
       "from": "py"
     },
     "btn_start": {
-      "zh": "✅ 启动聊天",
-      "en": "✅ Start Chat",
-      "ja": "✅ チャット開始",
+      "zh": "启动聊天",
+      "en": "Start Chat",
+      "ja": "チャット開始",
       "from": "py"
     },
     "btn_theme": {
@@ -2929,9 +2905,9 @@
       "from": "py"
     },
     "chk_rolling": {
-      "zh": "📜 滚动摘要",
-      "en": "📜 Rolling Summary",
-      "ja": "📜 ローリング要約",
+      "zh": "滚动摘要",
+      "en": "Rolling Summary",
+      "ja": "ローリング要約",
       "from": "py"
     },
     "dlg_settings_title": {
@@ -2959,27 +2935,27 @@
       "from": "web"
     },
     "feat1": {
-      "zh": "🎭 创建任意角色（性格、背景、说话风格）",
-      "en": "🎭 Create any character (personality, background, speech style)",
-      "ja": "🎭 どんなキャラでも作成（性格・背景・話し方）",
+      "zh": "创建任意角色（性格、背景、说话风格）",
+      "en": "Create any character (personality, background, speech style)",
+      "ja": "どんなキャラでも作成（性格・背景・話し方）",
       "from": "py"
     },
     "feat2": {
-      "zh": "🌍 构建任意世界观（规则、关键词、场景）",
-      "en": "🌍 Build any world (rules, keywords, scenes)",
-      "ja": "🌍 どんな世界でも構築（ルール・キーワード・シーン）",
+      "zh": "构建任意世界观（规则、关键词、场景）",
+      "en": "Build any world (rules, keywords, scenes)",
+      "ja": "どんな世界でも構築（ルール・キーワード・シーン）",
       "from": "py"
     },
     "feat3": {
-      "zh": "🔄 自由切换 17 种不同 AI 模型",
-      "en": "🔄 Switch freely among AI providers",
-      "ja": "🔄 AI プロバイダを自由に切り替え",
+      "zh": "自由切换 17 种不同 AI 模型",
+      "en": "Switch freely among AI providers",
+      "ja": "AI プロバイダを自由に切り替え",
       "from": "py"
     },
     "feat4": {
-      "zh": "🧩 通过插件扩展无限功能",
-      "en": "🧩 Extend infinitely with plugins",
-      "ja": "🧩 プラグインで無限に拡張",
+      "zh": "通过插件扩展无限功能",
+      "en": "Extend infinitely with plugins",
+      "ja": "プラグインで無限に拡張",
       "from": "py"
     },
     "hint": {
@@ -2989,9 +2965,9 @@
       "from": "py"
     },
     "hint_enter": {
-      "zh": "💡 按 Enter 发送；群聊时可输入 @角色名 指定发言对象",
-      "en": "💡 Press Enter to send; use @name to target a speaker in group chat",
-      "ja": "💡 Enter で送信。グループチャットでは @名前 で発言者を指定",
+      "zh": "按 Enter 发送；群聊时可输入 @角色名 指定发言对象",
+      "en": "Press Enter to send; use @name to target a speaker in group chat",
+      "ja": "Enter で送信。グループチャットでは @名前 で発言者を指定",
       "from": "py"
     },
     "hint_font": {
@@ -3043,9 +3019,9 @@
       "from": "py"
     },
     "lbl_archives": {
-      "zh": "📂 存档列表",
-      "en": "📂 Archives",
-      "ja": "📂 アーカイブ",
+      "zh": "存档列表",
+      "en": "Archives",
+      "ja": "アーカイブ",
       "from": "py"
     },
     "lbl_baseurl": {
@@ -3055,9 +3031,9 @@
       "from": "kt"
     },
     "lbl_budget": {
-      "zh": "🧮 预算：",
-      "en": "🧮 Budget:",
-      "ja": "🧮 予算：",
+      "zh": "预算：",
+      "en": "Budget:",
+      "ja": "予算：",
       "from": "py"
     },
     "lbl_font": {
@@ -3085,9 +3061,9 @@
       "from": "py+kt"
     },
     "lbl_persona": {
-      "zh": "🧑 玩家角色",
-      "en": "🧑 Player Persona",
-      "ja": "🧑 プレイヤー設定",
+      "zh": "玩家角色",
+      "en": "Player Persona",
+      "ja": "プレイヤー設定",
       "from": "py+kt"
     },
     "lbl_plugins": {
@@ -3109,9 +3085,9 @@
       "from": "py+kt"
     },
     "lbl_quickstart": {
-      "zh": "🚀 快速开始",
-      "en": "🚀 Quick Start",
-      "ja": "🚀 クイックスタート",
+      "zh": "快速开始",
+      "en": "Quick Start",
+      "ja": "クイックスタート",
       "from": "py"
     },
     "lbl_size": {
@@ -3127,21 +3103,21 @@
       "from": "py"
     },
     "lbl_worlds": {
-      "zh": "🌍 世界卡（可多选 = 平行世界）",
-      "en": "🌍 Worlds (multi-select = parallel worlds)",
-      "ja": "🌍 ワールド（複数選択 = 並行世界）",
+      "zh": "世界卡（可多选 = 平行世界）",
+      "en": "Worlds (multi-select = parallel worlds)",
+      "ja": "ワールド（複数選択 = 並行世界）",
       "from": "py"
     },
     "loading": {
-      "zh": "⏳ 正在输入...",
-      "en": "⏳ Typing...",
-      "ja": "⏳ 入力中...",
+      "zh": "正在输入...",
+      "en": "Typing...",
+      "ja": "入力中...",
       "from": "py"
     },
     "menu_tools": {
-      "zh": "🛠️ 工具",
-      "en": "🛠️ Tools",
-      "ja": "🛠️ ツール",
+      "zh": "工具",
+      "en": "Tools",
+      "ja": "ツール",
       "from": "py"
     },
     "param_climate": {
@@ -3217,9 +3193,9 @@
       "from": "web"
     },
     "qcNovel": {
-      "zh": "📖 导出小说(EPUB)",
-      "en": "📖 Export novel (EPUB)",
-      "ja": "📖 小説を書き出し（EPUB）",
+      "zh": "导出小说(EPUB)",
+      "en": "Export novel (EPUB)",
+      "ja": "小説を書き出し（EPUB）",
       "from": "web"
     },
     "qs1": {
@@ -3265,21 +3241,21 @@
       "from": "py"
     },
     "wsConn": {
-      "zh": "💾 保存连接",
-      "en": "💾 Save connection",
-      "ja": "💾 接続を保存",
+      "zh": "保存连接",
+      "en": "Save connection",
+      "ja": "接続を保存",
       "from": "web"
     },
     "wsServer": {
-      "zh": "🔗 服务器地址",
-      "en": "🔗 Server URL",
-      "ja": "🔗 サーバー URL",
+      "zh": "服务器地址",
+      "en": "Server URL",
+      "ja": "サーバー URL",
       "from": "web"
     },
     "ws_save_conn": {
       "zh": "",
-      "en": "💾 Save",
-      "ja": "💾 保存",
+      "en": "Save",
+      "ja": "保存",
       "from": "kt"
     },
     "ws_server": {
@@ -3292,12 +3268,9 @@
   "_same_as_zh_ok": [
     "accent_purple",
     "apiKey",
-    "btn_edit",
-    "btn_edit_msg",
     "btn_regenerate",
     "btn_save",
     "entry_content",
-    "entry_delete",
     "entry_depth",
     "match_all",
     "match_any",

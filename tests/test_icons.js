@@ -187,7 +187,7 @@ const svgText = makeText('🔀 分支');
 const svgEl = build('galGraph', ['svg'], [svgText]);
 const scriptText = makeText('// emoji 组合 👨‍👩‍👧 举例');
 const scriptEl = build('sc', ['script'], [scriptText]);
-const namedEl = build('named', [], [makeText('[ic:go] 围棋 · [ic:nope] 保留 · ☂ 不动')]);
+const namedEl = build('named', [], [makeText('[ic:go] 围棋 · [ic:folder] 直出 · ☂ 不动')]);
 const main = build('main', [], [chatEl, svgEl, scriptEl, namedEl]);
 const body = build('body', [], [sidebar, settingsModal, main]);
 sandbox.document.body = body;
@@ -203,9 +203,16 @@ check(chatEl.childNodes[0] === chatMsg && chatMsg.data === '你好，这是聊�
   '#chat 内容原样保留');
 check(svgEl.childNodes[0] === svgText, 'SVG <text> 内不替换（🔀 留给节点图自己上色）');
 check(scriptEl.childNodes[0] === scriptText, 'script 内不替换');
-check(countIcons(namedEl) === 1 && iconNameOf(iconEls(namedEl)[0]) === DICK_ICON_NAMES['go'].n &&
-  textOf(namedEl) === '[ic] 围棋 · [ic:nope] 保留 · ☂ 不动',
-  '[ic:go] 具名标记生效（→ ' + (DICK_ICON_NAMES['go'] || {}).n + '）；未知名与未收录符号原样保留');
+// [ic:名字] 现在是「直接写 Material Symbols 连字名」的通用转义：
+//   · 具名表里有（go/play/sprite…）→ 用表里的名字（go → grid_on）；
+//   · 表里没有但名字形状合法（folder）→ 原样当连字名画（不把 "[ic:folder]" 露给用户）。
+//     名字写错时字体显示的是名字本身，一眼能看出来；名字到底在不在字体里由
+//     tests/test_no_emoji_ui.py ① 按字体连字表把关。
+check(countIcons(namedEl) === 2 &&
+  iconNameOf(iconEls(namedEl)[0]) === DICK_ICON_NAMES['go'].n &&
+  iconNameOf(iconEls(namedEl)[1]) === 'folder' &&
+  textOf(namedEl) === '[ic] 围棋 · [ic] 直出 · ☂ 不动',
+  '[ic:go] 具名标记生效（→ ' + (DICK_ICON_NAMES['go'] || {}).n + '）；[ic:名字] 也会直接当连字名画');
 
 const before = sidebar.childNodes.length;
 const probesAfterFirst = imgProbes;

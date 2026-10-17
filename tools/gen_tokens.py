@@ -64,11 +64,11 @@ SIZES = {
 HEX = re.compile(r"^#[0-9a-fA-F]{6}$")
 ZW = re.compile(u"[\u200b-\u200f\u2060\ufeff\u00ad]+")
 
-HEADER_CSS = (u"/* ⚠ 生成物：由 tools/gen_tokens.py 从 design/tokens.json 生成，别手改。\n"
+HEADER_CSS = (u"/* 生成物：由 tools/gen_tokens.py 从 design/tokens.json 生成，别手改。\n"
               u"   改配色：改 design/tokens.json，再跑 python tools/gen_tokens.py。\n"
               u"   验收：python tools/audit_contrast.py（对比度矩阵 + 漂移扫描）。\n"
               u"   默认暗色，跟随系统；body.dark/.light/.oled 是应用内显式选择时的覆写。 */\n")
-HEADER_KT = (u"// ⚠ 生成物：由 tools/gen_tokens.py 从 design/tokens.json 生成，别手改。\n"
+HEADER_KT = (u"// 生成物：由 tools/gen_tokens.py 从 design/tokens.json 生成，别手改。\n"
              u"//   改配色：改 design/tokens.json，再跑 python tools/gen_tokens.py。\n"
              u"//   验收：python tools/audit_contrast.py。\n")
 

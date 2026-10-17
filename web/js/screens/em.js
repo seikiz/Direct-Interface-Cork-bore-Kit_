@@ -1,20 +1,20 @@
-/* web/js/screens/em.js —— ✏️ 编辑消息屏（阶段 2：从 index.html 的顶层代码搬出，零行为变化）
+/* web/js/screens/em.js —— 编辑消息屏（阶段 2：从 index.html 的顶层代码搬出，零行为变化）
  *
  * 这一屏比别的小，但它是"跨屏状态"最典型的一处：
- *   搬家前 —— 聊天屏的点击处理器把 `editTarget` 写进一个顶层 var，再直接去摸
- *            `#emInput` / `#emTitle` / `#editMsgModal`；保存/取消也挂在顶层。
- *            于是"哪条消息在编辑"这件事，谁都能改、谁都不知道谁改了。
- *   搬家后 —— 聊天屏只发一条事件（`msg:edit`）就撒手；本屏自己开、自己存、自己关，
- *            "正在编辑哪条"存在 DICK.state['editMsg.target']（键名登记在 state.js 的 SCHEMA）。
+ * 搬家前 —— 聊天屏的点击处理器把 `editTarget` 写进一个顶层 var，再直接去摸
+ * `#emInput` / `#emTitle` / `#editMsgModal`；保存/取消也挂在顶层。
+ * 于是"哪条消息在编辑"这件事，谁都能改、谁都不知道谁改了。
+ * 搬家后 —— 聊天屏只发一条事件（`msg:edit`）就撒手；本屏自己开、自己存、自己关，
+ * "正在编辑哪条"存在 DICK.state['editMsg.target']（键名登记在 state.js 的 SCHEMA）。
  *
  * 归属
- *   结构：web/screens/em.html（index.html 里原位只剩挂载点 <!--@screen:em-->）
- *   样式：没有专属 css 块（.modal/.modal-box/.field/.row 都是组件层的），所以不需要 em.css。
+ * 结构：web/screens/em.html（index.html 里原位只剩挂载点 <!--@screen:em-->）
+ * 样式：没有专属 css 块（.modal/.modal-box/.field/.row 都是组件层的），所以不需要 em.css。
  * 契约：router 注入片段后调 mount()：绑保存/取消两个按钮 + 订阅 msg:edit。
  * 本屏依赖的外部符号（阶段 3/4/5 的收尾清单）
- *   · pywebview.api.edit_message(seq, text)：后端改存档里的这一条
- *   · T.editMsg：界面文案表（web/i18n.js 生成物）—— 标题跟着当前语言走
- *   · alert()：失败提示还是原生弹窗（原有行为，本轮不改交互）
+ * · pywebview.api.edit_message(seq, text)：后端改存档里的这一条
+ * · T.editMsg：界面文案表（web/i18n.js 生成物）—— 标题跟着当前语言走
+ * · alert()：失败提示还是原生弹窗（原有行为，本轮不改交互）
  */
 window.EditMsgScreen = (function (global) {
   'use strict';

@@ -1,13 +1,13 @@
-<!-- 💾 角色卡·多存档（阶段3：这一屏的 DOM 从 index.html 搬到这里，index.html 原位只留挂载点）
-     结构/class/行内 style 必须和搬家前逐字一致（tools/ui_snapshot.py 会核对），
-     行为在 web/js/screens/save.js（本屏 = 一个存档点列表 + 新存档/读档/覆盖/改名/删除）。 -->
+<!-- 角色卡·多存档（阶段3：这一屏的 DOM 从 index.html 搬到这里，index.html 原位只留挂载点）
+ 结构/class/行内 style 必须和搬家前逐字一致（tools/ui_snapshot.py 会核对），
+ 行为在 web/js/screens/save.js（本屏 = 一个存档点列表 + 新存档/读档/覆盖/改名/删除）。 -->
 <!-- 角色卡·多存档<seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌（新存档功能） -->
 <div class="modal" id="saveModal">
   <div class="modal-box" style="width:min(94vw,520px)">
-    <h3 id="saveTitle">💾 存档 · 角色</h3>
+    <h3 id="saveTitle">[ic:save] 存档 · 角色</h3>
     <div class="row save-new" style="justify-content:flex-start">
       <input id="saveLabel" placeholder="存档名（可留空，自动编号）" style="flex:1">
-      <button class="btn2" id="saveNewBtn">📝 新存档</button>
+      <button class="btn2" id="saveNewBtn">[ic:note] 新存档</button>
     </div>
     <div id="saveList" style="margin-top:10px;max-height:52vh;overflow:auto"></div>
     <div class="row" style="justify-content:flex-end;margin-top:14px">

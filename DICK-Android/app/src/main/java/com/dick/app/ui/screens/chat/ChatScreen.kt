@@ -119,7 +119,7 @@ import kotlin.random.Random
  *   · `theme` / `accent`（由 App 解析好的当前主题，避免两处口径不同）；
  *   · `nav/OverlayHost`（其余屏的挂载点）。
  *
- * ⚠ 已知取舍：`DickTheme { ... }` 只包住抽屉，overlay 弹窗画在主题外层 ——
+ *  已知取舍：`DickTheme { ... }` 只包住抽屉，overlay 弹窗画在主题外层 ——
  * 这是搬家前的既有层级（弹窗拿到的是 Material3 默认配色），本轮**没有动**，
  * 因为把它挪进主题内会改变弹窗里输入框/勾选框的配色 = 观感变化。
  * 下一步：要么给弹窗全部显式传色，要么把 DickTheme 提到 App 并接受一次观感变更。
@@ -258,6 +258,13 @@ fun ChatScreen(vm: ChatViewModel, theme: ThemeSpec, accent: Color) {
     var wsServerInput by vm.wsServerInput
     var wsKeyInput by vm.wsKeyInput
     var wsStatus by vm.wsStatus
+    var wsStatusIcon by vm.wsStatusIcon
+    // 工坊状态行 = 纯文本 + 图标名（→check_circle、→error…）。渲染点在 WorkshopScreen
+    // 的 DickTag，这里只负责把两样一起设好 —— 文案里不再出现 emoji 字符。
+    fun wsSetStatus(text: String, icon: String? = null) {
+        wsStatus = text
+        wsStatusIcon = icon
+    }
     val wsOnlineList = vm.wsOnlineList
     var wsOnlineIdx by vm.wsOnlineIdx
     var wsSearchInput by vm.wsSearchInput
@@ -334,7 +341,7 @@ val importCardLauncher = rememberLauncherForActivityResult(ActivityResultContrac
                 } catch (e: Exception) {
                     "❌ " + (e.message ?: "")
                 }
-                withContext(Dispatchers.Main) { wsStatus = msg }
+                withContext(Dispatchers.Main) { wsSetStatus(msg) }
             }
         }
     }
@@ -1891,7 +1898,7 @@ fun wsRefreshLocal() {
     ChatBridge.worldsChanged = { scope.launch(Dispatchers.Main) { reloadWorldsFromDisk() } }
 
     fun wsLoadOnline() {
-        wsStatus = "加载中..."
+        wsSetStatus("加载中...")
         scope.launch(Dispatchers.IO) {
             try {
                 val (cards, worldsL) = Workshop.listResources()
@@ -1900,17 +1907,17 @@ fun wsRefreshLocal() {
                     cards.forEach { it.fields["_type"] = J.Str("角色卡"); wsOnlineList.add(it) }
                     worldsL.forEach { it.fields["_type"] = J.Str("世界卡"); wsOnlineList.add(it) }
                     wsOnlineIdx = -1
-                    wsStatus = "共 " + wsOnlineList.size + " 个作品"
+                    wsSetStatus("共 " + wsOnlineList.size + " 个作品")
                 }
             } catch (e: Exception) {
-                scope.launch(Dispatchers.Main) { wsStatus = "❌ " + (e.message ?: "网络错误") }
+                scope.launch(Dispatchers.Main) { wsSetStatus(e.message ?: "网络错误", "error") }
             }
         }
     }
 
     fun wsSearchOnline() {
         val q = wsSearchInput.trim()
-        wsStatus = "搜索中..."
+        wsSetStatus("搜索中...")
         scope.launch(Dispatchers.IO) {
             try {
                 val rs = Workshop.search(q, "")
@@ -1921,10 +1928,10 @@ fun wsRefreshLocal() {
                         wsOnlineList.add(r)
                     }
                     wsOnlineIdx = -1
-                    wsStatus = "找到 " + rs.size + " 个"
+                    wsSetStatus("找到 " + rs.size + " 个")
                 }
             } catch (e: Exception) {
-                scope.launch(Dispatchers.Main) { wsStatus = "❌ " + (e.message ?: "网络错误") }
+                scope.launch(Dispatchers.Main) { wsSetStatus(e.message ?: "网络错误", "error") }
             }
         }
     }
@@ -1936,29 +1943,30 @@ fun wsRefreshLocal() {
         val dl = (r.fields["downloads"] as? J.Num)?.v?.toInt() ?: 0
         val lk = (r.fields["likes"] as? J.Num)?.v?.toInt() ?: 0
         val tags = (r.fields["tags"] as? J.Arr)?.items?.mapNotNull { it.str() }?.joinToString(",") ?: ""
-        return (if (t == "角色卡") "🎭 " else "🌍 ") + name + " | " + author +
-            " | ↓" + dl + " ❤" + lk + (if (tags.isBlank()) "" else " | " + tags)
+        // 纯文本（图标位已去掉）：类型改成写在串里，别再用 emoji 当类型前缀
+        return (if (t == "角色卡") "角色卡 " else "世界卡 ") + name + " | " + author +
+            " | ↓" + dl + " 赞" + lk + (if (tags.isBlank()) "" else " | " + tags)
     }
 
     fun wsLoadPlugins() {
-        wsStatus = "加载中..."
+        wsSetStatus("加载中...")
         scope.launch(Dispatchers.IO) {
             try {
                 val (plugins, local) = Workshop.listPlugins()
                 scope.launch(Dispatchers.Main) {
                     wsPlugins = plugins
                     wsLocalPlugins = local
-                    wsStatus = "共 " + plugins.size + " 个插件"
+                    wsSetStatus("共 " + plugins.size + " 个插件")
                 }
             } catch (e: Exception) {
-                scope.launch(Dispatchers.Main) { wsStatus = "❌ " + (e.message ?: "网络错误") }
+                scope.launch(Dispatchers.Main) { wsSetStatus(e.message ?: "网络错误", "error") }
             }
         }
     }
 
     fun wsInstallPlugin(id: String) {
         wsInstallingId = id
-        wsStatus = "安装中..."
+        wsSetStatus("安装中...")
         scope.launch(Dispatchers.IO) {
             try {
                 val fname = Workshop.installPlugin(id)
@@ -1968,12 +1976,12 @@ fun wsRefreshLocal() {
                 scope.launch(Dispatchers.Main) {
                     wsLocalPlugins = local
                     wsInstallingId = ""
-                    wsStatus = "✅ 安装成功：" + fname
+                    wsSetStatus("安装成功：" + fname, "check_circle")
                 }
             } catch (e: Exception) {
                 scope.launch(Dispatchers.Main) {
                     wsInstallingId = ""
-                    wsStatus = "❌ " + (e.message ?: "安装失败")
+                    wsSetStatus(e.message ?: "安装失败", "error")
                 }
             }
         }
@@ -1984,18 +1992,18 @@ fun wsRefreshLocal() {
         val id = r.fields["id"]?.str() ?: return
         val type = r.fields["_type"]?.str() ?: "角色卡"
         val fname = r.fields["original_name"]?.str() ?: ((r.fields["name"]?.str() ?: "card") + ".json")
-        wsStatus = "下载中..."
+        wsSetStatus("下载中...")
         scope.launch(Dispatchers.IO) {
             try {
                 val f = Workshop.download(id, type, fname)
                 scope.launch(Dispatchers.Main) {
-                    wsStatus = "✅ 已下载：" + f.name
+                    wsSetStatus("已下载：" + f.name, "check_circle")
                     wsRefreshLocal()
                     reloadRolesFromDisk()
                     reloadWorldsFromDisk()
                 }
             } catch (e: Exception) {
-                scope.launch(Dispatchers.Main) { wsStatus = "❌ " + (e.message ?: "下载失败") }
+                scope.launch(Dispatchers.Main) { wsSetStatus(e.message ?: "下载失败", "error") }
             }
         }
     }
@@ -2006,7 +2014,7 @@ fun wsRefreshLocal() {
         val type = r.fields["_type"]?.str() ?: "角色卡"
         scope.launch(Dispatchers.IO) {
             val ok = try { Workshop.like(id, type) } catch (e: Exception) { false }
-            scope.launch(Dispatchers.Main) { wsStatus = if (ok) "✅ 已点赞" else "❌ 点赞失败" }
+            scope.launch(Dispatchers.Main) { wsSetStatus(if (ok) "已点赞" else "点赞失败", if (ok) "check_circle" else "error") }
         }
     }
 
@@ -2017,7 +2025,7 @@ fun wsRefreshLocal() {
         scope.launch(Dispatchers.IO) {
             val ok = try { Workshop.deleteRemote(id, type) } catch (e: Exception) { false }
             scope.launch(Dispatchers.Main) {
-                wsStatus = if (ok) "✅ 已删除" else "❌ 删除失败"
+                wsSetStatus(if (ok) "已删除" else "删除失败", if (ok) "check_circle" else "error")
                 if (ok) wsLoadOnline()
             }
         }
@@ -2028,14 +2036,14 @@ fun wsRefreshLocal() {
         val fname = if (wsLocalType == "角色卡") wsLocalRoles.getOrNull(wsLocalIdx) ?: return
             else wsLocalWorlds.getOrNull(wsLocalIdx) ?: return
         val name = fname.removeSuffix(".json")
-        wsStatus = "上传中..."
+        wsSetStatus("上传中...")
         scope.launch(Dispatchers.IO) {
             // uploadEx 会把原因带回来（本地文件不存在 / 401 要 Key / 404 线上是旧版 / HTTP 码+响应）
             val why = try { Workshop.uploadEx(wsLocalType, name) } catch (e: Exception) {
                 "异常：" + (e.message ?: e.javaClass.simpleName).take(80)
             }
             scope.launch(Dispatchers.Main) {
-                wsStatus = if (why == null) "✅ 上传成功" else "❌ 上传失败：" + why
+                wsSetStatus(if (why == null) "上传成功" else "上传失败：" + why, if (why == null) "check_circle" else "error")
                 if (why == null) wsLoadOnline()
             }
         }
@@ -2223,11 +2231,11 @@ fun wsRefreshLocal() {
                     }
                     Text(I18n.t("group_other", "其它项目"), Modifier.padding(horizontal = 16.dp, vertical = 4.dp), color = theme.muted, fontSize = 13.sp)
                     DrawerItem(I18n.t("item_settings", "设置")) { showSettings = true; scope.launch { drawerState.close() } }
-                    DrawerItem(I18n.t("item_api", "🔑 API 配置")) { showApiSetup = true; scope.launch { drawerState.close() } }
-                    DrawerItem("🎭 跑团（局域网）") { showTrpg = true; scope.launch { drawerState.close() } }
+                    DrawerItem(I18n.t("item_api", "API 配置"), icon = "key") { showApiSetup = true; scope.launch { drawerState.close() } }
+                    DrawerItem("跑团（局域网）", icon = "theater_comedy") { showTrpg = true; scope.launch { drawerState.close() } }
                     DrawerItem(I18n.t("item_share", "分享聊天记录")) { share(); scope.launch { drawerState.close() } }
-                    DrawerItem("🗑 彻底清空历史", color = theme.danger) { showClearHistory = true; scope.launch { drawerState.close() } }
-                    DrawerItem(I18n.t("btn_workshop", "🧰 创意工坊")) { showWorkshop = true; scope.launch { drawerState.close() } }
+                    DrawerItem("彻底清空历史", color = theme.danger, icon = "delete") { showClearHistory = true; scope.launch { drawerState.close() } }
+                    DrawerItem(I18n.t("btn_workshop", "创意工坊"), icon = "home_repair_service") { showWorkshop = true; scope.launch { drawerState.close() } }
                 }
             },
         ) {
@@ -2249,13 +2257,13 @@ fun wsRefreshLocal() {
                     .statusBarsPadding().navigationBarsPadding().padding(8.dp)
             ) {
                 Row(Modifier.fillMaxWidth()) {
-                    TextButton(onClick = { scope.launch { drawerState.open() } }) { IconText("☰", fontSize = 20.sp, iconSize = 20.dp) }
+                    TextButton(onClick = { scope.launch { drawerState.open() } }) { IconText("", fontSize = 20.sp, iconSize = 20.dp, icon = "menu") }
                     Spacer(Modifier.width(6.dp))
                     Text(PRESETS[presetIdx].name, Modifier.padding(top = 10.dp), color = theme.muted)
                     Spacer(Modifier.weight(1f))
                     FolderMenu(vm, deps)
-                    TextButton(onClick = { showCardFace = true }) { IconText("🎴", fontSize = 16.sp) }
-                    TextButton(onClick = { showBranches = true }) { IconText(I18n.t("btn_branch", "🌿 回档"), fontSize = 13.sp) }
+                    TextButton(onClick = { showCardFace = true }) { IconText("", fontSize = 16.sp, icon = "style") }
+                    TextButton(onClick = { showBranches = true }) { IconText(I18n.t("btn_branch", "回档"), fontSize = 13.sp, icon = "account_tree") }
                 }
                 Spacer(Modifier.height(6.dp))
                 // 机制卡三栏（好感度栏 / 人物状态栏 / 战斗数值栏）
@@ -2279,7 +2287,7 @@ fun wsRefreshLocal() {
                             val lo = mAff.fields["min"]?.int() ?: 0
                             val cur = mechSt.fields["affection"]?.int() ?: mAff.fields["initial"]?.int() ?: 50
                             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                IconText("❤ 好感", fontSize = 11.sp, color = theme.muted, iconSize = 12.dp)
+                                IconText("好感", fontSize = 11.sp, color = theme.muted, iconSize = 12.dp, icon = "favorite")
                                 Box(Modifier.weight(1f).height(5.dp).clip(RoundedCornerShape(3.dp)).background(theme.bubble)) {
                                     Box(
                                         Modifier
@@ -2302,10 +2310,10 @@ fun wsRefreshLocal() {
                                 val curI = v.int()
                                 if (mx > 1000) {
                                     // 大上限属性（atk/def/spd 等）：数值显示
-                                    IconText("⚔ $name：$curI", fontSize = 11.sp, color = theme.muted, iconSize = 12.dp)
+                                    IconText("$name：$curI", fontSize = 11.sp, color = theme.muted, iconSize = 12.dp, icon = "swords")
                                 } else {
                                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                        IconText("⚔ $name", fontSize = 11.sp, color = theme.muted, iconSize = 12.dp)
+                                        IconText("$name", fontSize = 11.sp, color = theme.muted, iconSize = 12.dp, icon = "swords")
                                         Box(Modifier.weight(1f).height(5.dp).clip(RoundedCornerShape(3.dp)).background(theme.bubble)) {
                                             Box(
                                                 Modifier
@@ -2326,18 +2334,19 @@ fun wsRefreshLocal() {
                         val evItems = mech.eventProgress()
                         if (evItems.isNotEmpty()) {
                             IconText(
-                                "🎬 事件 " + evItems.count { it["fired"] == true } + "/" + evItems.size,
-                                fontSize = 11.sp, color = theme.muted, iconSize = 12.dp,
+                                "事件 " + evItems.count { it["fired"] == true } + "/" + evItems.size,
+                                fontSize = 11.sp, color = theme.muted, iconSize = 12.dp, icon = "movie"
                             )
                             evItems.forEach { e ->
                                 val stt = e["state"] as? String ?: ""
                                 val nm = e["name"] as? String ?: (e["id"] as? String ?: "")
                                 val why = e["why"] as? String ?: ""
+                                // 图标名（不是 emoji）：画成 Material 图标，见下面 IconText 的 icon
                                 val mark = when (stt) {
-                                    "fired" -> "✅"
-                                    "cooling" -> "⏳"
-                                    "blocked" -> "🔒"
-                                    else -> "▶"
+                                    "fired" -> "check_circle"
+                                    "cooling" -> "hourglass_empty"
+                                    "blocked" -> "lock"
+                                    else -> "play_arrow"
                                 }
                                 val shown: String = when {
                                     stt == "fired" -> "已触发" +
@@ -2349,9 +2358,9 @@ fun wsRefreshLocal() {
                                     Modifier.fillMaxWidth(),
                                     horizontalArrangement = Arrangement.spacedBy(6.dp),
                                 ) {
-                                    IconText("$mark $nm", fontSize = 11.sp,
+                                    IconText(nm, fontSize = 11.sp,
                                          color = theme.text.copy(alpha = if (stt == "blocked" || stt == "cooling") 0.45f else 0.6f),
-                                         iconSize = 12.dp, modifier = Modifier.weight(1f))
+                                         iconSize = 12.dp, modifier = Modifier.weight(1f), icon = mark)
                                     Text(shown, fontSize = 11.sp,
                                          color = theme.text.copy(alpha = if (stt == "blocked" || stt == "cooling") 0.45f else 0.6f))
                                 }
@@ -2380,7 +2389,7 @@ fun wsRefreshLocal() {
                         val plHp = pl?.items?.mapNotNull { it as? J.Obj }
                             ?.firstOrNull { it.fields["key"]?.str() == "hp" }?.fields?.get("value")?.int() ?: 0
                         if (pl?.items?.isNotEmpty() == true) {
-                            IconText("🧑 玩家 $plHp HP", fontSize = 11.sp, color = theme.muted, iconSize = 12.dp)
+                            IconText("玩家 $plHp HP", fontSize = 11.sp, color = theme.muted, iconSize = 12.dp, icon = "person")
                         }
                         // ① 生命/灵力等 → 进度条（hp 红 / 其他蓝）
                         bars.forEach { ao ->
@@ -2389,7 +2398,7 @@ fun wsRefreshLocal() {
                             val value = ao.fields["value"]?.int() ?: 0
                             val mx = ao.fields["max"]?.int() ?: 1
                             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                IconText("⚔ $label", fontSize = 11.sp, color = theme.muted, iconSize = 12.dp)
+                                IconText("$label", fontSize = 11.sp, color = theme.muted, iconSize = 12.dp, icon = "swords")
                                 Box(Modifier.weight(1f).height(5.dp).clip(RoundedCornerShape(3.dp)).background(theme.bubble)) {
                                     Box(
                                         Modifier.fillMaxWidth((value.toFloat() / mx).coerceIn(0f, 1f)).height(5.dp)
@@ -2403,13 +2412,13 @@ fun wsRefreshLocal() {
                         // ② 无上限属性 → 数值（合并一行）
                         if (nums.isNotEmpty()) {
                             IconText(
-                                "⚔ " + nums.mapNotNull { a ->
+                                nums.mapNotNull { a ->
                                     val key = a.fields["key"]?.str() ?: return@mapNotNull null
                                     val label = a.fields["label"]?.str() ?: key
                                     val value = a.fields["value"]?.int() ?: 0
                                     "$label:$value"
                                 }.joinToString(" · "),
-                                fontSize = 11.sp, color = theme.muted, iconSize = 12.dp,
+                                fontSize = 11.sp, color = theme.muted, iconSize = 12.dp, icon = "swords"
                             )
                         }
                         // ③ 招式按钮
@@ -2425,7 +2434,7 @@ fun wsRefreshLocal() {
                                         modifier = Modifier.border(1.dp, accent, RoundedCornerShape(14.dp)),
                                         contentPadding = PaddingValues(horizontal = 10.dp, vertical = 0.dp),
                                     ) {
-                                        IconText("⚔ $name", fontSize = 12.sp, color = theme.text, iconSize = 13.dp, maxLines = 1)
+                                        IconText("$name", fontSize = 12.sp, color = theme.text, iconSize = 13.dp, maxLines = 1, icon = "swords")
                                     }
                                 }
                             }
@@ -2438,7 +2447,7 @@ fun wsRefreshLocal() {
                                     val bo = bf as? J.Obj ?: return@forEach
                                     val bid = bo.fields["id"]?.str() ?: ""
                                     val turns = bo.fields["turns"]?.int() ?: 0
-                                    IconText("✨ $bid ×$turns", fontSize = 10.sp, color = theme.palette.accent, iconSize = 11.dp)
+                                    IconText("$bid ×$turns", fontSize = 10.sp, color = theme.palette.accent, iconSize = 11.dp, icon = "auto_awesome")
                                 }
                             }
                         }
@@ -2516,36 +2525,36 @@ fun wsRefreshLocal() {
                         Spacer(Modifier.width(8.dp))
                         Text(I18n.t("img_selected", "已选图片"), Modifier.padding(top = 22.dp), fontSize = 12.sp, color = theme.muted)
                         Spacer(Modifier.weight(1f))
-                        TextButton(onClick = { pendingImage = null }) { IconText(I18n.t("btn_remove", "✕ 移除"), fontSize = 12.sp, iconSize = 13.dp) }
+                        TextButton(onClick = { pendingImage = null }) { IconText(I18n.t("btn_remove", "移除"), fontSize = 12.sp, iconSize = 13.dp, icon = "close") }
                     }
                 }
                 if (showQuickPanel) {
                     Surface(color = theme.bubble, shape = RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp)) {
                         Column(Modifier.padding(6.dp)) {
                             Row {
-                                QuickChip("📷 " + I18n.t("qc_image", "图片")) { showQuickPanel = false; imagePicker.launch("image/*") }
-                                QuickChip("🔍 搜索") { insertCmd("/搜索 ") }
-                                QuickChip("🔍 深搜") { insertCmd("/深搜 ") }
-                                QuickChip("🎲 骰子") { insertCmd("/r 2d6") }
+                                QuickChip(I18n.t("qc_image", "图片"), icon = "photo_camera") { showQuickPanel = false; imagePicker.launch("image/*") }
+                                QuickChip("搜索", icon = "search") { insertCmd("/搜索 ") }
+                                QuickChip("深搜", icon = "search") { insertCmd("/深搜 ") }
+                                QuickChip("骰子", icon = "casino") { insertCmd("/r 2d6") }
                             }
                             Row {
-                                QuickChip("🧠 记忆") { insertCmd("/memory recall 3") }
-                                QuickChip("🎮 选项") { showQuickPanel = false; gal.manualGenerate() }
+                                QuickChip("记忆", icon = "memory") { insertCmd("/memory recall 3") }
+                                QuickChip("选项", icon = "sports_esports") { showQuickPanel = false; gal.manualGenerate() }
                             }
                             // 财报：折叠区块，仅启用财报模式才显示（隐藏 + 收起，避免铺满面板）
                             if (financial.enabled) {
-                                FoldHead("📊 财报", finFolded, { finFolded = !finFolded })
+                                FoldHead("财报", finFolded, { finFolded = !finFolded }, icon = "bar_chart")
                                 if (!finFolded) {
                                     Row {
-                                        QuickChip("📊 个股") { insertCmd("/股票 ") }
-                                        QuickChip("🔍 全市场") { insertCmd("/全市场 ") }
-                                        QuickChip("🔗 联动") { insertCmd("/联动 ") }
-                                        QuickChip("📈 爬政策") { insertCmd("/财报 爬取") }
+                                        QuickChip("个股", icon = "bar_chart") { insertCmd("/股票 ") }
+                                        QuickChip("全市场", icon = "search") { insertCmd("/全市场 ") }
+                                        QuickChip("联动", icon = "link") { insertCmd("/联动 ") }
+                                        QuickChip("爬政策", icon = "trending_up") { insertCmd("/财报 爬取") }
                                     }
                                     Row {
-                                        QuickChip("📚 入库") { insertCmd("/财报 入库") }
-                                        QuickChip("📚 检索") { insertCmd("/财报 检索 ") }
-                                        QuickChip("🌐 爬网页") { insertCmd("/爬取 ") }
+                                        QuickChip("入库", icon = "menu_book") { insertCmd("/财报 入库") }
+                                        QuickChip("检索", icon = "menu_book") { insertCmd("/财报 检索 ") }
+                                        QuickChip("爬网页", icon = "language") { insertCmd("/爬取 ") }
                                     }
                                 }
                             }
@@ -2571,7 +2580,7 @@ fun wsRefreshLocal() {
                 if (gal.enabled && (gal.choices.isNotEmpty() || gal.loading)) {
                     Column(Modifier.fillMaxWidth().padding(vertical = 2.dp)) {
                         if (gal.loading) {
-                            IconText("⏳ 正在生成选项…", fontSize = 12.sp, color = theme.muted, iconSize = 13.dp, modifier = Modifier.padding(start = 4.dp))
+                            IconText("正在生成选项…", fontSize = 12.sp, color = theme.muted, iconSize = 13.dp, modifier = Modifier.padding(start = 4.dp), icon = "hourglass_empty")
                         }
                         gal.choices.chunked(2).forEach { rowItems ->
                             Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.padding(vertical = 1.dp)) {
@@ -2586,7 +2595,7 @@ fun wsRefreshLocal() {
                                             Text(c.text, fontSize = 13.sp, color = theme.text, maxLines = 2)
                                             val eff = buildString {
                                                 c.result?.let { append(it) }
-                                                c.aff?.let { if (isNotEmpty()) append(" · "); append("❤").append(if (it > 0) "+" else "").append(it).append("%") }
+                                                c.aff?.let { if (isNotEmpty()) append(" · "); append("好感").append(if (it > 0) "+" else "").append(it).append("%") }
                                                 c.st?.forEach { (k, v) ->
                                                     if (isNotEmpty()) append(" · ")
                                                     append(k).append(":").append(v)
@@ -2602,14 +2611,17 @@ fun wsRefreshLocal() {
                         }
                         if (gal.choices.isNotEmpty()) {
                             TextButton(onClick = { gal.manualGenerate() }, modifier = Modifier.align(Alignment.End)) {
-                                IconText("🔄 重新生成", fontSize = 12.sp)
+                                IconText("重新生成", fontSize = 12.sp, icon = "refresh")
                             }
                         }
                     }
                 }
                 Spacer(Modifier.height(6.dp))
                 Row(Modifier.fillMaxWidth()) {
-                    TextButton(onClick = { showQuickPanel = !showQuickPanel }) { IconText(if (showQuickPanel) "✕" else "➕", fontSize = 20.sp) }
+                    TextButton(onClick = { showQuickPanel = !showQuickPanel }) {
+                        // 快捷面板开/关：图标名跟着状态走（原来是  /  两个 emoji）
+                        IconText("", fontSize = 20.sp, icon = if (showQuickPanel) "close" else "add")
+                    }
                     OutlinedTextField(
                         value = input,
                         onValueChange = { input = it },
@@ -2633,17 +2645,20 @@ fun wsRefreshLocal() {
                 color = theme.bubble,
                 shadowElevation = 12.dp,
             ) {
+                // 三步引导：每条 = (图标名, 标题, 说明)。图标名走 IconText 的 icon 参数，
+                // 标题只留纯文本（文案里不再有 emoji 字符）。
                 val guide = listOf(
-                    "👋 欢迎使用 DICK" to "装好即聊的角色扮演聊天室：手机 / 电脑进度互通，支持角色卡、世界书、回档、内置游戏。",
-                    "⚙️ 配置模型" to "设置 → 填 API Key、选模型商（DeepSeek 官方 / 免费链 / Ollama 本地）。免费链可留空直接聊。",
-                    "🎭 选择角色" to "角色列表勾选即可开聊（多选 = 群聊，@角色名 指定发言）；可新建或导入酒馆卡 v1/v2/v3/PNG。",
-                    "💬 开聊" to "输入消息发送；↻ 重生成、◀▶ 滑条、编辑。面板有骰子 / 记忆 / GAL 选项 / 快捷回复。",
-                    "🌿 进阶玩法" to "回档：主线平铺、分支收纳；GAL 选项点选即演；世界书平行世界；存档自动守护。",
+                    Triple("waving_hand", "欢迎使用 DICK", "装好即聊的角色扮演聊天室：手机 / 电脑进度互通，支持角色卡、世界书、回档、内置游戏。"),
+                    Triple("settings", "配置模型", "设置 → 填 API Key、选模型商（DeepSeek 官方 / 免费链 / Ollama 本地）。免费链可留空直接聊。"),
+                    Triple("theater_comedy", "选择角色", "角色列表勾选即可开聊（多选 = 群聊，@角色名 指定发言）；可新建或导入酒馆卡 v1/v2/v3/PNG。"),
+                    Triple("chat", "开聊", "输入消息发送；↻ 重生成、◀▶ 滑条、编辑。面板有骰子 / 记忆 / GAL 选项 / 快捷回复。"),
+                    Triple("account_tree", "进阶玩法", "回档：主线平铺、分支收纳；GAL 选项点选即演；世界书平行世界；存档自动守护。"),
                 )
                 Column(Modifier.padding(20.dp)) {
-                    IconText(guide[guideStep].first, fontSize = 18.sp, fontWeight = FontWeight.Bold, iconSize = 20.dp)
+                    IconText(guide[guideStep].second, fontSize = 18.sp, fontWeight = FontWeight.Bold, iconSize = 20.dp,
+                        icon = guide[guideStep].first)
                     Spacer(Modifier.height(10.dp))
-                    Text(guide[guideStep].second, fontSize = 13.sp, lineHeight = 22.sp)
+                    Text(guide[guideStep].third, fontSize = 13.sp, lineHeight = 22.sp)
                     Spacer(Modifier.height(16.dp))
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         TextButton(onClick = { showGuide = false; saveConfig() }) { Text("跳过", fontSize = 13.sp) }
@@ -2680,7 +2695,7 @@ fun wsRefreshLocal() {
         var alsoClearMemory by remember { mutableStateOf(false) }
         AlertDialog(
             onDismissRequest = { showClearHistory = false },
-            title = { IconText("⚠️ 彻底清空历史", color = theme.danger) },
+            title = { IconText("彻底清空历史", color = theme.danger, icon = "warning") },
             text = {
                 Column {
                     Text("将删除当前角色「" + currentCardLabel() + "」的全部聊天记录。")
@@ -2698,7 +2713,7 @@ fun wsRefreshLocal() {
                 TextButton(onClick = {
                     clearHistory(alsoClearMemory)
                     showClearHistory = false
-                }) { IconText("🗑 彻底清空", color = theme.danger) }
+                }) { IconText("彻底清空", color = theme.danger, icon = "delete") }
             },
             dismissButton = { TextButton(onClick = { showClearHistory = false }) { Text("取消") } },
         )

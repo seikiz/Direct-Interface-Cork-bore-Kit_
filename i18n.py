@@ -95,8 +95,12 @@ def t(key, zh):
 
 
 def welcome(ver):
-    """欢迎语：**措辞来自 json，版号由调用方给**（版号只有 version.json 一个来源）。"""
-    return t("welcome", u"👋 欢迎使用 %s！") % str(ver)
+    """欢迎语：**措辞来自 json，版号由调用方给**（版号只有 version.json 一个来源）。
+
+    2026-12：界面文案里不再允许 emoji 字符，兜底串也跟 json 一样去掉行首的 👋
+    （图标位由前端按文案表渲染，见 web 的 [ic:名字] 与安卓的 IconText(icon = …)）。
+    """
+    return t("welcome", u"欢迎使用 %s！") % str(ver)
 
 
 def tokens_label(n):

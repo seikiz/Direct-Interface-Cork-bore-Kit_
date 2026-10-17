@@ -44,16 +44,18 @@ fun DickActionButton(
     enabled: Boolean = true,
     fontSize: TextUnit = TextUnit.Unspecified,
     color: Color = Color.Unspecified,
+    // 图标名（Material Symbols）：文案只留纯文本，图标一律由调用点显式点名。
+    icon: String? = null,
 ) {
     when (variant) {
         DickButtonVariant.Primary -> Button(onClick = onClick, modifier = modifier, enabled = enabled) {
-            IconText(label, fontSize = fontSize, color = color)
+            IconText(label, fontSize = fontSize, color = color, icon = icon)
         }
         DickButtonVariant.Secondary -> OutlinedButton(onClick = onClick, modifier = modifier, enabled = enabled) {
-            IconText(label, fontSize = fontSize, color = color)
+            IconText(label, fontSize = fontSize, color = color, icon = icon)
         }
         DickButtonVariant.Plain -> TextButton(onClick = onClick, modifier = modifier, enabled = enabled) {
-            IconText(label, fontSize = fontSize, color = color)
+            IconText(label, fontSize = fontSize, color = color, icon = icon)
         }
     }
 }
@@ -66,8 +68,10 @@ fun DickButton(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
     fontSize: TextUnit = TextUnit.Unspecified,
+    icon: String? = null,
 ) {
-    DickActionButton(label, onClick, DickButtonVariant.Primary, modifier, enabled, fontSize)
+    DickActionButton(label, onClick, DickButtonVariant.Primary, modifier, enabled, fontSize,
+        icon = icon)
 }
 
 /** 文字按钮（Plain）：对话框的确定/取消、列表行里的轻动作。 */
@@ -79,8 +83,10 @@ fun DickTextButton(
     enabled: Boolean = true,
     fontSize: TextUnit = TextUnit.Unspecified,
     color: Color = Color.Unspecified,
+    icon: String? = null,
 ) {
-    DickActionButton(label, onClick, DickButtonVariant.Plain, modifier, enabled, fontSize, color)
+    DickActionButton(label, onClick, DickButtonVariant.Plain, modifier, enabled, fontSize, color,
+        icon = icon)
 }
 
 /** 描边按钮（Secondary）：设置页里"打开另一个面板/相册"那类入口。 */
@@ -91,8 +97,10 @@ fun DickOutlinedButton(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
     fontSize: TextUnit = TextUnit.Unspecified,
+    icon: String? = null,
 ) {
-    DickActionButton(label, onClick, DickButtonVariant.Secondary, modifier, enabled, fontSize)
+    DickActionButton(label, onClick, DickButtonVariant.Secondary, modifier, enabled, fontSize,
+        icon = icon)
 }
 
 /**
@@ -110,6 +118,7 @@ fun DickIconButton(
     tint: Color = Color.Unspecified,
 ) {
     TextButton(onClick = onClick, modifier = modifier, enabled = enabled) {
-        IconText(icon, fontSize = fontSize, color = tint, iconSize = iconSize)
+        // 这里收的已经是图标名（不是 emoji）：只画图标，不要再当文本贴出来
+        IconText("", fontSize = fontSize, color = tint, iconSize = iconSize, icon = icon)
     }
 }

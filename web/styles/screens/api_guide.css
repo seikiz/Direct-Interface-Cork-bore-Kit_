@@ -1,13 +1,13 @@
-/* api_guide.css —— 📖 API 教程面板 + 🧭 首启配置向导的**专属布局**
+/* api_guide.css —— API 教程面板 + 首启配置向导的**专属布局**
  *
  * 规矩（见 web/UI_ARCHITECTURE.md）：
- *   · 这里只写"这一屏有、别处没有"的布局（栅格、行距、滚动区高度）；
- *   · **不新造按钮外观**：按钮全部来自 web/js/components/Button.js，它用的就是既有的
- *     `.btn2` / `.btn2.ghost`；这里最多补两档尺寸修饰（.ag-btn-sm / .ag-btn-lg）；
- *   · 颜色只许来自令牌（var(--text)/--text-sub/--accent/--danger/--ok/--line/--panel…），
- *     不许出现第二个硬编码色值 —— 那正是"颜色看起来费劲"的来源；
- *   · <link> 顺序：排在 screens.css 与 components.css **之后**（它要覆盖 .modal-box 的宽度，
- *     靠的就是"在后面"，见 index.html 头部注释）。
+ * · 这里只写"这一屏有、别处没有"的布局（栅格、行距、滚动区高度）；
+ * · **不新造按钮外观**：按钮全部来自 web/js/components/Button.js，它用的就是既有的
+ * `.btn2` / `.btn2.ghost`；这里最多补两档尺寸修饰（.ag-btn-sm / .ag-btn-lg）；
+ * · 颜色只许来自令牌（var(--text)/--text-sub/--accent/--danger/--ok/--line/--panel…），
+ * 不许出现第二个硬编码色值 —— 那正是"颜色看起来费劲"的来源；
+ * · <link> 顺序：排在 screens.css 与 components.css **之后**（它要覆盖 .modal-box 的宽度，
+ * 靠的就是"在后面"，见 index.html 头部注释）。
  */
 
 /* ---------- 面<seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌板壳 ---------- */
@@ -31,13 +31,13 @@
 
 /* ---------- 服务商清单：一行一家，六列信息 ---------- */
 .ag-prov{ display:grid; grid-template-columns:150px 1fr; gap:2px 10px;
-  border:1px solid var(--line); border-radius:10px; padding:8px 10px; margin:6px 0;
-  background:var(--surface); }
+ border:1px solid var(--line); border-radius:10px; padding:8px 10px; margin:6px 0;
+ background:var(--surface); }
 .ag-prov .ag-pname{ font-size:13px; font-weight:600; color:var(--text); grid-row:span 5; }
 .ag-kv{ font-size:12px; color:var(--text-sub); line-height:1.6; }
 .ag-kv b{ color:var(--text); font-weight:600; }
 .ag-kv code{ font-family:Consolas,"Courier New",monospace; font-size:11px; color:var(--text);
-  background:var(--surface-2); border:1px solid var(--line); border-radius:4px; padding:0 4px; }
+ background:var(--surface-2); border:1px solid var(--line); border-radius:4px; padding:0 4px; }
 .ag-link{ color:var(--accent); cursor:pointer; text-decoration:underline; word-break:break-all; }
 
 /* ---------- 常见错误对照表 ---------- */
@@ -48,17 +48,17 @@
 /* ---------- 向导 ---------- */
 .aw-steps{ display:flex; gap:6px; margin-bottom:10px; flex-wrap:wrap; }
 .aw-pill{ flex:1; text-align:center; font-size:11px; padding:4px 6px; border-radius:8px;
-  border:1px solid var(--line); color:var(--text-sub); background:var(--surface-2); }
+ border:1px solid var(--line); color:var(--text-sub); background:var(--surface-2); }
 .aw-pill.on{ border-color:var(--accent); color:var(--accent); font-weight:600; }
 .aw-body{ max-height:52vh; overflow-y:auto; }
 .aw-cards{ display:grid; grid-template-columns:1fr 1fr; gap:6px; }
 .aw-card{ text-align:left; font-size:12px; line-height:1.5; padding:8px 10px; border-radius:10px;
-  border:1px solid var(--line); background:var(--surface); color:var(--text); cursor:pointer; }
+ border:1px solid var(--line); background:var(--surface); color:var(--text); cursor:pointer; }
 .aw-card.on{ border-color:var(--accent); box-shadow:inset 0 0 0 1px var(--accent); }
 .aw-card .aw-cn{ font-weight:600; }
 .aw-card .aw-cb{ display:block; font-size:11px; color:var(--text-sub); margin-top:2px; }
 .aw-key{ width:100%; font-family:Consolas,"Courier New",monospace; font-size:13px; padding:8px 10px;
-  border-radius:8px; border:1px solid var(--line); background:var(--surface-2); color:var(--text); }
+ border-radius:8px; border:1px solid var(--line); background:var(--surface-2); color:var(--text); }
 .aw-meta{ font-size:11px; color:var(--text-sub); line-height:1.7; word-break:break-all; margin-top:6px; }
 .aw-res{ font-size:12px; line-height:1.7; margin-top:8px; min-height:18px; }
 .aw-res.ok{ color:var(--ok); }

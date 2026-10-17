@@ -23,12 +23,12 @@ import com.dick.core.Workshop
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
-/** 工坊在线列表的「类型」前缀（角色卡 / 世界卡包 / 世界卡）：返回的是图标键，
- *  由 IconText 画成 Material 图标（不要再往这里塞彩色 emoji）。 */
+/** 工坊列表的「类型」图标名（角色卡 / 世界卡包 / 世界卡）：返回的是 Material Symbols
+ *  图标名，由 IconText 的 icon 参数画出来（名称取 icons/icons.json，别再往这里塞 emoji）。 */
 private fun wsTypeIcon(t: String): String = when (t) {
-    "角色卡" -> "🎭 "
-    "世界卡包" -> "📦 "
-    else -> "🌍 "
+    "角色卡" -> "theater_comedy"
+    "世界卡包" -> "inventory_2"
+    else -> "public"
 }
 
 /**
@@ -73,6 +73,13 @@ fun WorkshopScreen(vm: ChatViewModel, acts: WorkshopActions) {
     var wsServerInput by vm.wsServerInput
     var wsKeyInput by vm.wsKeyInput
     var wsStatus by vm.wsStatus
+    var wsStatusIcon by vm.wsStatusIcon
+    // 状态行 = 纯文本 + 图标名：图标由产生状态那一处点<seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌名（→check_circle、→error…），
+    // 文案里不再塞 emoji 字符。渲染点只有一个（下面的 DickTag），所以不必往回猜。
+    fun wsSetStatus(text: String, icon: String? = null) {
+        wsStatus = text
+        wsStatusIcon = icon
+    }
     val wsOnlineList = vm.wsOnlineList
     var wsOnlineIdx by vm.wsOnlineIdx
     var wsSearchInput by vm.wsSearchInput
@@ -80,29 +87,28 @@ fun WorkshopScreen(vm: ChatViewModel, acts: WorkshopActions) {
     if (showWorkshop) {
     DickDialog(
         onDismissRequest = { showWorkshop = false },
-        title = { IconText(I18n.t("btn_workshop", "🧰 创意工坊")) },
+        title = { IconText(I18n.t("btn_workshop", "创意工坊"), icon = "home_repair_service") },
         text = {
             Column(Modifier.verticalScroll(rememberScrollState())) {
                 Row {
                     DickTextButton(
-                        label = if (!wsTabOnline && !wsTabPlugin) I18n.t("ws_local", "📂 本地 ▾") else I18n.t("ws_local", "📂 本地"),
+                        label = if (!wsTabOnline && !wsTabPlugin) I18n.t("ws_local", "本地 ▾") else I18n.t("ws_local", "本地"),
                         onClick = { wsTabOnline = false; wsTabPlugin = false; wsRefreshLocal() },
-                        fontSize = 12.sp,
+                        fontSize = 12.sp, icon = "folder"
                     )
                     DickTextButton(
-                        label = if (wsTabOnline) I18n.t("ws_online", "🌐 在线 ▾") else I18n.t("ws_online", "🌐 在线"),
+                        label = if (wsTabOnline) I18n.t("ws_online", "在线 ▾") else I18n.t("ws_online", "在线"),
                         onClick = { wsTabOnline = true; wsTabPlugin = false; wsLoadOnline() },
-                        fontSize = 12.sp,
+                        fontSize = 12.sp, icon = "language"
                     )
                     DickTextButton(
-                        label = if (wsTabPlugin) "🔌 插件 ▾" else "🔌 插件",
+                        label = if (wsTabPlugin) "插件 ▾" else "插件",
                         onClick = { wsTabPlugin = true; wsTabOnline = false; wsLoadPlugins() },
-                        fontSize = 12.sp,
+                        fontSize = 12.sp, icon = "extension"
                     )
                     Spacer(Modifier.weight(1f))
-                    // 状态串（✅ 上传成功 / ❌ 连接失败 / 🔑 <seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌要 Key …）里的 emoji 是图标键：
-                    // 走 IconText 画成 Material 图标，界面上不留彩色 emoji
-                    DickTag(wsStatus, fontSize = 11.sp, iconSize = 12.dp)
+                    // 状态串（上传成功 / 连接失败 / 要先填 Key …）：文案纯文本，图标走 icon 参数
+                    DickTag(wsStatus, fontSize = 11.sp, iconSize = 12.dp, icon = wsStatusIcon)
                 }
                 if (!wsTabOnline && !wsTabPlugin) {
                     // 本地文件列表 = **白底卡片**（2026-12）：底色只从令牌来
@@ -111,7 +117,7 @@ fun WorkshopScreen(vm: ChatViewModel, acts: WorkshopActions) {
                     //     所以选中只能靠强调色描边认出来 —— 原来那整块灰底在浅色弹窗里最扎眼）
                     Row {
                         Column(Modifier.weight(1f)) {
-                            DickTag("📂 角色卡", fontSize = 12.sp)
+                            DickTag("角色卡", fontSize = 12.sp, icon = "folder")
                             wsLocalRoles.forEachIndexed { i, f ->
                                 val sel = wsLocalType == "角色卡" && wsLocalIdx == i
                                 DickCard(
@@ -129,7 +135,7 @@ fun WorkshopScreen(vm: ChatViewModel, acts: WorkshopActions) {
                             }
                         }
                         Column(Modifier.weight(1f)) {
-                            DickTag("🌍 世界卡", fontSize = 12.sp)
+                            DickTag("世界卡", fontSize = 12.sp, icon = "public")
                             wsLocalWorlds.forEachIndexed { i, f ->
                                 val sel = wsLocalType == "世界卡" && wsLocalIdx == i
                                 DickCard(
@@ -166,22 +172,22 @@ fun WorkshopScreen(vm: ChatViewModel, acts: WorkshopActions) {
                     }
                     Row {
                         DickTextButton(
-                            label = I18n.t("btn_import_card", "📥 导入"),
+                            label = I18n.t("btn_import_card", "导入"),
                             onClick = {
                                 importCardLauncher.launch(arrayOf("image/png", "image/webp", "application/json"))
                             },
-                            fontSize = 12.sp,
+                            fontSize = 12.sp, icon = "inbox"
                         )
                         DickTextButton(
-                            label = I18n.t("ws_export", "📤 导出"),
+                            label = I18n.t("ws_export", "导出"),
                             onClick = {
                                 val fname = WorkshopState.selectedLocalFile(wsLocalType, wsLocalIdx, wsLocalRoles, wsLocalWorlds)
                                 if (fname != null) { wsExportTarget = fname; wsExportLauncher.launch(fname) }
                             },
-                            fontSize = 12.sp,
+                            fontSize = 12.sp, icon = "upload"
                         )
                         DickTextButton(
-                            label = I18n.t("ws_delete", "🗑️ 删除"),
+                            label = I18n.t("ws_delete", "删除"),
                             onClick = {
                                 val fname = WorkshopState.selectedLocalFile(wsLocalType, wsLocalIdx, wsLocalRoles, wsLocalWorlds)
                                 if (fname != null) {
@@ -191,32 +197,32 @@ fun WorkshopScreen(vm: ChatViewModel, acts: WorkshopActions) {
                                         wsRefreshLocal()
                                         reloadRolesFromDisk()
                                         reloadWorldsFromDisk()
-                                        wsStatus = "✅ 已删除"
+                                        wsSetStatus("已删除", "check_circle")
                                     }
                                 }
                             },
-                            fontSize = 12.sp, color = theme.danger,
+                            fontSize = 12.sp, color = theme.danger, icon = "delete"
                         )
-                        DickTextButton(label = I18n.t("ws_upload", "📤 上传"), onClick = { wsUploadLocal() }, fontSize = 12.sp)
+                        DickTextButton(label = I18n.t("ws_upload", "上传"), onClick = { wsUploadLocal() }, fontSize = 12.sp, icon = "upload")
                     }
                 } else if (wsTabOnline) {
                     if (wsServerInput.isNotBlank()) {
-                        DickTag("🛰️ 自动连接：" + wsServerInput,
+                        DickTag("自动连接：" + wsServerInput,
                             fontSize = 12.sp, iconSize = 13.dp,
-                            modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp))
+                            modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp), icon = "satellite_alt")
                     } else {
-                        DickLoading("🛰️ 自动连接中...",
+                        DickLoading("自动连接中...",
                             fontSize = 12.sp, iconSize = 13.dp,
-                            modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp))
+                            modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp), icon = "satellite_alt")
                     }
                     DickField(value = wsKeyInput, onValueChange = { wsKeyInput = it },
                         label = I18n.t("ws_key", "Key（可选）"), singleLine = true)
                     Row {
                         DickTextButton(
-                            label = I18n.t("ws_test", "🔄 重新检测"),
+                            label = I18n.t("ws_test", "重新检测"),
                             onClick = {
                                 Workshop.saveConfig(Workshop.serverUrl, wsKeyInput)
-                                wsStatus = "检测中..."
+                                wsSetStatus("检测中...")
                                 scope.launch(Dispatchers.IO) {
                                     val active = try { Workshop.activeServer() } catch (e: Exception) { "" }
                                     val h = try { Workshop.health() } catch (e: Exception) { null }
@@ -228,20 +234,20 @@ fun WorkshopScreen(vm: ChatViewModel, acts: WorkshopActions) {
                                             val dl = (s?.fields?.get("downloads") as? J.Num)?.v?.toInt() ?: 0
                                             val lk = (s?.fields?.get("likes") as? J.Num)?.v?.toInt() ?: 0
                                             // auth=key 的服务器：上传/删除没 Key 就是 401，这里直接说清楚，
-                                            // 否则用户只看到"❌ 上传失败"，会以为是网络或服务器坏了。
+                                            // 否则用户只看到" 上传失败"，会以为是网络或服务器坏了。
                                             val needKey = auth == "key" && wsKeyInput.isBlank()
-                                            wsStatus = "✅ 已连接（认证:" + auth + " · ↓" + dl + " ❤" + lk + "）" +
-                                                if (needKey) " · 🔑 上传/删除要先填 Key" else ""
-                                        } else wsStatus = "❌ 连接失败"
+                                            wsSetStatus("已连接（认证:" + auth + " · ↓" + dl + " 赞" + lk + "）" +
+                                                if (needKey) " · 上传/删除要先填 Key" else "", "check_circle")
+                                        } else wsSetStatus("连接失败", "error")
                                     }
                                 }
                             },
-                            fontSize = 12.sp,
+                            fontSize = 12.sp, icon = "refresh"
                         )
                         Spacer(Modifier.weight(1f))
                         DickField(value = wsSearchInput, onValueChange = { wsSearchInput = it },
                             label = I18n.t("ws_search", "搜索"), singleLine = true, modifier = Modifier.width(110.dp))
-                        DickIconButton(icon = "🔍", onClick = { wsSearchOnline() })
+                        DickIconButton(icon = "search", onClick = { wsSearchOnline() })
                     }
                     DickTextButton(label = "全部作品", onClick = { wsLoadOnline() }, fontSize = 12.sp)
                     wsOnlineList.forEachIndexed { i, r ->
@@ -262,9 +268,9 @@ fun WorkshopScreen(vm: ChatViewModel, acts: WorkshopActions) {
                         ) {
                             Column(Modifier.padding(10.dp)) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
-                                    IconText(wsTypeIcon(t) + name, fontSize = 14.sp, fontWeight = FontWeight.SemiBold,
-                                        modifier = Modifier.weight(1f), iconSize = 16.dp)
-                                    DickTag("↓" + dl + "  ❤" + lk, fontSize = 11.sp, iconSize = 12.dp)
+                                    IconText(name, fontSize = 14.sp, fontWeight = FontWeight.SemiBold,
+                                        modifier = Modifier.weight(1f), iconSize = 16.dp, icon = wsTypeIcon(t))
+                                    DickTag("↓" + dl + "  赞" + lk, fontSize = 11.sp, iconSize = 12.dp)
                                 }
                                 Text(author, fontSize = 11.sp, color = theme.muted)
                                 if (tags.isNotEmpty()) Text(tags.joinToString(" · "), fontSize = 10.sp, color = theme.muted)
@@ -291,9 +297,9 @@ fun WorkshopScreen(vm: ChatViewModel, acts: WorkshopActions) {
                         ) {
                             Column(Modifier.padding(12.dp)) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
-                                    IconText(wsTypeIcon(t) + name, fontSize = 15.sp, fontWeight = FontWeight.Bold,
-                                        modifier = Modifier.weight(1f), iconSize = 17.dp)
-                                    DickTag("↓" + dl + "  ❤" + lk, fontSize = 12.sp, iconSize = 13.dp)
+                                    IconText(name, fontSize = 15.sp, fontWeight = FontWeight.Bold,
+                                        modifier = Modifier.weight(1f), iconSize = 17.dp, icon = wsTypeIcon(t))
+                                    DickTag("↓" + dl + "  赞" + lk, fontSize = 12.sp, iconSize = 13.dp)
                                 }
                                 Text("作者：" + author, fontSize = 12.sp, color = theme.muted)
                                 if (created.isNotBlank()) Text("上传：" + created.take(10), fontSize = 10.sp, color = theme.muted)
@@ -304,13 +310,13 @@ fun WorkshopScreen(vm: ChatViewModel, acts: WorkshopActions) {
                         }
                     }
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        DickTextButton(label = I18n.t("ws_download", "⬇️ 下载"), onClick = { wsDownloadSelected() }, fontSize = 12.sp)
-                        DickTextButton(label = I18n.t("ws_like", "❤️ 点赞"), onClick = { wsLikeSelected() }, fontSize = 12.sp)
-                        DickTextButton(label = I18n.t("ws_delete", "🗑️ 删除"), onClick = { wsDeleteSelected() }, fontSize = 12.sp, color = theme.danger)
+                        DickTextButton(label = I18n.t("ws_download", "下载"), onClick = { wsDownloadSelected() }, fontSize = 12.sp, icon = "download")
+                        DickTextButton(label = I18n.t("ws_like", "点赞"), onClick = { wsLikeSelected() }, fontSize = 12.sp, icon = "favorite")
+                        DickTextButton(label = I18n.t("ws_delete", "删除"), onClick = { wsDeleteSelected() }, fontSize = 12.sp, color = theme.danger, icon = "delete")
                     }
                 } else {
                     if (wsPlugins.isEmpty()) {
-                        DickEmptyState("🔌 插件市场暂无内容（工坊服务器未启动或未上传插件）")
+                        DickEmptyState("插件市场暂无内容（工坊服务器未启动或未上传插件）", icon = "extension")
                     }
                     wsPlugins.forEach { p ->
                         val id = p.fields["id"]?.str() ?: return@forEach
@@ -330,21 +336,22 @@ fun WorkshopScreen(vm: ChatViewModel, acts: WorkshopActions) {
                         ) {
                             Column(Modifier.padding(8.dp)) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
-                                    IconText("🔌 $name", fontSize = 13.sp, fontWeight = FontWeight.SemiBold,
-                                        modifier = Modifier.weight(1f), iconSize = 14.dp)
+                                    IconText("$name", fontSize = 13.sp, fontWeight = FontWeight.SemiBold,
+                                        modifier = Modifier.weight(1f), iconSize = 14.dp, icon = "extension")
                                     DickTag("v$ver · $author · ↓$dl", fontSize = 10.sp, iconSize = 11.dp)
                                 }
                                 if (desc.isNotBlank()) {
                                     Text(desc, fontSize = 11.sp, color = theme.muted, maxLines = 2)
                                 }
                                 if (installed) {
-                                    DickTag("✅ 已安装", fontSize = 11.sp, tone = DickTone.Ok, iconSize = 12.dp)
+                                    DickTag("已安装", fontSize = 11.sp, tone = DickTone.Ok, iconSize = 12.dp, icon = "check_circle")
                                 } else {
                                     DickTextButton(
-                                        label = if (wsInstallingId == id) "⏳ 安装中..." else "⬇️ 安装",
+                                        label = if (wsInstallingId == id) "安装中..." else "安装",
                                         onClick = { wsInstallPlugin(id) },
                                         enabled = wsInstallingId != id,
                                         fontSize = 12.sp,
+                                        icon = if (wsInstallingId == id) "hourglass_empty" else "download",
                                     )
                                 }
                             }
