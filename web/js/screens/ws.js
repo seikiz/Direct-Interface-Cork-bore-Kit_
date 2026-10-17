@@ -254,15 +254,12 @@ window.WsScreen = (function (global) {
         var arr = Array.isArray(v) ? v : [v];
         var items = [];
         for (var j = 0; j < arr.length; j++) {
-          var s = wsCardScalar(arr[j]);
-          if (s === null) s = wsCardSummary(arr[j]);
-          s = s ? wsCardOneLine(s, 0) : '';
+          var s = wsCardValueText(arr[j], 0);
           if (s) items.push(s);
         }
         if (items.length) out.blocks.push({ label: wsCardFieldLabel(path), items: items });
       } else {
-        var sc = wsCardScalar(v);
-        var val = sc === null ? wsCardSummary(v) : wsCardOneLine(sc, kvMax);
+        var val = wsCardValueText(v, kvMax);
         if (!val) continue;
         var lbl = wsCardKV(path);
         if (seenLabel[lbl]) continue;       // params.era 与 era 同时存在时不留两行
@@ -331,15 +328,13 @@ window.WsScreen = (function (global) {
         for (var c = 0; c < kids.length; c++) {
           var path = k + '.' + kids[c];
           if (isHidden(kids[c]) || claimed[path]) continue;
-          var sc2 = wsCardScalar(v[kids[c]]);
-          var val2 = sc2 === null ? wsCardSummary(v[kids[c]]) : wsCardOneLine(sc2, kvMax);
+          var val2 = wsCardValueText(v[kids[c]], kvMax);
           if (!val2 || repeatedInBody(val2)) continue;
           other.push({ label: wsCardKV(path), value: val2 });
         }
         continue;
       }
-      var sc = wsCardScalar(v);
-      var val = sc === null ? wsCardSummary(v) : wsCardOneLine(sc, kvMax);
+      var val = wsCardValueText(v, kvMax);
       if (!val || repeatedInBody(val)) continue;
       other.push({ label: wsCardKV(k), value: val });
     }

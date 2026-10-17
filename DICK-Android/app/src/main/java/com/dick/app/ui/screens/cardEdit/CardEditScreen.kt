@@ -343,7 +343,7 @@ fun CardEditScreen(vm: ChatViewModel, deps: DialogDeps) {
                     FoldHead("🎴 卡面（HTML，可选）", foldCardFace, onToggle = { foldCardFace = !foldCardFace })
                     if (foldCardFace) {
                         OutlinedTextField(value = rCardFace, onValueChange = { rCardFace = it },
-                            label = { Text("卡面 HTML（导入或自写；聊天顶栏 🎴 查看；非强制）") }, minLines = 4)
+                            label = { Text("卡面 HTML（导入或自写；聊天顶栏查看；非强制）") }, minLines = 4)
                         Row {
                             TextButton(onClick = { cardFaceImpLauncher.launch(arrayOf("text/html", "text/plain", "*/*")) }) { IconText("📥 导入HTML文件", fontSize = 12.sp) }
                             TextButton(onClick = { rCardFacePrev = true }) { IconText("👁 预览", fontSize = 12.sp) }

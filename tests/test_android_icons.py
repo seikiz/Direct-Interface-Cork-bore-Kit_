@@ -107,6 +107,98 @@ def ligs(path):
         f.close()
 
 
+# ---------------- ⑦ 的判定器（句子中间 emoji 会不会露成彩色） ----------------
+# 内容类消费方：这些是**内容**（聊天消息正文由模型/用户填），不是 UI 图标，允许带 emoji。
+# 每条都必须写清理由 —— 白名单只该给"内容不是图标"的地方。
+CONTENT_CONSUMERS = {
+    "ChatMsg": "聊天消息对象（正文是内容，不是 UI 图标）",
+}
+# I18n.t 这类只是「取文案」的中转壳，真正的消费方在更外层
+TRANSPARENT_CALLS = ("t", "format", "trim", "toString")
+STR_LIT = re.compile(r'"((?:[^"\\]|\\.)*)"')
+CALL_NAME = re.compile(r"([A-Za-z_][A-Za-z0-9_]*)\s*\(\s*$")
+FUN_HEAD = re.compile(r"^\s*(?:private\s+|internal\s+)?fun\s+([A-Za-z_][A-Za-z0-9_]*)\s*\(")
+
+
+def _walk_kt(base):
+    out = []
+    for dirpath, dirs, files in os.walk(base):
+        dirs[:] = sorted(d for d in dirs if d not in ("build", ".gradle"))
+        for fn in sorted(files):
+            if fn.endswith(".kt"):
+                out.append(os.path.join(dirpath, fn))
+    return out
+
+
+def _ui_strings(text):
+    """[(行号, 字面量内容, 起点)] —— 只认双引号字符串（够用：UI 文案都是双引号）。"""
+    for m in STR_LIT.finditer(text):
+        yield text.count("\n", 0, m.start()) + 1, m.group(1), m.start()
+
+
+def _first_string(text):
+    for _line, s, pos in _ui_strings(text):
+        return s, pos
+    return None
+
+
+def _consumer_of(text, pos, depth_limit=4):
+    """字面量往外第一层「非透明壳」的调用名 → (名字, 是不是直接调用)。
+
+    例：`Body(I18n.t("k", "…🚀"))` → ("Body", False)；
+        `Text("…🚀")`            → ("Text", True)。
+    """
+    i, depth, found = pos - 1, 0, []
+    while i > 0 and len(found) < depth_limit:
+        c = text[i]
+        if c == ")":
+            depth += 1
+        elif c == "(":
+            if depth == 0:
+                m = CALL_NAME.search(text[max(0, i - 60):i + 1])
+                if m:
+                    found.append(m.group(1))
+            else:
+                depth -= 1
+        i -= 1
+    real = [n for n in found if n not in TRANSPARENT_CALLS]
+    if not real:
+        return (found[0] if found else "?"), True
+    return real[0], len(real) == len(found)
+
+
+def _plain_text_wrappers(text):
+    """文件里「自己包一层纯 Text」的小函数名集合（ApiGuideScreen 的 Body/SecTitle 那种）。
+
+    判据：函数体里有 `Text(`，但**没有**任何一个会替换图标的组件
+    （IconText / DickTag / DickTextButton / DickActionButton / DickLoading /…）。
+    """
+    funcs, cur, buf = set(), None, []
+    for line in text.split("\n"):
+        m = FUN_HEAD.match(line)
+        if m:
+            if cur is not None:
+                funcs.add((cur, "\n".join(buf)))
+            # 函数体可能和签名写在同一行（`fun Body(s: String) { Text(s) }`），
+            # 所以签名那行的剩余部分也算进函数体，别漏掉单行小函数。
+            cur, buf = m.group(1), [line[m.end():]]
+            continue
+        if cur is not None:
+            buf.append(line)
+    if cur is not None:
+        funcs.add((cur, "\n".join(buf)))
+    out = set()
+    for name, body in funcs:
+        if "Text(" not in body:
+            continue
+        if any(k in body for k in ("IconText(", "DickTag(", "DickTextButton(",
+                                   "DickActionButton(", "DickButton(", "DickLoading(",
+                                   "DickEmptyState(", "MsIcon(")):
+            continue
+        out.add(name)
+    return out
+
+
 def main():
     print("=" * 62)
     print(u"图标系统审计（Material Symbols，两端同一份真相）")
@@ -229,6 +321,76 @@ def main():
             gap[e] = gap.get(e, 0) + 1
     detail = u"、".join(u"%s x%d" % (k, gap[k]) for k in sorted(gap, key=lambda k: -gap[k]))
     check(u"行首 emoji（%d 处）都有图标" % total, not gap, u"露出来的：%s" % detail)
+
+    # ------------------------------------------------------------------
+    # ⑦ 句子中间的 emoji（2026-12 用户重申「图标都换成谷歌那种」）
+    # ------------------------------------------------------------------
+    # 先纠正一个容易搞错的前提：IconText **不只处理行首** —— splitEmojiSegments 会把
+    # 任意位置的 emoji 换成 Material 图标（InlineTextContent），所以「句中有 emoji」本身
+    # 不是毛病。真正会露成彩色 emoji 的只有三条路：
+    #   ① emoji 在 IconNames 里**没有名字** → IconText 跳过它，原样显示彩色 emoji；
+    #   ② 这段文字走的是**纯 Text**（Text/BasicText 直贴字面量）→ 没有任何人替换；
+    #   ③ 这段文字走的是「自己包一层 Text 的小函数」（ApiGuideScreen 的 Body/SecTitle
+    #      就是这种）→ 同样没人替换，而且只看 `Text("…")` 是扫不到的。
+    # 三条都守死之后，句中 emoji 只可能落在「会替换成图标」的组件里，也就是用户要的那种。
+    # （不写成「除行首出现次数 = 0」：那会把 200 多处**已经正常显示成图标**的句中图标
+    #   一起判死，等于为了指标砍功能。）
+    print(u"\n== ⑦ 句子中间的 emoji：有图标名 + 不被纯 Text 吞掉 ==")
+    ui_dir = os.path.join(JAVA_DIR, "com", "dick", "app", "ui")
+    bad_nomap, bad_plain, bad_wrapper = [], [], []
+    ui_total = 0
+    for p in _walk_kt(ui_dir):
+        rel = os.path.relpath(p, ROOT).replace("\\", "/")
+        text = io.open(p, encoding="utf-8", errors="ignore").read()
+        plain_funcs = _plain_text_wrappers(text)
+        for line, s, pos in _ui_strings(text):
+            hits = [e.group(0) for e in EMOJI.finditer(ZW.sub(u"", s))]
+            hits = [e for e in hits if e not in TYPO]
+            if not hits:
+                continue
+            ui_total += 1
+            miss = [e for e in hits if e not in icons]
+            if miss:
+                bad_nomap.append((rel, line, u"、".join(miss), s[:40]))
+            consumer, direct = _consumer_of(text, pos)
+            if direct and consumer in ("Text", "BasicText"):
+                bad_plain.append((rel, line, consumer, s[:50]))
+            elif consumer in plain_funcs and consumer not in CONTENT_CONSUMERS:
+                bad_wrapper.append((rel, line, consumer, s[:50]))
+    check(u"UI 里带 emoji 的字面量（%d 处）的 emoji 都有图标名" % ui_total, not bad_nomap,
+          u"；".join(u"%s:%d %s" % (r[0], r[1], r[2]) for r in bad_nomap[:6]))
+    check(u"没有 emoji 直接贴在 Text/BasicText 里（%d 处）" % len(bad_plain), not bad_plain,
+          u"；".join(u"%s:%d %s(%s)" % (r[0], r[1], r[2], r[3]) for r in bad_plain[:5]))
+    check(u"没有 emoji 被「自己包的纯 Text 函数」吞掉（%d 处）" % len(bad_wrapper),
+          not bad_wrapper,
+          u"；".join(u"%s:%d %s(%s)" % (r[0], r[1], r[2], r[3]) for r in bad_wrapper[:5]))
+    check(u"内容类白名单 ≤3（现在 %d 个：%s）"
+          % (len(CONTENT_CONSUMERS), u"、".join(sorted(CONTENT_CONSUMERS))),
+          len(CONTENT_CONSUMERS) <= 3)
+    check(u"白名单里的 ChatMsg 是聊天内容（写得出来理由）",
+          CONTENT_CONSUMERS.get("ChatMsg", u"").strip() != u"")
+
+    # 判定器自检：拿已知样本喂进去，该红必须红（防止把判定改成"什么都能过"）
+    samples = [
+        (u'@Composable fun A() { Text("点 🚀 开始") }', u"Text 直贴", True),
+        (u'@Composable\nfun B(s: String) { Text(s) }\n@Composable\nfun C() { B("点 🚀 开始") }',
+         u"自己包的纯 Text 函数", True),
+        (u'@Composable fun D() { IconText("点 🚀 开始") }', u"IconText", False),
+        (u'@Composable fun E() { DickTag("❤ 好感") }', u"DickTag", False),
+        (u'@Composable fun F() { ChatMsg("系统", "点 🚀 开始") }', u"ChatMsg（聊天内容）", False),
+    ]
+    for code, why, should_fail in samples:
+        one = _first_string(code)
+        if one is None:
+            check(u"判定器自检：%s 里找得到字符串" % why, False, code)
+            continue
+        s, pos = one
+        plain_funcs = _plain_text_wrappers(code)
+        consumer, direct = _consumer_of(code, pos)
+        got = ((direct and consumer in ("Text", "BasicText")) or
+               (consumer in plain_funcs and consumer not in CONTENT_CONSUMERS))
+        check(u"判定器自检：%s → %s" % (why, u"判红" if should_fail else u"放行"),
+              got == should_fail, u"consumer=%s direct=%s got=%s" % (consumer, direct, got))
 
     print("\n" + "=" * 62)
     print(u"通过 %d / 失败 %d" % (PASS, FAIL))

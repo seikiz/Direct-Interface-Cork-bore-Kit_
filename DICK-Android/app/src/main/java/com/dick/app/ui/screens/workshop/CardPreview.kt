@@ -109,6 +109,27 @@ private fun cfOneLine(s: String, max: Int): String {
     return if (max > 0 && t.length > max) t.take(max) + "…" else t
 }
 
+/** 字符串里包着 JSON 的情况（世界卡包的 params.space 就是这么存的）→ 解出容器。
+ *  不这么做就得把 {"places":[…]} 原样画在界面上 —— 那正是用户说的「像个代码，穿帮了」。 */
+private fun cfJsonOf(text: String): J? {
+    val t = text.trim()
+    if (t.isEmpty() || (t[0] != '{' && t[0] != '[')) return null
+    val v = try {
+        JsonS.parse(t)
+    } catch (e: Exception) {
+        return null
+    }
+    return if (v is J.Obj || v is J.Arr) v else null
+}
+
+/** 界面值：标量照抄（压成一行）；容器报计数；字符串里包的 JSON 也按容器报计数。 */
+private fun cfValueText(v: J?, max: Int): String {
+    val sc = cfScalar(v) ?: return cfSummary(v)
+    val inner = cfJsonOf(sc)
+    if (inner != null) return cfSummary(inner)
+    return cfOneLine(sc, max)
+}
+
 /** 点号路径取值：`params.era` → root.params.era（世界卡的年代/空间住在 params 里）。 */
 private fun cfGet(root: J.Obj, path: String): J? {
     var cur: J = root
@@ -158,14 +179,11 @@ private fun cfCollect(root: J.Obj, sec: CardSection, seenBody: MutableList<Strin
             }
             MODE_LIST -> {
                 val arr = (v as? J.Arr)?.items ?: listOf(v)
-                val items = arr.mapNotNull { item ->
-                    cfScalar(item) ?: cfSummary(item).ifBlank { null }
-                }.map { cfOneLine(it, 0) }.filter { it.isNotBlank() }
+                val items = arr.map { cfValueText(it, 0) }.filter { it.isNotBlank() }
                 if (items.isNotEmpty()) blocks.add(CardListBlock(CardFields.fieldLabel(path), items))
             }
             else -> {
-                val sc = cfScalar(v)
-                val value = if (sc == null) cfSummary(v) else cfOneLine(sc, CardFields.KV_VALUE_CHARS)
+                val value = cfValueText(v, CardFields.KV_VALUE_CHARS)
                 if (value.isBlank()) continue
                 val label = CardFields.fieldLabel(path).ifBlank { path }
                 if (!seenLabels.add(label)) continue   // params.era 与 era 同时存在时不留两行
@@ -215,15 +233,13 @@ private fun cfModel(root: J.Obj, fileName: String): CardModel {
             for ((k2, v2) in v.fields) {
                 val path = "$k.$k2"
                 if (cfHidden(k2) || claimed.contains(path)) continue
-                val sc2 = cfScalar(v2)
-                val val2 = if (sc2 == null) cfSummary(v2) else cfOneLine(sc2, CardFields.KV_VALUE_CHARS)
+                val val2 = cfValueText(v2, CardFields.KV_VALUE_CHARS)
                 if (val2.isBlank() || repeatedInBody(val2)) continue
                 other.add(CardFields.fieldLabel(path).ifBlank { path } to val2)
             }
             continue
         }
-        val sc = cfScalar(v)
-        val value = if (sc == null) cfSummary(v) else cfOneLine(sc, CardFields.KV_VALUE_CHARS)
+        val value = cfValueText(v, CardFields.KV_VALUE_CHARS)
         if (value.isBlank() || repeatedInBody(value)) continue
         other.add(CardFields.fieldLabel(k).ifBlank { k } to value)
     }

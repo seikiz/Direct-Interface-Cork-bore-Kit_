@@ -156,7 +156,9 @@ fun ApiGuideDialog(vm: ChatViewModel) {
                 // ③ 三步配置
                 SecTitle(I18n.t("apiWizTitle", "三步配置 API"))
                 Body(I18n.t("guideStep1", "拿 Key：按上表去对应官网注册，把 Key 复制下来。"))
-                Body(I18n.t("guideStep2", "粘贴：设置 →「🔑 API 配置」→ 选模型商 → 把 Key 粘进输入框，Base URL 会自动填好。"))
+                // 句子中间的 emoji 一律去掉（用户口径：图标走 Material Symbols 字体，
+                // 句子中间塞彩色 emoji 会露成旧版观感）。引用按钮直接说名字。
+                Body(I18n.t("guideStep2", "粘贴：设置 →「API 配置」→ 选模型商 → 把 Key 粘进输入框，Base URL 会自动填好。"))
                 Body(I18n.t("guideStep3", "点「测试并保存」：真实请求一次 /models，通了才写进 config.json；不通会告诉你下一步。"))
 
                 // ④ 常见错误对照表

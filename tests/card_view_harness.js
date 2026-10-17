@@ -78,10 +78,18 @@ const WORLD = {
 const LONG = { name: '长正文卡' };
 LONG.system_prompt = Array.from({ length: 10 }, (_, i) => '第' + (i + 1) + '行正文。').join('\\n\\n');
 
+// 字符串里包着 JSON：世界卡包的 params.space 就是这么存的（不解出来就会把花括号摊在界面上）
+const JSONSTR = {
+  name: '字符串卡',
+  params: { era: '现代', space: '{"places":[{"name":"宿舍","minutes":0}]}' },
+  rules: ['{"text":"这条规则自己也是 JSON 字符串"}'],
+};
+
 const CASES = [
   { key: 'role', text: JSON.stringify(ROLE), file: '测试角色卡.json' },
   { key: 'world', text: JSON.stringify(WORLD), file: '测试世界卡.json' },
   { key: 'long', text: JSON.stringify(LONG), file: '长正文卡.json' },
+  { key: 'jsonstr', text: JSON.stringify(JSONSTR), file: '字符串卡.json' },
   { key: 'broken', text: '这不是 JSON，只是一段原文。\\n\\n第二段原文。', file: '坏文件.json' },
   { key: 'array', text: '[1,2,3]', file: '数组.json' },
   { key: 'empty', text: '', file: '空文件.json', err: '文件不存在' },

@@ -43,7 +43,7 @@ fun CardFaceScreen(vm: ChatViewModel, muted: Color) {
                 } else {
                     Column(Modifier.padding(8.dp)) {
                         Text("该角色未设置卡面。", fontSize = 13.sp, color = muted)
-                        Text("在「角色 → ✏️ 编辑 → 开发者模式 → 卡面」导入 HTML 或自行编辑。", fontSize = 12.sp, color = muted)
+                        Text("在「角色 → 编辑 → 开发者模式 → 卡面」导入 HTML 或自行编辑。", fontSize = 12.sp, color = muted)
                     }
                 }
             },

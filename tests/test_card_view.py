@@ -332,6 +332,12 @@ def main():
     check(u"世界卡：entries 只报计数（列表 · 2 项）", u"列表 · 2 项" in world, world[-260:])
     check(u"世界卡：没有大括号", "{" not in world and "}" not in world, world[:200])
 
+    js_str = zh.get("jsonstr", u"")
+    check(u"字符串里包的 JSON（世界卡包 params.space 那种）只报计数、不摊花括号",
+          "{" not in js_str and u"对象 · 1 项" in js_str, js_str[:300])
+    check(u"列表项自己也是 JSON 字符串时同样只报计数",
+          js_str.count(u"对象 · 1 项") >= 2, js_str[-220:])
+
     long_html = zh.get("long", u"")
     lines = len(re.findall(r"<p>", long_html))
     check(u"长正文折叠到 8 行（实际 %d 段）" % lines, lines == data["collapse_lines"], str(lines))

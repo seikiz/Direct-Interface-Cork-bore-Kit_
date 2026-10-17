@@ -1405,7 +1405,7 @@ val importCardLauncher = rememberLauncherForActivityResult(ActivityResultContrac
                 val pct = text.split(" ").getOrNull(1)?.toIntOrNull() ?: 100
                 val res = mech.setAffectionPercent(pct)
                 sysMsgs.add(ChatMsg("系统",
-                    if (res == null) "⚠️ 当前角色未启用好感度（机制卡 → ❤ 好感度）"
+                    if (res == null) "⚠️ 当前角色未启用好感度（机制卡 → 好感度）"
                     else "✨ METTERTOOLS！好感度已填至 $pct% → $res。"))
                 mechTick++
                 refreshChain()
@@ -2637,7 +2637,7 @@ fun wsRefreshLocal() {
                     "👋 欢迎使用 DICK" to "装好即聊的角色扮演聊天室：手机 / 电脑进度互通，支持角色卡、世界书、回档、内置游戏。",
                     "⚙️ 配置模型" to "设置 → 填 API Key、选模型商（DeepSeek 官方 / 免费链 / Ollama 本地）。免费链可留空直接聊。",
                     "🎭 选择角色" to "角色列表勾选即可开聊（多选 = 群聊，@角色名 指定发言）；可新建或导入酒馆卡 v1/v2/v3/PNG。",
-                    "💬 开聊" to "输入消息发送；↻ 重生成、◀▶ 滑条、✏️ 编辑。➕ 面板有骰子 / 记忆 / GAL 选项 / 快捷回复。",
+                    "💬 开聊" to "输入消息发送；↻ 重生成、◀▶ 滑条、编辑。面板有骰子 / 记忆 / GAL 选项 / 快捷回复。",
                     "🌿 进阶玩法" to "回档：主线平铺、分支收纳；GAL 选项点选即演；世界书平行世界；存档自动守护。",
                 )
                 Column(Modifier.padding(20.dp)) {
@@ -2654,7 +2654,7 @@ fun wsRefreshLocal() {
                         Button(onClick = {
                             if (guideStep >= guide.size - 1) { showGuide = false; saveConfig() }
                             else guideStep++
-                        }) { IconText(if (guideStep >= guide.size - 1) "开始使用 🚀" else "下一步", fontSize = 13.sp, iconSize = 14.dp) }
+                        }) { IconText(if (guideStep >= guide.size - 1) "开始使用" else "下一步", fontSize = 13.sp, iconSize = 14.dp) }
                     }
                 }
             }

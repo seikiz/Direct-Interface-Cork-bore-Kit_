@@ -2507,9 +2507,9 @@
       ]
     },
     "guideStep2": {
-      "zh": "粘贴：设置 →「🔑 API 配置」→ 选模型商 → 把 Key 粘进输入框，Base URL 会自动填好。",
-      "en": "Paste: Settings → “🔑 API settings” → pick the provider → paste the key. The Base URL fills itself.",
-      "ja": "貼り付け：設定 →「🔑 API 設定」→ プロバイダーを選び、キーを貼り付け。Base URL は自動で入ります。",
+      "zh": "粘贴：设置 →「API 配置」→ 选模型商 → 把 Key 粘进输入框，Base URL 会自动填好。",
+      "en": "Paste: Settings → “API settings” → pick the provider → paste the key. The Base URL fills itself.",
+      "ja": "貼り付け：設定 →「API 設定」→ プロバイダーを選び、キーを貼り付け。Base URL は自動で入ります。",
       "used_by": [
         "desktop_web",
         "android"

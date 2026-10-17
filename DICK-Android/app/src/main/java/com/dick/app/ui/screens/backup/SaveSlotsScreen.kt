@@ -74,7 +74,7 @@ fun SaveSlotsScreen(vm: ChatViewModel, deps: DialogDeps, role: String, onClose: 
                 }
                 Spacer(Modifier.height(8.dp))
                 if (saves.isEmpty()) {
-                    Text("还没有存档点。继续聊天后点「📝 新存档」即把当前进度固化成一个存档点。", color = theme.muted, fontSize = 13.sp)
+                    Text("还没有存档点。继续聊天后点「新存档」即把当前进度固化成一个存档点。", color = theme.muted, fontSize = 13.sp)
                 } else {
                     saves.forEach { s ->
                         val id = s.fields["id"]?.str() ?: return@forEach
