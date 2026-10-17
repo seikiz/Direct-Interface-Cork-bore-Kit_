@@ -157,17 +157,57 @@ def main():
         check(u"未知类型 → 400", bad.status_code == 400, str(bad.status_code))
         check(u"400 里回可用类型", "packs" in json.dumps(bad.get_json(), ensure_ascii=False))
 
-        print(u"\n== ⑥ 鉴权：写要 Key，读默认公开 ==")
+        print(u"\n== ⑥ 写策略：上传不用 Key，删除要 Key（用户只是想传个东西） ==")
         net.API_KEY = "secret-key"
+        net.OPEN_UPLOAD = True
         c2 = net.app.test_client()
+        # 默认（OPEN_UPLOAD=1）：匿名上传必须能成 —— 客户端不用填 Key
+        r = c2.post("/api/packs/upload",
+                    data={"file": (io.BytesIO(json.dumps({"name": u"匿名传的"}).encode("utf-8")), "x.json")},
+                    content_type="multipart/form-data")
+        check(u"没填 Key 也能上传（开放上传）", r.status_code == 201, str(r.status_code) + str(r.get_json()))
+        anon_id = (r.get_json() or {}).get("id")
+        check(u"匿名上传的作品出现在列表里",
+              any(x.get("id") == anon_id for x in c2.get("/api/packs/list").get_json()))
+        # 但删除不许匿名
+        check(u"匿名删不掉别人传的东西",
+              c2.delete("/api/packs/" + str(anon_id)).status_code in (401, 403))
+        check(u"带 Key 能删", c2.delete("/api/packs/" + str(anon_id),
+                                        headers={"X-API-Key": "secret-key"}).status_code == 200)
+        # 关掉开放上传 → 回到"写要 Key"
+        net.OPEN_UPLOAD = False
         r = c2.post("/api/packs/upload",
                     data={"file": (io.BytesIO(b"{}"), "x.json")}, content_type="multipart/form-data")
-        check(u"没带 Key 的上传被拒（401/403）", r.status_code in (401, 403), str(r.status_code))
+        check(u"OPEN_UPLOAD=0 时没 Key 的上传被拒（401/403）", r.status_code in (401, 403), str(r.status_code))
         check(u"错误信息说得清", bool((r.get_json() or {}).get("error")), str(r.get_json()))
+        net.OPEN_UPLOAD = True
         r = c2.post("/api/packs/upload",
                     data={"file": (io.BytesIO(json.dumps({"name": "带钥匙"}).encode("utf-8")), "x.json")},
                     headers={"X-API-Key": "secret-key"}, content_type="multipart/form-data")
-        check(u"带 Key 的上传通过", r.status_code == 201, str(r.status_code))
+        check(u"OPEN_UPLOAD=0 时带 Key 的上传通过", r.status_code == 201, str(r.status_code))
+        check(u"插件上传始终要 Key（恶意插件比卡危险）",
+              c2.post("/api/plugins/upload",
+                      data={"file": (io.BytesIO(b"print(1)"), "evil.py")},
+                      content_type="multipart/form-data").status_code in (401, 403))
+        check(u"共享模型配置读取始终要 Key",
+              c2.get("/api/sync/api").status_code in (401, 403))
+
+        print(u"\n== ⑥之二 开放上传防刷：同一 IP 超额要 429（不是无限灌） ==")
+        net.RATE_PER_HOUR = 2
+        net._RATE_HITS.clear()
+        codes = []
+        for i in range(3):
+            rr = c2.post("/api/packs/upload",
+                         data={"file": (io.BytesIO(json.dumps({"name": u"刷%d" % i}).encode("utf-8")), "x.json")},
+                         content_type="multipart/form-data")
+            codes.append(rr.status_code)
+        check(u"前两个能传、第三个 429", codes[:2] == [201, 201] and codes[2] == 429, str(codes))
+        check(u"429 说清是为了什么",
+              u"频繁" in ((c2.post("/api/packs/upload",
+                                   data={"file": (io.BytesIO(b"{}"), "x.json")},
+                                   content_type="multipart/form-data").get_json() or {}).get("error") or ""))
+        net.RATE_PER_HOUR = 60
+        net._RATE_HITS.clear()
         check(u"读接口默认仍公开（老行为不变）", c2.get("/api/packs/list").status_code == 200)
         net.READ_KEY = True
         c3 = net.app.test_client()

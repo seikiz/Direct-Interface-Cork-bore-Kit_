@@ -298,7 +298,10 @@ def main():
         "WORKSHOP_HOST": a.host,
         "WORKSHOP_PORT": str(a.port),
         "WORKSHOP_API_KEY": a.key or secrets.token_urlsafe(24),
-        "WORKSHOP_READ_KEY": "1",
+        # 用户可以「直接上传」，不用先找 Key：写操作里只有删除/插件/共享配置要 Key
+        "WORKSHOP_OPEN_UPLOAD": "1",
+        "WORKSHOP_RATE_PER_HOUR": "60",
+        "WORKSHOP_READ_KEY": "0",   # 客户端要能直接浏览下载；想锁死读再改 1
         "WORKSHOP_RELAY": "0",
         "WORKSHOP_UPLOAD_MAX_MB": "64",
         "NO_PROXY": "127.0.0.1,localhost,::1",
@@ -311,8 +314,8 @@ def main():
         vals = pack_env(env_file, want)
         say("   env：%s（600）" % env_file)
     say("   写鉴权 Key：%s" % vals.get("WORKSHOP_API_KEY"))
-    say("   （客户端「在线」页填这个 Key 才能上传/删除；读接口公开，但下面会把 READ_KEY 打开，"
-        "到时候**读也要 Key**——不想这么严就把 WORKSHOP_READ_KEY 改成 0）")
+    say("   上传/点赞/进度**不需要**这个 Key（OPEN_UPLOAD=1）；只有「删除作品、传插件、"
+        "共享模型配置」要它 —— 也就是作者/管理员自己用，普通用户零配置")
 
     step("⑤ 服务")
     if has_systemd and not a.no_systemd:

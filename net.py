@@ -15,6 +15,7 @@ import json
 import os
 import sys
 import threading
+import time
 import uuid
 from datetime import datetime, timezone
 from functools import wraps
@@ -91,6 +92,12 @@ PORT = int(os.environ.get("WORKSHOP_PORT", "5000"))
 DEBUG = os.environ.get("WORKSHOP_DEBUG", "0") == "1"
 # 读接口是否也要 Key（默认关 = 保持老行为：只读公开）。公网部署建议开。
 READ_KEY = os.environ.get("WORKSHOP_READ_KEY", "0") == "1"
+# 写策略：**上传/点赞/进度默认不需要 Key**（用户只是想传个东西，别让人先找 Key）。
+#   删除 / 插件上传 / 共享模型配置 仍然要 Key —— 那三样出事的代价太大。
+#   想让"写也要 Key"就设 WORKSHOP_OPEN_UPLOAD=0（老行为）。
+OPEN_UPLOAD = os.environ.get("WORKSHOP_OPEN_UPLOAD", "1") != "0"
+# 开放上传后的防刷：同一 IP 一小时内最多传几个（0 = 不限）
+RATE_PER_HOUR = int(os.environ.get("WORKSHOP_RATE_PER_HOUR", "60"))
 # 内置中转（/relay）：默认关。客户端已停用它（香港工坊 /relay 出于安全关闭），
 # 留着只是历史包袱 + 开放代理风险；真要临时用就显式设 WORKSHOP_RELAY=1。
 RELAY_ON = os.environ.get("WORKSHOP_RELAY", "0") == "1"
@@ -226,6 +233,51 @@ def require_auth_strict(f):
         if api_key != API_KEY:
             return jsonify({"error": "API Key 无效或缺失"}), 401
         return f(*args, **kwargs)
+    return decorated
+
+
+def _key_ok():
+    """请求有没有带对 Key（服务器没设 Key 时一律算对）"""
+    return (not API_KEY) or (request.headers.get("X-API-Key", "") == API_KEY)
+
+
+# 上传限流：开放上传之后，唯一需要担心的就是"有人刷屏"。
+# 按 IP 记一小时内的次数，超了回 429（不影响正常用户：一个人一小时传不了几十个）。
+_RATE_LOCK = threading.Lock()
+_RATE_HITS = {}
+
+
+def _rate_ok(limit=None):
+    n = RATE_PER_HOUR if limit is None else limit
+    if n <= 0:
+        return True
+    ip = request.headers.get("X-Real-IP") or request.remote_addr or "?"
+    now = time.time()
+    with _RATE_LOCK:
+        arr = [t for t in _RATE_HITS.get(ip, []) if now - t < 3600]
+        if len(arr) >= n:
+            _RATE_HITS[ip] = arr
+            return False
+        arr.append(now)
+        _RATE_HITS[ip] = arr
+        if len(_RATE_HITS) > 2000:            # 顺手清掉两小时没动静的 IP
+            for k in [k for k, v in _RATE_HITS.items() if not v or now - v[-1] > 7200][:500]:
+                _RATE_HITS.pop(k, None)
+    return True
+
+
+def write_auth(f):
+    """**上传/点赞/进度**这类"用户只是想传个东西"的写操作：
+    - OPEN_UPLOAD=1（默认）：谁都能传，客户端不用填 Key；
+    - OPEN_UPLOAD=0：退回"写要 Key"的老行为（需要 WORKSHOP_API_KEY）。
+    删除、插件上传、/api/sync/api 不在这里 —— 它们始终要 Key（删别人的东西/推恶意插件
+    /偷共享 API 码，代价太大，不能为了省一步就把门全打开）。
+    """
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if OPEN_UPLOAD or _key_ok():
+            return f(*args, **kwargs)
+        return jsonify({"error": "API Key 无效或缺失"}), 401
     return decorated
 
 
@@ -374,7 +426,7 @@ def _save_path(card_id: str) -> str:
 
 
 @app.post("/api/save/<card_id>")
-@require_auth
+@write_auth
 def save_upload(card_id):
     """上传某个角色的聊天树存档（后来者胜，服务器盖时间戳）。"""
     try:
@@ -652,6 +704,8 @@ def _store_upload(section, target_dir, original_name, content, form, ext_whiteli
 
 
 def handle_upload(section, target_dir, default_name):
+    if not _rate_ok():
+        return jsonify({"error": "上传太频繁了，歇一会儿再试（每 IP 每小时 %d 个）" % RATE_PER_HOUR}), 429
     if "file" not in request.files:
         return jsonify({"error": "没有上传文件"}), 400
     file = request.files["file"]
@@ -675,14 +729,14 @@ def handle_upload(section, target_dir, default_name):
 
 
 @app.post("/api/cards/upload")
-@require_auth
+@write_auth
 def upload_card():
     """上传角色卡"""
     return handle_upload("cards", CARDS_DIR, "未命名角色")
 
 
 @app.post("/api/worlds/upload")
-@require_auth
+@write_auth
 def upload_world():
     """上传世界卡"""
     return handle_upload("worlds", WORLDS_DIR, "未命名世界")
@@ -735,7 +789,7 @@ def delete_any(rtype, item_id):
 
 
 @app.post("/api/<rtype>/upload")
-@require_auth
+@write_auth
 def upload_any(rtype):
     """整包上传（小文件走这条；大文件走下面的分片）"""
     spec = type_of(rtype)
@@ -749,7 +803,7 @@ CHUNK_DIR = os.path.join(DATA_DIR, ".uploads")
 
 
 @app.post("/api/<rtype>/upload/init")
-@require_auth
+@write_auth
 def upload_init(rtype):
     """开一次分片上传，拿到 upload_id"""
     spec = type_of(rtype)
@@ -772,7 +826,7 @@ def _arg(name, default=""):
 
 
 @app.post("/api/<rtype>/upload/chunk")
-@require_auth
+@write_auth
 def upload_chunk(rtype):
     """收一片：body 就是裸字节（不走 multipart），元数据走 query string"""
     spec = type_of(rtype)
@@ -794,7 +848,7 @@ def upload_chunk(rtype):
 
 
 @app.post("/api/<rtype>/upload/finish")
-@require_auth
+@write_auth
 def upload_finish(rtype):
     """把分片按序拼起来，当作一次整包上传登记（扩展名白名单照查）"""
     spec = type_of(rtype)
@@ -818,6 +872,8 @@ def upload_finish(rtype):
     except Exception as e:
         return jsonify({"error": "拼起来不是合法 JSON：%s" % e}), 400
     name = (_arg("filename") or "upload.json")
+    if not _rate_ok():
+        return jsonify({"error": "上传太频繁了，歇一会儿再试（每 IP 每小时 %d 个）" % RATE_PER_HOUR}), 429
     try:
         entry = _store_upload(spec["index"], spec["dir"], name, content, request.form, spec["ext"])
     except ValueError as e:

@@ -48,6 +48,15 @@ sudo python3 deploy_workshop.py --no-systemd # 没有 systemd 的环境（nohup 
 python3 selfcheck_workshop.py --base http://127.0.0.1:5000 --key <写Key> --full
 ```
 
+## 写策略：用户上传**不用填 Key**
+
+- 默认 `WORKSHOP_OPEN_UPLOAD=1`：上传 / 点赞 / 聊天进度 —— **谁都能用，客户端零配置**。
+- 仍然**必须** Key 的只有三样（出事代价太大）：**删除作品**、**上传插件**、**读写共享模型配置**。
+  这个 Key 由部署器自动生成，只给作者/管理员自己用。
+- 防刷：`WORKSHOP_RATE_PER_HOUR=60`（同一 IP 一小时最多传 60 个，超了 429）。想更松就调大，`0` 关闭。
+- `WORKSHOP_READ_KEY=0`（默认）：浏览/下载公开，客户端不用 Key 就能看和拉。
+  想在公网锁死「只能带 Key 读」就改 `1`（但那样客户端又得填 Key 了）。
+
 ## 它装成什么样
 
 - 目录：`/opt/dick-workshop/`（`net.py`、`workshop.env`(600)、`workshop_data/`、`backups/`、`workshop.log`）

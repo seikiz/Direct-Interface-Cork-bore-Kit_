@@ -1113,9 +1113,9 @@
       ]
     },
     "wsKey": {
-      "zh": "🔑 Key（上传/删除需要）",
-      "en": "🔑 Key (required for upload/delete)",
-      "ja": "🔑 Key（アップロード/削除に必要）",
+      "zh": "🔑 Key（可选，只有删除/管理才要；上传不用）",
+      "en": "🔑 Key (optional — only for delete/admin, not upload)",
+      "ja": "🔑 Key（任意・削除/管理のみ。アップロードは不要）",
       "used_by": [
         "desktop_web"
       ]
@@ -1217,9 +1217,9 @@
       ]
     },
     "ws_key": {
-      "zh": "Key（上传/删除需要）",
-      "en": "Key (required for upload/delete)",
-      "ja": "Key（アップロード/削除に必要）",
+      "zh": "Key（可选，只有删除/管理才要）",
+      "en": "Key (optional — delete/admin only)",
+      "ja": "Key（任意・削除/管理のみ）",
       "used_by": [
         "android"
       ]
