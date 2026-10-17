@@ -34,7 +34,11 @@ APP = os.path.join(ROOT, "DICK-Android", "app", "src", "main", "java", "com", "d
 STRINGS = os.path.join(ROOT, "lang", "strings.json")
 
 # 被盯住的屏（搬进<seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌来一屏就加一行）
-FILES = [os.path.join(APP, "ui", "screens", "settings", "SettingsScreen.kt")]
+FILES = [
+    os.path.join(APP, "ui", "screens", "settings", "SettingsScreen.kt"),
+    # 2026-11 新增：API 教程面板 + 首启向导（同一批 guide_*/apiWiz* 键，三语齐全）
+    os.path.join(APP, "ui", "screens", "api", "ApiGuideScreen.kt"),
+]
 
 # 不翻译的串：分隔/符号/示例（都是"不是给用户读的句子"）
 ALLOW = {

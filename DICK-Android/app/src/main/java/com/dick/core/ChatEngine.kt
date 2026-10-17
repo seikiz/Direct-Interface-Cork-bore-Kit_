@@ -19,7 +19,7 @@ data class Usage(
 class ChatEngine(
     var baseUrl: String = "https://api.deepseek.com",
     var apiKey: String = "",
-    var model: String = "deepseek-v4-flash",
+    var model: String = "deepseek-flash",
 ) {
     /** 免费厂商（OVH 免费链 / Ollama 本地）允许空 Key */
     @Volatile
@@ -259,4 +259,92 @@ class ChatEngine(
         completionTokens = (o.fields["completion_tokens"] as? J.Num)?.v?.toInt() ?: 0,
         totalTokens = (o.fields["total_tokens"] as? J.Num)?.v?.toInt() ?: 0,
     )
+
+    companion object {
+        /**
+         * 向导第③步「测试并保存」用的探针：**真连一次** `GET {base}/models`。
+         *
+         * 为什么不用一条最小对话试探：多数厂商对 /models 不做计费，而哪怕 1 token 的
+         * 对话也会扣钱、也会被审计日志记一笔 —— 用户点一次"测试"就被计费是坏体验。
+         * 只有厂商不实现 /models（404/405）时才退化成最小对话兜底。
+         *
+         * 返回 (是否连通, 人话原因)。原因要能直接贴到界面上，别返回异常对象。
+         */
+        fun probeApi(baseUrl: String, apiKey: String, proxy: String?, free: Boolean, model: String = ""): Pair<Boolean, String> {
+            val base = baseUrl.trim().trimEnd('/')
+            if (base.isEmpty()) return false to "Base URL 是空的"
+            if (apiKey.isBlank() && !free) return false to "还没有填 Key"
+            var proxyConn: Proxy? = null
+            val p = proxy?.trim()?.takeIf { it.isNotEmpty() }
+            if (p != null) {
+                try {
+                    var hp = p.removePrefix("http://").removePrefix("https://")
+                        .removePrefix("socks5://").removePrefix("socks://").trimEnd('/')
+                    if (!hp.contains(':')) hp += ":1080"
+                    val idx = hp.lastIndexOf(':')
+                    if (idx > 0) {
+                        hp.substring(idx + 1).toIntOrNull()?.let {
+                            proxyConn = Proxy(Proxy.Type.HTTP, InetSocketAddress(hp.substring(0, idx), it))
+                        }
+                    }
+                } catch (_: Exception) {
+                }
+            }
+            fun open(u: String): HttpURLConnection {
+                val url = URL(u)
+                return (if (proxyConn != null) url.openConnection(proxyConn) else url.openConnection()) as HttpURLConnection
+            }
+            fun reason(code: Int): String = when (code) {
+                401 -> "401 无效 Key（厂商拒绝了这枚 Key）"
+                402 -> "402 余额不足（要先充值）"
+                403 -> "403 无权访问（Key 没开通这个模型）"
+                404 -> "404 端点或模型名不对"
+                429 -> "429 限流（请求太快或额度用完）"
+                in 500..599 -> "$code 厂商服务端异常"
+                else -> "$code 请求被拒绝"
+            }
+            fun hint(code: Int): String = when (code) {
+                401 -> "回上一步整条重贴 Key（别带空格，别把 Base URL 粘进来）"
+                402 -> "去服务商官网充一点，或点「稍后再说」先用免费链"
+                404 -> "照教程里的模型名示例原样填；Base URL 别漏 /v1"
+                429 -> "等几十秒再试；免费链最常见，配一枚 Key 就稳了"
+                else -> "检查网络或代理；不确定就先点「稍后再说」用免费链"
+            }
+            var conn: HttpURLConnection? = null
+            try {
+                conn = open(base + "/models")
+                conn.requestMethod = "GET"
+                conn.setRequestProperty("Authorization", "Bearer " + apiKey.ifBlank { "free" })
+                conn.connectTimeout = 12000
+                conn.readTimeout = 12000
+                val code = conn.responseCode
+                if (code in 200..299) return true to ""
+                if (code == 404 || code == 405) {
+                    // 少数 OpenAI 兼容实现不实现 /models → 用 1 token 最小对话兜底
+                    conn.disconnect()
+                    conn = open(base + "/chat/completions")
+                    conn.requestMethod = "POST"
+                    conn.setRequestProperty("Content-Type", "application/json")
+                    conn.setRequestProperty("Authorization", "Bearer " + apiKey.ifBlank { "free" })
+                    conn.connectTimeout = 12000
+                    conn.readTimeout = 20000
+                    conn.doOutput = true
+                    val body = "{\"model\":\"" + model + "\",\"messages\":[{\"role\":\"user\",\"content\":\"hi\"}],\"max_tokens\":1,\"stream\":false}"
+                    conn.outputStream.use { it.write(body.toByteArray(Charsets.UTF_8)) }
+                    val code2 = conn.responseCode
+                    if (code2 in 200..299) return true to ""
+                    return false to (reason(code2) + "  ·  " + hint(code2))
+                }
+                return false to (reason(code) + "  ·  " + hint(code))
+            } catch (e: Exception) {
+                return false to ("网络层失败：" + (e.message ?: e.javaClass.simpleName) +
+                    "  ·  多半是超时或被墙，填个代理再试；也可以先点「稍后再说」用免费链")
+            } finally {
+                try {
+                    conn?.disconnect()
+                } catch (_: Exception) {
+                }
+            }
+        }
+    }
 }

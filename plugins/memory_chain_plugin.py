@@ -296,7 +296,7 @@ class MemoryChainPlugin(PluginBase):
             return None
         try:
             resp = client.chat.completions.create(
-                model=getattr(self.core, "model", "deepseek-chat"),
+                model=getattr(self.core, "model", "deepseek-flash"),
                 messages=[
                     {"role": "system",
                      "content": f"你是记忆压缩助手。把下面的对话历史压缩成 {self.SUMMARY_CHARS} 字以内的要点摘要，"

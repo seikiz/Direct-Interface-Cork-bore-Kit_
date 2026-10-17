@@ -22,6 +22,15 @@ import androidx.compose.runtime.setValue
 class SettingsState {
     /** 「🔌 插件」这一段是不是展开<seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌的（默认收起 —— 与搬家前一致） */
     var foldPlugins by mutableStateOf(false)
+
+    // ---- 「向导」的三格瞬态（2026-11）----
+    // 为什么放这里：离开 API 弹窗就没意义 → 屏内瞬态，不进 ChatViewModel。
+    /** 向导当前步：0 选服务商 / 1 填 Key / 2 测试并保存 */
+    var apiStep by mutableStateOf(0)
+    /** 正在测试（真连一次 /models）—— 按钮要禁用，防连点 */
+    var apiTesting by mutableStateOf(false)
+    /** 测试结果/提示那一行（'' = 还没测） */
+    var apiTestLine by mutableStateOf("")
 }
 
 /** 跟着「设置弹窗打开」这一段的组合走：弹窗关掉，屏内瞬态一起丢。 */

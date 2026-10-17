@@ -85,7 +85,7 @@ class TrpgSession:
             return "（GM 推理不可用：未找到 openai 客户端）"
         key = (self.conf.get("api_key") or "").strip() or "free"
         base = (self.conf.get("base_url") or "https://api.deepseek.com").strip()
-        model = (self.conf.get("model") or "deepseek-v4-flash").strip()
+        model = (self.conf.get("model") or "deepseek-flash").strip()
         client = OpenAI(api_key=key, base_url=base)
         try:
             r = client.chat.completions.create(

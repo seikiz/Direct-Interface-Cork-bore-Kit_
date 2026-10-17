@@ -30,7 +30,7 @@ class ChatViewModel : ViewModel() {
 
     // ---- 模型/API ----
     var apiKey = mutableStateOf("")
-    var model = mutableStateOf("deepseek-v4-flash")
+    var model = mutableStateOf("deepseek-flash")
     var baseUrl = mutableStateOf("https://api.deepseek.com")
     var proxy = mutableStateOf("")
     var relayUrl = mutableStateOf(BUILTIN_RELAY)
@@ -81,6 +81,8 @@ class ChatViewModel : ViewModel() {
     /** 生活 / 空间 / 世界卡库设置面板（见 LifeSpaceSettings.kt） */
     var showLifeSpace = mutableStateOf(false)
     var showApiSetup = mutableStateOf(false)
+    /** 📖 API 教程面板（2026-11）：与网页端 web/screens/api_guide.html 同一份内容 */
+    var showApiGuide = mutableStateOf(false)
     var showTrpg = mutableStateOf(false)
     var showCardFace = mutableStateOf(false)
     var showRoles = mutableStateOf(false)

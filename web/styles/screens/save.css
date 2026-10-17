@@ -17,6 +17,6 @@
 .save-row .save-ops .iconbtn{ background:none; border:none; cursor:pointer; font-size:13px;
   opacity:.7; padding:3px 6px; border-radius:6px; color:var(--sub); }
 .save-row .save-ops .iconbtn:hover{ opacity:1; background:var(--line); }
-.save-row .save-ops .act-del{ color:#f87171; }
+.save-row .save-ops .act-del{ color:var(--danger); }
 .save-new input{ background:var(--bubble); border:1px solid var(--line); border-radius:8px;
   color:var(--text); padding:7px 10px; font-size:13px; }

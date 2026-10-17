@@ -22,8 +22,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.dick.core.ChatEngine
 import com.dick.core.Lanes
 import com.dick.core.TimeScale
 import com.dick.core.Workshop
@@ -87,111 +89,248 @@ fun SettingsScreen(vm: ChatViewModel, acts: SettingsActions) {
     val clearWallpaper = acts.clearWallpaper
     var wallpaper by vm.wallpaper
     if (vm.showApiSetup.value) {
+    // 2026-11：向导化 —— 原先是"一屏塞下模型商/<seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌模型/Key/Base/代理/中转/停止序列"的长表单，
+    // 用户的原话是"这套引导不够"。现在拆成三步，每步只问一件事：
+    //   ① 选服务商（卡片列表，免 Key 的会标出来）
+    //   ② 填 Key（一个输入框 + 一行「去哪里拿」可点链接）
+    //   ③ 点「测试并保存」—— ChatEngine.probeApi() 真连一次，通了才写 config；
+    //      不通就把人话原因 + 下一步建议贴在按钮上方。
+    // 「稍后再说」= 切到免费链厂商（不用 Key）直接保存，下次启动不再弹。
+    // 高级项（代理/中转/停止序列/自定义模型）留在下面的「设置」里，不再挡在第①步前面。
+    val wiz = rememberSettingsState()
+    var step = wiz.apiStep
+    var testing = wiz.apiTesting
+    var testLine = wiz.apiTestLine
+    val curProvider = PROVIDERS.firstOrNull { it.id == providerId }
+    val freeNow = curProvider?.free == true
+    fun persist() {
+        apiKeysMap[providerId] = apiKey.trim()
+        engine.apiKey = apiKey.trim()
+        engine.model = model
+        engine.baseUrl = baseUrl.trim().ifBlank { "https://api.deepseek.com" }
+        engine.proxy = proxy.trim().ifBlank { null }
+        val effRelay = relayUrl.trim().ifBlank { BUILTIN_RELAY }.ifBlank { null }
+        if (engine.relayBase != effRelay) engine.relayOn = false
+        engine.relayBase = effRelay
+        engine.stopSequences = parseStops(stopInput)
+        engine.allowEmptyKey = PROVIDERS.firstOrNull { it.id == providerId }?.free == true
+        saveConfig()
+        val k = apiKey.trim()
+        Lanes.on(Lanes.net, "推送连接配置") {
+            try { Workshop.pushApi(k, baseUrl.trim().ifBlank { "https://api.deepseek.com" }, model, providerId) } catch (_: Exception) {}
+        }
+    }
+    fun runProbe() {
+        testing = true
+        testLine = I18n.t("apiWizTesting", "正在测试…（真实请求一次 /models）")
+        val base = baseUrl.trim()
+        val key = if (freeNow) "" else apiKey.trim()
+        val mdl = model
+        Lanes.on(Lanes.net, "测试 API Key") {
+            val r = ChatEngine.probeApi(base, key, proxy.trim(), freeNow, mdl)
+            testing = false
+            if (r.first) {
+                testLine = I18n.t("apiWizOk", "通了，已保存")
+                persist()
+                vm.showApiSetup.value = false
+            } else {
+                testLine = I18n.t("apiWizFail", "没通") + " — " + r.second
+            }
+        }
+    }
     DickDialog(
         onDismissRequest = { vm.showApiSetup.value = false },
         title = { IconText(I18n.t("st_api_title", "🔑 API 配置（模型商 / 模型 / Key）")) },
         text = {
             Column(Modifier.verticalScroll(rememberScrollState())) {
-                Text(I18n.t("st_provider", "模型商"), fontSize = 13.sp, color = theme.muted)
-                val curProvider = PROVIDERS.firstOrNull { it.id == providerId }
-                PROVIDERS.forEach { p ->
+                // ---- 步骤指示（三步一句一档，当前步用强调色） ----
+                Row(Modifier.fillMaxWidth()) {
+                    listOf(
+                        I18n.t("apiWizStep1", "① 选服务商"),
+                        I18n.t("apiWizStep2", "② 填 Key"),
+                        I18n.t("apiWizStep3", "③ 测试并保存"),
+                    ).forEachIndexed { i, label ->
+                        Text(
+                            label,
+                            fontSize = 11.sp,
+                            color = if (i == step) accent else theme.muted,
+                            modifier = Modifier.padding(end = 10.dp, bottom = 8.dp),
+                        )
+                    }
+                }
+                if (step == 0) {
+                    // ---- ① 选服务商：卡片列表 ----
+                    Text(I18n.t("st_provider", "模型商"), fontSize = 13.sp, color = theme.muted)
+                    PROVIDERS.forEach { p ->
+                        DickActionButton(
+                            label = (if (p.id == providerId) "● " else "○ ") + p.name +
+                                (if (p.free) I18n.t("st_free_suffix", "（免 Key）") else "") +
+                                (if (p.id == "ollama") (if (ollamaOnline) I18n.t("st_ollama_online", " · 本地已连接")
+                                                         else I18n.t("st_ollama_offline", " · 本地未检测到")) else ""),
+                            onClick = {
+                                providerId = p.id
+                                baseUrl = p.baseUrl
+                                model = p.models.first()
+                                apiKey = apiKeysMap[p.id] ?: ""
+                                testLine = ""
+                            },
+                            variant = DickButtonVariant.Plain,
+                            modifier = Modifier.fillMaxWidth(),
+                            fontSize = 13.sp,
+                            color = if (p.id == providerId) accent else Color.Unspecified,
+                        )
+                    }
+                } else if (step == 1) {
+                    // ---- ② 填 Key：一个输入框 + 一行「去哪里拿」 ----
+                    Text(curProvider?.name ?: "", fontSize = 14.sp, fontWeight = FontWeight.SemiBold,
+                        color = theme.text, modifier = Modifier.padding(bottom = 6.dp))
+                    DickLabeledField(
+                        value = apiKey, onValueChange = { apiKey = it },
+                        label = if (freeNow) I18n.t("st_api_key_free", "API Key（免 Key，可留空）")
+                                else I18n.t("st_api_key", "API Key"),
+                        singleLine = true,
+                        enabled = !freeNow,
+                    )
+                    if (freeNow) {
+                        Text(I18n.t("apiWizFree", "这家免 Key，直接可用"), fontSize = 11.sp,
+                            color = theme.muted, modifier = Modifier.padding(top = 4.dp))
+                    } else {
+                        val where = curProvider?.buyUrl ?: ""
+                        DickActionButton(
+                            label = I18n.t("btn_buy", "🔑 去官网注册/充值"),
+                            variant = DickButtonVariant.Plain,
+                            fontSize = 12.sp,
+                            onClick = {
+                                if (where.isNotBlank()) {
+                                    try {
+                                        context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(where)))
+                                    } catch (_: Exception) {
+                                    }
+                                }
+                            },
+                        )
+                        DickActionButton(
+                            label = I18n.t("apiWizWhere", "去哪里拿 Key") + " → " + where,
+                            variant = DickButtonVariant.Plain,
+                            fontSize = 11.sp,
+                            onClick = {
+                                if (where.isNotBlank()) {
+                                    try {
+                                        context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(where)))
+                                    } catch (_: Exception) {
+                                    }
+                                }
+                            },
+                        )
+                    }
+                    Spacer(Modifier.height(6.dp))
+                    Text(I18n.t("st_base_url", "Base URL") + "：" + (curProvider?.baseUrl ?: baseUrl),
+                        fontSize = 11.sp, color = theme.muted)
+                    Text(I18n.t("st_model", "模型") + "：" + model, fontSize = 11.sp, color = theme.muted)
+                } else {
+                    // ---- ③ 测试并保存 ----
+                    Text(curProvider?.name ?: "", fontSize = 14.sp, fontWeight = FontWeight.SemiBold,
+                        color = theme.text, modifier = Modifier.padding(bottom = 6.dp))
+                    Text(I18n.t("st_base_url", "Base URL") + "：" +
+                        baseUrl.trim().ifBlank { curProvider?.baseUrl ?: "" },
+                        fontSize = 11.sp, color = theme.muted)
+                    Text(I18n.t("st_model", "模型") + "：" + model, fontSize = 11.sp, color = theme.muted)
+                    Spacer(Modifier.height(8.dp))
+                    Text(testLine, fontSize = 12.sp,
+                        color = if (testLine == I18n.t("apiWizOk", "通了，已保存")) theme.palette.ok else theme.muted)
+                    Spacer(Modifier.height(8.dp))
+                    // ---- 高级连线项 ----
+                    // 这些字段原来在那个"一屏塞到底"的长表单里；改成向导之后**不能丢**——
+                    // 直连被墙的人只有在这里填代理才连得上。放在第③步（测试那一步）最顺手：
+                    // 测不通 → 就地改 → 再测。
+                    Text(I18n.t("st_model", "模型"), fontSize = 12.sp, color = theme.muted)
+                    (curProvider?.models ?: emptyList()).forEach { m ->
+                        DickActionButton(
+                            label = (if (m == model) "● " else "○ ") + m,
+                            onClick = { model = m },
+                            variant = DickButtonVariant.Plain,
+                            modifier = Modifier.fillMaxWidth(),
+                            fontSize = 12.sp,
+                            color = if (m == model) accent else Color.Unspecified,
+                        )
+                    }
+                    if (model.isNotBlank() && model !in (curProvider?.models ?: emptyList())) {
+                        DickActionButton(
+                            label = "● " + model + I18n.t("st_current_suffix", "（当前）"),
+                            onClick = {},
+                            variant = DickButtonVariant.Plain,
+                            modifier = Modifier.fillMaxWidth(),
+                            fontSize = 12.sp, color = accent,
+                        )
+                    }
+                    DickLabeledField(value = customModelInput, onValueChange = { customModelInput = it },
+                        label = I18n.t("st_custom_model", "自定义模型 ID"), singleLine = true)
                     DickActionButton(
-                        label = (if (p.id == providerId) "● " else "○ ") + p.name +
-                            (if (p.free) I18n.t("st_free_suffix", "（免 Key）") else "") +
-                            (if (p.id == "ollama") (if (ollamaOnline) I18n.t("st_ollama_online", " · 本地已连接")
-                                                     else I18n.t("st_ollama_offline", " · 本地未检测到")) else ""),
-                        onClick = { providerId = p.id; baseUrl = p.baseUrl; model = p.models.first(); apiKey = apiKeysMap[p.id] ?: "" },
-                        // 列表里的"当前项"靠 ● 和强调色表达就够，别做成实心大按钮
-                        //（一列 7 个实心 pill 会把这一屏的主次彻底搅乱）
+                        label = I18n.t("st_use_custom", "使用自定义模型"),
+                        onClick = { if (customModelInput.isNotBlank()) model = customModelInput.trim() },
                         variant = DickButtonVariant.Plain,
-                        modifier = Modifier.fillMaxWidth(),
-                        fontSize = 13.sp, color = if (p.id == providerId) accent else Color.Unspecified,
+                        fontSize = 12.sp,
+                    )
+                    DickLabeledField(value = baseUrl, onValueChange = { baseUrl = it },
+                        label = I18n.t("st_base_url", "Base URL"),
+                        hint = I18n.t("st_base_hint", "选模型商时自动填"), singleLine = true)
+                    Spacer(Modifier.height(6.dp))
+                    DickLabeledField(value = proxy, onValueChange = { proxy = it },
+                        label = I18n.t("st_proxy", "代理"),
+                        hint = I18n.t("st_proxy_hint", "通道不通时填，如 http://127.0.0.1:7890"), singleLine = true)
+                    Spacer(Modifier.height(6.dp))
+                    DickLabeledField(value = relayUrl, onValueChange = { relayUrl = it },
+                        label = I18n.t("st_relay", "内置代理通道"),
+                        hint = I18n.t("st_relay_hint", "直连失败自动走中转"), singleLine = true)
+                    Text(if (engine.relayOn) I18n.t("st_relay_on", "● 中转通道已启用（直连失败已自动切换）")
+                         else I18n.t("st_relay_off", "○ 直连模式（直连失败自动走中转）"),
+                        fontSize = 11.sp, color = theme.muted)
+                    Spacer(Modifier.height(6.dp))
+                    DickLabeledField(value = stopInput, onValueChange = { stopInput = it },
+                        label = I18n.t("st_stop", "停止序列"),
+                        hint = I18n.t("st_stop_hint", "逗号分隔，如 <|im_end|>, </s>"), singleLine = true)
+                    Spacer(Modifier.height(4.dp))
+                    DickActionButton(
+                        label = I18n.t("apiWizLater", "稍后再说（先用免费链）"),
+                        variant = DickButtonVariant.Plain,
+                        fontSize = 12.sp,
+                        onClick = {
+                            val f = PROVIDERS.firstOrNull { it.free }
+                            if (f != null) {
+                                providerId = f.id
+                                baseUrl = f.baseUrl
+                                model = f.models.first()
+                                apiKey = ""
+                                runProbe()
+                            } else {
+                                vm.showApiSetup.value = false
+                            }
+                        },
                     )
                 }
-                DickActionButton(
-                    label = I18n.t("btn_buy", "🔑 去官网注册/充值"),
-                    onClick = {
-                        val p = PROVIDERS.firstOrNull { it.id == providerId }
-                        if (p != null) { try { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(p.buyUrl))) } catch (_: Exception) {} }
-                    },
-                    variant = DickButtonVariant.Plain,
-                    fontSize = 12.sp,
-                )
-                Spacer(Modifier.height(6.dp))
-                Text(I18n.t("st_model", "模型"), fontSize = 13.sp, color = theme.muted)
-                (curProvider?.models ?: emptyList()).forEach { m ->
-                    DickActionButton(
-                        label = (if (m == model) "● " else "○ ") + m,
-                        onClick = { model = m },
-                        variant = DickButtonVariant.Plain,
-                        modifier = Modifier.fillMaxWidth(),
-                        fontSize = 12.sp, color = if (m == model) accent else Color.Unspecified,
-                    )
-                }
-                if (model.isNotBlank() && model !in (curProvider?.models ?: emptyList())) {
-                    DickActionButton(
-                        label = "● " + model + I18n.t("st_current_suffix", "（当前）"),
-                        onClick = {},
-                        variant = DickButtonVariant.Plain,
-                        modifier = Modifier.fillMaxWidth(),
-                        fontSize = 12.sp, color = accent,
-                    )
-                }
-                DickLabeledField(value = customModelInput, onValueChange = { customModelInput = it },
-                    label = I18n.t("st_custom_model", "自定义模型 ID"), singleLine = true)
-                DickActionButton(
-                    label = I18n.t("st_use_custom", "使用自定义模型"),
-                    onClick = { if (customModelInput.isNotBlank()) model = customModelInput.trim() },
-                    variant = DickButtonVariant.Plain,
-                    fontSize = 12.sp,
-                )
-                val freeNow = curProvider?.free == true
-                DickLabeledField(value = apiKey, onValueChange = { apiKey = it },
-                    label = if (freeNow) I18n.t("st_api_key_free", "API Key（免 Key，可留空）")
-                            else I18n.t("st_api_key", "API Key"),
-                    singleLine = true,
-                    enabled = !freeNow)
-                Spacer(Modifier.height(6.dp))
-                DickLabeledField(value = baseUrl, onValueChange = { baseUrl = it },
-                    label = I18n.t("st_base_url", "Base URL"),
-                    hint = I18n.t("st_base_hint", "选模型商时自动填"), singleLine = true)
-                Spacer(Modifier.height(6.dp))
-                DickLabeledField(value = proxy, onValueChange = { proxy = it },
-                    label = I18n.t("st_proxy", "代理"),
-                    hint = I18n.t("st_proxy_hint", "通道不通时填，如 http://127.0.0.1:7890"), singleLine = true)
-                Spacer(Modifier.height(6.dp))
-                DickLabeledField(value = relayUrl, onValueChange = { relayUrl = it },
-                    label = I18n.t("st_relay", "内置代理通道"),
-                    hint = I18n.t("st_relay_hint", "直连失败自动走中转"), singleLine = true)
-                Text(if (engine.relayOn) I18n.t("st_relay_on", "● 中转通道已启用（直连失败已自动切换）")
-                     else I18n.t("st_relay_off", "○ 直连模式（直连失败自动走中转）"),
-                    fontSize = 11.sp, color = theme.muted)
-                Spacer(Modifier.height(6.dp))
-                DickLabeledField(value = stopInput, onValueChange = { stopInput = it },
-                    label = I18n.t("st_stop", "停止序列"),
-                    hint = I18n.t("st_stop_hint", "逗号分隔，如 <|im_end|>, </s>"), singleLine = true)
             }
         },
         confirmButton = {
-            DickActionButton(label = I18n.t("btn_save", "保存"), variant = DickButtonVariant.Primary, onClick = {
-                apiKeysMap[providerId] = apiKey.trim()
-                engine.apiKey = apiKey.trim()
-                engine.model = model
-                engine.baseUrl = baseUrl.trim().ifBlank { "https://api.deepseek.com" }
-                engine.proxy = proxy.trim().ifBlank { null }
-                val effRelay = relayUrl.trim().ifBlank { BUILTIN_RELAY }.ifBlank { null }
-                if (engine.relayBase != effRelay) engine.relayOn = false
-                engine.relayBase = effRelay
-                engine.stopSequences = parseStops(stopInput)
-                engine.allowEmptyKey = PROVIDERS.firstOrNull { it.id == providerId }?.free == true
-                saveConfig()
-                val k = apiKey.trim()
-                // 推送共享连接配置：网络活，走 ne<seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌t 线（原来是一个裸 Thread）
-                Lanes.on(Lanes.net, "推送连接配置") {
-                    try { Workshop.pushApi(k, baseUrl.trim().ifBlank { "https://api.deepseek.com" }, model, providerId) } catch (_: Exception) {}
+            Row {
+                if (step > 0) {
+                    DickActionButton(label = I18n.t("apiWizPrev", "上一步"),
+                        variant = DickButtonVariant.Plain, fontSize = 12.sp,
+                        onClick = { step -= 1; testLine = ""; wiz.apiStep = step })
                 }
-                vm.showApiSetup.value = false
-            })
+                if (step < 2) {
+                    DickActionButton(label = I18n.t("apiWizNext", "下一步"),
+                        variant = DickButtonVariant.Primary, fontSize = 12.sp,
+                        onClick = { step += 1; testLine = ""; wiz.apiStep = step })
+                } else {
+                    DickActionButton(
+                        label = if (testing) I18n.t("apiWizTesting", "正在测试…（真实请求一次 /models）")
+                                else I18n.t("apiWizStep3", "③ 测试并保存"),
+                        variant = DickButtonVariant.Primary, fontSize = 12.sp,
+                        enabled = !testing,
+                        onClick = { runProbe() },
+                    )
+                }
+            }
         },
         dismissButton = {
             DickActionButton(label = I18n.t("btn_cancel", "取消"), variant = DickButtonVariant.Plain,
@@ -207,6 +346,22 @@ fun SettingsScreen(vm: ChatViewModel, acts: SettingsActions) {
         title = { Text(I18n.t("dlg_settings", "DICK · 设置")) },
         text = {
             Column(Modifier.verticalScroll(rememberScrollState())) {
+                Spacer(Modifier.height(6.dp))
+                // 2026-11：API 教程 + 重开向导。位置在**最上面** —— 用户填不动的那一刻
+                // 就在找这两个入口，塞到最底下等于没有。
+                Row {
+                    DickActionButton(
+                        label = I18n.t("apiGuideBtn", "📖 API 教程"),
+                        variant = DickButtonVariant.Secondary, fontSize = 12.sp,
+                        onClick = { vm.showApiGuide.value = true },
+                    )
+                    Spacer(Modifier.width(6.dp))
+                    DickActionButton(
+                        label = I18n.t("apiWizardBtn", "🧭 重新打开配置向导"),
+                        variant = DickButtonVariant.Plain, fontSize = 12.sp,
+                        onClick = { vm.showApiSetup.value = true },
+                    )
+                }
                 Spacer(Modifier.height(6.dp))
                 DickLabeledField(value = regexInput, onValueChange = { regexInput = it },
                     label = I18n.t("st_regex", "正则规则（每行 id|名称|正则|替换|作用域；ai/user/both）"),

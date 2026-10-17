@@ -1,0 +1,23 @@
+<!-- 📖 API 教程面板 + 🧭 首启配置向导（这一屏的 DOM；行为在 web/js/screens/api_guide.js）
+     内容全部由 api_guide.js 用 lang/strings.json 的键渲染，所以这里只有壳。
+     挂载点见 index.html 里那行 screen:api_guide 注释（由 web/js/router.js 同步注入）。
+     注意：HTML 注释不能嵌套，所以这里不写字面的挂载点标记。 -->
+<div class="modal" id="apiGuideModal">
+  <div class="modal-box ag-box">
+    <h3 data-i18n-prefix="📖 " data-i18n="apiGuideTitle" id="apiGuideHead">📖 API 教程</h3>
+    <div class="ag-body" id="apiGuideBody"></div>
+    <div class="row">
+      <button class="btn2 ghost" id="apiGuideClose" data-i18n="btn_cancel">关闭</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="apiWizModal">
+  <div class="modal-box aw-box">
+    <h3 data-i18n-prefix="🧭 " data-i18n="apiWizTitle" id="apiWizHead">🧭 三步配置 API</h3>
+    <div class="aw-steps" id="apiWizSteps"></div>
+    <div class="aw-body" id="apiWizBody"></div>
+    <div class="aw-foot" id="apiWizFoot"></div>
+  </div>
+</div>
+<!-- <seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌

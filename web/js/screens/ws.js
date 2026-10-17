@@ -163,7 +163,7 @@ window.WsScreen = (function (global) {
           (p.description ? '<div class="ws-card-desc">' + escapeHtml(String(p.description).slice(0, 80)) + '</div>' : '') +
           '<div class="ws-card-btns">' +
           (installed
-            ? '<span style="font-size:11px;color:#4ade80;padding:3px 4px">✅ 已安装</span>'
+            ? '<span style="font-size:11px;color:var(--ok);padding:3px 4px">✅ 已安装</span>'
             : '<button class="btn2" data-pid="' + p.id + '">⬇️ 安装</button>') +
           '</div>';
         var btn = card.querySelector('[data-pid]');
@@ -173,7 +173,7 @@ window.WsScreen = (function (global) {
             btn.textContent = '⏳ 安装中...';
             jobWait('workshop.install_plugin', [p.id]).then(function (rr) {
               if (rr && rr.ok) {
-                btn.outerHTML = '<span style="font-size:11px;color:#4ade80;padding:3px 4px">✅ 已安装 ' + escapeHtml(rr.name || '') + '</span>';
+                btn.outerHTML = '<span style="font-size:11px;color:var(--ok);padding:3px 4px">✅ 已安装 ' + escapeHtml(rr.name || '') + '</span>';
                 wsSetPluginStatus('✅ 安装成功：' + (rr.name || ''));
               } else {
                 btn.disabled = false;

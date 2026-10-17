@@ -121,6 +121,19 @@ def load_tokens():
         return json.load(f)
 
 
+def min_text_ratio(data):
+    """当前仓库里"文字色 / 其背景"的最低比值（给报告用：最差对比度提到多少）。"""
+    worst = None
+    n = 0
+    for p in text_pairs(data):
+        if p["ratio"] is None:
+            continue
+        n += 1
+        if worst is None or p["ratio"] < worst[0]:
+            worst = (p["ratio"], p["rel"], p["line"], p["theme"], p["value"])
+    return worst, n
+
+
 # ============================================================
 #  漂移扫描
 # ============================================================
@@ -207,6 +220,404 @@ def scan_drift(data):
 
 
 # ============================================================
+#  ③ 文字色 vs 其背景（2026-11 去浅色字新增）
+# ============================================================
+# 为什么要有这一段
+# ----------------
+# 前两段查的是"令牌本身达不达标"和"哪些颜色没走令牌"。它们都看不见真正的病灶：
+# 一屏里 `color:#8a93a3` 压在 `--panel` 上、`color:#fff` 压在 `--accent` 上 ——
+# 令牌表全绿，用户还是说"颜色看起来费劲"。这一段直接拿**声明出来的文字色**与
+# **它自己的背景**算比值，要求正文类一律 ≥4.5（WCAG 2.1 AA，本项目不给自己放水）。
+#
+# 判定口径（刻意保守，宁少误报也不放过真问题）：
+#   1) 同一条规则/同一行内 style 里既有文字色又有背景 → 就按这一对判（最准）。
+#   2) 只有文字色、背景无从得知 → 分别对 bg / surface / surface_2 三块底色算，
+#      **取最有利的那个**：三块全不达标才算 FAIL。理由是"这块文字到底压在谁身上"
+#      静态看不出来，取最有利值只会漏报、不会误报；而"三块全不行"一定是真的看不清。
+#   3) 白名单（真正的功能态，不是正文）：`:disabled`/`disabled`（禁用态）、
+#      `::placeholder`（占位符，WCAG 不把它算正文，但也要求 ≥3:1 → 单独按 3.0 判）、
+#      以及非文字属性（border/box-shadow/outline/text-shadow 根本不在文字属性表里）。
+#   4) 颜色取自 `design/tokens.json`（暗/浅两套），网页端 `var(--x)` 与安卓端
+#      `theme.x` 都能解析；解析不出来的（`color-mix()`、渐变）跳过并计数，不猜。
+
+TEXT_PROPS = ("color", "-webkit-text-fill-color")
+# 网页上允许直接判定的"已知暗底次要灰"：这些值在暗底上次要文字勉强能看、在浅底上直接糊掉。
+DIM_HEX = {
+    "#555", "#666", "#777", "#888", "#999", "#aaa", "#bbb",
+    "#8a93a3", "#7aa2b8", "#9aa1ab", "#7b828b", "#6b7078", "#a7adb6", "#8f93b0", "#9aa9aa",
+}
+DIM_ALPHA = 0.6            # 文字色 alpha 低于它就算"浅色字"（用户口径）
+DIM_ALPHA_KT = 0.6         # 安卓口径按 "copy(alpha = 0.[0-6])" 抓，含 0.6 本身（≤0.6 都算）
+PLACEHOLDER_MIN = 3.0      # 占位符放宽到 3:1，但不能再低
+TEXT_MIN = 4.5             # 正文类硬门槛
+
+_RE_COMMENT = re.compile(r"/\*.*?\*/", re.S)
+_RE_RULE = re.compile(r"([^{}]+)\{([^{}]*)\}")
+_RE_TEXT = re.compile(r"(?:^|[;{\s])(color|-webkit-text-fill-color)\s*:\s*([^;}\"']*)", re.I)
+_RE_BG = re.compile(r"(?:^|[;{\s])(background(?:-color)?)\s*:\s*([^;}\"']*)", re.I)
+_RE_RGBA = re.compile(r"rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*(?:,\s*([\d.]+)\s*)?\)")
+_RE_VAR = re.compile(r"var\(\s*--([\w-]+)\s*(?:,([^)]*))?\)")
+_RE_MIX = re.compile(r"color-mix\(\s*in\s+srgb\s*,\s*([^,]+?)\s+([\d.]+)%\s*,\s*([^)]+?)\s*\)")
+ALIAS = {"panel": "surface", "bubble": "surface_2", "sub": "text_sub",
+         "line": "border", "user": "ok"}
+
+
+def _blank(m):
+    """把注释替换成等长空白（保留换行），这样行号不会漂。"""
+    return re.sub(r"[^\n]", " ", m.group(0))
+
+
+def strip_comments(text, js=False):
+    text = _RE_COMMENT.sub(_blank, text)
+    if js:
+        text = re.sub(r"(?m)//[^\n]*", lambda m: " " * len(m.group(0)), text)
+    return text
+
+
+def role_value(role, pal):
+    """--text-sub / text_sub / textSub → 调色板里的颜色。"""
+    key = ALIAS.get(role, role).replace("-", "_")
+    key = re.sub(r"(?<!^)(?=[A-Z])", "_", key).lower()
+    return pal.get(key)
+
+
+def parse_color(value, pal):
+    """把一条 CSS 颜色值解析成 #rrggbb（可含 alpha 合成）。返回 (hex|None, alpha)。
+
+    value 可以是 #hex / rgb() / rgba() / var(--role) / var(--role, #fallback) / color-mix()。
+    """
+    v = (value or "").strip()
+    if not v:
+        return None, 1.0
+    m = _RE_MIX.search(v)
+    if m:
+        a, pct, b = m.group(1).strip(), float(m.group(2)) / 100.0, m.group(3).strip()
+        ca, _ = parse_color(a, pal)
+        cb, _ = parse_color(b, pal)
+        if ca and cb:
+            return blend_hex(ca, cb, pct), 1.0
+        return None, 1.0
+    m = _RE_VAR.search(v)
+    if m:
+        hit = role_value(m.group(1), pal)
+        if hit:
+            return hit, 1.0
+        if m.group(2):
+            return parse_color(m.group(2), pal)
+        return None, 1.0
+    m = _RE_RGBA.search(v)
+    if m:
+        a = float(m.group(4)) if m.group(4) else 1.0
+        return "#%02x%02x%02x" % (int(m.group(1)), int(m.group(2)), int(m.group(3))), a
+    m = HEX6.search(v) or re.search(r"#[0-9a-fA-F]{3}\b", v)
+    if m:
+        h = m.group(0)
+        return ("#" + "".join(ch * 2 for ch in h[1:]) if len(h) == 4 else h), 1.0
+    return None, 1.0
+
+
+def blend_hex(fg, bg, alpha):
+    r, g, b = hex_to_rgb(fg)
+    br, bgc, bb = hex_to_rgb(bg)
+    return "#%02x%02x%02x" % (round(r * alpha + br * (1 - alpha)),
+                              round(g * alpha + bgc * (1 - alpha)),
+                              round(b * alpha + bb * (1 - alpha)))
+
+
+def _is_placeholder(sel):
+    return "placeholder" in (sel or "").lower()
+
+
+def _is_disabled(sel, line):
+    s = ((sel or "") + " " + (line or "")).lower()
+    return "disabled" in s
+
+
+def text_scan_files():
+    """网页端文字色扫描范围：web 下**全部** .css/.html/.js。
+
+    注意不能复用 scan_files()：那份清单里 .html 是非递归的（只扫 web/*.html），
+    而文字色主要长在 web/screens/*.html 和 web/js/**/*.js 里 —— 用它扫等于漏掉八成。
+    """
+    out = []
+    web = os.path.join(ROOT, "web")
+    for base, dirs, files in os.walk(web):
+        dirs[:] = [d for d in dirs if d not in ("vendor", "live2d", "node_modules")]
+        for fn in sorted(files):
+            if not fn.endswith((".css", ".html", ".js")) or fn in SKIP_BASENAMES:
+                continue
+            out.append(os.path.join(base, fn))
+    return sorted(out)
+
+
+def web_text_units():
+    """产出网页端每一条文字色声明：dict(rel, line, sel, prop, value, bg, whitelist)。"""
+    out = []
+    for path in text_scan_files():
+        fn = os.path.basename(path)
+        rel = os.path.relpath(path, ROOT).replace(os.sep, "/")
+        try:
+            raw = io.open(path, encoding="utf-8", errors="replace").read()
+        except OSError:
+            continue
+        js = fn.endswith(".js")
+        txt = strip_comments(raw, js=js)
+        raw_lines = raw.split("\n")
+        if fn.endswith(".css"):
+            for m in _RE_RULE.finditer(txt):
+                sel = m.group(1).strip().replace("\n", " ")
+                body = m.group(2)
+                line = txt.count("\n", 0, m.start()) + 1
+                bgs = [b.group(2).strip() for b in _RE_BG.finditer(body)]
+                for d in _RE_TEXT.finditer(body):
+                    out.append(dict(rel=rel, line=line, sel=sel[:120], prop=d.group(1),
+                                    value=d.group(2).strip(), bg=bgs[0] if bgs else None,
+                                    whitelist=("::placeholder" if _is_placeholder(sel) else
+                                               "disabled" if _is_disabled(sel, "") else None)))
+        else:
+            # HTML 行内 style / JS 里的 cssText 字符串：一行一条，按行判最稳
+            for i, line in enumerate(txt.split("\n"), 1):
+                for d in _RE_TEXT.finditer(";" + line):
+                    body = ";" + line
+                    bgs = [b.group(2).strip() for b in _RE_BG.finditer(body)]
+                    reason = None
+                    if _is_placeholder(line):
+                        reason = "::placeholder"
+                    elif _is_disabled("", line):
+                        reason = "disabled"
+                    elif "console." in line:
+                        reason = "console"
+                    elif "aria-hidden" in line or any(
+                            u"水印" in raw_lines[k] for k in range(max(0, i - 9), i)):
+                        reason = "watermark"
+                    out.append(dict(rel=rel, line=i, sel=("<inline>" if not js else "<js>"),
+                                    prop=d.group(1), value=d.group(2).strip(),
+                                    bg=bgs[0] if bgs else None, whitelist=reason))
+    return out
+
+
+_RE_KT_COPY = re.compile(r"copy\(\s*alpha\s*=\s*(0?\.\d+)f\s*\)")
+_RE_KT_THEME = re.compile(r"\btheme\.([A-Za-z0-9_]+)")
+_RE_KT_COLOR = re.compile(r"(?:color|tint)\s*=\s*(.+?)\s*(?:,|$)", re.I)
+_RE_KT_LITERAL = re.compile(r"Color\(\s*0x([0-9a-fA-F]{8})\s*\)")
+_RE_KT_RGB = re.compile(r"Color\.rgb\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\)")
+
+
+def android_text_units():
+    """产出安卓端每一条文字色声明（严格只看 `color =` / `tint =` 语境）。
+
+    刻意不收 `Color.rgb(…)`：那是 Canvas 上画生成头像的 TextPaint 颜色，
+    背景是被画出来的渐变，静态推不出来 —— 收进来只会制造误报。
+    """
+    out = []
+    d = os.path.join(ROOT, "DICK-Android", "app", "src", "main", "java", "com", "dick")
+    if not os.path.isdir(d):
+        return out
+    ctx = re.compile(r"(?:^|[^A-Za-z])(?:color|tint)\s*=", re.I)
+    skip_files = {"Theme.kt", "Tokens.kt", "IconNames.kt"}
+    for path in scan_files():
+        if not path.endswith(".kt") or not path.startswith(d):
+            continue
+        if os.path.basename(path) in skip_files:
+            continue
+        rel = os.path.relpath(path, ROOT).replace(os.sep, "/")
+        try:
+            raw = io.open(path, encoding="utf-8", errors="replace").read()
+        except OSError:
+            continue
+        txt = strip_comments(raw, js=True)
+        for i, line in enumerate(txt.split("\n"), 1):
+            if not ctx.search(line):
+                continue
+            reason = "disabled" if "disabled" in line.lower() else None
+            m = _RE_KT_COPY.search(line)
+            if m:
+                out.append(dict(rel=rel, line=i, sel="<kt>", prop="copy(alpha)",
+                                value=float(m.group(1)), bg=None, whitelist=reason,
+                                literal=None, alpha=float(m.group(1))))
+                continue
+            for lit in _RE_KT_LITERAL.finditer(line):
+                argb = lit.group(1)
+                out.append(dict(rel=rel, line=i, sel="<kt>", prop="Color(0x)",
+                                value="#" + argb[2:].lower(), bg=None, whitelist=reason,
+                                literal="#" + argb[2:].lower(), alpha=int(argb[:2], 16) / 255.0))
+    return out
+
+
+def _kt_role_expr(line, pal):
+    """从一行 Kotlin 里认出 theme.textSub / DickTokens.dark.text 这类表达式 → 颜色。"""
+    for m in _RE_KT_THEME.finditer(line):
+        hit = role_value(m.group(1), pal)
+        if hit:
+            return hit
+    return None
+
+
+def dim_reason(value, pal=None):
+    """一条 CSS 文字色值是不是"浅色字"？是则返回原因串，否则 None（纯函数，测试可自检）。
+
+    判据（与用户口径一致）：
+      · `rgba(…, a)` 且 a < 0.6        → 半透明浅色字
+      · 已知暗底次要灰（DIM_HEX）       → 硬编码灰度，浅底上直接糊掉
+      · 值里已经用了**存在的**颜色令牌  → 不算（令牌自己由矩阵那段按 4.5 卡）
+    """
+    v = value or ""
+    m = _RE_VAR.search(v)
+    if m and role_value(m.group(1), pal or _default_pal()):
+        return None
+    for mm in _RE_RGBA.finditer(v):
+        if mm.group(4) and float(mm.group(4)) < DIM_ALPHA:
+            return u"rgba alpha=%s < %s" % (mm.group(4), DIM_ALPHA)
+    for h in re.findall(r"#[0-9a-fA-F]{3,8}\b", v):
+        hh = ("#" + "".join(c * 2 for c in h[1:]) if len(h) == 4 else h.lower())
+        if hh in DIM_HEX or h.lower() in DIM_HEX:
+            return u"已知暗灰 %s" % h
+    return None
+
+
+def check_no_dim_text(data):
+    """① 浅色字声明零容忍：alpha<0.6 的 rgba / 已知暗灰 hex / 安卓 copy(alpha=0.x)。
+
+    返回 (violations, whitelist)。violations 里每条是 (rel, line, 说明)。
+    """
+    pals = palettes_of(data)
+    viol, white = [], []
+    for u in web_text_units():
+        dim = dim_reason(u["value"], pals["dark"])
+        if not dim:
+            continue
+        if u["whitelist"]:
+            white.append((u["rel"], u["line"], dim, u["whitelist"]))
+        else:
+            viol.append((u["rel"], u["line"], u"color:%s（%s）" % (u["value"], dim)))
+    # 网页端已改干净后，安卓端单独判：copy(alpha = 0.[0-6]) 出现在 color=/tint= 语境
+    for u in android_text_units():
+        if u["prop"] != "copy(alpha)":
+            continue
+        if u["alpha"] > DIM_ALPHA_KT + 1e-9:
+            continue
+        if u["whitelist"]:
+            white.append((u["rel"], u["line"], u"alpha=%s" % u["alpha"], u["whitelist"]))
+        else:
+            viol.append((u["rel"], u["line"], u"copy(alpha = %sf)：文字色被压到 %d%%"
+                         % (u["alpha"], round(u["alpha"] * 100))))
+    return viol, white
+
+
+def text_pairs(data):
+    """把每条文字色与它自己的背景配对并算比值。
+
+    产出 dict(ratio, need, rel, line, theme, value, bg_desc)。
+    `check_text_contrast()` 与 `min_text_ratio()` 都走这里，避免两套算法给出两套结论。
+    """
+    pals = palettes_of(data)
+    out = []
+    canvas = ("bg", "surface", "surface_2")
+    for theme in ("dark", "light"):
+        pal = pals[theme]
+        for u in web_text_units():
+            need = TEXT_MIN
+            if u["whitelist"] == "::placeholder":
+                need = PLACEHOLDER_MIN
+            elif u["whitelist"] in ("disabled", "console", "watermark"):
+                continue
+            if theme == "light" and not _theme_aware(u["rel"]):
+                continue
+            fg, a = parse_color(u["value"], pal)
+            if not fg:
+                out.append(dict(ratio=None, need=need, rel=u["rel"], line=u["line"],
+                                theme=theme, value=u["value"], bg_desc=u"解析不出颜色"))
+                continue
+            best = None
+            if u["bg"]:
+                bg, ba = parse_color(u["bg"], pal)
+                if bg:
+                    if ba >= 0.999:
+                        best = (contrast(blend_hex(fg, bg, a), bg), bg)
+                    else:
+                        for role in canvas:
+                            comp = blend_hex(bg, pal[role], ba)
+                            r = contrast(blend_hex(fg, comp, a), comp)
+                            if best is None or r > best[0]:
+                                best = (r, u"把 %s 压在 --%s 上" % (u["bg"], role))
+            if best is None:
+                for role in canvas:
+                    base = pal[role]
+                    r = contrast(blend_hex(fg, base, a), base)
+                    if best is None or r > best[0]:
+                        best = (r, u"最有利底 --%s" % role)
+            out.append(dict(ratio=best[0], need=need, rel=u["rel"], line=u["line"],
+                            theme=theme, value=u["value"], bg_desc=best[1]))
+        for u in android_text_units():
+            if u["prop"] == "copy(alpha)" or u["whitelist"]:
+                continue
+            fg, a = u["literal"], u["alpha"]
+            if not fg or a < 0.999:
+                continue          # 带 alpha 的字面色交给 ① 判
+            best = None
+            for role in canvas:
+                base = pal[role]
+                r = contrast(fg, base)
+                if best is None or r > best[0]:
+                    best = (r, u"最有利底 --%s" % role)
+            out.append(dict(ratio=best[0], need=TEXT_MIN, rel=u["rel"], line=u["line"],
+                            theme=theme, value=u["value"], bg_desc=best[1]))
+    return out
+
+
+def check_text_contrast(data, top=12):
+    """② 所有文字色 vs 其背景 ≥4.5（占位符 ≥3.0）。返回 (fails, checked, skipped)。"""
+    fails, skipped = [], 0
+    for p in text_pairs(data):
+        if p["ratio"] is None:
+            skipped += 1
+            continue
+        if p["ratio"] < p["need"]:
+            fails.append((p["rel"], p["line"], p["theme"], p["value"],
+                          p["bg_desc"], p["ratio"], p["need"]))
+    return fails, len(text_pairs(data)) - skipped, skipped
+
+
+_PAL_CACHE = {}
+_PAL_DEFAULT = []
+_AWARE = {}
+# 认"这页会不会跟着主题换色"：只看它有没有引用**颜色角色**的变量。
+# 别用宽泛的 `var(--` —— 动画时长也能写成 var(--d,4s)，那会让一整张固定调色板的
+# 美术页（gothic_frame）被误判成会换主题，然后按浅色底给出一堆假 FAIL。
+_RE_THEME_VAR = re.compile(
+    r"var\(\s*--(bg|surface|surface-2|border|border-strong|text|text-sub|text-dim|accent|"
+    r"accent-text|danger|warn|ok|focus-ring|panel|bubble|sub|line|user)\b")
+
+
+def _theme_aware(rel):
+    """整页没有一处颜色令牌变量的，是自带固定调色板的独立页 —— 只按暗色判。"""
+    if rel not in _AWARE:
+        try:
+            raw = io.open(os.path.join(ROOT, rel.replace("/", os.sep)),
+                          encoding="utf-8", errors="replace").read()
+        except OSError:
+            raw = ""
+        _AWARE[rel] = bool(_RE_THEME_VAR.search(raw))
+    return _AWARE[rel]
+
+
+def _default_pal():
+    """暗色调色板（`dim_reason` 的默认参照，只读一次令牌文件）。"""
+    if not _PAL_DEFAULT:
+        _PAL_DEFAULT.append(palettes_of(load_tokens())["dark"])
+    return _PAL_DEFAULT[0]
+
+
+def palettes_of(data):
+    """暗/浅两套调色板（audit 与 test 共用；不 import gen_tokens，避免循环依赖）。"""
+    key = id(data)
+    if key not in _PAL_CACHE:
+        _PAL_CACHE[key] = {"dark": dict(data["colors"]["dark"]),
+                           "light": dict(data["colors"]["light"])}
+    return _PAL_CACHE[key]
+
+
+# ============================================================
 #  main
 # ============================================================
 def main(argv):
@@ -263,10 +674,36 @@ def main(argv):
             print(u"    %-58s %d" % (rel, len(by_file[rel])))
 
     bad = n_fail + n_missing
+
+    # ---- ③ 文字色 vs 其背景 ----
+    n_dim, white = check_no_dim_text(data)
+    print(u"")
+    print(u"== 文字色 vs 其背景（去浅色字） ==")
+    print(u"  浅色字声明：FAIL %d ／ 白名单保留 %d" % (len(n_dim), len(white)))
+    for rel, line, why in n_dim[:top]:
+        print(u"    [FAIL] %s:%d  %s" % (rel, line, why))
+    if len(n_dim) > top:
+        print(u"    … 另有 %d 处" % (len(n_dim) - top))
+    if white and not quiet:
+        print(u"  -- 白名单（功能态，不算正文）--")
+        for rel, line, why, reason in white:
+            print(u"    %s:%d  %s  → %s" % (rel, line, why, reason))
+
+    t_fails, t_checked, t_skipped = check_text_contrast(data)
+    print(u"  文字色/背景配对：检查 %d 对（换两套主题各算一遍），不达标 %d 对，"
+          u"解析不了跳过 %d" % (t_checked, len(t_fails), t_skipped))
+    for rel, line, theme, val, bg, r, need in t_fails[:top]:
+        print(u"    [FAIL] %s:%d [%s] %s 压 %s = %.2f < %g"
+              % (rel, line, theme, val, bg, r, need))
+    if len(t_fails) > top:
+        print(u"    … 另有 %d 对" % (len(t_fails) - top))
+
+    bad += len(n_dim) + len(t_fails)
     if bad:
         print(u"[FAIL] 配置不达标（%d 项）—— 调 design/tokens.json 后重跑，别改阈值。" % bad)
         return 1
-    print(u"[ok] 必需组合全部达标（%d 项 FAIL ／ %d 项 WARN 仅装饰）" % (n_fail, n_warn))
+    print(u"[ok] 必需组合全部达标（%d 项 FAIL ／ %d 项 WARN 仅装饰）；"
+          u"无浅色字声明，文字色全部 ≥%g:1" % (n_fail, n_warn, TEXT_MIN))
     return 0
 
 

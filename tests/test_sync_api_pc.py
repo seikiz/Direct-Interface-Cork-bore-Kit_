@@ -50,7 +50,7 @@ app._ws_active_server = lambda: base
 
 print("== 推送（真实 HTTP） ==")
 payload = {"api_key": "sk-test", "base_url": "https://api.deepseek.com",
-           "model": "deepseek-v4-flash", "provider": "deepseek"}
+           "model": "deepseek-flash", "provider": "deepseek"}
 app._ws_push_api_sync(payload)
 import requests as _rq
 r = _rq.get(base + "/api/sync/api", timeout=3)
@@ -62,7 +62,7 @@ app.config["model"] = ""
 ok1 = app._ws_pull_api()
 check(ok1 is True, "拉取成功")
 check(app.config.get("api_key") == "sk-test", "本地应用了服务器 API Key")
-check(app.config.get("model") == "deepseek-v4-flash", "本地应用了模型")
+check(app.config.get("model") == "deepseek-flash", "本地应用了模型")
 
 print("== 空 Key 不推送 ==")
 calls = []

@@ -40,6 +40,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.dick.app.LocalDickPalette
 import com.dick.core.TimeScale
 
 /**
@@ -74,7 +75,9 @@ fun TimeScaleDial(
     // 默认跟随环境内容色，而不是写死白 —— 写死白<seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌的后果是浅色主题下白字浅底（"字不是反色"）。
     // 调用方仍可显式传主题色（面板就是传 ThemeSpec.text / muted）。
     textColor: Color = LocalContentColor.current,
-    subColor: Color = LocalContentColor.current.copy(alpha = 0.62f),
+    // 去浅色字：原来 copy(alpha = 0.62f) 把正文色压到 62% 透明，暗色主题下只剩约 3.3:1。
+    // 改用令牌 textSub（暗 #94a3b8 / 浅 #656c79，两端都 ≥4.5）。
+    subColor: Color = LocalDickPalette.current.textSub,
     onChange: (Double) -> Unit,
 ) {
     // 颜色由调用方传入（这个项目没有全局主题对象，DialogDeps.theme / accent 是约定）

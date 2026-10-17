@@ -48,7 +48,7 @@ class JpPatchPlugin(PluginBase):
         target = "日语" if direction == "jp" else "中文"
         try:
             resp = client.chat.completions.create(
-                model=getattr(self.core, "model", "deepseek-chat"),
+                model=getattr(self.core, "model", "deepseek-flash"),
                 messages=[
                     {"role": "system", "content":
                      f"你是专业日中翻译。只输出译文本身，不要任何解释、引号或前后缀。"

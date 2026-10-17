@@ -38,20 +38,20 @@
 }
 .role-card .rc-name label{ flex:1; display:flex; align-items:center; gap:8px; cursor:pointer; font-size:14px; font-weight:600; overflow:hidden; color:var(--text); }
 .role-card .rc-name .avatar{ width:32px; height:32px; border-radius:50%; object-fit:cover; flex:none; }
-.role-card .rc-name .avatar.letter{ display:flex; align-items:center; justify-content:center; color:#fff; font-weight:700; font-size:14px; }
-.role-card .rc-name .rc-unlock{ font-size:12px; color:#f87171; flex:none; }
+.role-card .rc-name .avatar.letter{ display:flex; align-items:center; justify-content:center; color:var(--text); font-weight:700; font-size:14px; }
+.role-card .rc-name .rc-unlock{ font-size:12px; color:var(--danger); flex:none; }
 .role-card .rc-actions{ display:flex; align-items:center; gap:6px; border-top:1px dashed var(--line); padding-top:8px; flex-wrap:wrap; row-gap:6px; }
 .role-card .rc-actions .iconbtn{ background:none; border:none; cursor:pointer; font-size:12px; opacity:.7; padding:4px 8px; border-radius:6px; color:var(--sub); white-space:nowrap; flex:0 0 auto; }
 .role-card .rc-actions .iconbtn:hover{ opacity:1; background:var(--line); }
-.role-card .rc-actions .act-del{ color:#f87171; margin-left:auto; }
+.role-card .rc-actions .act-del{ color:var(--danger); margin-left:auto; }
 /* 角色卡·多存档：存档点列表的规则搬到了 styles/screens/save.css（阶段3，随 save 屏一起搬）。
    它仍然排在 components.css 之前（<link> 顺序见 index.html 头部），层叠一字未动。 */
 .avatar{ width:28px; height:28px; border-radius:50%; object-fit:cover; flex:none; background:var(--line); }
-.avatar.letter{ display:flex; align-items:center; justify-content:center; color:#fff; font-weight:700; font-size:13px; }
+.avatar.letter{ display:flex; align-items:center; justify-content:center; color:var(--text); font-weight:700; font-size:13px; }
 /* GAL 制作器 · 线-点-分支 全屏编辑器 */
 .gal-line{ margin:10px 0; border:1px solid var(--line); border-radius:10px; background:var(--panel); }
 .gal-line-head{ display:flex; align-items:center; gap:8px; padding:8px 12px; cursor:pointer; border-bottom:1px dashed var(--line); }
-.gal-line-head b{ font-size:14px; color:#f5c06c; }
+.gal-line-head b{ font-size:14px; color:var(--warn); }
 .gal-line-head .gal-count{ font-size:11px; color:var(--sub); }
 /* 顶部工具条：按钮收进自己能换行的组里，避免被 flex:1 占位顶出窗口 */
 .gal-top{ display:flex; align-items:center; gap:10px 12px; padding:14px 18px; border-bottom:1px solid var(--line); flex-wrap:wrap; }
@@ -60,12 +60,12 @@
 .gal-top #galStats{ white-space:nowrap; }
 .gal-body{ display:flex; flex-wrap:wrap; gap:0; align-items:flex-start; padding:8px 10px; }
 .gal-chip{ display:inline-flex; align-items:center; gap:6px; padding:7px 10px; margin:0; border:1px solid var(--line); border-radius:8px; background:var(--bubble); color:var(--text); font-size:12px; cursor:grab; white-space:nowrap; min-width:60px; }
-.gal-chip.choice{ background:color-mix(in srgb, #f59e0b 14%, var(--bubble)); border-color:#f59e0b; color:#f5c06c; }
+.gal-chip.choice{ background:color-mix(in srgb, var(--warn) 14%, var(--bubble)); border-color:var(--warn); color:var(--warn); }
 .gal-chip .gal-k{ font-size:10px; color:var(--sub); }
-.gal-chip.drag-over{ outline:2px dashed #f59e0b; }
+.gal-chip.drag-over{ outline:2px dashed var(--warn); }
 .gal-insert{ width:22px; height:22px; flex:none; align-self:center; margin:0 2px; border-radius:50%; background:var(--bubble); color:var(--sub); border:1px dashed var(--line); cursor:pointer; font-size:12px; line-height:20px; text-align:center; }
-.gal-insert:hover{ background:color-mix(in srgb, #f59e0b 20%, var(--bubble)); color:#f5c06c; }
-.gal-fork{ font-size:10px; color:#f59e0b; margin:0 4px; white-space:nowrap; align-self:center; }
+.gal-insert:hover{ background:color-mix(in srgb, var(--warn) 20%, var(--bubble)); color:var(--warn); }
+.gal-fork{ font-size:10px; color:var(--warn); margin:0 4px; white-space:nowrap; align-self:center; }
 .gal-editor{ background:var(--bubble); border:1px solid var(--line); border-radius:10px; padding:10px 12px; margin:6px 0; }
 .gal-editor .row{ margin:4px 0; }
 .gal-editor input,.gal-editor select,.gal-editor textarea{ background:var(--panel); border:1px solid var(--line); border-radius:6px; color:var(--text); padding:5px 8px; font-size:12px; }
@@ -73,7 +73,7 @@
 .btn{ display:block; width:calc(100% - 24px); margin:5px 12px; padding:7px 10px; border-radius:8px;
   border:1px solid var(--line); background:var(--bubble); color:var(--text); cursor:pointer; font-size:13px; text-align:left; }
 .btn:hover{ border-color:var(--accent); }
-.btn.danger{ color:#f87171; }
+.btn.danger{ color:var(--danger); }
 
 /* ---------- 主区 ---------- */
 #main{ flex:1; display:flex; flex-direction:column; min-width:0; }
@@ -85,7 +85,7 @@
 .msg{ display:flex; gap:8px; margin:6px 0; animation:pop .18s ease-out; }
 .msg.user{ flex-direction:row-reverse; }
 .msg .av{ width:34px; height:34px; border-radius:50%; object-fit:cover; flex:none; background:var(--line); }
-.msg .av.letter{ display:flex; align-items:center; justify-content:center; color:#fff; font-weight:700; }
+.msg .av.letter{ display:flex; align-items:center; justify-content:center; color:var(--text); font-weight:700; }
 .msg .body{ max-width:72%; display:flex; flex-direction:column; }
 .msg.user .body{ align-items:flex-end; }
 .msg .who{ font-size:11px; color:var(--sub); margin:0 2px 2px; }
@@ -95,7 +95,7 @@
   line-height:1.55; white-space:pre-wrap; word-break:break-word; }
 .msg .img{ max-width:260px; max-height:180px; border-radius:10px; margin-bottom:6px; display:block; }
 .msg.sys .body{ max-width:90%; }
-.msg.sys .bubble{ background:#333840; color:#c9cdd4; font-size:12px; border-radius:10px; }
+.msg.sys .bubble{ background:var(--surface-2); color:var(--text-sub); border:1px solid var(--line); font-size:12px; border-radius:10px; }
 .cursor{ animation:blink .5s steps(1) infinite; }
 @keyframes blink{ 50%{ opacity:0; } }
 @keyframes pop{ from{ transform:scale(.97); opacity:0; } to{ transform:scale(1); opacity:1; } }
@@ -106,7 +106,7 @@
 #input{ flex:1; resize:none; background:var(--bubble); border:1px solid var(--line); border-radius:10px;
   color:var(--text); padding:9px 12px; font-size:14px; font-family:inherit; max-height:120px; }
 #input:focus{ outline:none; border-color:var(--accent); }
-#send{ background:var(--accent); color:#0b1220; border:none; border-radius:10px; padding:9px 18px;
+#send{ background:var(--accent); color:var(--accent-text); border:none; border-radius:10px; padding:9px 18px;
   font-size:14px; font-weight:600; cursor:pointer; }
 #send:disabled{ opacity:.5; cursor:default; }
 #quickpanel{ display:none; padding:6px 14px; border-top:1px solid var(--line); background:var(--panel);
@@ -130,7 +130,7 @@
 #choices .choice-btn{ background:var(--bubble); border:1px solid var(--accent); color:var(--text);
   border-radius:14px; padding:6px 12px; font-size:13px; cursor:pointer;
   transition:background .15s, transform .1s; max-width:320px; text-align:left; }
-#choices .choice-btn:hover{ background:var(--accent); color:#fff; border-color:var(--accent); transform:translateY(-1px); }
+#choices .choice-btn:hover{ background:var(--accent); color:var(--accent-text); border-color:var(--accent); transform:translateY(-1px); }
 #choices .choice-btn.ghost{ border-color:var(--line); background:transparent; color:var(--sub); padding:6px 10px; }
 #choices .choice-btn.ghost:hover{ background:var(--bubble); color:var(--text); }
 #choices .choice-btn:disabled{ opacity:.5; cursor:default; transform:none; }
@@ -143,7 +143,7 @@
 #mechbar .mb-bar.fight i{ background:#f87171; }
 #mechbar .mb-bar.mp i{ background:#60a5fa; }
 #mechbar .mb-moves{ display:inline-flex; gap:6px; align-items:center; }
-#mechbar .mb-item.buff{ color:#a78bfa; }
+#mechbar .mb-item.buff{ color:var(--accent); }
 .mech-fold{ margin-top:8px; }
 .mech-fold .fold-head{ cursor:pointer; display:flex; justify-content:space-between; align-items:center; font-size:12px; font-weight:600; color:var(--text); padding:4px 0; border-bottom:1px dashed var(--line); user-select:none; }
 .mech-fold .fold-arrow{ transition:transform .15s; color:var(--sub); }
@@ -152,5 +152,5 @@
 .mech-fold .fold-body{ padding-top:2px; }
 #battlebar{ display:none; flex-wrap:wrap; gap:6px; align-items:center; padding:4px 14px; border-bottom:1px solid var(--line); }
 #battlebar .battle-btn{ background:var(--bubble); border:1px solid var(--accent); color:var(--text); border-radius:12px; padding:3px 10px; font-size:12px; cursor:pointer; }
-#battlebar .battle-btn:hover{ background:var(--accent); color:#fff; }
+#battlebar .battle-btn:hover{ background:var(--accent); color:var(--accent-text); }
 #battlebar .mb-item{ font-size:11px; color:var(--sub); }

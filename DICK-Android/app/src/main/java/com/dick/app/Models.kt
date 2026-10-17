@@ -64,7 +64,10 @@ fun expandMacros(text: String, player: String, char: String, world: String): Str
 
 val PROVIDERS = listOf(
     ProviderSpec("deepseek", "DeepSeek 官方", false, "https://api.deepseek.com",
-        listOf("deepseek-v4-flash", "deepseek-v4-pro", "deepseek-chat", "deepseek-reasoner"), "https://platform.deepseek.com/"),
+        // 2026-11 模型名对齐官方更新日志：主力是 deepseek-flash（默认）；
+        // deepseek-v4-pro 是可选的高思考档（按量更贵，别当默认）；
+        // deepseek-chat / deepseek-reasoner 已于 2026-07-24 停用，别再列出来误导用户。
+        listOf("deepseek-flash", "deepseek-v4-pro"), "https://platform.deepseek.com/"),
     ProviderSpec("ovh", "OVH 免费链", true, "https://oai.endpoints.kepler.ai.cloud.ovh.net/v1",
         listOf("Qwen3.5-397B-A17B", "Qwen3.6-27B", "Qwen2.5-VL-72B-Instruct",
             "Mistral-Small-3.2-24B-Instruct-2506", "Llama-3.3-70B-Instruct",

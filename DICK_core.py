@@ -497,7 +497,7 @@ class ChatCore:
 
     def __init__(self):
         self.client = None
-        self.model = "deepseek-v4-flash"
+        self.model = "deepseek-flash"
         self.base_url = "https://api.deepseek.com"
         self.api_key = None
         self.proxy = None  # LLM 通道代理（http/https/socks5；None=直连）

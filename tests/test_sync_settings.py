@@ -30,7 +30,7 @@ os.makedirs(net.SAVES_DIR, exist_ok=True)
 client = net.app.test_client()
 
 print("== /api/sync/api 存/取 ==")
-api = {"api_key": "sk-test", "base_url": "https://api.deepseek.com", "model": "deepseek-v4-flash"}
+api = {"api_key": "sk-test", "base_url": "https://api.deepseek.com", "model": "deepseek-flash"}
 r = client.post("/api/sync/api", json=api)
 check(r.status_code == 200 and r.get_json().get("ok") is True, "保存 API 配置")
 r2 = client.get("/api/sync/api")

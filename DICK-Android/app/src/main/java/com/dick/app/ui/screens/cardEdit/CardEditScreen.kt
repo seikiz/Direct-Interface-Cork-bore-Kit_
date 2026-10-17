@@ -651,7 +651,7 @@ fun CardEditScreen(vm: ChatViewModel, deps: DialogDeps) {
     if (rCardFacePrev) {
         AlertDialog(
             onDismissRequest = { rCardFacePrev = false },
-            text = { HtmlCard(rCardFace.ifBlank { "<div style='color:#888;padding:20px'>（空卡面，保存后生效）</div>" }, Modifier.fillMaxWidth().height(400.dp)) },
+            text = { HtmlCard(rCardFace.ifBlank { "<div style='color:#666;padding:20px'>（空卡面，保存后生效）</div>" }, Modifier.fillMaxWidth().height(400.dp)) },
             confirmButton = {},
             dismissButton = { TextButton(onClick = { rCardFacePrev = false }) { Text(I18n.t("btn_cancel", "关闭")) } },
         )

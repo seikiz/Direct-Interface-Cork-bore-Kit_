@@ -17,7 +17,7 @@
   background:var(--line); }
 .wentry .we-dot.on{ background:#4ade80; }
 .wentry .we-dot.const{ background:#60a5fa; }
-.wentry .we-del{ background:none; border:none; color:#f87171; cursor:pointer; font-size:14px; }
+.wentry .we-del{ background:none; border:none; color:var(--danger); cursor:pointer; font-size:14px; }
 .wentry .we-chk{ display:inline-flex; align-items:center; gap:4px; font-size:11px; color:var(--sub); }
 .wentry .we-chk input{ width:auto; }
 .wentry textarea{ width:100%; background:var(--bubble); border:1px solid var(--line); border-radius:8px;

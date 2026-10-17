@@ -44,7 +44,7 @@ button .ic{ margin-right:2px; }
 .modal-box input,.modal-box textarea,.modal-box select{ width:100%; background:var(--bubble);
   border:1px solid var(--line); border-radius:8px; color:var(--text); padding:8px 10px; font-size:13px; font-family:inherit; }
 .modal-box .row{ display:flex; gap:8px; margin-top:14px; justify-content:flex-end; }
-.modal-box .btn2{ background:var(--accent); color:#0b1220; border:none; border-radius:8px; padding:7px 16px; cursor:pointer; }
+.modal-box .btn2{ background:var(--accent); color:var(--accent-text); border:none; border-radius:8px; padding:7px 16px; cursor:pointer; }
 .modal-box .btn2.ghost{ background:var(--bubble); color:var(--text); border:1px solid var(--line); }
 
 /* ---------- 消息控制（编辑/滑条/重生成） ---------- */

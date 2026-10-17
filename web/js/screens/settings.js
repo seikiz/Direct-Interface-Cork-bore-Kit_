@@ -153,6 +153,12 @@ window.SettingsScreen = (function (global) {
     }
     mounted = true;
     bindTools();
+    // 2026-11：API 教程 / 首启向导两个入口。放在 Key 输入框旁边 —— 用户"填不动"的那一刻就在这。
+    // 只发事件、不直接调 api_guide 屏的函数（屏与屏之间只走 DICK.bus）。
+    var g = document.getElementById('stApiGuideBtn');
+    if (g) { g.onclick = function () { DICK.bus.emit('api:guide'); }; }
+    var w = document.getElementById('stApiWizardBtn');
+    if (w) { w.onclick = function () { DICK.bus.emit('api:wizard'); }; }
   }
 
   function unmount() {
@@ -160,6 +166,10 @@ window.SettingsScreen = (function (global) {
     if (b) { b.onclick = null; }
     var f = document.getElementById('stFontBtn');
     if (f) { f.onclick = null; }
+    var g = document.getElementById('stApiGuideBtn');
+    if (g) { g.onclick = null; }
+    var w = document.getElementById('stApiWizardBtn');
+    if (w) { w.onclick = null; }
     mounted = false;
   }
 

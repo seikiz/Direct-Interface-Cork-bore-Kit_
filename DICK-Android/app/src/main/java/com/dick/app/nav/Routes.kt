@@ -22,6 +22,9 @@ object Routes {
     /** 设置（API 配置 / 主题 / 语言 / 插件开关）—— 已搬到 ui/screens/settings/ */
     const val SETTINGS = "settings"
 
+    /** 📖 API 教程面板 —— 已搬到 ui/screens/api/（2026-11） */
+    const val API_GUIDE = "apiGuide"
+
     /** 时间流速表盘（独立面板，不塞在设置里） */
     const val TIME_DIAL = "timeDial"
 
@@ -83,6 +86,7 @@ fun OverlayHost(
 ) {
     // 顺序 = 叠放顺序（后调的盖在前面的上面<seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌）。与搬家前的调用顺序逐行对应，别重排。
     SettingsDialog(vm, deps)              // Routes.SETTINGS      → ui/screens/settings/
+    ApiGuideDialog(vm)                    // Routes.API_GUIDE     → ui/screens/api/（只读，只吃 vm）
     TimeScalePanel(vm, deps)              // Routes.TIME_DIAL     · 自托管，读 vm.showTimeDial
     LifeSpaceSettingsPanel(vm, deps)      // Routes.LIFE_SPACE    · 自托管，读 vm.showLifeSpace
     TrpgDialog(vm, deps)                  // Routes.TRPG

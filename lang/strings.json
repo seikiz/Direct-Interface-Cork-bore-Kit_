@@ -91,7 +91,8 @@
       "en": "Cancel",
       "ja": "キャンセル",
       "used_by": [
-        "android"
+        "android",
+        "desktop_web"
       ]
     },
     "btn_delete": {
@@ -1301,7 +1302,8 @@
       "en": "Model",
       "ja": "モデル",
       "used_by": [
-        "android"
+        "android",
+        "desktop_web"
       ]
     },
     "st_custom_model": {
@@ -1341,7 +1343,8 @@
       "en": "Base URL",
       "ja": "Base URL",
       "used_by": [
-        "android"
+        "android",
+        "desktop_web"
       ]
     },
     "st_base_hint": {
@@ -1717,6 +1720,708 @@
       "en": "Earnings report mode",
       "ja": "決算モード",
       "used_by": [
+        "android"
+      ]
+    },
+    "apiGuideTitle": {
+      "zh": "API 教程",
+      "en": "API guide",
+      "ja": "API ガイド",
+      "used_by": [
+        "desktop_web",
+        "android"
+      ]
+    },
+    "apiGuideBtn": {
+      "zh": "📖 API 教程",
+      "en": "📖 API guide",
+      "ja": "📖 API ガイド",
+      "used_by": [
+        "desktop_web",
+        "android"
+      ]
+    },
+    "apiWizardBtn": {
+      "zh": "🧭 重新打开配置向导",
+      "en": "🧭 Reopen the setup wizard",
+      "ja": "🧭 セットアップを開き直す",
+      "used_by": [
+        "desktop_web",
+        "android"
+      ]
+    },
+    "apiWizTitle": {
+      "zh": "三步配置 API",
+      "en": "Set up the API in 3 steps",
+      "ja": "API を3ステップで設定",
+      "used_by": [
+        "desktop_web",
+        "android"
+      ]
+    },
+    "apiWizStep1": {
+      "zh": "① 选服务商",
+      "en": "① Pick a provider",
+      "ja": "① プロバイダーを選ぶ",
+      "used_by": [
+        "desktop_web",
+        "android"
+      ]
+    },
+    "apiWizStep2": {
+      "zh": "② 填 Key",
+      "en": "② Paste the key",
+      "ja": "② キーを貼る",
+      "used_by": [
+        "desktop_web",
+        "android"
+      ]
+    },
+    "apiWizStep3": {
+      "zh": "③ 测试并保存",
+      "en": "③ Test and save",
+      "ja": "③ テストして保存",
+      "used_by": [
+        "desktop_web",
+        "android"
+      ]
+    },
+    "apiWizLater": {
+      "zh": "稍后再说（先用免费链）",
+      "en": "Later (use the free chain)",
+      "ja": "あとで（まず無料チェーン）",
+      "used_by": [
+        "desktop_web",
+        "android"
+      ]
+    },
+    "apiWizWhere": {
+      "zh": "去哪里拿 Key",
+      "en": "Where to get the key",
+      "ja": "キーの入手先",
+      "used_by": [
+        "desktop_web",
+        "android"
+      ]
+    },
+    "apiWizTesting": {
+      "zh": "正在测试…（真实请求一次 /models）",
+      "en": "Testing… (one real /models request)",
+      "ja": "テスト中…（/models に実際に1回）",
+      "used_by": [
+        "desktop_web",
+        "android"
+      ]
+    },
+    "apiWizOk": {
+      "zh": "通了，已保存",
+      "en": "Connected and saved",
+      "ja": "接続成功・保存しました",
+      "used_by": [
+        "desktop_web",
+        "android"
+      ]
+    },
+    "apiWizFail": {
+      "zh": "没通",
+      "en": "Failed",
+      "ja": "接続できません",
+      "used_by": [
+        "desktop_web",
+        "android"
+      ]
+    },
+    "apiWizNext": {
+      "zh": "下一步",
+      "en": "Next",
+      "ja": "次へ",
+      "used_by": [
+        "desktop_web",
+        "android"
+      ]
+    },
+    "apiWizPrev": {
+      "zh": "上一步",
+      "en": "Back",
+      "ja": "戻る",
+      "used_by": [
+        "desktop_web",
+        "android"
+      ]
+    },
+    "apiWizFree": {
+      "zh": "这家免 Key，直接可用",
+      "en": "This provider needs no key",
+      "ja": "このプロバイダーはキー不要です",
+      "used_by": [
+        "desktop_web",
+        "android"
+      ]
+    },
+    "guide_p1_name": {
+      "zh": "DeepSeek 官方",
+      "en": "DeepSeek official",
+      "ja": "DeepSeek 公式",
+      "used_by": [
+        "desktop_web",
+        "android"
+      ]
+    },
+    "guide_p1_url": {
+      "zh": "https://platform.deepseek.com/",
+      "en": "https://platform.deepseek.com/",
+      "ja": "https://platform.deepseek.com/",
+      "used_by": [
+        "desktop_web",
+        "android"
+      ]
+    },
+    "guide_p1_base": {
+      "zh": "https://api.deepseek.com",
+      "en": "https://api.deepseek.com",
+      "ja": "https://api.deepseek.com",
+      "used_by": [
+        "desktop_web",
+        "android"
+      ]
+    },
+    "guide_p1_model": {
+      "zh": "deepseek-flash",
+      "en": "deepseek-flash",
+      "ja": "deepseek-flash",
+      "used_by": [
+        "desktop_web",
+        "android"
+      ]
+    },
+    "guide_p1_buy": {
+      "zh": "要充值（按量计费）。新账号通常没有赠额，先充一点再试。",
+      "en": "Paid, pay-as-you-go. New accounts usually have no credit — top up a little first.",
+      "ja": "従量課金。新規アカウントは通常クレジットが無いので、少しチャージしてから試してください。",
+      "used_by": [
+        "desktop_web",
+        "android"
+      ]
+    },
+    "guide_p1_where": {
+      "zh": "控制台 → API keys → 创建，形如 sk-…",
+      "en": "Console → API keys → Create. It looks like sk-…",
+      "ja": "コンソール → API keys → 作成。sk-… の形式です。",
+      "used_by": [
+        "desktop_web",
+        "android"
+      ]
+    },
+    "guide_p2_name": {
+      "zh": "智谱 GLM",
+      "en": "Zhipu GLM",
+      "ja": "智譜 GLM",
+      "used_by": [
+        "desktop_web",
+        "android"
+      ]
+    },
+    "guide_p2_url": {
+      "zh": "https://open.bigmodel.cn/",
+      "en": "https://open.bigmodel.cn/",
+      "ja": "https://open.bigmodel.cn/",
+      "used_by": [
+        "desktop_web",
+        "android"
+      ]
+    },
+    "guide_p2_base": {
+      "zh": "https://open.bigmodel.cn/api/paas/v4",
+      "en": "https://open.bigmodel.cn/api/paas/v4",
+      "ja": "https://open.bigmodel.cn/api/paas/v4",
+      "used_by": [
+        "desktop_web",
+        "android"
+      ]
+    },
+    "guide_p2_model": {
+      "zh": "glm-4.6",
+      "en": "glm-4.6",
+      "ja": "glm-4.6",
+      "used_by": [
+        "desktop_web",
+        "android"
+      ]
+    },
+    "guide_p2_buy": {
+      "zh": "要充值（含体验额度，用完后按量计费）。",
+      "en": "Paid (a trial quota is included, then pay-as-you-go).",
+      "ja": "課金制（体験枠あり、使い切ると従量課金）。",
+      "used_by": [
+        "desktop_web",
+        "android"
+      ]
+    },
+    "guide_p2_where": {
+      "zh": "控制台 → API Keys（个人中心）→ 复制。",
+      "en": "Console → API Keys (personal center) → copy.",
+      "ja": "コンソール → API Keys（個人センター）→ コピー。",
+      "used_by": [
+        "desktop_web",
+        "android"
+      ]
+    },
+    "guide_p3_name": {
+      "zh": "硅基流动 SiliconFlow",
+      "en": "SiliconFlow",
+      "ja": "SiliconFlow（シリコンフロー）",
+      "used_by": [
+        "desktop_web",
+        "android"
+      ]
+    },
+    "guide_p3_url": {
+      "zh": "https://cloud.siliconflow.cn/",
+      "en": "https://cloud.siliconflow.cn/",
+      "ja": "https://cloud.siliconflow.cn/",
+      "used_by": [
+        "desktop_web",
+        "android"
+      ]
+    },
+    "guide_p3_base": {
+      "zh": "https://api.siliconflow.cn/v1",
+      "en": "https://api.siliconflow.cn/v1",
+      "ja": "https://api.siliconflow.cn/v1",
+      "used_by": [
+        "desktop_web",
+        "android"
+      ]
+    },
+    "guide_p3_model": {
+      "zh": "deepseek-ai/DeepSeek-V3",
+      "en": "deepseek-ai/DeepSeek-V3",
+      "ja": "deepseek-ai/DeepSeek-V3",
+      "used_by": [
+        "desktop_web",
+        "android"
+      ]
+    },
+    "guide_p3_buy": {
+      "zh": "注册送一点额度，之后要充值。",
+      "en": "Sign-up credit, then paid.",
+      "ja": "登録で少し枠が付き、その後は課金。",
+      "used_by": [
+        "desktop_web",
+        "android"
+      ]
+    },
+    "guide_p3_where": {
+      "zh": "控制台 → API 密钥 → 新建。",
+      "en": "Console → API keys → New key.",
+      "ja": "コンソール → API キー → 新規作成。",
+      "used_by": [
+        "desktop_web",
+        "android"
+      ]
+    },
+    "guide_p4_name": {
+      "zh": "OpenRouter",
+      "en": "OpenRouter",
+      "ja": "OpenRouter",
+      "used_by": [
+        "desktop_web",
+        "android"
+      ]
+    },
+    "guide_p4_url": {
+      "zh": "https://openrouter.ai/",
+      "en": "https://openrouter.ai/",
+      "ja": "https://openrouter.ai/",
+      "used_by": [
+        "desktop_web",
+        "android"
+      ]
+    },
+    "guide_p4_base": {
+      "zh": "https://openrouter.ai/api/v1",
+      "en": "https://openrouter.ai/api/v1",
+      "ja": "https://openrouter.ai/api/v1",
+      "used_by": [
+        "desktop_web",
+        "android"
+      ]
+    },
+    "guide_p4_model": {
+      "zh": "openrouter/auto",
+      "en": "openrouter/auto",
+      "ja": "openrouter/auto",
+      "used_by": [
+        "desktop_web",
+        "android"
+      ]
+    },
+    "guide_p4_buy": {
+      "zh": "部分模型免费，付费模型要充值。",
+      "en": "Some models are free; paid models need credit.",
+      "ja": "一部のモデルは無料、有料モデルはチャージが必要。",
+      "used_by": [
+        "desktop_web",
+        "android"
+      ]
+    },
+    "guide_p4_where": {
+      "zh": "右上头像 → Keys → Create Key。",
+      "en": "Avatar menu → Keys → Create Key.",
+      "ja": "右上のアバター → Keys → Create Key。",
+      "used_by": [
+        "desktop_web",
+        "android"
+      ]
+    },
+    "guide_p5_name": {
+      "zh": "Pollinations（免 Key）",
+      "en": "Pollinations (no key)",
+      "ja": "Pollinations（キー不要）",
+      "used_by": [
+        "desktop_web",
+        "android"
+      ]
+    },
+    "guide_p5_url": {
+      "zh": "https://pollinations.ai/",
+      "en": "https://pollinations.ai/",
+      "ja": "https://pollinations.ai/",
+      "used_by": [
+        "desktop_web",
+        "android"
+      ]
+    },
+    "guide_p5_base": {
+      "zh": "https://text.pollinations.ai/openai",
+      "en": "https://text.pollinations.ai/openai",
+      "ja": "https://text.pollinations.ai/openai",
+      "used_by": [
+        "desktop_web",
+        "android"
+      ]
+    },
+    "guide_p5_model": {
+      "zh": "openai",
+      "en": "openai",
+      "ja": "openai",
+      "used_by": [
+        "desktop_web",
+        "android"
+      ]
+    },
+    "guide_p5_buy": {
+      "zh": "免费，不用充值（高峰期限流）。",
+      "en": "Free, no payment (rate-limited at peak).",
+      "ja": "無料。チャージ不要（ピーク時は制限あり）。",
+      "used_by": [
+        "desktop_web",
+        "android"
+      ]
+    },
+    "guide_p5_where": {
+      "zh": "不需要 Key，留空即可。",
+      "en": "No key needed — leave it blank.",
+      "ja": "キーは不要です。空欄のままで。",
+      "used_by": [
+        "desktop_web",
+        "android"
+      ]
+    },
+    "guide_p6_name": {
+      "zh": "本地 Ollama / LM Studio",
+      "en": "Local Ollama / LM Studio",
+      "ja": "ローカル Ollama / LM Studio",
+      "used_by": [
+        "desktop_web",
+        "android"
+      ]
+    },
+    "guide_p6_url": {
+      "zh": "https://ollama.com/",
+      "en": "https://ollama.com/",
+      "ja": "https://ollama.com/",
+      "used_by": [
+        "desktop_web",
+        "android"
+      ]
+    },
+    "guide_p6_base": {
+      "zh": "http://127.0.0.1:11434/v1",
+      "en": "http://127.0.0.1:11434/v1",
+      "ja": "http://127.0.0.1:11434/v1",
+      "used_by": [
+        "desktop_web",
+        "android"
+      ]
+    },
+    "guide_p6_model": {
+      "zh": "qwen2.5:7b",
+      "en": "qwen2.5:7b",
+      "ja": "qwen2.5:7b",
+      "used_by": [
+        "desktop_web",
+        "android"
+      ]
+    },
+    "guide_p6_buy": {
+      "zh": "完全免费，只吃自己电脑的算力。",
+      "en": "Completely free — it uses your own machine.",
+      "ja": "完全無料。自分の PC の計算資源を使います。",
+      "used_by": [
+        "desktop_web",
+        "android"
+      ]
+    },
+    "guide_p6_where": {
+      "zh": "不需要 Key；先在本机启动 Ollama（或 LM Studio 开 OpenAI 兼容端口）。",
+      "en": "No key; start Ollama locally first (or enable LM Studio's OpenAI-compatible server).",
+      "ja": "キー不要。先にローカルで Ollama を起動（または LM Studio の OpenAI 互換サーバーを有効化）。",
+      "used_by": [
+        "desktop_web",
+        "android"
+      ]
+    },
+    "guideStep1": {
+      "zh": "拿 Key：按上表去对应官网注册，把 Key 复制下来。",
+      "en": "Get a key: sign up on the provider site above, then copy the key.",
+      "ja": "キーを取得：上の表のサイトで登録し、キーをコピーします。",
+      "used_by": [
+        "desktop_web",
+        "android"
+      ]
+    },
+    "guideStep2": {
+      "zh": "粘贴：设置 →「🔑 API 配置」→ 选模型商 → 把 Key 粘进输入框，Base URL 会自动填好。",
+      "en": "Paste: Settings → “🔑 API settings” → pick the provider → paste the key. The Base URL fills itself.",
+      "ja": "貼り付け：設定 →「🔑 API 設定」→ プロバイダーを選び、キーを貼り付け。Base URL は自動で入ります。",
+      "used_by": [
+        "desktop_web",
+        "android"
+      ]
+    },
+    "guideStep3": {
+      "zh": "点「测试并保存」：真实请求一次 /models，通了才写进 config.json；不通会告诉你下一步。",
+      "en": "Press “Test and save”: one real /models request. Only on success is it written to config.json; on failure you get the next step.",
+      "ja": "「テストして保存」を押す：/models に実際に1回リクエストし、成功した時だけ config.json に保存します。失敗時は次の手を示します。",
+      "used_by": [
+        "desktop_web",
+        "android"
+      ]
+    },
+    "guidePickTitle": {
+      "zh": "怎么选模型",
+      "en": "Which model to pick",
+      "ja": "モデルの選び方",
+      "used_by": [
+        "desktop_web",
+        "android"
+      ]
+    },
+    "guidePickChat": {
+      "zh": "日常聊天 / 角色扮演 → deepseek-flash（推荐，默认）",
+      "en": "Everyday chat / role-play → deepseek-flash (recommended, the default)",
+      "ja": "日常会話・ロールプレイ → deepseek-flash（推奨・既定）",
+      "used_by": [
+        "desktop_web",
+        "android"
+      ]
+    },
+    "guidePickReason": {
+      "zh": "长文推理 / 复杂代码 / Agent 任务 → deepseek-v4-pro（可选，按量更贵，别当默认；性价比一般，只在 flash 顶不住时再换）",
+      "en": "Long-form reasoning / heavy code / agent work → deepseek-v4-pro (optional, costs more per call, not the default; fair value, switch only when flash can't hold)",
+      "ja": "長文推論・複雑なコード・エージェント作業 → deepseek-v4-pro（任意。従量で割高、既定にはしない。コスパは普通なので flash で足りない時だけ）",
+      "used_by": [
+        "desktop_web",
+        "android"
+      ]
+    },
+    "guidePickFree": {
+      "zh": "完全不想花钱 → 免费链（Pollinations / 免 Key 模型）",
+      "en": "Don't want to pay at all → the free chain (Pollinations / key-free models)",
+      "ja": "お金をかけたくない → 無料チェーン（Pollinations / キー不要モデル）",
+      "used_by": [
+        "desktop_web",
+        "android"
+      ]
+    },
+    "guideErrTitle": {
+      "zh": "常见错误对照表",
+      "en": "Common errors",
+      "ja": "よくあるエラー",
+      "used_by": [
+        "desktop_web",
+        "android"
+      ]
+    },
+    "guideErr1S": {
+      "zh": "401 / invalid api key：Key 不对",
+      "en": "401 / invalid api key — the key is wrong",
+      "ja": "401 / invalid api key — キーが違います",
+      "used_by": [
+        "desktop_web",
+        "android"
+      ]
+    },
+    "guideErr1F": {
+      "zh": "回设置整条重贴一遍（前后别带空格），确认没把 Base URL 粘进 Key 框。",
+      "en": "Paste the whole key again (no leading/trailing spaces) and make sure the Base URL didn't go into the key box.",
+      "ja": "設定でキー全体を貼り直す（前後の空白なし）。Base URL をキー欄に貼っていないか確認。",
+      "used_by": [
+        "desktop_web",
+        "android"
+      ]
+    },
+    "guideErr2S": {
+      "zh": "余额不足 / insufficient balance",
+      "en": "Insufficient balance",
+      "ja": "残高不足 / insufficient balance",
+      "used_by": [
+        "desktop_web",
+        "android"
+      ]
+    },
+    "guideErr2F": {
+      "zh": "去官网充值；只想先试试就先切免费链。",
+      "en": "Top up on the provider site; to try it out first, switch to the free chain.",
+      "ja": "公式サイトでチャージ。まず試したいだけなら無料チェーンに切り替え。",
+      "used_by": [
+        "desktop_web",
+        "android"
+      ]
+    },
+    "guideErr3S": {
+      "zh": "模型名不对 / model not found",
+      "en": "Wrong model name / model not found",
+      "ja": "モデル名が違う / model not found",
+      "used_by": [
+        "desktop_web",
+        "android"
+      ]
+    },
+    "guideErr3F": {
+      "zh": "照上表「模型名示例」原样填（大小写和斜杠都要一致）；带 org/ 前缀的别漏。",
+      "en": "Copy the example model name exactly (case and slashes matter); don't drop the org/ prefix.",
+      "ja": "上の表の「モデル名の例」をそのまま入力（大文字小文字とスラッシュも一致させる）。org/ の接頭辞を落とさない。",
+      "used_by": [
+        "desktop_web",
+        "android"
+      ]
+    },
+    "guideErr4S": {
+      "zh": "超时 / 连接被重置（被墙）",
+      "en": "Timeout / connection reset (blocked)",
+      "ja": "タイムアウト / 接続リセット（遮断）",
+      "used_by": [
+        "desktop_web",
+        "android"
+      ]
+    },
+    "guideErr4F": {
+      "zh": "填代理（如 http://127.0.0.1:7890）再测；或换 Pollinations / 本地 Ollama。",
+      "en": "Set a proxy (e.g. http://127.0.0.1:7890) and retry; or switch to Pollinations / local Ollama.",
+      "ja": "プロキシ（例 http://127.0.0.1:7890）を入れて再試行。または Pollinations / ローカル Ollama に切り替え。",
+      "used_by": [
+        "desktop_web",
+        "android"
+      ]
+    },
+    "guideErr5S": {
+      "zh": "429 / rate limit：限流",
+      "en": "429 / rate limit",
+      "ja": "429 / rate limit（制限）",
+      "used_by": [
+        "desktop_web",
+        "android"
+      ]
+    },
+    "guideErr5F": {
+      "zh": "等几十秒再试；换了服务商仍 429 就是额度用完了（免费链最常见）。",
+      "en": "Wait a minute and retry; if 429 persists after switching providers, your quota is used up (most common on the free chain).",
+      "ja": "数十秒待って再試行。プロバイダーを変えても 429 なら枠の使い切りです（無料チェーンで最も多い）。",
+      "used_by": [
+        "desktop_web",
+        "android"
+      ]
+    },
+    "guideFreeTitle": {
+      "zh": "免费链：不填 Key 也能聊",
+      "en": "Free chain: chat without a key",
+      "ja": "無料チェーン：キーなしでも会話可",
+      "used_by": [
+        "desktop_web",
+        "android"
+      ]
+    },
+    "guideFreeBody": {
+      "zh": "Pollinations 与免 Key 模型链不需要任何 Key，装上就能说话；代价是高峰期慢、质量不如付费模型，敏感内容也更容易被拒。想稳定就配一个 Key。",
+      "en": "Pollinations and the key-free chain need no key at all — install and talk. The trade-off: slow at peak, weaker than paid models, and more likely to refuse sensitive content. Configure a key if you want stability.",
+      "ja": "Pollinations とキー不要チェーンはキーが一切不要で、入れてすぐ話せます。代わりにピーク時は遅く、品質は有料モデルに劣り、センシティブな内容は拒否されやすいです。安定させたいならキーを設定してください。",
+      "used_by": [
+        "desktop_web",
+        "android"
+      ]
+    },
+    "guideTipTitle": {
+      "zh": "省钱小贴士",
+      "en": "Save money",
+      "ja": "節約のコツ",
+      "used_by": [
+        "desktop_web",
+        "android"
+      ]
+    },
+    "guideTipBody": {
+      "zh": "DeepSeek 自 2026-08-13 起是峰谷定价：闲时价格是高峰时段的一半。批量跑、睡前挂着跑长任务更划算。",
+      "en": "DeepSeek has used peak/off-peak pricing since 2026-08-13: off-peak costs half of peak. Batch jobs and long overnight runs are cheaper.",
+      "ja": "DeepSeek は 2026-08-13 からピーク・オフピーク制。オフピークはピーク時の半額です。バッチ処理や夜間の長い実行がお得。",
+      "used_by": [
+        "desktop_web",
+        "android"
+      ]
+    },
+    "guideSearchTitle": {
+      "zh": "想用官方搜索",
+      "en": "Using the official search API",
+      "ja": "公式検索を使いたい場合",
+      "used_by": [
+        "desktop_web",
+        "android"
+      ]
+    },
+    "guideSearchBody": {
+      "zh": "DeepSeek 在 2026-10-17 开放了自研搜索 API（文档见 /zh-cn/guides/search）。插件里的「联网搜索 / 深搜」可以把它当后端之一，填同一个 Key 即可；原来的免 Key 搜索照旧保留，不填也能用。",
+      "en": "On 2026-10-17 DeepSeek opened its own search API (docs: /zh-cn/guides/search). The plugin's “web search / deep search” can use it as one backend with the same key; the existing key-free search stays as-is.",
+      "ja": "DeepSeek は 2026-10-17 に独自検索 API を公開しました（ドキュメント /zh-cn/guides/search）。プラグインの「ウェブ検索 / 深掘り検索」のバックエンドの一つとして同じキーで使えます。従来のキー不要検索もそのまま残ります。",
+      "used_by": [
+        "desktop_web",
+        "android"
+      ]
+    },
+    "guideFooter": {
+      "zh": "模型名与价格会变，以官方控制台与更新日志为准：https://api-docs.deepseek.com/zh-cn/updates/",
+      "en": "Model names and prices change. Always check the official console and the changelog: https://api-docs.deepseek.com/zh-cn/updates/",
+      "ja": "モデル名と価格は変わります。公式コンソールと更新履歴を確認してください：https://api-docs.deepseek.com/zh-cn/updates/",
+      "used_by": [
+        "desktop_web",
+        "android"
+      ]
+    },
+    "guideLabelUrl": {
+      "zh": "注册地址",
+      "en": "Sign-up page",
+      "ja": "登録ページ",
+      "used_by": [
+        "desktop_web",
+        "android"
+      ]
+    },
+    "guideLabelBuy": {
+      "zh": "要不要充值",
+      "en": "Payment",
+      "ja": "課金",
+      "used_by": [
+        "desktop_web",
         "android"
       ]
     }

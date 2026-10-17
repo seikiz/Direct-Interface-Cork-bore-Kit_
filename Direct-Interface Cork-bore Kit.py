@@ -419,8 +419,10 @@ def _render_world_desc(w):
 PROVIDERS = [
     {"id": "deepseek", "name": "DeepSeek 官方", "free": False,
      "base_url": "https://api.deepseek.com",
-     "models": ["deepseek-flash", "deepseek-chat", "deepseek-reasoner",
-                "deepseek-v4-flash-vision-exp"],
+     # 2026-11 对齐官方更新日志：主力 deepseek-flash（默认）；deepseek-v4-pro 是可选的
+     # 高思考档（按量更贵，别当默认）；deepseek-chat / deepseek-reasoner 已于
+     # 2026-07-24 停用，deepseek-v4-flash-vision-exp 已并入 V4.1 Flash 的多模态能力。
+     "models": ["deepseek-flash", "deepseek-v4-pro"],
      "buy_url": "https://platform.deepseek.com/"},
     {"id": "ovh", "name": "OVH 免费链（免 Key）", "free": True,
      "base_url": "https://oai.endpoints.kepler.ai.cloud.ovh.net/v1",
@@ -749,15 +751,16 @@ class HtmlApp:
         print("[Ollama] 未检测到本地服务（需要时先安装并启动 Ollama）")
 
     def _vision_describe(self, image_b64, mime):
-        """看图描述：DICK 的眼睛 = DeepSeek-V4-Flash-Vision-Exp（DSFVE）。
+        """看图描述：DICK 的眼睛 = 官方视觉理解（V4.1 Flash 起原生多模态，模型名仍填 deepseek-flash）。
         只要配了 DeepSeek key 就固定用它看图（与主对话模型无关），失败才回落免费链。"""
         import requests
         proxy = self.config.get("proxy") or None
         proxies = {"http": proxy, "https": proxy} if proxy else None
         ds_key = (self.config.get("api_key") or "").strip()
         ds_base = (self.config.get("base_url") or "https://api.deepseek.com").strip()
-        # 独立视觉模型 ID（DSFVE），不依赖主模型
-        vision_model = "deepseek-v4-flash-vision-exp"
+        # 视觉模型 ID：2026-09-10 起 V4.1 Flash 原生支持视觉理解，
+        # 旧的 deepseek-v4-flash-vision-exp 已下线（官方暂时路由），统一填 deepseek-flash。
+        vision_model = "deepseek-flash"
         if ds_key and ds_base:
             data_url = "data:" + mime + ";base64," + image_b64
             body = {
@@ -1677,15 +1680,15 @@ class HtmlApp:
         return {"ok": True}
 
     def _vision_then_send(self, node_id, text, image_b64, mime):
-        """发图 = DSFVE 直接看图回答：视觉模型基于图片+用户文本，以角色口吻直接生成回复。
-        失败则回落到"描述中转 + 主模型"。"""
+        """发图 = 视觉模型直接看图回答（deepseek-flash 的多模态能力）：基于图片+用户文本，
+        以角色口吻直接生成回复。失败则回落到"描述中转 + 主模型"。"""
         import requests
         proxy = self.config.get("proxy") or None
         proxies = {"http": proxy, "https": proxy} if proxy else None
         node = self.core.tree.nodes.get(node_id)
         ds_key = (self.config.get("api_key") or "").strip()
         ds_base = (self.config.get("base_url") or "https://api.deepseek.com").strip()
-        vision_model = "deepseek-v4-flash-vision-exp"
+        vision_model = "deepseek-flash"
         data_url = "data:" + (mime or "image/png") + ";base64," + image_b64
         direct = None
         if ds_key and ds_base:
@@ -7062,6 +7065,94 @@ class HtmlApp:
         # 进度同步：把模型连接配置推到工坊服务器（后台线程，不阻塞）
         self._ws_push_api()
         return {"ok": True, "provider": pid}
+
+    # ---- 向导第③步：测试并保存（2026-11 新增） ----
+    @staticmethod
+    def _probe_reason(code, text):
+        """把厂商的 HTTP 状态码翻成人话（401/402/404/429 是最常见的四类）。"""
+        t = (text or "")[:300].replace("\n", " ")
+        if code == 401:
+            return "401 无效 Key（厂商拒绝了这枚 Key）"
+        if code == 402:
+            return "402 余额不足（要先充值）"
+        if code == 403:
+            return "403 无权访问（Key 没开通这个模型）"
+        if code == 404:
+            return "404 端点或模型名不对"
+        if code == 429:
+            return "429 限流（请求太快或额度用完）"
+        if code >= 500:
+            return "%d 厂商服务端异常" % code
+        return "%d %s" % (code, t)
+
+    @staticmethod
+    def _probe_hint(code):
+        """每种失败给一句「下一步怎么做」——向导只报错不指路等于没做。"""
+        if code == 401:
+            return "回上一步整条重贴 Key（别带空格，别把 Base URL 粘进来）"
+        if code == 402:
+            return "去服务商官网充一点，或点「稍后再说」先用免费链"
+        if code == 403:
+            return "换一个该账号有权限的模型名，或去控制台开通"
+        if code == 404:
+            return "照教程里的「模型名示例」原样填；Base URL 别漏 /v1"
+        if code == 429:
+            return "等几十秒再试；免费链最常见，配置一枚 Key 就稳了"
+        return "检查网络/代理；不确定就先点「稍后再说」用免费链"
+
+    def api_test_and_save_key(self, key, base_url, model, provider_id=None):
+        """向导第③步「测试并保存」：**先真连一次，通了才落盘**。
+
+        判据（宁严不松）：
+          ① GET {base}/models 返回 2xx → 通；
+          ② 该端点 404/405（少数 OpenAI 兼容实现不实现 /models）→ 用一条 1 token 的最小对话兜底；
+          ③ 其它状态码 → 不保存，回 `err`（人话）+ `hint`（下一步怎么做）。
+        免 Key 厂商（OVH 免费链 / Ollama 本地）没有 Key 可验，直接落到保存。
+        """
+        import requests
+        pid = (provider_id or self.provider_id or "deepseek").strip()
+        prov = next((p for p in PROVIDERS if p["id"] == pid), None)
+        k = (key or "").strip()
+        base = (base_url or (prov or {}).get("base_url") or "").strip().rstrip("/")
+        models = (prov or {}).get("models") or []
+        m = (model or "").strip() or (models[0] if models else "")
+        free = bool(prov and prov.get("free"))
+        if not base:
+            return {"ok": False, "err": "Base URL 是空的",
+                    "hint": "回第①步选一个服务商，Base URL 会跟着填好"}
+        if not k and not free:
+            return {"ok": False, "err": "还没有填 Key",
+                    "hint": "回第②步粘一枚 Key；不想填就点「稍后再说」用免费链"}
+
+        def _save():
+            self.api_save_key(k, base, m, pid)
+            return {"ok": True, "provider": pid, "model": m, "base_url": base}
+
+        if free:
+            return _save()
+        proxy = self.config.get("proxy") or None
+        proxies = {"http": proxy, "https": proxy} if proxy else None
+        headers = {"Authorization": "Bearer " + k}
+        try:
+            r = requests.get(base + "/models", headers=headers, proxies=proxies, timeout=12)
+            if r.status_code in (200, 201):
+                return _save()
+            if r.status_code in (404, 405):
+                body = {"model": m, "messages": [{"role": "user", "content": "hi"}],
+                        "max_tokens": 1, "stream": False}
+                h2 = dict(headers)
+                h2["Content-Type"] = "application/json"
+                r2 = requests.post(base + "/chat/completions", headers=h2, json=body,
+                                   proxies=proxies, timeout=25)
+                if r2.status_code in (200, 201):
+                    return _save()
+                return {"ok": False, "err": self._probe_reason(r2.status_code, r2.text),
+                        "hint": self._probe_hint(r2.status_code)}
+            return {"ok": False, "err": self._probe_reason(r.status_code, r.text),
+                    "hint": self._probe_hint(r.status_code)}
+        except Exception as e:
+            return {"ok": False, "err": "%s: %s" % (type(e).__name__, e),
+                    "hint": "网络层失败：多半是超时或被墙，填个代理再试；也可以先点「稍后再说」用免费链"}
 
     def api_save_image_gen(self, key, base_url, model, backend="auto"):
         """保存生图配置（key/端点/模型/后端），存 config.json"""

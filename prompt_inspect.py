@@ -98,7 +98,7 @@ def build_core(role_data, cfg):
     from DICK_core import ChatCore
     c = ChatCore()
     c.client = _Client(CAPTURE)            # 假 client：能进流程，但不发请求
-    c.set_model(cfg.get("model") or "deepseek-v4-flash")
+    c.set_model(cfg.get("model") or "deepseek-flash")
     c.set_system_base(cfg.get("system_prompt_base") or "")
     c.humanize = bool(cfg.get("humanize", True))
     for attr in ("style_guard", "rolling_summary"):

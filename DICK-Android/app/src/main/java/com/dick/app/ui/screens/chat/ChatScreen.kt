@@ -1001,6 +1001,11 @@ val importCardLauncher = rememberLauncherForActivityResult(ActivityResultContrac
                     styleGuard = (root.fields["style_guard"] as? J.Bool)?.v ?: true
                     styleGuardLong = (root.fields["style_guard_long"] as? J.Bool)?.v ?: false
                     showGuide = (root.fields["welcome_shown"] as? J.Bool)?.v != true
+                    // 2026-11 首启向导：**没配到可用 Key、且当前不是免 Key 厂商** → 弹 3 步向导。
+                    // 免 Key 厂商（OVH 免费链 / 本地 Ollama）不需要 Key，不打扰；
+                    // 「稍后再说」会把 providerId 切到免费链并落盘，下次启动就不再弹。
+                    val _p = PROVIDERS.firstOrNull { it.id == vm.providerId.value }
+                    if (vm.apiKey.value.isBlank() && _p?.free != true) vm.showApiSetup.value = true
                     (root.fields["language"] as? J.Str)?.v?.let { language = it }
                     PRESETS.indexOfFirst { it.name == cfg.promptPreset }.takeIf { it >= 0 }?.let { presetIdx = it }
                     (root.fields["ui_theme"] as? J.Num)?.v?.toInt()?.takeIf { it in 0..2 }?.let { themeIdx = it }
@@ -2274,7 +2279,7 @@ fun wsRefreshLocal() {
                             val lo = mAff.fields["min"]?.int() ?: 0
                             val cur = mechSt.fields["affection"]?.int() ?: mAff.fields["initial"]?.int() ?: 50
                             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                IconText("❤ 好感", fontSize = 11.sp, color = theme.text.copy(alpha = 0.6f), iconSize = 12.dp)
+                                IconText("❤ 好感", fontSize = 11.sp, color = theme.muted, iconSize = 12.dp)
                                 Box(Modifier.weight(1f).height(5.dp).clip(RoundedCornerShape(3.dp)).background(theme.bubble)) {
                                     Box(
                                         Modifier
@@ -2282,7 +2287,7 @@ fun wsRefreshLocal() {
                                             .height(5.dp).clip(RoundedCornerShape(3.dp)).background(accent),
                                     )
                                 }
-                                Text("$cur/$hi", fontSize = 11.sp, color = theme.text.copy(alpha = 0.6f))
+                                Text("$cur/$hi", fontSize = 11.sp, color = theme.muted)
                             }
                         }
                         // ② 人物状态栏（enum 文字） / ③ 战斗数值栏（int 进度条）
@@ -2297,10 +2302,10 @@ fun wsRefreshLocal() {
                                 val curI = v.int()
                                 if (mx > 1000) {
                                     // 大上限属性（atk/def/spd 等）：数值显示
-                                    IconText("⚔ $name：$curI", fontSize = 11.sp, color = theme.text.copy(alpha = 0.6f), iconSize = 12.dp)
+                                    IconText("⚔ $name：$curI", fontSize = 11.sp, color = theme.muted, iconSize = 12.dp)
                                 } else {
                                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                        IconText("⚔ $name", fontSize = 11.sp, color = theme.text.copy(alpha = 0.6f), iconSize = 12.dp)
+                                        IconText("⚔ $name", fontSize = 11.sp, color = theme.muted, iconSize = 12.dp)
                                         Box(Modifier.weight(1f).height(5.dp).clip(RoundedCornerShape(3.dp)).background(theme.bubble)) {
                                             Box(
                                                 Modifier
@@ -2308,11 +2313,11 @@ fun wsRefreshLocal() {
                                                     .height(5.dp).clip(RoundedCornerShape(3.dp)).background(theme.danger),
                                             )
                                         }
-                                        Text("$curI/$mx", fontSize = 11.sp, color = theme.text.copy(alpha = 0.6f))
+                                        Text("$curI/$mx", fontSize = 11.sp, color = theme.muted)
                                     }
                                 }
                             } else {
-                                Text("$name：${v.str() ?: v.int()}", fontSize = 11.sp, color = theme.text.copy(alpha = 0.6f))
+                                Text("$name：${v.str() ?: v.int()}", fontSize = 11.sp, color = theme.muted)
                             }
                         }
                         // ④ 事件进度：玩家看不到进度就会觉得事件坏了。
@@ -2322,7 +2327,7 @@ fun wsRefreshLocal() {
                         if (evItems.isNotEmpty()) {
                             IconText(
                                 "🎬 事件 " + evItems.count { it["fired"] == true } + "/" + evItems.size,
-                                fontSize = 11.sp, color = theme.text.copy(alpha = 0.6f), iconSize = 12.dp,
+                                fontSize = 11.sp, color = theme.muted, iconSize = 12.dp,
                             )
                             evItems.forEach { e ->
                                 val stt = e["state"] as? String ?: ""
@@ -2375,7 +2380,7 @@ fun wsRefreshLocal() {
                         val plHp = pl?.items?.mapNotNull { it as? J.Obj }
                             ?.firstOrNull { it.fields["key"]?.str() == "hp" }?.fields?.get("value")?.int() ?: 0
                         if (pl?.items?.isNotEmpty() == true) {
-                            IconText("🧑 玩家 $plHp HP", fontSize = 11.sp, color = theme.text.copy(alpha = 0.6f), iconSize = 12.dp)
+                            IconText("🧑 玩家 $plHp HP", fontSize = 11.sp, color = theme.muted, iconSize = 12.dp)
                         }
                         // ① 生命/灵力等 → 进度条（hp 红 / 其他蓝）
                         bars.forEach { ao ->
@@ -2384,7 +2389,7 @@ fun wsRefreshLocal() {
                             val value = ao.fields["value"]?.int() ?: 0
                             val mx = ao.fields["max"]?.int() ?: 1
                             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                IconText("⚔ $label", fontSize = 11.sp, color = theme.text.copy(alpha = 0.6f), iconSize = 12.dp)
+                                IconText("⚔ $label", fontSize = 11.sp, color = theme.muted, iconSize = 12.dp)
                                 Box(Modifier.weight(1f).height(5.dp).clip(RoundedCornerShape(3.dp)).background(theme.bubble)) {
                                     Box(
                                         Modifier.fillMaxWidth((value.toFloat() / mx).coerceIn(0f, 1f)).height(5.dp)
@@ -2392,7 +2397,7 @@ fun wsRefreshLocal() {
                                             .background(if (key == "hp") theme.danger else accent),
                                     )
                                 }
-                                Text("$value/$mx", fontSize = 11.sp, color = theme.text.copy(alpha = 0.6f))
+                                Text("$value/$mx", fontSize = 11.sp, color = theme.muted)
                             }
                         }
                         // ② 无上限属性 → 数值（合并一行）
@@ -2404,7 +2409,7 @@ fun wsRefreshLocal() {
                                     val value = a.fields["value"]?.int() ?: 0
                                     "$label:$value"
                                 }.joinToString(" · "),
-                                fontSize = 11.sp, color = theme.text.copy(alpha = 0.6f), iconSize = 12.dp,
+                                fontSize = 11.sp, color = theme.muted, iconSize = 12.dp,
                             )
                         }
                         // ③ 招式按钮
@@ -2433,7 +2438,7 @@ fun wsRefreshLocal() {
                                     val bo = bf as? J.Obj ?: return@forEach
                                     val bid = bo.fields["id"]?.str() ?: ""
                                     val turns = bo.fields["turns"]?.int() ?: 0
-                                    IconText("✨ $bid ×$turns", fontSize = 10.sp, color = Color(0xFFA78BFA), iconSize = 11.dp)
+                                    IconText("✨ $bid ×$turns", fontSize = 10.sp, color = theme.palette.accent, iconSize = 11.dp)
                                 }
                             }
                         }
@@ -2588,7 +2593,7 @@ fun wsRefreshLocal() {
                                                 }
                                             }
                                             if (eff.isNotEmpty()) {
-                                                IconText(eff, fontSize = 10.sp, color = theme.text.copy(alpha = 0.6f), iconSize = 11.dp, maxLines = 1)
+                                                IconText(eff, fontSize = 10.sp, color = theme.muted, iconSize = 11.dp, maxLines = 1)
                                             }
                                         }
                                     }

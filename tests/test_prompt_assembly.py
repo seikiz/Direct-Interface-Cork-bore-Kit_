@@ -40,7 +40,7 @@ def check(name, cond, detail=""):
 def assemble(role_data, cfg=None, user="你好", humanize=True):
     """组装一次请求并拿到 messages（不发网络请求）"""
     cfg = dict(cfg or {})
-    cfg.setdefault("model", "deepseek-v4-flash")
+    cfg.setdefault("model", "deepseek-flash")
     cfg["humanize"] = humanize
     pi.CAPTURE.clear()
     core = pi.build_core(role_data, cfg)
@@ -159,7 +159,7 @@ def test_group_chat_unaffected():
     from DICK_core import ChatCore
     c = ChatCore()
     c.client = pi._Client(pi.CAPTURE)
-    c.set_model("deepseek-v4-flash")
+    c.set_model("deepseek-flash")
     c.humanize = True
     a = {"name": "甲", "system_prompt": "你现在的身份是：甲。\n【性格】\n严肃\n"}
     b = {"name": "乙", "system_prompt": "你现在的身份是：乙。\n【性格】\n活泼\n"}

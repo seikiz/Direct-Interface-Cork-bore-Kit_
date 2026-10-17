@@ -175,7 +175,7 @@ def test_payload_has_no_user_message():
     print("\n== 4. 开局载荷里不能有 user 消息 ==")
     core = ChatCore()
     core.client = pi._Client(pi.CAPTURE)
-    core.set_model("deepseek-v4-flash")
+    core.set_model("deepseek-flash")
     core.set_active_roles([{"name": "阿岚",
                             "system_prompt": "你现在的身份是：阿岚。\n【性格】\n温和\n"}])
     core.opening_cue = GREET
@@ -200,7 +200,7 @@ def test_cue_is_one_shot():
     print("\n== 5. 开场场景只能用一次（否则每轮都重演开场）==")
     core = ChatCore()
     core.client = pi._Client(pi.CAPTURE)
-    core.set_model("deepseek-v4-flash")
+    core.set_model("deepseek-flash")
     core.set_active_roles([{"name": "阿岚",
                             "system_prompt": "你现在的身份是：阿岚。\n【性格】\n温和\n"}])
     core.opening_cue = GREET

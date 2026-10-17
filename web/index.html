@@ -13,6 +13,7 @@
 <link rel="stylesheet" href="styles/tokens.css">
 <link rel="stylesheet" href="styles/screens.css">
 <link rel="stylesheet" href="styles/screens/save.css">
+<link rel="stylesheet" href="styles/screens/api_guide.css">
 <link rel="stylesheet" href="styles/components.css">
 <link rel="stylesheet" href="styles/panels.css">
 <link rel="stylesheet" href="styles/screens/wm.css">
@@ -173,7 +174,7 @@
         <button class="btn2 ghost" id="codexExportBtn">📤 导出 zip</button>
         <button class="btn2 ghost" id="codexExportCodexBtn">📦 导出 .codex</button>
         <button class="btn2 ghost" id="codexFilesBtn">🗂️ 资源</button>
-        <button class="btn2 ghost" id="codexDelBtn" style="color:#f87171">🗑️ 删除</button>
+        <button class="btn2 ghost" id="codexDelBtn" style="color:var(--danger)">🗑️ 删除</button>
       </div>
       <div id="codexIntro" style="font-size:12px;color:var(--sub);margin:6px 0;white-space:pre-wrap"></div>
       <div id="codexPackInfo" style="display:none;font-size:12px;color:var(--sub);margin:6px 0;padding:8px;background:rgba(46,160,67,.1);border:1px solid rgba(46,160,67,.4);border-radius:6px"></div>
@@ -236,8 +237,8 @@
       <button class="btn2 ghost" id="galCloseBtn">✕</button>
     </div>
   </div>
-  <div style="padding:6px 16px;font-size:11px;color:var(--sub,#8a93a3);border-bottom:1px solid var(--line)">▸ <b style="color:#7aa2b8">进行</b>=点击继续到下一节点(灰蓝实线) · 🔀 <b style="color:#f5c06c">选项</b>=玩家选择分支(橙线) · 🔒=带条件 · 点「节点」编它内部，拖节点移动</div>
-  <div id="galToast" style="display:none;position:fixed;right:20px;top:20px;z-index:10001;background:rgba(34,197,94,.18);border:1px solid rgba(34,197,94,.6);color:#4ade80;padding:8px 14px;border-radius:8px;font-size:13px;opacity:0;transition:opacity .3s"></div>
+  <div style="padding:6px 16px;font-size:11px;color:var(--sub,#8a93a3);border-bottom:1px solid var(--line)">▸ <b style="color:var(--text-sub)">进行</b>=点击继续到下一节点(灰蓝实线) · 🔀 <b style="color:var(--warn)">选项</b>=玩家选择分支(橙线) · 🔒=带条件 · 点「节点」编它内部，拖节点移动</div>
+  <div id="galToast" style="display:none;position:fixed;right:20px;top:20px;z-index:10001;background:rgba(34,197,94,.18);border:1px solid rgba(34,197,94,.6);color:var(--ok);padding:8px 14px;border-radius:8px;font-size:13px;opacity:0;transition:opacity .3s"></div>
   <div id="galOptPop" style="display:none;position:fixed;z-index:10002;min-width:300px;background:var(--panel);border:1px solid color-mix(in srgb, #f59e0b 55%, var(--line));border-radius:10px;padding:10px 12px;box-shadow:0 10px 40px rgba(0,0,0,.6)"></div>
   <div id="galLines" style="flex:1;overflow:auto;padding:12px 16px;position:relative;background:radial-gradient(circle, var(--line) 1px, transparent 1px);background-size:22px 22px;background-position:0 0"></div>
   <div id="galScenePanel" style="display:none;border-top:1px solid var(--line);min-height:200px;max-height:56vh;overflow:auto;resize:vertical;background:var(--panel)"></div>
@@ -324,14 +325,16 @@
     <div id="cxTitleName" style="font-size:34px;font-weight:bold;color:#ffd76e;margin-bottom:10px"></div>
     <div id="cxTitleIntro" style="font-size:15px;color:#bbb;max-width:560px;line-height:1.8;white-space:pre-wrap"></div>
     <div id="cxChapterList" style="margin-top:18px;max-width:560px;max-height:160px;overflow:auto;text-align:left"></div>
-    <div style="margin-top:22px;font-size:13px;color:#777">点击开始 ▸</div>
+    <div style="margin-top:22px;font-size:13px;color:#9aa">点击开始 ▸</div>
   </div>
   <div id="cxEnd" style="position:absolute;inset:0;display:none;background:radial-gradient(circle at 50% 40%,rgba(255,215,110,.12),#000 70%);z-index:5;flex-direction:column;align-items:center;justify-content:center;text-align:center;cursor:pointer">
     <div id="cxEndTitle" style="font-size:28px;font-weight:bold;color:#ffd76e;margin-bottom:8px"></div>
     <div style="font-size:13px;color:#888">— END —</div>
-    <div style="margin-top:22px;font-size:13px;color:#777">点击返回</div>
+    <div style="margin-top:22px;font-size:13px;color:#9aa">点击返回</div>
   </div>
 </div>
+
+<!--@screen:api_guide-->  <!-- 这一屏的 DOM 在 web/screens/api_guide.html，由 web/js/router.js 同步注入；JS 在 web/js/screens/api_guide.js -->
 
 <!--@screen:settings-->  <!-- 这一屏的 DOM 在 web/screens/settings.html，由 web/js/router.js 同步注入；JS 在 web/js/screens/settings.js -->
 
@@ -617,6 +620,7 @@
 <script src="js/store/codex.js"></script>
 <script src="js/store/gal.js"></script>
 <script src="js/router.js"></script>
+<script src="js/components/Button.js"></script>
 <script src="js/screens/go.js"></script>
 <script src="js/screens/gen.js"></script>
 <script src="js/screens/crop.js"></script>
@@ -629,6 +633,7 @@
 <script src="js/screens/wm.js"></script>
 <script src="js/screens/ws.js"></script>
 <script src="js/screens/settings.js"></script>
+<script src="js/screens/api_guide.js"></script>
 <script>
 // 同步注入全部片段 + 调各屏 mount()，必须在页尾大脚本之前完成（见上面注释）
 DICK.router.boot();
@@ -1456,7 +1461,7 @@ function loadState() {
       if (s.version && window.__dickVerLogged !== s.version) {
         window.__dickVerLogged = s.version;
         console.log("%c" + (s.version_full || ("DICK " + s.version)),
-          "color:#f59e0b;font-weight:bold");
+          "color:var(--warn);font-weight:bold");
       }
     } catch (e) {}
     try {
@@ -1485,7 +1490,7 @@ function loadStateFill(s) {
     apiKeysMap = s.api_keys || {};
     currentProviderId = s.provider || 'deepseek';
     renderProviderSel(currentProviderId);
-    document.getElementById('stModelInput').value = s.model || 'deepseek-v4-flash';
+    document.getElementById('stModelInput').value = s.model || 'deepseek-flash';
     // 生图配置回填
     document.getElementById('stImgKey').value = s.image_gen_key ? '••••••••' : '';
     document.getElementById('stImgBase').value = s.image_gen_base_url || 'https://api.siliconflow.cn/v1';
@@ -1494,6 +1499,13 @@ function loadStateFill(s) {
     if (stImgBe) stImgBe.value = s.image_gen_backend || 'auto';
     applyGenLast(s.image_gen_last);
     fillProvider(currentProviderId, true);
+    // 首启向导（2026-11）：**没配到可用 Key、且当前不是免 Key 厂商** → 自动弹 3 步向导。
+    // 「稍后再说」会切到免费链（免 Key 厂商不需要 Key，所以那种情况不打扰）；
+    // 配通一次之后 localStorage 记 done，别每次启动都弹。
+    try {
+      var _p = providerById(currentProviderId);
+      if (!s.has_key && !(_p && _p.free)) apiWizardAutoOpen();
+    } catch (e) { console.warn('[api] 向导没能弹出：', e); }
     document.getElementById('stBaseInput').value = s.base_url || document.getElementById('stBaseInput').value;
     document.getElementById('stProxyInput').value = s.proxy || '';
     document.getElementById('stRelayInput').value = s.relay_url || '';
@@ -1577,7 +1589,7 @@ function renderRoles(roles, selected, unlockedMap) {
         (unl ? '<span class="rc-unlock" title="破甲已开启">🔥</span>' : '') +
       '</div>' +
       '<div class="rc-actions">' +
-        '<button class="iconbtn" title="解锁/破甲" data-unlock="' + nm + '" style="' + (unl ? 'color:#f87171' : '') + '">' + (unl ? '🔥 破甲' : '🔥') + '</button>' +
+        '<button class="iconbtn" title="解锁/破甲" data-unlock="' + nm + '" style="' + (unl ? 'color:var(--danger)' : '') + '">' + (unl ? '🔥 破甲' : '🔥') + '</button>' +
         '<button class="iconbtn" title="存档点" data-saves="' + nm + '">💾 档</button>' +
         '<button class="iconbtn" title="编辑" data-edit="' + nm + '">✏️ 编辑</button>' +
         '<button class="iconbtn" title="头像" data-avatar="' + nm + '">👤 头像</button>' +
@@ -1973,7 +1985,7 @@ function openCardFace(html) {
   var m = document.getElementById('cardFaceModal');
   if (!m) return;
   var fr = m.querySelector('iframe');
-  if (fr) fr.srcdoc = html || '<div style="color:#888;padding:30px">（暂无卡面。在角色→编辑→开发者模式→卡面 导入或编写 HTML。）</div>';
+  if (fr) fr.srcdoc = html || '<div style="color:var(--text-sub);padding:30px">（暂无卡面。在角色→编辑→开发者模式→卡面 导入或编写 HTML。）</div>';
   m.classList.add('open');
 }
 function cardFacePreview() {
@@ -2189,7 +2201,7 @@ function evRender() {
        +   '<span>'
        +     '<button class="btn2 ghost" style="width:auto;margin:0;padding:1px 7px" onclick="evMove(' + i + ',-1)" title="上移">↑</button> '
        +     '<button class="btn2 ghost" style="width:auto;margin:0;padding:1px 7px" onclick="evMove(' + i + ',1)" title="下移">↓</button> '
-       +     '<button class="btn2 ghost" style="width:auto;margin:0;padding:1px 7px;color:#e06060" onclick="evDel(' + i + ')" title="删除">✕</button>'
+       +     '<button class="btn2 ghost" style="width:auto;margin:0;padding:1px 7px;color:var(--danger)" onclick="evDel(' + i + ')" title="删除">✕</button>'
        +   '</span>'
        + '</div>';
     h += '<div class="row" style="justify-content:flex-start;gap:6px;margin-bottom:6px">'
@@ -3691,7 +3703,7 @@ function renderCodexList(pkgs) {
     var res = '[ic:sprite]' + p.sprites + ' [ic:image]' + p.bg + ' [ic:music]' + p.bgm + ' [ic:mic]' + p.voice;
     card.innerHTML =
       '<div class="rc-name" ' + sel + '>' +
-        '<label for="">📕 ' + escapeHtml(p.name) + (p.has_script ? '' : ' <span style="color:#f87171">(缺剧本)</span>') + '</label>' +
+        '<label for="">📕 ' + escapeHtml(p.name) + (p.has_script ? '' : ' <span style="color:var(--danger)">(缺剧本)</span>') + '</label>' +
         '<span style="flex:1"></span>' +
         '<span style="font-size:11px;color:var(--sub)">' + res + '</span>' +
       '</div>' +
@@ -4059,7 +4071,7 @@ function codexEditSceneGraph(sid) {
   var panel = document.getElementById('cxSceneEdit');
   panel.style.display = 'block';
   panel.innerHTML = '';
-  if (!sc) { panel.innerHTML = '<div style="color:#8a93a3">场景不存在</div>'; return; }
+  if (!sc) { panel.innerHTML = '<div style="color:var(--text-sub)">场景不存在</div>'; return; }
   var h = document.createElement('div');
   h.className = 'row';
   h.style.cssText = 'justify-content:flex-start;align-items:center;margin-bottom:6px';
@@ -4084,7 +4096,7 @@ function codexEditSceneGraph(sid) {
     var delScene = document.createElement('button');
     delScene.className = 'btn2 ghost';
     delScene.textContent = '🗑️ 删除本场景';
-    delScene.style.cssText = 'margin-top:6px;color:#f87171;margin-left:8px';
+    delScene.style.cssText = 'margin-top:6px;color:var(--danger);margin-left:8px';
     delScene.onclick = function () { _gScript.scenes = _gScript.scenes.filter(function (s) { return s.id !== sc.id; }); _gSel = null; codexRenderGraph(); document.getElementById('cxSceneEdit').style.display = 'none'; };
     list.appendChild(delScene);
   }
@@ -4133,12 +4145,12 @@ function codexEditSceneGraph(sid) {
     box.style.cssText = 'display:inline-flex;gap:4px;align-items:center;margin:2px 4px';
     var ot = document.createElement('input'); ot.value = o.text || ''; ot.placeholder = '选项文字'; ot.style.cssText = 'background:var(--bubble,#161b22);border:1px solid var(--line);border-radius:6px;color:var(--text,#ddd);padding:3px 6px;font-size:12px;width:110px'; ot.oninput = function () { o.text = ot.value; }; box.appendChild(ot);
     var og = document.createElement('input'); og.value = o.goto || ''; og.placeholder = 'goto'; og.style.cssText = 'background:var(--bubble,#161b22);border:1px solid var(--line);border-radius:6px;color:var(--text,#ddd);padding:3px 6px;font-size:12px;width:70px'; og.oninput = function () { o.goto = og.value; }; box.appendChild(og);
-    var oc = document.createElement('input'); oc.value = o.if ? JSON.stringify(o.if) : ''; oc.placeholder = '条件 {aff:>=85}'; oc.style.cssText = 'background:var(--bubble,#161b22);border:1px solid rgba(245,158,11,.4);border-radius:6px;color:#f59e0b;padding:3px 6px;font-size:12px;width:150px'; oc.oninput = function () { try { o.if = oc.value.trim() ? JSON.parse(oc.value) : undefined; } catch (e) { o.if = undefined; } }; box.appendChild(oc);
-    var del = document.createElement('button'); del.textContent = '✕'; del.className = 'btn2 ghost'; del.style.cssText = 'color:#f87171;font-size:11px;padding:2px 6px'; del.onclick = function () { ln.choice = ln.choice.filter(function (x) { return x !== o; }); renderSteps(); }; box.appendChild(del);
+    var oc = document.createElement('input'); oc.value = o.if ? JSON.stringify(o.if) : ''; oc.placeholder = '条件 {aff:>=85}'; oc.style.cssText = 'background:var(--bubble,#161b22);border:1px solid rgba(245,158,11,.4);border-radius:6px;color:var(--warn);padding:3px 6px;font-size:12px;width:150px'; oc.oninput = function () { try { o.if = oc.value.trim() ? JSON.parse(oc.value) : undefined; } catch (e) { o.if = undefined; } }; box.appendChild(oc);
+    var del = document.createElement('button'); del.textContent = '✕'; del.className = 'btn2 ghost'; del.style.cssText = 'color:var(--danger);font-size:11px;padding:2px 6px'; del.onclick = function () { ln.choice = ln.choice.filter(function (x) { return x !== o; }); renderSteps(); }; box.appendChild(del);
     row.appendChild(box);
   }
   function delBtn(ln, i) {
-    var d = document.createElement('button'); d.textContent = '🗑️'; d.className = 'btn2 ghost'; d.style.cssText = 'color:#f87171;font-size:12px;padding:2px 6px'; d.onclick = function () { sc.lines.splice(i, 1); renderSteps(); }; return d;
+    var d = document.createElement('button'); d.textContent = '🗑️'; d.className = 'btn2 ghost'; d.style.cssText = 'color:var(--danger);font-size:12px;padding:2px 6px'; d.onclick = function () { sc.lines.splice(i, 1); renderSteps(); }; return d;
   }
   function mkInput(val, ph, cb) {
     var x = document.createElement('input'); x.value = val; x.placeholder = ph; firstInput(x); return x;
@@ -4396,7 +4408,7 @@ function galRenderRoles() {
     row.appendChild(galInput(r.name || '', '角色名', function (v) { r.name = v; }));
     row.appendChild(galInput(r.sprite || '', '立绘', function (v) { r.sprite = v; }));
     row.appendChild(galInput(r.voice || '', '语音', function (v) { r.voice = v; }));
-    var del = document.createElement('button'); del.className = 'btn2 ghost'; del.textContent = '✕'; del.style.cssText = 'color:#f87171;font-size:12px;padding:2px 6px'; del.onclick = function () { galPushUndo(); galScript.roles.splice(i, 1); galRenderRoles(); }; row.appendChild(del);
+    var del = document.createElement('button'); del.className = 'btn2 ghost'; del.textContent = '✕'; del.style.cssText = 'color:var(--danger);font-size:12px;padding:2px 6px'; del.onclick = function () { galPushUndo(); galScript.roles.splice(i, 1); galRenderRoles(); }; row.appendChild(del);
     wrap.appendChild(row);
   });
   var add = document.createElement('button'); add.className = 'btn2'; add.textContent = '➕ 加角色'; add.onclick = function () { galPushUndo(); galScript.roles.push({ name: '', sprite: '', voice: '' }); galRenderRoles(); };
@@ -4584,12 +4596,12 @@ function galEditOption(srcId, idx, eo, ev) {
   var o = opts && opts[eo];
   var p = document.getElementById('galOptPop');
   if (!p || !sc || !o) return;
-  p.innerHTML = '<b style="font-size:13px;color:#f5c06c">✏️ 编辑选项</b>';
+  p.innerHTML = '<b style="font-size:13px;color:var(--warn)">✏️ 编辑选项</b>';
   var t = galInput(o.text || '', '选项文字', function (v) { o.text = v; }); t.style.cssText = 'display:block;width:100%;margin-top:6px;background:var(--bubble,#161b22);border:1px solid var(--line);border-radius:6px;color:var(--text,#ddd);padding:6px 8px;font-size:12px'; p.appendChild(t);
   var g = galInput(o.goto || '', '目标场景 id (goto)', function (v) { o.goto = v; }); g.style.cssText = 'display:block;width:100%;margin-top:6px;background:var(--bubble,#161b22);border:1px solid var(--line);border-radius:6px;color:var(--text,#ddd);padding:6px 8px;font-size:12px'; p.appendChild(g);
-  var c = galInput(o.if ? JSON.stringify(o.if) : '', '🔒 条件 {"aff":">=85"}（可留空）', function (v) { try { o.if = v.trim() ? JSON.parse(v) : undefined; } catch (e) { o.if = undefined; } }); c.style.cssText = 'display:block;width:100%;margin-top:6px;background:var(--bubble,#161b22);border:1px solid rgba(245,158,11,.4);border-radius:6px;color:#f5c06c;padding:6px 8px;font-size:12px'; p.appendChild(c);
+  var c = galInput(o.if ? JSON.stringify(o.if) : '', '🔒 条件 {"aff":">=85"}（可留空）', function (v) { try { o.if = v.trim() ? JSON.parse(v) : undefined; } catch (e) { o.if = undefined; } }); c.style.cssText = 'display:block;width:100%;margin-top:6px;background:var(--bubble,#161b22);border:1px solid rgba(245,158,11,.4);border-radius:6px;color:var(--warn);padding:6px 8px;font-size:12px'; p.appendChild(c);
   var btns = document.createElement('div'); btns.style.cssText = 'display:flex;justify-content:space-between;align-items:center;margin-top:8px';
-  var del = document.createElement('button'); del.className = 'btn2 ghost'; del.textContent = '🗑 删选项'; del.style.cssText = 'color:#f87171;padding:5px 12px'; del.onclick = function () { galPushUndo(); opts.splice(eo, 1); galOptPopClose(); galRenderGraph(); }; btns.appendChild(del);
+  var del = document.createElement('button'); del.className = 'btn2 ghost'; del.textContent = '🗑 删选项'; del.style.cssText = 'color:var(--danger);padding:5px 12px'; del.onclick = function () { galPushUndo(); opts.splice(eo, 1); galOptPopClose(); galRenderGraph(); }; btns.appendChild(del);
   var right = document.createElement('div');
   var add1 = document.createElement('button'); add1.className = 'btn2'; add1.textContent = '➕ 加选项'; add1.style.cssText = 'padding:5px 12px'; add1.onclick = function () { galPushUndo(); opts.push({ text: '选项', goto: '' }); galOptPopClose(); galRenderGraph(); }; right.appendChild(add1);
   var done = document.createElement('button'); done.className = 'btn2'; done.textContent = '✅ 完成'; done.style.cssText = 'padding:5px 12px;margin-left:6px'; done.onclick = function () { galOptPopClose(); galRenderGraph(); }; right.appendChild(done);
@@ -4657,7 +4669,7 @@ function galOpenScenePanel(sid, focusIdx) {
   panel.innerHTML = '';
   var h = document.createElement('div');
   h.style.cssText = 'display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--line)';
-  h.innerHTML = '<b style="font-size:14px;color:#f5c06c">线 ' + escapeHtml(sc.id) + ' 「' + escapeHtml(sc.title || '') + '」 · 编辑点</b>';
+  h.innerHTML = '<b style="font-size:14px;color:var(--warn)">线 ' + escapeHtml(sc.id) + ' 「' + escapeHtml(sc.title || '') + '」 · 编辑点</b>';
   var keyBtn = document.createElement('button'); keyBtn.className = 'btn2'; keyBtn.textContent = galIsKey(sc) ? '⭐ 关键节点' : '☆ 叙事线'; keyBtn.onclick = function () { galToggleKey(sc.id); galOpenScenePanel(sc.id, focusIdx); };
   h.appendChild(keyBtn);
   var close = document.createElement('button'); close.className = 'btn2 ghost'; close.textContent = '✕ 收起'; close.onclick = function () { panel.style.display = 'none'; galRenderGraph(); };
@@ -4672,7 +4684,7 @@ function galOpenScenePanel(sid, focusIdx) {
     sList.innerHTML = '';
     sc.images.forEach(function (f, i) {
       var inp = galInput(f, '图片文件', function (v) { sc.images[i] = v; }); inp.style.cssText = 'width:150px;background:var(--bubble,#161b22);border:1px solid var(--line);border-radius:6px;color:var(--text,#ddd);padding:6px 8px;font-size:12px';
-      var rm = document.createElement('button'); rm.textContent = '✕'; rm.className = 'btn2 ghost'; rm.style.cssText = 'color:#f87171;font-size:12px;padding:4px 8px'; rm.onclick = function () { galPushUndo(); sc.images.splice(i, 1); renderS(); };
+      var rm = document.createElement('button'); rm.textContent = '✕'; rm.className = 'btn2 ghost'; rm.style.cssText = 'color:var(--danger);font-size:12px;padding:4px 8px'; rm.onclick = function () { galPushUndo(); sc.images.splice(i, 1); renderS(); };
       sList.appendChild(inp); sList.appendChild(rm);
     });
   };
@@ -4730,9 +4742,9 @@ function galScenePointRow(sc, ln, re) {
         r.appendChild(galInput(o.text || '', '选项文字', function (v) { o.text = v; }));
         r.appendChild(galInput(o.goto || '', 'goto', function (v) { o.goto = v; }));
         var c = galInput(o.if ? JSON.stringify(o.if) : '', '🔒 条件', function (v) { try { o.if = v.trim() ? JSON.parse(v) : undefined; } catch (e) { o.if = undefined; } });
-        c.style.cssText = 'flex:1;min-width:150px;background:var(--bubble,#161b22);border:1px solid rgba(245,158,11,.4);border-radius:6px;color:#f5c06c;padding:5px 8px;font-size:12px';
+        c.style.cssText = 'flex:1;min-width:150px;background:var(--bubble,#161b22);border:1px solid rgba(245,158,11,.4);border-radius:6px;color:var(--warn);padding:5px 8px;font-size:12px';
         r.appendChild(c);
-        var del = document.createElement('button'); del.className = 'btn2 ghost'; del.textContent = '✕'; del.style.cssText = 'color:#f87171;font-size:11px;padding:2px 6px'; del.onclick = function () { galPushUndo(); ln.choice.splice(k, 1); ro(); }; r.appendChild(del);
+        var del = document.createElement('button'); del.className = 'btn2 ghost'; del.textContent = '✕'; del.style.cssText = 'color:var(--danger);font-size:11px;padding:2px 6px'; del.onclick = function () { galPushUndo(); ln.choice.splice(k, 1); ro(); }; r.appendChild(del);
         optBox.appendChild(r);
       });
       var add = document.createElement('button'); add.className = 'btn2 ghost'; add.textContent = '➕ 选项'; add.style.cssText = 'font-size:11px;padding:3px 8px'; add.onclick = function () { galPushUndo(); ln.choice = ln.choice || []; ln.choice.push({ text: '', goto: '' }); ro(); }; optBox.appendChild(add);
@@ -4764,7 +4776,7 @@ function galScenePointRow(sc, ln, re) {
     imgList.innerHTML = '';
     ln.images.forEach(function (f, i) {
       var inp = galInput(f, '图片文件', function (v) { ln.images[i] = v; }); inp.style.cssText = 'width:150px;background:var(--bubble,#161b22);border:1px solid var(--line);border-radius:6px;color:var(--text,#ddd);padding:6px 8px;font-size:12px';
-      var rm = document.createElement('button'); rm.textContent = '✕'; rm.className = 'btn2 ghost'; rm.style.cssText = 'color:#f87171;font-size:12px;padding:4px 8px'; rm.onclick = function () { galPushUndo(); ln.images.splice(i, 1); renderImgs(); };
+      var rm = document.createElement('button'); rm.textContent = '✕'; rm.className = 'btn2 ghost'; rm.style.cssText = 'color:var(--danger);font-size:12px;padding:4px 8px'; rm.onclick = function () { galPushUndo(); ln.images.splice(i, 1); renderImgs(); };
       imgList.appendChild(inp); imgList.appendChild(rm);
     });
   };
@@ -4776,7 +4788,7 @@ function galScenePointRow(sc, ln, re) {
   clearImg.appendChild(cb); clearImg.appendChild(document.createTextNode('退出图片'));
   imgWrap.appendChild(clearImg);
   row.appendChild(imgWrap);
-  var del = document.createElement('button'); del.className = 'btn2 ghost'; del.textContent = '🗑'; del.style.cssText = 'color:#f87171;font-size:11px;padding:2px 6px'; del.onclick = function () { galPushUndo(); sc.lines = (sc.lines || []).filter(function (x) { return x !== ln; }); re(); }; row.appendChild(del);
+  var del = document.createElement('button'); del.className = 'btn2 ghost'; del.textContent = '🗑'; del.style.cssText = 'color:var(--danger);font-size:11px;padding:2px 6px'; del.onclick = function () { galPushUndo(); sc.lines = (sc.lines || []).filter(function (x) { return x !== ln; }); re(); }; row.appendChild(del);
   return row;
 }
 // 干净专用界面入口：📕 GAL制作器 → 直接进入全屏编辑器 + 包选择
@@ -5052,9 +5064,9 @@ function galEditorEl(sc, i, body) {
         r.appendChild(galInput(o.text || '', '选项文字', function (v) { o.text = v; }));
         r.appendChild(galInput(o.goto || '', 'goto', function (v) { o.goto = v; }));
         var c = galInput(o.if ? JSON.stringify(o.if) : '', '🔒 条件 {"aff":">=85"}', function (v) { try { o.if = v.trim() ? JSON.parse(v) : undefined; } catch (e) { o.if = undefined; } });
-        c.style.cssText = 'flex:1;min-width:150px;background:var(--bubble,#161b22);border:1px solid rgba(245,158,11,.4);border-radius:6px;color:#f5c06c;padding:5px 8px;font-size:12px';
+        c.style.cssText = 'flex:1;min-width:150px;background:var(--bubble,#161b22);border:1px solid rgba(245,158,11,.4);border-radius:6px;color:var(--warn);padding:5px 8px;font-size:12px';
         r.appendChild(c);
-        var del = document.createElement('button'); del.className = 'btn2 ghost'; del.textContent = '✕'; del.style.cssText = 'font-size:11px;padding:2px 6px;color:#f87171'; del.onclick = function () { opts.splice(k, 1); renderOpts(); };
+        var del = document.createElement('button'); del.className = 'btn2 ghost'; del.textContent = '✕'; del.style.cssText = 'font-size:11px;padding:2px 6px;color:var(--danger)'; del.onclick = function () { opts.splice(k, 1); renderOpts(); };
         r.appendChild(del);
         optBox.appendChild(r);
       });
@@ -5079,7 +5091,7 @@ function galEditorEl(sc, i, body) {
   }
   var ops = document.createElement('div'); ops.className = 'row';
   var done = document.createElement('button'); done.className = 'btn2'; done.textContent = '✅ 完成'; done.onclick = function () { galRenderBody(sc, body, -1); };
-  var del = document.createElement('button'); del.className = 'btn2 ghost'; del.textContent = '🗑 删本点'; del.style.cssText = 'color:#f87171'; del.onclick = function () { galDeleteAt(sc, i, body); };
+  var del = document.createElement('button'); del.className = 'btn2 ghost'; del.textContent = '🗑 删本点'; del.style.cssText = 'color:var(--danger)'; del.onclick = function () { galDeleteAt(sc, i, body); };
   var after = document.createElement('button'); after.className = 'btn2 ghost'; after.textContent = '➕ 其后插入'; after.onclick = function () { galInsertAt(sc, i + 1, body); };
   ops.appendChild(done); ops.appendChild(del); ops.appendChild(after);
   box.appendChild(ops);
@@ -5121,7 +5133,7 @@ document.getElementById('galCheckBtn').onclick = galCheckRun;
 function galCheckRender(r) {
   var box = document.getElementById('galCheckPanel');
   if (!r || r.err) {
-    box.innerHTML = '<div style="color:#f87171">体检失败：' + ((r && r.err) || '未知错误') + '</div>';
+    box.innerHTML = '<div style="color:var(--danger)">体检失败：' + ((r && r.err) || '未知错误') + '</div>';
     box.style.display = 'block';
     return;
   }
@@ -5136,16 +5148,16 @@ function galCheckRender(r) {
     '<button class="btn2 ghost" style="width:auto;margin:0;padding:3px 10px" onclick="galCheckHide()">收起</button></div>');
   var issues = r.issues || [], warns = r.warnings || [];
   if (!issues.length && !warns.length) {
-    h.push('<div style="color:#4ade80">✅ 没查出问题：场景都可达、没有死行、能走到结局、素材引用完整。</div>');
+    h.push('<div style="color:var(--ok)">✅ 没查出问题：场景都可达、没有死行、能走到结局、素材引用完整。</div>');
   }
   if (issues.length) {
-    h.push('<div style="color:#f87171;margin:6px 0 4px"><b>结构问题 ' + issues.length + ' 条（会真的坏）</b></div>');
+    h.push('<div style="color:var(--danger);margin:6px 0 4px"><b>结构问题 ' + issues.length + ' 条（会真的坏）</b></div>');
     issues.forEach(function (t) {
       h.push('<div style="padding:3px 0 3px 14px;border-left:2px solid #f87171;margin-bottom:3px">' + galCheckEsc(t) + '</div>');
     });
   }
   if (warns.length) {
-    h.push('<div style="color:#fbbf24;margin:10px 0 4px"><b>提示 ' + warns.length + ' 条（不坏，但会咬人）</b></div>');
+    h.push('<div style="color:var(--warn);margin:10px 0 4px"><b>提示 ' + warns.length + ' 条（不坏，但会咬人）</b></div>');
     warns.forEach(function (t) {
       h.push('<div style="padding:3px 0 3px 14px;border-left:2px solid #fbbf24;margin-bottom:3px">' + galCheckEsc(t) + '</div>');
     });
@@ -5164,7 +5176,7 @@ function galCheckRun() {
   var pkg = (document.getElementById('galPkgSel') || {}).value || '';
   pywebview.api.codex_analyze(JSON.stringify(galScript || {}), pkg).then(galCheckRender)
     .catch(function (e) {
-      box.innerHTML = '<div style="color:#f87171">体检调用失败：' + galCheckEsc(e) + '</div>';
+      box.innerHTML = '<div style="color:var(--danger)">体检调用失败：' + galCheckEsc(e) + '</div>';
     });
 }
 galSetupViewport();
@@ -5343,7 +5355,7 @@ function codexShowFiles() {
   document.getElementById('codexFiles').style.display = 'block';
   pywebview.api.codex_script_files(codexCur).then(function (r) {
     var box = document.getElementById('codexFiles');
-    if (!r || !r.ok) { box.innerHTML = '<div style="color:#f87171">加载失败</div>'; return; }
+    if (!r || !r.ok) { box.innerHTML = '<div style="color:var(--danger)">加载失败</div>'; return; }
     var html = '';
     var labels = { sprites: '🎴 立绘', bg: '🖼 背景', bgm: '🎵 音乐', voice: '🎙 配音' };
     for (var k in labels) {
@@ -5385,7 +5397,7 @@ function codexPlay() {
       var lbl = sc.title || sc.id || ('章节 ' + (idx + 1));
       var b = document.createElement('button');
       b.textContent = (idx === 0 ? '▶ ' : '📖 ') + lbl;
-      b.style.cssText = 'display:block;width:100%;text-align:left;margin:3px 0;padding:5px 10px;font-size:13px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.15);color:#ddd;border-radius:6px;cursor:pointer';
+      b.style.cssText = 'display:block;width:100%;text-align:left;margin:3px 0;padding:5px 10px;font-size:13px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.15);color:var(--text);border-radius:6px;cursor:pointer';
       b.onclick = function (e) {
         e.stopPropagation();
         document.getElementById('cxTitle').style.display = 'none';
@@ -5625,7 +5637,7 @@ function codexShowChoice(opts, hiddenCount, totalCount) {
   if (hiddenCount) {
     // 让作者一眼看出"这里有条件分支被门住了"，而不是以为剧本漏写了选项
     var hint = document.createElement('div');
-    hint.style.cssText = 'font-size:12px;color:#fbbf24;margin:2px 0 6px';
+    hint.style.cssText = 'font-size:12px;color:var(--warn);margin:2px 0 6px';
     hint.textContent = '🔒 ' + hiddenCount + '/' + (totalCount || 0) +
       ' 个选项因条件不满足被隐藏　' + codexVarsHint();
     box.appendChild(hint);
@@ -5639,7 +5651,7 @@ function codexShowChoice(opts, hiddenCount, totalCount) {
     var b = document.createElement('button');
     b.className = 'btn2';
     b.textContent = o.text || '';
-    b.style.cssText = 'display:block;width:100%;margin:6px 0;text-align:left;font-size:15px;padding:10px 14px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.25);color:#eee;border-radius:8px;cursor:pointer';
+    b.style.cssText = 'display:block;width:100%;margin:6px 0;text-align:left;font-size:15px;padding:10px 14px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.25);color:var(--text);border-radius:8px;cursor:pointer';
     b.onclick = function () {
       box.style.display = 'none';
       codexStopAuto();
