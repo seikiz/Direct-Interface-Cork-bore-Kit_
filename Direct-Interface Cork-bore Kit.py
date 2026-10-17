@@ -4294,13 +4294,23 @@ class HtmlApp:
         except Exception as e:
             return {"ok": False, "err": str(e)[:200]}
 
+    def _ws_http_err(self, r, what="操作"):
+        """把工坊的 4xx/5xx 翻成能给人看的一句话（401 单独说，不然只会显示"HTTP 401"）"""
+        detail = (r.text or "")[:140].replace("\n", " ").strip()
+        if r.status_code in (401, 403):
+            has_key = bool(self._ws_headers().get("X-API-Key"))
+            return {"ok": False,
+                    "err": "服务器要求 Key（HTTP %d）：在「🌐 在线」页填上 Key 再%s%s"
+                           % (r.status_code, what, "" if has_key else "（当前没填）")}
+        return {"ok": False, "err": "HTTP %d：%s" % (r.status_code, detail or "服务器无说明")}
+
     def api_workshop_delete(self, res_id, rtype):
         import requests
         try:
             kind, _folder, _icon = self._ws_kind(rtype)
             r = self._ws_call("DELETE", self._ws_url("/api/" + kind + "/" + str(res_id)), timeout=8)
             if r.status_code >= 400:
-                return {"ok": False, "err": "HTTP " + str(r.status_code)}
+                return self._ws_http_err(r, "删除")
             return {"ok": True}
         except Exception as e:
             return {"ok": False, "err": str(e)[:200]}
@@ -4321,7 +4331,7 @@ class HtmlApp:
                 files={"file": (fname, raw, "application/json")}, data={"name": name},
                 timeout=30)
             if r.status_code >= 400:
-                return {"ok": False, "err": "HTTP " + str(r.status_code)}
+                return self._ws_http_err(r, "上传")
             return {"ok": True, "message": r.text[:200]}
         except Exception as e:
             return {"ok": False, "err": str(e)[:200]}

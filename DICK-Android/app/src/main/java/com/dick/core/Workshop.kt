@@ -448,13 +448,26 @@ object Workshop {
         return code < 400
     }
 
-    /** multipart 上传本地卡/世界卡 */
-    fun upload(type: String, name: String): Boolean {
-        val targetDir = if (type == "角色卡") AppEnv.savesDir() else AppEnv.worldsDir()
+    /** multipart 上传本地卡/世界卡；返回 null = 成功，否则是**能给人看的原因**。
+     *  以前只回 Boolean，UI 只能显示"❌ 上传失败"——线上服务器 auth=key 时，
+     *  手机没填 Key 就是 401，用户完全看不出为什么（列表/下载是公开读，所以看起来"只有上传坏"）。 */
+    fun uploadEx(type: String, name: String): String? {
+        val kind = when (type) {
+            "角色卡" -> "cards"
+            "世界卡包" -> "packs"
+            else -> "worlds"
+        }
+        val targetDir = when (kind) {
+            "cards" -> AppEnv.savesDir()
+            "packs" -> AppEnv.worldPacksDir()
+            else -> AppEnv.worldsDir()
+        }
         val fname = name.replace(Regex("[\\\\/:*?\"<>|]"), "_").take(60) + ".json"
         val f = File(targetDir, fname)
-        if (!f.isFile) return false
-        val kind = if (type == "角色卡") "cards" else "worlds"
+        if (!f.isFile) {
+            val have = targetDir.listFiles()?.count { it.isFile && it.name.endsWith(".json") } ?: 0
+            return "本地文件不存在：$fname（$targetDir 下共 $have 个 .json）"
+        }
         val boundary = "----DICK" + System.currentTimeMillis()
         val CRLF = "\r\n"
         val head = ("--" + boundary + CRLF +
@@ -463,12 +476,26 @@ object Workshop {
             "Content-Disposition: form-data; name=\"file\"; filename=\"" + fname + "\"" + CRLF +
             "Content-Type: application/json" + CRLF + CRLF).toByteArray(Charsets.UTF_8)
         val tail = (CRLF + "--" + boundary + "--" + CRLF).toByteArray(Charsets.UTF_8)
-        val fileBytes = f.readBytes()
-        val body = head + fileBytes + tail
-        val (code, _) = request("/api/" + kind + "/upload", method = "POST", body = body,
-            contentType = "multipart/form-data; boundary=" + boundary, timeoutMs = 30000)
-        return code < 400
+        val body = head + f.readBytes() + tail
+        val (code, data) = try {
+            request("/api/" + kind + "/upload", method = "POST", body = body,
+                contentType = "multipart/form-data; boundary=" + boundary, timeoutMs = 30000)
+        } catch (e: Exception) {
+            return "网络错误：" + (e.message ?: e.javaClass.simpleName).take(80)
+        }
+        if (code < 400) return null
+        val detail = try { String(data, Charsets.UTF_8).take(140) } catch (_: Exception) { "" }
+        return when {
+            code == 401 || code == 403 ->
+                "服务器要求 Key（HTTP $code）：请在「在线」页把 Key 填上再试" + (if (apiKey.isBlank()) "（当前没填）" else "（当前已填，可能不对）")
+            code == 404 ->
+                "服务器没有这个接口（HTTP 404）——线上可能还是旧版，没有「$type」这一类"
+            else -> "HTTP $code：" + detail
+        }
     }
+
+    /** 老接口：只要成败 */
+    fun upload(type: String, name: String): Boolean = uploadEx(type, name) == null
 
     fun localRoles(): List<String> =
         AppEnv.savesDir().listFiles()?.filter { it.isFile && it.name.endsWith(".json") && !it.name.startsWith("_tree_") && !it.name.startsWith(".") }?.map { it.name }?.sorted() ?: emptyList()

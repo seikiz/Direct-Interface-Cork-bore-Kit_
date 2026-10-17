@@ -2052,8 +2052,14 @@ fun wsRefreshLocal() {
         val name = fname.removeSuffix(".json")
         wsStatus = "上传中..."
         scope.launch(Dispatchers.IO) {
-            val ok = try { Workshop.upload(wsLocalType, name) } catch (e: Exception) { false }
-            scope.launch(Dispatchers.Main) { wsStatus = if (ok) "✅ 上传成功" else "❌ 上传失败" }
+            // uploadEx 会把原因带回来（本地文件不存在 / 401 要 Key / 404 线上是旧版 / HTTP 码+响应）
+            val why = try { Workshop.uploadEx(wsLocalType, name) } catch (e: Exception) {
+                "异常：" + (e.message ?: e.javaClass.simpleName).take(80)
+            }
+            scope.launch(Dispatchers.Main) {
+                wsStatus = if (why == null) "✅ 上传成功" else "❌ 上传失败：" + why
+                if (why == null) wsLoadOnline()
+            }
         }
     }
 

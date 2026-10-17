@@ -2652,7 +2652,11 @@ fun WorkshopDialog(vm: ChatViewModel, deps: DialogDeps) {
                                         val auth = h.fields["auth"]?.str() ?: "open"
                                         val dl = (s?.fields?.get("downloads") as? J.Num)?.v?.toInt() ?: 0
                                         val lk = (s?.fields?.get("likes") as? J.Num)?.v?.toInt() ?: 0
-                                        wsStatus = "✅ 已连接（认证:" + auth + " · ↓" + dl + " ❤" + lk + "）"
+                                        // auth=key 的服务器：上传/删除没 Key 就是 401，这里直接说清楚，
+                                        // 否则用户只看到"❌ 上传失败"，会以为是网络或服务器坏了。
+                                        val needKey = auth == "key" && wsKeyInput.isBlank()
+                                        wsStatus = "✅ 已连接（认证:" + auth + " · ↓" + dl + " ❤" + lk + "）" +
+                                            if (needKey) " · 🔑 上传/删除要先填 Key" else ""
                                     } else wsStatus = "❌ 连接失败"
                                 }
                             }
