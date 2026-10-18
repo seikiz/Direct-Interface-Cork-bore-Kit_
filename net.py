@@ -1411,4 +1411,22 @@ if __name__ == "__main__":
     print(f"🌐 本机访问: http://localhost:{PORT}")
     print(f"📱 手机直连（同一 Wi-Fi）: http://{_lan_ip()}:{PORT}   ← 把这段填到手机工坊地址")
     print(f"🔑 认证模式: {'需要 X-API-Key' if API_KEY else '开放模式（无需认证）'}")
+    # 生产：装了 waitress 就用它（纯 Python 多线程 WSGI，pip install waitress 即可）；
+# 没装/调试模式则退回 Flask 自带服务器（开发用，并发会排队）。
+# 想强制用某一种：WORKSHOP_SERVER=waitress|flask
+_which = os.environ.get("WORKSHOP_SERVER", "auto").strip().lower()
+_serve = None
+if _which in ("auto", "waitress"):
+    try:
+        from waitress import serve as _serve
+    except Exception:
+        _serve = None
+if _serve is not None and not DEBUG and _which != "flask":
+    _threads = int(os.environ.get("WORKSHOP_THREADS", "0")) or max(8, (os.cpu_count() or 4) * 4)
+    print("[net.py] waitress 启动 %s:%d（threads=%d）" % (HOST, PORT, _threads))
+    # channel_timeout 给大包上传/下载留余量，别在慢网络上被掐断
+    _serve(app, host=HOST, port=PORT, threads=_threads, channel_timeout=600)
+else:
+    if _which == "waitress":
+        print("[net.py] 没装 waitress，退回 Flask 自带服务器（建议 pip install waitress）")
     app.run(host=HOST, port=PORT, debug=DEBUG, threaded=True)
