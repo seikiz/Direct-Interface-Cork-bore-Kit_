@@ -17,6 +17,7 @@
 
 跑法：python tests\\test_workshop_server.py
 """
+import gzip
 import io
 import importlib.util
 import json
@@ -339,6 +340,253 @@ def main():
                   d4.status_code == 200 and d4.get_json().get("removed") is False, str(d4.get_json()))
         finally:
             net.API_KEY = ""
+
+        # ============================================================
+        #  gzip 传输通道（压缩 → 传输 → 解压 → 放置）
+        # ============================================================
+        print(u"\n== ⑬ gzip 能力位：health / capabilities 都要能看出来 ==")
+        c7 = net.app.test_client()
+        h = c7.get("/api/health").get_json()
+        check(u"health.features 里有 gzip", "gzip" in (h.get("features") or []), str(h.get("features")))
+        cap = c7.get("/api/capabilities").get_json()
+        check(u"capabilities.features 里有 gzip", "gzip" in (cap.get("features") or []), str(cap.get("features")))
+        lim = cap.get("limits") or {}
+        check(u"limits 里下发传输节奏 min_interval_ms / max_concurrent",
+              lim.get("min_interval_ms") == 500 and lim.get("max_concurrent") == 1, str(lim))
+        check(u"capabilities.gzip 里写明两条接口路径",
+              (cap.get("gzip") or {}).get("upload", "").endswith("/upload/gz") and
+              (cap.get("gzip") or {}).get("download", "").endswith("/gz"), str(cap.get("gzip")))
+
+        print(u"\n== ⑭ gz 上传 → 列表 → gz 下载（内容一致） ==")
+        card2 = {"name": u"压缩阿绫", "system_prompt": u"你是压缩过的阿绫。", "description": u"gz 测试"}
+        raw2 = json.dumps(card2, ensure_ascii=False).encode("utf-8")
+        gz_body = gzip.compress(raw2)
+        up = c7.post("/api/cards/upload/gz", data=gz_body,
+                     headers={"X-Filename": "aling-gz.json", "X-Author": "gz-tester",
+                              "X-Tags": u"压缩,测试", "Content-Type": "application/json"})
+        check(u"gz 上传返回 201", up.status_code == 201, str(up.status_code) + str(up.get_json()))
+        upj = up.get_json() or {}
+        gzid = upj.get("id")
+        check(u"响应带 gzip/bytes_in/bytes_out/sha256",
+              upj.get("gzip") is True and upj.get("bytes_in") == len(gz_body) and
+              upj.get("bytes_out") == len(raw2) and bool(upj.get("sha256")), str(upj))
+        lst = c7.get("/api/cards/list").get_json() or []
+        mine = [x for x in lst if x.get("id") == gzid]
+        check(u"列表里能看到这条 gz 上传", len(mine) == 1, str(len(lst)))
+        if mine:
+            check(u"文件名/作者/标签都来自请求头",
+                  mine[0].get("original_name") == "aling-gz.json" and
+                  mine[0].get("author") == "gz-tester" and
+                  set(mine[0].get("tags") or []) == {u"压缩", u"测试"}, str(mine[0]))
+            check(u"预览字段照样提取（复用 _store_upload 的证据）",
+                  bool(mine[0].get("system_prompt_preview")), str(mine[0].keys()))
+        got = c7.get("/api/cards/%s/gz" % gzid)
+        check(u"gz 下载 200 且是 application/json + Content-Encoding: gzip",
+              got.status_code == 200 and
+              "application/json" in (got.headers.get("Content-Type") or "") and
+              got.headers.get("Content-Encoding") == "gzip",
+              "%s %s" % (got.status_code, dict(got.headers)))
+        check(u"解压回来与上传的那张卡一致",
+              json.loads(gzip.decompress(got.data).decode("utf-8")) == card2)
+        # 原长提示说的**是落盘文件**的大小（服务器会重新缩进序列化，不是客户端原始字节数），
+        # 所以拿磁盘上那份量，别拿 raw2 —— 差的就是 indent=2 的空白。
+        stored_size = os.path.getsize(os.path.join(net.CARDS_DIR, mine[0]["filename"])) if mine else -1
+        check(u"gz 下载带原长提示（= 落盘文件大小，压缩率可算）",
+              int(got.headers.get("X-Uncompressed-Length") or 0) == stored_size,
+              "%s vs %s" % (got.headers.get("X-Uncompressed-Length"), stored_size))
+        check(u"下载次数照样 +1（与普通下载共用索引）",
+              [x for x in (c7.get("/api/cards/list").get_json() or [])
+               if x.get("id") == gzid][0].get("downloads") == 1)
+
+        # 头的编码：WSGI 把头当 latin-1 字节串，客户端直接塞 UTF-8 字节（curl 就是这么干的）
+        # 到服务端就是「ä¸­æ–‡」这种乱码。这两条钉住"两种来法都能落成正确的中文名"：
+        #   ① 安卓：百分号编码（ASCII 头）→ 服务端解回来；
+        #   ② curl：裸 UTF-8 字节 → 被 latin-1 解成乱码 → 再修回 UTF-8。
+        mojibake = u"乱码卡.json".encode("utf-8").decode("latin-1")
+        enc_up = c7.post("/api/cards/upload/gz", data=gz_body,
+                         headers={"X-Filename": u"%E4%B9%B1%E7%A0%81%E5%8D%A1.json"})
+        moj_up = c7.post("/api/cards/upload/gz", data=gz_body, headers={"X-Filename": mojibake})
+        names = []
+        for resp in (enc_up, moj_up):
+            rid = (resp.get_json() or {}).get("id")
+            hit = [x for x in (c7.get("/api/cards/list").get_json() or []) if x.get("id") == rid]
+            names.append(hit[0].get("original_name") if hit else None)
+        check(u"百分号编码的文件名（安卓那套）解回中文", names[0] == u"乱码卡.json", str(names[0]))
+        check(u"裸 UTF-8 头（curl 那套）也修回中文", names[1] == u"乱码卡.json", str(names[1]))
+
+        print(u"\n== ⑮ gz 上传的坏包/超限/坏扩展名/坏 JSON 各归各码 ==")
+        bad_gz = c7.post("/api/cards/upload/gz", data=b"this is not gzip",
+                         headers={"X-Filename": "x.json"})
+        check(u"不是合法 gzip → 400", bad_gz.status_code == 400,
+              str(bad_gz.status_code) + str(bad_gz.get_json()))
+        bad_json = c7.post("/api/cards/upload/gz", data=gzip.compress(b"{not json"),
+                           headers={"X-Filename": "x.json"})
+        check(u"解出来不是合法 JSON → 400", bad_json.status_code == 400, str(bad_json.status_code))
+        bad_ext = c7.post("/api/cards/upload/gz", data=gz_body, headers={"X-Filename": "evil.txt"})
+        check(u"扩展名白名单仍然拦（400）", bad_ext.status_code == 400,
+              str(bad_ext.status_code) + str(bad_ext.get_json()))
+        # 解压超限：上限调到 1MB，塞 2MB 的 JSON（压缩后很小，所以过得了 body 上限）
+        old_max = net.UPLOAD_MAX_MB
+        net.UPLOAD_MAX_MB = 1
+        try:
+            bomb = json.dumps({"name": u"炸弹", "blob": "a" * (2 * 1024 * 1024)}).encode("utf-8")
+            over = c7.post("/api/cards/upload/gz", data=gzip.compress(bomb),
+                           headers={"X-Filename": "bomb.json"})
+            check(u"解压后超过 UPLOAD_MAX_MB → 413", over.status_code == 413,
+                  str(over.status_code) + str(over.get_json()))
+            check(u"413 里说清是「解压后」超限",
+                  u"解压后" in ((over.get_json() or {}).get("error") or ""), str(over.get_json()))
+            check(u"超限的包没有留下半成品（列表条数没涨）",
+                  len([x for x in (c7.get("/api/cards/list").get_json() or [])
+                       if x.get("name") == u"炸弹"]) == 0)
+        finally:
+            net.UPLOAD_MAX_MB = old_max
+
+        print(u"\n== ⑯ 去历史：服务器兜底剔除本地状态（每次上传都是新卡） ==")
+        dirty = {"name": u"咲", "system_prompt": u"你是咲。", "personality": u"安静",
+                 "greeting": u"……", "params": {"k": 1},
+                 "entries": [{"keywords": [u"雨"], "content": u"下雨"}],
+                 "history_tree": {"nodes": {"n1": {"content": u"私密对话"}}},
+                 "_tree_ts": "2026-10-18T00:00:00", "messages": [{"role": "user", "content": u"隐私"}],
+                 "memory": {"x": 1}, "state": {"mood": "calm"}}
+        dr = c7.post("/api/cards/upload/gz",
+                     data=gzip.compress(json.dumps(dirty, ensure_ascii=False).encode("utf-8")),
+                     headers={"X-Filename": "saki.json"})
+        check(u"上传成功", dr.status_code == 201, str(dr.status_code))
+        drj = dr.get_json() or {}
+        check(u"响应里报出被剔掉的键", u"history_tree" in (drj.get("stripped") or []), str(drj.get("stripped")))
+        saki_id = drj.get("id")
+        saki_entry = [x for x in (c7.get("/api/cards/list").get_json() or []) if x.get("id") == saki_id]
+        if saki_entry:
+            p = os.path.join(net.CARDS_DIR, saki_entry[0]["filename"])
+            with open(p, "r", encoding="utf-8") as f:
+                saved = json.load(f)
+            check(u"落盘文件里没有 history_tree / _tree_ts / messages / memory / state",
+                  not any(k in saved for k in ("history_tree", "_tree_ts", "messages", "memory", "state")),
+                  str(sorted(saved.keys())))
+            check(u"落盘文件里卡面字段都在（system_prompt/personality/greeting/entries/params）",
+                  saved.get("system_prompt") == u"你是咲。" and saved.get("personality") == u"安静"
+                  and saved.get("greeting") == u"……" and bool(saved.get("entries"))
+                  and saved.get("params") == {"k": 1}, str(sorted(saved.keys())))
+            check(u"索引里也没有 history_tree（条目字段干净）",
+                  "history_tree" not in json.dumps(saki_entry[0], ensure_ascii=False))
+        # 新卡语义：同一份内容传两次 = 两条独立条目（不按 id 覆盖、不按 sha256 去重）
+        before = len(c7.get("/api/cards/list").get_json() or [])
+        again = c7.post("/api/cards/upload/gz",
+                        data=gzip.compress(json.dumps(dirty, ensure_ascii=False).encode("utf-8")),
+                        headers={"X-Filename": "saki.json"})
+        after = len(c7.get("/api/cards/list").get_json() or [])
+        check(u"同一张卡传两次 → 两条不同 id 的条目（新卡语义）",
+              again.status_code == 201 and after == before + 1 and
+              (again.get_json() or {}).get("id") != saki_id,
+              "%d → %d" % (before, after))
+
+        print(u"\n== ⑰ 旧路径不受影响：没有 gzip 能力位时 multipart 照旧 ==")
+        saved_features = net.FEATURES
+        net.FEATURES = tuple(f for f in net.FEATURES if f != "gzip")
+        try:
+            h2 = c7.get("/api/health").get_json()
+            check(u"FEATURES 里去掉 gzip 后 health 也不报（老客户端据此走 multipart）",
+                  "gzip" not in (h2.get("features") or []), str(h2.get("features")))
+            old_up = c7.post("/api/cards/upload",
+                             data={"file": (io.BytesIO(json.dumps({"name": u"老路卡"}).encode("utf-8")),
+                                            "old.json")},
+                             content_type="multipart/form-data")
+            check(u"multipart 上传仍然 201", old_up.status_code == 201, str(old_up.status_code))
+            old_id = (old_up.get_json() or {}).get("id")
+            check(u"老路上传的作品能正常下载",
+                  c7.get("/api/cards/" + str(old_id)).status_code == 200)
+            c7.get("/api/cards/list").close()
+        finally:
+            net.FEATURES = saved_features
+
+        print(u"\n== ⑱ 响应压缩：JSON ≥1KB 才压，文件下载与已压内容不碰 ==")
+        big = {"name": u"长卡", "system_prompt": u"长" * 1500}     # UTF-8 后 > 1KB
+        c7.post("/api/cards/upload",
+                data={"file": (io.BytesIO(json.dumps(big, ensure_ascii=False).encode("utf-8")), "big.json")},
+                content_type="multipart/form-data")
+        plain = c7.get("/api/cards/list")
+        packed = c7.get("/api/cards/list", headers={"Accept-Encoding": "gzip"})
+        check(u"Accept-Encoding: gzip → Content-Encoding: gzip",
+              packed.headers.get("Content-Encoding") == "gzip",
+              "%s len=%d" % (packed.headers.get("Content-Encoding"), len(packed.data)))
+        check(u"压过的比明文小", len(packed.data) < len(plain.data),
+              "%d vs %d" % (len(packed.data), len(plain.data)))
+        check(u"解回来与明文一致",
+              json.loads(gzip.decompress(packed.data).decode("utf-8")) ==
+              json.loads(plain.data.decode("utf-8")))
+        check(u"Vary: Accept-Encoding 存在",
+              "accept-encoding" in (packed.headers.get("Vary") or "").lower(),
+              str(packed.headers.get("Vary")))
+        small = c7.get("/api/health", headers={"Accept-Encoding": "gzip"})
+        check(u"小于 1KB 的 JSON 不压（压了只会更大）",
+              not small.headers.get("Content-Encoding"),
+              "%s %d" % (small.headers.get("Content-Encoding"), len(small.data)))
+        plain.close()
+        packed.close()
+        big_id = [x for x in (c7.get("/api/cards/list").get_json() or []) if x.get("name") == u"长卡"][0]["id"]
+        dl = c7.get("/api/cards/" + str(big_id), headers={"Accept-Encoding": "gzip"})
+        check(u"文件下载不被压缩（send_file 直通，压了存下来的文件就废了）",
+              not dl.headers.get("Content-Encoding"),
+              str(dl.headers.get("Content-Encoding")))
+        dl.close()
+        gz_dl = c7.get("/api/cards/%s/gz" % big_id, headers={"Accept-Encoding": "gzip"})
+        check(u"已经是 gzip 的响应不会被压第二遍",
+              gz_dl.headers.get("Content-Encoding") == "gzip" and
+              json.loads(gzip.decompress(gz_dl.data).decode("utf-8")).get("name") == u"长卡",
+              str(dict(gz_dl.headers)))
+
+        print(u"\n== ⑲ 限流两档 + 429 带 Retry-After（客户端据此退避） ==")
+        net.RATE_PER_MIN = 2
+        net.RATE_PER_HOUR = 0
+        net._RATE_HITS.clear()
+        codes = []
+        last = None
+        for i in range(3):
+            last = c7.post("/api/cards/upload/gz", data=gz_body,
+                           headers={"X-Filename": "rate%d.json" % i})
+            codes.append(last.status_code)
+        check(u"分钟档 2 次：前两个 201、第三个 429", codes[:2] == [201, 201] and codes[2] == 429,
+              str(codes))
+        check(u"429 带 Retry-After 头（秒）", bool(last.headers.get("Retry-After")),
+              str(dict(last.headers)))
+        check(u"429 的 body 里也有 retry_after（客户端另一条读法）",
+              isinstance((last.get_json() or {}).get("retry_after"), int), str(last.get_json()))
+        check(u"429 说明里点出是哪一档超了（每分钟）",
+              u"每分钟" in ((last.get_json() or {}).get("error") or ""), str(last.get_json()))
+        # 恢复默认节奏：2/s 的正常节奏不该被自己限流打回
+        net.RATE_PER_MIN = 120
+        net.RATE_PER_HOUR = 10800
+        net._RATE_HITS.clear()
+        ok_codes = [c7.post("/api/cards/upload/gz", data=gz_body,
+                            headers={"X-Filename": "ok%d.json" % i}).status_code for i in range(5)]
+        check(u"默认档位下连传 5 次全部 201（500ms 节奏打不到自己）",
+              ok_codes == [201] * 5, str(ok_codes))
+
+        print(u"\n== ⑳ gz 上传的鉴权与普通上传完全一致（开放上传可匿名，删除要 Key） ==")
+        net._RATE_HITS.clear()
+        net.API_KEY = "gz-key"
+        net.OPEN_UPLOAD = True
+        try:
+            c8 = net.app.test_client()
+            anon = c8.post("/api/cards/upload/gz", data=gz_body,
+                           headers={"X-Filename": "anon.json"})
+            check(u"OPEN_UPLOAD=1 时匿名 gz 上传照样 201（和 multipart 同一套 write_auth）",
+                  anon.status_code == 201, str(anon.status_code) + str(anon.get_json()))
+            anon_id = (anon.get_json() or {}).get("id")
+            check(u"匿名删不掉（删除始终要 Key）",
+                  c8.delete("/api/cards/" + str(anon_id)).status_code in (401, 403))
+            check(u"带 Key 能删掉",
+                  c8.delete("/api/cards/" + str(anon_id),
+                            headers={"X-API-Key": "gz-key"}).status_code == 200)
+            net.OPEN_UPLOAD = False
+            closed = c8.post("/api/cards/upload/gz", data=gz_body,
+                             headers={"X-Filename": "closed.json"})
+            check(u"OPEN_UPLOAD=0 时匿名 gz 上传被拒（401/403，与 multipart 同一策略）",
+                  closed.status_code in (401, 403), str(closed.status_code))
+        finally:
+            net.API_KEY = ""
+            net.OPEN_UPLOAD = True
 
     finally:
         shutil.rmtree(tmp, ignore_errors=True)

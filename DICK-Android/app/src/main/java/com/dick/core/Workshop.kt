@@ -1,10 +1,13 @@
 package com.dick.core
 
+import java.io.ByteArrayOutputStream
 import java.io.File
 import java.net.HttpURLConnection
 import java.net.Proxy
 import java.net.URL
 import java.net.URLEncoder
+import java.util.zip.GZIPInputStream
+import java.util.zip.GZIPOutputStream
 
 /**
  * 创意工坊（联网版）—— 与桌面版 html_app 接口协议一致：
@@ -12,6 +15,11 @@ import java.net.URLEncoder
  *   /api/cards/{id} /api/worlds/{id}（下载）
  *   POST /like、/upload（multipart）、DELETE /{id}
  *   可选请求头 X-API-Key；连接配置保存在数据目录 workshop_config.json
+ *
+ * gzip 传输通道（2026-10）：
+ *   POST /api/{type}/upload/gz  body = gzip(JSON)，元数据走 X-Filename / X-Author / X-Tags
+ *   GET  /api/{type}/{id}/gz    返回 gzip 体（Content-Encoding: gzip）
+ *   能力看 /api/capabilities 的 features 里有没有 "gzip"；没有就回退 multipart。
  */
 object Workshop {
 
@@ -249,6 +257,79 @@ object Workshop {
     // 这是部署好的 dick-workshop Worker 稳定地址（永不失效，转发到你的工坊）。
     private const val DEFAULT_PUBLIC_URL = "http://154.94.226.240:8080"
 
+    // ============ 传输节奏（与桌面端同一套契约） ============
+    //  链路按"每设备每 500ms 一次"设计（40 Mbit ≈ 5MB/s）：并发/连打会把水管灌满，
+    //  服务器也会按 rate_per_min 回 429。所以 gz 上传与下载都走同一个闸门：
+    //  串行（同一时刻只有一个传输在飞）+ 最小间隔。
+    //  间隔**优先用服务器下发的** limits.min_interval_ms（以后换 100MB/s 只改服务器
+    //  环境变量、客户端不用重新发版），读不到才用下面这个兜底值。
+    private const val XFER_MIN_INTERVAL_MS = 500L
+
+    /** 429 退避重试上限（超过就如实报"链路限流"） */
+    private const val XFER_MAX_RETRY = 3
+
+    /** 上传前要剔掉的**本地历史/状态**键（与 net.py、桌面端的 LOCAL_STATE_KEYS 同一份名单）。
+     *
+     *  语义是"每次上传都是新卡"：聊天树里是用户真实的私密对话，传到公网工坊既
+     *  泄漏隐私又白白撑大包体（实测 咲.json 16KB → 2KB）。卡面字段
+     *  （name/system_prompt/personality/appearance/greeting/scenario/description/
+     *  tags/author/version/params/rules/entries…）一个都不动，也**不递归**进
+     *  params/rules 里 —— 那里的同名键是作者自己写的数据，不是运行期状态。 */
+    private val LOCAL_STATE_KEYS = listOf(
+        "history_tree", "_tree_ts", "tree_ts", "messages", "chat_history", "_history",
+        "memory", "memories", "preferences", "_indices", "_trpg_lock",
+        "last_leaf_id", "current_leaf_id", "session", "state"
+    )
+
+    /** 传输闸门用的锁 + 上次发送时刻。
+     *  这是**阻塞**代码（HttpURLConnection，不是挂起函数），所以用 ReentrantLock
+     *  而不是 kotlinx 的 Mutex —— 后者是给协程用的，在这里得 runBlocking 绕一圈，
+     *  反而会让"同一时刻只有一个传输"这条保证变得不好读。
+     *  时刻用 SystemClock.elapsedRealtime()：单调时钟，用户改系统时间不会变负。 */
+    private val xferMutex = java.util.concurrent.locks.ReentrantLock()
+    private var lastSendAt = 0L
+
+    /** 占用一次传输窗口：串行 + 最小间隔。 */
+    private fun <T> withXferSlot(block: () -> T): T {
+        xferMutex.lock()
+        try {
+            val wait = minIntervalMs() - (android.os.SystemClock.elapsedRealtime() - lastSendAt)
+            if (wait > 0) {
+                try {
+                    Thread.sleep(wait)      // 还没到下一次的窗口，就等着（不并发突发）
+                } catch (_: InterruptedException) {
+                }
+            }
+            lastSendAt = android.os.SystemClock.elapsedRealtime()
+            return block()
+        } finally {
+            xferMutex.unlock()
+        }
+    }
+
+    /** 两次传输的最小间隔：优先服务器下发的 limits.min_interval_ms。 */
+    private fun minIntervalMs(): Long {
+        val v = capabilities().limits["min_interval_ms"] ?: 0L
+        return if (v in 1L..60000L) v else XFER_MIN_INTERVAL_MS
+    }
+
+    /** 读响应体：显式 Accept-Encoding: gzip 之后，HttpURLConnection **不会**自动解压
+     *  （它只负责收发字节），所以这里按 Content-Encoding 用 GZIPInputStream 解；
+     *  另外按 gzip 魔数 1f 8b 兜一层 —— 中间层把 Content-Encoding 头丢掉时也能解。 */
+    private fun readMaybeGzip(conn: HttpURLConnection, ok: Boolean): ByteArray {
+        val stream = (if (ok) conn.inputStream else conn.errorStream) ?: return ByteArray(0)
+        val body = stream.use { it.readBytes() }
+        val enc = (conn.getHeaderField("Content-Encoding") ?: "").lowercase()
+        val looksGzip = body.size > 2 && body[0] == 0x1f.toByte() && body[1] == 0x8b.toByte()
+        if (!enc.contains("gzip") && !looksGzip) return body
+        if (!looksGzip) return body               // 头说压了、体却不是 gzip：别硬解
+        return try {
+            GZIPInputStream(body.inputStream()).use { it.readBytes() }
+        } catch (_: Exception) {
+            body                                  // 解不开就原样给（上层按坏 JSON 报错）
+        }
+    }
+
     private fun request(
         path: String,
         method: String = "GET",
@@ -256,7 +337,8 @@ object Workshop {
         body: ByteArray? = null,
         contentType: String? = null,
         timeoutMs: Int = 8000,
-    ): Pair<Int, ByteArray> {
+        extraHeaders: Map<String, String> = emptyMap(),
+    ): Resp {
         var u = path
         if (params.isNotEmpty()) {
             u += "?" + params.entries.joinToString("&") { (k, v) ->
@@ -269,16 +351,103 @@ object Workshop {
         conn.connectTimeout = timeoutMs
         conn.readTimeout = timeoutMs
         if (apiKey.isNotBlank()) conn.setRequestProperty("X-API-Key", apiKey)
+        // HttpURLConnection **默认不发** Accept-Encoding（浏览器才会），
+        // 所以想拿到压缩响应必须显式加 —— 否则服务器的 JSON 压缩通道永远不触发。
+        conn.setRequestProperty("Accept-Encoding", "gzip")
+        for ((k, v) in extraHeaders) conn.setRequestProperty(k, v)
         if (body != null) {
             conn.doOutput = true
             if (contentType != null) conn.setRequestProperty("Content-Type", contentType)
             conn.outputStream.use { it.write(body) }
         }
         val code = conn.responseCode
-        val data = if (code < 400) conn.inputStream.use { it.readBytes() }
-            else conn.errorStream?.use { it.readBytes() } ?: ByteArray(0)
+        val data = readMaybeGzip(conn, code < 400)
+        // 头也带出来：429 的 Retry-After 在头里（JSON 里也有一份 body 兜底）
+        val headers = mutableMapOf<String, String>()
+        try {
+            for ((k, vs) in conn.headerFields) {
+                if (k != null && vs != null && vs.isNotEmpty()) headers[k.lowercase()] = vs[0]
+            }
+        } catch (_: Exception) {
+        }
         conn.disconnect()
-        return code to data
+        return Resp(code, data, headers)
+    }
+
+    /** 一次工坊响应。**刻意保留 component1/component2**：仓库里几十处
+     *  `val (code, body) = request(...)` 的写法因此一行都不用改。 */
+    class Resp(val code: Int, val body: ByteArray, val headers: Map<String, String> = emptyMap()) {
+        operator fun component1(): Int = code
+        operator fun component2(): ByteArray = body
+    }
+
+    // ============ 能力协商（与桌面端 _ws_caps 同一套形状） ============
+
+    /** 服务器能力：types / features / limits。老服务器没有 /api/capabilities → old=true。 */
+    data class Caps(
+        val types: Set<String>,
+        val features: Set<String>,
+        val limits: Map<String, Long>,
+        val old: Boolean,
+    )
+
+    private var capsCache: Pair<Caps, Long>? = null
+    private const val CAPS_TTL_MS = 5 * 60 * 1000L      // 5 分钟
+
+    /** 读 /api/capabilities（缓存 5 分钟）。客户端据此决定走不走 gzip、发多快。 */
+    fun capabilities(): Caps {
+        val now = System.currentTimeMillis()
+        capsCache?.let { if (now - it.second < CAPS_TTL_MS) return it.first }
+        var caps = Caps(emptySet(), emptySet(), emptyMap(), true)
+        try {
+            val (code, body) = request("/api/capabilities", timeoutMs = 6000)
+            if (code < 400) {
+                val o = JsonS.parse(String(body, Charsets.UTF_8)) as? J.Obj
+                val types = mutableSetOf<String>()
+                (o?.fields?.get("types") as? J.Arr)?.items?.forEach { t ->
+                    val name = when (t) {
+                        is J.Str -> t.v
+                        is J.Obj -> t.fields["name"]?.str() ?: ""
+                        else -> ""
+                    }
+                    name.trim().lowercase().takeIf { it.isNotEmpty() }?.let { types.add(it) }
+                }
+                val features = mutableSetOf<String>()
+                (o?.fields?.get("features") as? J.Arr)?.items?.forEach { f ->
+                    (f as? J.Str)?.v?.trim()?.lowercase()?.takeIf { it.isNotEmpty() }
+                        ?.let { features.add(it) }
+                }
+                val limits = mutableMapOf<String, Long>()
+                (o?.fields?.get("limits") as? J.Obj)?.fields?.forEach { (k, v) ->
+                    ((v as? J.Num)?.v)?.toLong()?.let { limits[k] = it }
+                }
+                if (types.isNotEmpty()) caps = Caps(types, features, limits, false)
+            }
+        } catch (_: Exception) {
+            // 老服务器 / 网络不通：当"没有能力"，所有新通道自动降级
+        }
+        capsCache = caps to now
+        return caps
+    }
+
+    /** 服务器支持 gzip 传输通道吗？ */
+    fun hasGzip(): Boolean = "gzip" in capabilities().features
+
+    /** 上传前剔掉本地历史/状态（bytes 版）：解析 → 剔除 → 重新序列化。
+     *
+     *  解析不了就原样返回（让服务器去判 400）；没有可剔的键时返回**原字节**，
+     *  避免"没改也重新序列化"把用户的排版/缩进悄悄改掉。 */
+    private fun stripLocalStateBytes(raw: ByteArray): Pair<ByteArray, List<String>> {
+        val o = try {
+            JsonS.parse(String(raw, Charsets.UTF_8)) as? J.Obj
+        } catch (_: Exception) {
+            null
+        } ?: return raw to emptyList()
+        val gone = LOCAL_STATE_KEYS.filter { o.fields.containsKey(it) }
+        if (gone.isEmpty()) return raw to emptyList()
+        val copy = J.Obj()
+        for ((k, v) in o.fields) if (k !in gone) copy.fields[k] = v
+        return JsonS.stringify(copy, pretty = true).toByteArray(Charsets.UTF_8) to gone
     }
 
     fun health(): J.Obj? {
@@ -312,12 +481,30 @@ object Workshop {
         return ((JsonS.parse(String(body, Charsets.UTF_8)) as? J.Arr)?.items ?: emptyList()).mapNotNull { it as? J.Obj }
     }
 
-    /** 下载在线作品到本地（重名自动加序号），返回保存的文件 */
+    /** 下载在线作品到本地（重名自动加序号），返回保存的文件。
+     *
+     *  能力里有 gzip 就走 /api/<kind>/<id>/gz（省流量），否则普通下载；
+     *  两条路都在传输闸门里（串行 + 最小间隔）。HttpURLConnection 不自动解压，
+     *  解压由 request() → readMaybeGzip 按 Content-Encoding / gzip 魔数完成。 */
     fun download(id: String, type: String, filename: String): File {
         val kind = if (type == "角色卡") "cards" else "worlds"
         val targetDir = if (type == "角色卡") AppEnv.savesDir() else AppEnv.worldsDir()
-        val (code, body) = request("/api/" + kind + "/" + id, timeoutMs = 30000)
-        if (code >= 400) throw IllegalStateException("HTTP $code")
+        var usedGz = hasGzip()
+        val t0 = System.currentTimeMillis()
+        val resp = withXferSlot {
+            if (usedGz) {
+                val gz = request("/api/" + kind + "/" + id + "/gz", timeoutMs = 30000)
+                if (gz.code < 400) gz
+                else {
+                    usedGz = false        // 老服务器没这条 → 退回普通下载
+                    request("/api/" + kind + "/" + id, timeoutMs = 30000)
+                }
+            } else {
+                request("/api/" + kind + "/" + id, timeoutMs = 30000)
+            }
+        }
+        if (resp.code >= 400) throw IllegalStateException("HTTP ${resp.code}")
+        val body = resp.body
         var fname = filename.replace("..", "_")
         if (!fname.endsWith(".json")) fname += ".json"
         var dst = File(targetDir, fname)
@@ -328,6 +515,7 @@ object Workshop {
             i++
         }
         dst.writeBytes(body)
+        logXfer("下载", body.size, body.size, System.currentTimeMillis() - t0, emptyList(), usedGz)
         return dst
     }
 
@@ -448,9 +636,18 @@ object Workshop {
         return code < 400
     }
 
-    /** multipart 上传本地卡/世界卡；返回 null = 成功，否则是**能给人看的原因**。
+    /** 上传本地卡/世界卡；返回 null = 成功，否则是**能给人看的原因**。
+     *
+     *  流程（两端同一套，别再各写一份）：
+     *    ① 剔掉本地历史/状态 —— "每次上传都是新卡"，聊天树绝不外传；
+     *    ② 服务器能力里有 gzip → 压到 ByteArrayOutputStream 后 POST /upload/gz
+     *       （文件名走 X-Filename，中文名 URL 编码；服务器 _url_unquote 会解回来）；
+     *    ③ gz 接口不认（404/405/415/501）→ **自动回退** multipart，不让用户感知；
+     *    ④ 传输在闸门里（串行 + 最小间隔），429 按 Retry-After 退避，最多 3 次。
+     *
      *  以前只回 Boolean，UI 只能显示"❌ 上传失败"——线上服务器 auth=key 时，
-     *  手机没填 Key 就是 401，用户完全看不出为什么（列表/下载是公开读，所以看起来"只有上传坏"）。 */
+     *  手机没填 Key 就是 401，用户完全看不出为什么（列表/下载是公开读，所以看起来
+     *  "只有上传坏"）。 */
     fun uploadEx(type: String, name: String): String? {
         val kind = when (type) {
             "角色卡" -> "cards"
@@ -468,6 +665,95 @@ object Workshop {
             val have = targetDir.listFiles()?.count { it.isFile && it.name.endsWith(".json") } ?: 0
             return "本地文件不存在：$fname（$targetDir 下共 $have 个 .json）"
         }
+        // ① 去历史（在压缩之前做：先变小，再压，收益叠加）
+        val (raw, gone) = stripLocalStateBytes(f.readBytes())
+        // ② 有 gzip 能力就先压好；压不动/发不出去再回退
+        var compressible = hasGzip()
+        val gzBody: ByteArray? = if (compressible) gzipCompress(raw) else null
+        if (compressible && gzBody == null) compressible = false
+        var usedGz = false
+        var resp = Resp(0, ByteArray(0))
+        val t0 = System.currentTimeMillis()
+        try {
+            var attempt = 0
+            while (true) {
+                attempt++
+                resp = withXferSlot {
+                    var r: Resp? = null
+                    if (compressible && !usedGz) {
+                        r = sendGzip(kind, fname, gzBody!!)
+                        if (r.code == 404 || r.code == 405 || r.code == 415 || r.code == 501) {
+                            compressible = false      // 服务器没有这条接口 → 本轮改走 multipart
+                            r = null
+                        } else {
+                            usedGz = r.code < 400
+                        }
+                    }
+                    r ?: sendMultipart(kind, fname, name, raw)
+                }
+                if (resp.code != 429 || attempt >= XFER_MAX_RETRY) break
+                val waitMs = retryAfterMs(resp)
+                println("[工坊] 链路限流（429），${waitMs}ms 后重试（第 $attempt/$XFER_MAX_RETRY 次）")
+                try {
+                    Thread.sleep(waitMs)
+                } catch (_: InterruptedException) {
+                }
+            }
+        } catch (e: Exception) {
+            return "网络错误：" + (e.message ?: e.javaClass.simpleName).take(80)
+        }
+        val costMs = System.currentTimeMillis() - t0
+        if (resp.code < 400) {
+            val sent = if (usedGz) (gzBody?.size ?: raw.size) else raw.size
+            logXfer("上传", raw.size, sent, costMs, gone, usedGz)
+            return null
+        }
+        if (resp.code == 429) return "链路限流，稍后再试（服务器一直回 429）"
+        val detail = try {
+            String(resp.body, Charsets.UTF_8).take(140)
+        } catch (_: Exception) {
+            ""
+        }
+        return when {
+            resp.code == 401 || resp.code == 403 ->
+                "服务器要求 Key（HTTP ${resp.code}）：请在「在线」页把 Key 填上再试" + (if (apiKey.isBlank()) "（当前没填）" else "（当前已填，可能不对）")
+            resp.code == 404 ->
+                "服务器没有这个接口（HTTP 404）——线上可能还是旧版，没有「$type」这一类"
+            resp.code == 413 ->
+                "压缩包解压后超过服务器上限（HTTP 413）：${detail.ifBlank { "换小一点的卡再试" }}"
+            resp.code == 400 ->
+                "服务器拒收（HTTP 400）：${detail.ifBlank { "压缩包/JSON 有问题" }}"
+            else -> "HTTP ${resp.code}：" + detail
+        }
+    }
+
+    /** gzip 压缩到内存（Jetpack 里没有现成的 ByteArray 版）。
+     *  失败返回 null（例如 OOM）——调用方据此放弃压缩、直接发明文。 */
+    private fun gzipCompress(raw: ByteArray): ByteArray? {
+        return try {
+            val out = ByteArrayOutputStream()
+            GZIPOutputStream(out).use { it.write(raw) }
+            out.toByteArray()
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    /** 文件名放进 X-Filename 前转成 ASCII 安全的形式。
+     *  HTTP 头只能带 ISO-8859-1，中文名直接塞会变乱码（甚至抛 IllegalArgumentException），
+     *  所以做一次 URL 编码 —— 服务器（net.py 的 _url_unquote）会解回原名。 */
+    private fun asciiHeaderName(name: String): String =
+        URLEncoder.encode(name, "UTF-8").replace("+", "%20")
+
+    /** gzip 上传：body 就是 gzip(JSON)，元数据走请求头（与桌面端同一个接口/同一套头）。 */
+    private fun sendGzip(kind: String, fname: String, gzBody: ByteArray): Resp =
+        request("/api/" + kind + "/upload/gz", method = "POST", body = gzBody,
+            contentType = "application/json", timeoutMs = 30000,
+            extraHeaders = mapOf("X-Filename" to asciiHeaderName(fname)))
+
+    /** 老路径：multipart。保留原样（字段名 file / name、boundary 规则都不变），
+     *  老服务器、以及 gz 接口不存在时的回退都走这条。 */
+    private fun sendMultipart(kind: String, fname: String, name: String, raw: ByteArray): Resp {
         val boundary = "----DICK" + System.currentTimeMillis()
         val CRLF = "\r\n"
         val head = ("--" + boundary + CRLF +
@@ -476,22 +762,37 @@ object Workshop {
             "Content-Disposition: form-data; name=\"file\"; filename=\"" + fname + "\"" + CRLF +
             "Content-Type: application/json" + CRLF + CRLF).toByteArray(Charsets.UTF_8)
         val tail = (CRLF + "--" + boundary + "--" + CRLF).toByteArray(Charsets.UTF_8)
-        val body = head + f.readBytes() + tail
-        val (code, data) = try {
-            request("/api/" + kind + "/upload", method = "POST", body = body,
-                contentType = "multipart/form-data; boundary=" + boundary, timeoutMs = 30000)
-        } catch (e: Exception) {
-            return "网络错误：" + (e.message ?: e.javaClass.simpleName).take(80)
+        return request("/api/" + kind + "/upload", method = "POST", body = head + raw + tail,
+            contentType = "multipart/form-data; boundary=" + boundary, timeoutMs = 30000)
+    }
+
+    /** 429 要等多久：优先 Retry-After 头（标准），其次 JSON 里的 retry_after，
+     *  都没有就按最小间隔来一次。 */
+    private fun retryAfterMs(resp: Resp): Long {
+        val fromHeader = resp.headers["retry-after"]?.trim()?.toDoubleOrNull()
+        val fromBody = try {
+            ((JsonS.parse(String(resp.body, Charsets.UTF_8)) as? J.Obj)
+                ?.fields?.get("retry_after") as? J.Num)?.v
+        } catch (_: Exception) {
+            null
         }
-        if (code < 400) return null
-        val detail = try { String(data, Charsets.UTF_8).take(140) } catch (_: Exception) { "" }
-        return when {
-            code == 401 || code == 403 ->
-                "服务器要求 Key（HTTP $code）：请在「在线」页把 Key 填上再试" + (if (apiKey.isBlank()) "（当前没填）" else "（当前已填，可能不对）")
-            code == 404 ->
-                "服务器没有这个接口（HTTP 404）——线上可能还是旧版，没有「$type」这一类"
-            else -> "HTTP $code：" + detail
-        }
+        val secs = fromHeader ?: fromBody ?: (XFER_MIN_INTERVAL_MS / 1000.0)
+        return maxOf(XFER_MIN_INTERVAL_MS, (secs * 1000).toLong())
+    }
+
+    /** 本次耗时 / 压缩后字节数 / 平均吞吐（MB/s）：40Mbit 的水管有没有被打满，
+     *  靠这行日志看，不靠感觉。 */
+    private fun logXfer(what: String, rawSize: Int, sentSize: Int, costMs: Long,
+                        gone: List<String>, gz: Boolean) {
+        val secs = costMs / 1000.0
+        val mbps = if (secs > 0) (sentSize / 1048576.0) / secs else 0.0
+        val pct = if (rawSize > 0) 100.0 * sentSize / rawSize else 100.0
+        val size = if (gz) "gzip ${rawSize}→${sentSize} 字节（${"%.0f".format(pct)}%）"
+        else "明文 $sentSize 字节"
+        val strip = if (gone.isEmpty()) "" else
+            "，已剔掉 ${gone.size} 个本地键（${gone.take(3).joinToString("、")}）"
+        println("[工坊] $what 完成：$size，耗时 ${"%.2f".format(secs)}s，" +
+            "平均 ${"%.2f".format(mbps)} MB/s$strip")
     }
 
     /** 老接口：只要成败 */

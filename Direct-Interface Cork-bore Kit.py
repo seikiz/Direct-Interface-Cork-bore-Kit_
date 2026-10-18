@@ -542,6 +542,122 @@ def _seed_defaults(base_dir):
             pass
 
 
+# ============================================================
+#  创意工坊：传输节奏与"去历史"
+# ============================================================
+#  两件与具体视图无关、两端（桌面/安卓）必须一致的规矩，放在模块级：
+#
+#  ① 传输节奏：链路按"每设备每 500ms 一次"设计（40 Mbit ≈ 5MB/s）。
+#     并发两条大上传会互相抢带宽、双倍超时，服务器也会按 rate_per_min 回 429。
+#     所以工坊的**传输**（上传/下载）走同一个闸门：串行 + 最小间隔。
+#     间隔优先用服务器下发的 limits.min_interval_ms（以后换 100MB/s 只改服务器
+#     环境变量、客户端不用重新发版），读不到才回落到这个常量。
+#  ② 去历史：上传前剔掉本地历史/状态（聊天树/进度/记忆），只发卡面内容。
+#     语义是"每次上传都是新卡"——不按 id 覆盖、不按 sha256 去重。
+#     实测 咲.json 16KB → 2KB（gzip 前）。服务器侧还会再兜底剔一遍。
+# ============================================================
+XFER_MIN_INTERVAL_MS = 500      # 每设备两次传输的最小间隔（服务器下发优先）
+XFER_MAX_RETRY = 3              # 429 退避重试上限（超过就报"链路限流"）
+
+# 与 net.py 的 LOCAL_STATE_KEYS 同一份名单：存在才删，卡面字段一个都不碰。
+# 世界书的 entries、params、rules 都**不在**这个名单里（那些是卡内容）；
+# 也刻意不递归进 params/rules 里面 —— 那里的同名键是作者自己写的数据。
+LOCAL_STATE_KEYS = (
+    "history_tree", "_tree_ts", "tree_ts", "messages", "chat_history", "_history",
+    "memory", "memories", "preferences", "_indices", "_trpg_lock",
+    "last_leaf_id", "current_leaf_id", "session", "state",
+)
+
+
+def strip_local_state(card):
+    """剥掉本地历史/状态，只留卡面内容。返回 (新 dict, 剔掉的键名列表)。
+
+    不修改入参（复制一份再删）：调用方手里那份可能还要落盘回本地。
+    """
+    if not isinstance(card, dict):
+        return card, []
+    out = dict(card)
+    gone = [k for k in LOCAL_STATE_KEYS if k in out]
+    for k in gone:
+        out.pop(k, None)
+    return out, gone
+
+
+def strip_local_state_bytes(raw):
+    """bytes 版：解析 → 剥 → 重新序列化。解析不了就原样返回（让服务器去判 400）。
+
+    返回 (新 bytes, 剔掉的键名列表)。没有可剔的键时**返回原字节**，
+    避免"没改也要重新序列化"——那会把用户的排版/缩进悄悄改掉。
+    """
+    try:
+        obj = json.loads(raw.decode("utf-8"))
+    except Exception:
+        return raw, []
+    if not isinstance(obj, dict):
+        return raw, []
+    clean, gone = strip_local_state(obj)
+    if not gone:
+        return raw, []
+    return json.dumps(clean, ensure_ascii=False, indent=2).encode("utf-8"), gone
+
+
+def ws_header_name(name):
+    """文件名放进 HTTP 头之前转成 ASCII。
+
+    **这条不是可选优化，是必须的**：requests 按 latin-1 编请求头，卡名是中文时
+    （工坊里的卡几乎全是中文名）会直接抛
+        UnicodeEncodeError: 'latin-1' codec can't encode characters ...
+    整次上传当场失败。所以含非 ASCII 就做百分号编码，服务端（net.py 的
+    _url_unquote）会解回原名；纯 ASCII 原样发，日志里好读。安卓端
+    （Workshop.kt 的 asciiHeaderName）用的是同一套约定。
+    """
+    s = str(name or "")
+    if s.isascii():
+        return s
+    from urllib.parse import quote
+    return quote(s, safe="")
+
+
+class WsXferSlot(object):
+    """工坊传输闸门（上下文管理器）：**串行 + 最小间隔**。
+
+        with self._ws_xfer_slot():
+            ...真正发请求...
+
+    锁在**整个传输期间**持有，所以并发的第二次调用会先等前一个彻底结束，
+    再等到间隔满 —— 这才是"不许并发突发"。只在开始前 sleep 而不占锁，
+    等于放任两条传输同时在飞，500ms 的间隔就白设了。
+    """
+
+    def __init__(self, app):
+        self.app = app
+        self.lock = None
+
+    def __enter__(self):
+        import time as _t
+        lock = getattr(self.app, "_ws_xfer_lock", None)
+        if lock is None:
+            lock = threading.Lock()
+            self.app._ws_xfer_lock = lock
+        self.lock = lock
+        lock.acquire()
+        try:
+            gap = self.app._ws_min_interval_ms() / 1000.0
+            wait = gap - (_t.time() - getattr(self.app, "_ws_xfer_last", 0.0))
+            if wait > 0:
+                _t.sleep(wait)            # 还没到下一次的窗口，就等着
+            self.app._ws_xfer_last = _t.time()
+        except BaseException:
+            lock.release()
+            raise
+        return self
+
+    def __exit__(self, *exc):
+        if self.lock is not None:
+            self.lock.release()
+        return False
+
+
 class HtmlApp:
     # 已并入核心（底层）的 UI 插件：不再作为可开关插件出现，也不可被禁用
     # （Tk 时代的「现代界面」已随 Tk 一起退役 —— HTML 版的主题由前端自己管）
@@ -3889,7 +4005,8 @@ class HtmlApp:
         cached = getattr(self, "_ws_caps_cache", None)
         if cached and _t.time() - cached[1] < 300:
             return cached[0]
-        base = {"types": ["cards", "worlds", "plugins"], "features": [], "schema": 0, "old": True}
+        base = {"types": ["cards", "worlds", "plugins"], "features": [], "schema": 0,
+                "old": True, "limits": {}}
         try:
             r = self._ws_call("GET", self._ws_url("/api/capabilities"), timeout=6)
             if r.status_code < 400:
@@ -3909,11 +4026,70 @@ class HtmlApp:
                 if names:
                     base = {"types": names,
                             "features": [str(f) for f in (d.get("features") or [])],
-                            "schema": d.get("schema") or 0, "old": False}
+                            "schema": d.get("schema") or 0, "old": False,
+                            # 服务器下发的节奏（min_interval_ms / max_concurrent / rate_*）
+                            "limits": dict(d.get("limits") or {})}
         except Exception:
             pass
         self._ws_caps_cache = (base, _t.time())
         return base
+
+    def _ws_has_gzip(self):
+        """服务器支持 gzip 传输通道吗？（有就走压缩上传/下载，没有就退回 multipart）"""
+        try:
+            feats = [str(f).strip().lower() for f in (self._ws_caps().get("features") or [])]
+            return "gzip" in feats
+        except Exception:
+            return False
+
+    def _ws_min_interval_ms(self):
+        """两次传输的最小间隔（毫秒）：**优先用服务器下发的值**，读不到回落本地常量。
+
+        这样"后期换成 100MB/s 的水管"只改服务器 WORKSHOP_MIN_INTERVAL_MS，
+        两端客户端都不用重新发版。服务器给了离谱的值（负数/超大）就当没给。
+        """
+        try:
+            v = int((self._ws_caps().get("limits") or {}).get("min_interval_ms") or 0)
+            if 0 < v <= 60000:
+                return v
+        except Exception:
+            pass
+        return XFER_MIN_INTERVAL_MS
+
+    def _ws_xfer_slot(self):
+        """占用一次传输窗口（串行 + 最小间隔）。用法：with self._ws_xfer_slot(): ..."""
+        return WsXferSlot(self)
+
+    def _ws_retry_after(self, r):
+        """从 429 响应里取 Retry-After（秒）。取不到就按最小间隔来一次。"""
+        try:
+            return max(XFER_MIN_INTERVAL_MS / 1000.0,
+                       float(str(r.headers.get("Retry-After") or "").strip()))
+        except Exception:
+            pass
+        try:
+            return max(XFER_MIN_INTERVAL_MS / 1000.0,
+                       float((r.json() or {}).get("retry_after") or 0))
+        except Exception:
+            return XFER_MIN_INTERVAL_MS / 1000.0
+
+    def _ws_gz_body(self, r):
+        """把响应体按"可能被压缩过"处理。
+
+        requests 遇到 Content-Encoding: gzip 会**自动解**，所以多数时候这里原样返回；
+        但两种情况要自己解：
+          · 服务端只回了压缩体、中间的代理/隧道把 Content-Encoding 头丢了；
+          · 响应是我们自己拼的（测试/离线）。
+        判据用 gzip 魔数 1f 8b —— 比信任头可靠（JSON 文本不可能以这两个字节开头）。
+        """
+        data = r.content or b""
+        if len(data) > 2 and data[0] == 0x1F and data[1] == 0x8B:
+            try:
+                import gzip as _gz
+                return _gz.decompress(data)
+            except Exception:
+                return data          # 解不开就原样给（让上层按坏 JSON 报错，别吞）
+        return data
 
     def _ws_active_server(self):
         """自动部署：返回当前可用的工坊服务器地址。
@@ -4258,13 +4434,33 @@ class HtmlApp:
             return {"ok": False, "err": str(e)[:200]}
 
     def api_workshop_download(self, res_id, rtype, filename):
+        """下载在线作品。能力里有 gzip 就走 /gz（省带宽），否则走普通下载。
+
+        两条路都过同一个闸门（串行 + 最小间隔），并把"耗时/字节数/平均吞吐"打出来 ——
+        40Mbit 的水管有没有被打满，靠这个看，不靠感觉。
+        """
         import requests
+        import time as _t
         try:
             kind, _folder, _icon = self._ws_kind(rtype)
             target_dir = self._ws_local_dir(rtype)
-            r = self._ws_call("GET", self._ws_url("/api/" + kind + "/" + str(res_id)), timeout=30)
+            use_gz = self._ws_has_gzip()
+            t0 = _t.time()
+            with self._ws_xfer_slot():
+                if use_gz:
+                    r = self._ws_call("GET", self._ws_url("/api/" + kind + "/" + str(res_id) + "/gz"),
+                                      timeout=30)
+                    if r.status_code >= 400:
+                        use_gz = False      # 老服务器没这条 → 退回普通下载
+                if not use_gz:
+                    r = self._ws_call("GET", self._ws_url("/api/" + kind + "/" + str(res_id)),
+                                      timeout=30)
+                # requests 会按 Content-Encoding 自动解压；但"只回了压缩体、头被中间层
+                # 丢掉"的情况要自己按魔数解 —— 见 _ws_gz_body。
+                payload = self._ws_gz_body(r) if r.status_code < 400 else b""
             if r.status_code >= 400:
                 return {"ok": False, "err": "HTTP " + str(r.status_code)}
+            cost = _t.time() - t0
             fname = (filename or (str(res_id) + ".json")).replace("..", "_")
             if not fname.endswith(".json"):
                 fname += ".json"
@@ -4275,13 +4471,19 @@ class HtmlApp:
                 dst = base + "_" + str(i) + ext
                 i += 1
             with open(dst, "wb") as f:
-                f.write(r.content)
+                f.write(payload)
+            if cost > 0:
+                print("[工坊] 下载完成：%s %d 字节%s，耗时 %.2fs，平均 %.2f MB/s"
+                      % (os.path.basename(dst), len(payload),
+                         "（gzip 通道）" if use_gz else "", cost,
+                         (len(payload) / 1048576.0) / cost))
             if rtype == "角色卡":
                 self._reload_roles()
             elif rtype == "世界卡":
                 self._reload_worlds()
             # 世界卡包下载到 world_packs/ 后刻意不自动装进 worlds/：装哪几张是用户的选择
-            return {"ok": True, "file": os.path.basename(dst)}
+            return {"ok": True, "file": os.path.basename(dst), "gzip": bool(use_gz),
+                    "bytes": len(payload), "elapsed": round(cost, 3)}
         except Exception as e:
             return {"ok": False, "err": str(e)[:200]}
 
@@ -4319,7 +4521,17 @@ class HtmlApp:
             return {"ok": False, "err": str(e)[:200]}
 
     def api_workshop_upload(self, rtype, name):
+        """上传本地作品：**有 gzip 能力就压缩上传**，否则照旧 multipart。
+
+        三件事按顺序发生：
+          ① 剔掉本地历史/状态（"每次上传都是新卡"，聊天树绝不外传）；
+          ② 有 gzip 能力就 gzip.compress 后 POST /api/<kind>/upload/gz（文件名走 X-Filename）；
+          ③ 接口不在（404/405/415/501）→ **自动回退 multipart**，不让用户感知。
+        整个传输在闸门里（串行 + 最小间隔），429 按 Retry-After 退避，最多 XFER_MAX_RETRY 次。
+        """
         import requests
+        import time as _t
+        import gzip as _gz
         try:
             kind, _folder, _icon = self._ws_kind(rtype)
             target_dir = self._ws_local_dir(rtype)
@@ -4328,14 +4540,55 @@ class HtmlApp:
             if not os.path.isfile(path):
                 return {"ok": False, "err": "本地文件不存在：" + fname}
             with open(path, "rb") as f:
-                raw = f.read()      # 先读进内存：换通道重试时文件句柄已到末尾，必须能重发
-            r = self._ws_call(
-                "POST", self._ws_url("/api/" + kind + "/upload"),
-                files={"file": (fname, raw, "application/json")}, data={"name": name},
-                timeout=30)
+                raw0 = f.read()      # 先读进内存：换通道重试时文件句柄已到末尾，必须能重发
+            raw, gone = strip_local_state_bytes(raw0)
+            use_gz = self._ws_has_gzip()
+            body = _gz.compress(raw) if use_gz else raw
+            t0 = _t.time()
+            r = None
+            for attempt in range(XFER_MAX_RETRY):
+                with self._ws_xfer_slot():
+                    if use_gz:
+                        # 压缩体走专门接口：body 就是 gzip(JSON)，元数据全靠请求头。
+                        # 不设 Content-Encoding 请求头 —— 有专门接口就不必让中间代理去猜。
+                        r = self._ws_call(
+                            "POST", self._ws_url("/api/" + kind + "/upload/gz"), data=body,
+                            headers=dict(self._ws_headers(), **{
+                                # 中文卡名必须转 ASCII：requests 按 latin-1 编头，
+                                # 直接塞中文会抛 UnicodeEncodeError（真机上必现）。
+                                "X-Filename": ws_header_name(fname),
+                                "Content-Type": "application/json",
+                            }),
+                            timeout=30)
+                        if r.status_code in (404, 405, 415, 501):
+                            use_gz = False      # 服务器没有这条接口 → 本轮改走 multipart
+                    if not use_gz:
+                        r = self._ws_call(
+                            "POST", self._ws_url("/api/" + kind + "/upload"),
+                            files={"file": (fname, raw, "application/json")},
+                            data={"name": name}, timeout=30)
+                if r.status_code != 429:
+                    break
+                wait = self._ws_retry_after(r)
+                print("[工坊] 链路限流（429），%.1f 秒后重试（第 %d/%d 次）"
+                      % (wait, attempt + 1, XFER_MAX_RETRY))
+                _t.sleep(wait)
+            else:
+                return {"ok": False, "err": "链路限流，稍后再试（服务器一直回 429）"}
+            cost = _t.time() - t0
             if r.status_code >= 400:
                 return self._ws_http_err(r, "上传")
-            return {"ok": True, "message": r.text[:200]}
+            sent = len(body) if use_gz else len(raw)
+            if cost > 0:
+                print("[工坊] 上传完成：%s，耗时 %.2fs，平均 %.2f MB/s%s"
+                      % ("gzip %d→%d 字节（%.0f%%）" % (len(raw), sent,
+                                                        100.0 * sent / max(1, len(raw)))
+                         if use_gz else "明文 %d 字节" % len(raw),
+                         cost, (sent / 1048576.0) / cost,
+                         ("，已剔掉 " + "、".join(gone[:3])) if gone else ""))
+            return {"ok": True, "message": r.text[:200], "gzip": bool(use_gz),
+                    "bytes": sent, "raw_bytes": len(raw), "stripped": gone,
+                    "elapsed": round(cost, 3)}
         except Exception as e:
             return {"ok": False, "err": str(e)[:200]}
 

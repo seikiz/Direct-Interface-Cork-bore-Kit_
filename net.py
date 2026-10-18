@@ -11,8 +11,10 @@
 #     WORKSHOP_DEBUG    设为 1 开启 Flask debug 模式（默认关闭）
 # ============================================================
 
+import gzip
 import json
 import os
+import struct
 import sys
 import threading
 import time
@@ -82,8 +84,20 @@ TYPES = {
 INDEX_SCHEMA = 1
 
 # 能力清单：客户端据此决定"走整包还是分片""能不能按类型搜"（见 /api/capabilities）
-FEATURES = ("search", "like", "progress", "chunked_upload", "types", "capabilities")
+#
+# "gzip" 是**传输层**能力位（2026-10 加）：两端客户端看到它就改走压缩通道 ——
+#   上传 POST /api/<rtype>/upload/gz（body = gzip(JSON)，元数据走请求头）
+#   下载 GET  /api/<rtype>/<id>/gz（回 gzip 体）
+#   外加**全局响应压缩**（JSON ≥ 1KB 且客户端说 Accept-Encoding: gzip 就压）
+# 工坊的载荷几乎全是 JSON（角色卡/世界卡/卡包），文本类 JSON 通常能压到 1/10，
+# 而服务器在海外、客户端在国内 —— 省下来的就是往返时间。
+# 没有这个能力位的老服务器，两端都自动退回 multipart，老客户端连新服务器也不受影响。
+FEATURES = ("search", "like", "progress", "chunked_upload", "types", "capabilities", "gzip")
 UPLOAD_MAX_MB = int(os.environ.get("WORKSHOP_UPLOAD_MAX_MB", "64"))
+
+# 响应压缩门槛：小于这个字节数的 JSON 压了反而更大（gzip 头 + 字典开销），不值得。
+# 1KB 是实测出来的分界：一条列表响应的 JSON 头就上百字节，几百字节的短响应压完基本不变。
+COMPRESS_MIN_BYTES = int(os.environ.get("WORKSHOP_COMPRESS_MIN_BYTES", "1024"))
 
 # 运行配置（环境变量可覆盖）
 API_KEY = os.environ.get("WORKSHOP_API_KEY", "").strip()
@@ -96,8 +110,24 @@ READ_KEY = os.environ.get("WORKSHOP_READ_KEY", "0") == "1"
 #   删除 / 插件上传 / 共享模型配置 仍然要 Key —— 那三样出事的代价太大。
 #   想让"写也要 Key"就设 WORKSHOP_OPEN_UPLOAD=0（老行为）。
 OPEN_UPLOAD = os.environ.get("WORKSHOP_OPEN_UPLOAD", "1") != "0"
-# 开放上传后的防刷：同一 IP 一小时内最多传几个（0 = 不限）
-RATE_PER_HOUR = int(os.environ.get("WORKSHOP_RATE_PER_HOUR", "60"))
+# 开放上传后的防刷：**两档**滑动窗口（2026-10 改）。
+#
+# 节奏从哪来：链路按"每设备每 500ms 一次"设计（40 Mbit ≈ 5MB/s，一次传几 MB 以内
+# 就不会把水管灌满）。所以限流必须让这个节奏**打不到自己**：
+#   RATE_PER_MIN  突发档，默认 120 = 2 次/秒，正好是 500ms 一次的速率；
+#   RATE_PER_HOUR 兜底档，默认 10800（2/s 连打一小时是 7200，留 1.5 倍余量给
+#                 失败补传与重试）—— 只用来挡"整夜刷屏"，不该挡正常用户。
+# 以前只有一个 RATE_PER_HOUR=60（= 1 次/分钟），和 500ms 的节奏直接打架。
+RATE_PER_MIN = int(os.environ.get("WORKSHOP_RATE_PER_MIN", "120"))
+RATE_PER_HOUR = int(os.environ.get("WORKSHOP_RATE_PER_HOUR", "10800"))
+
+# 传输节奏（能力位的一部分，见 /api/capabilities 的 limits）：
+#   min_interval_ms  同一设备两次传输之间的最小间隔
+#   max_concurrent   同一设备允许同时飞几个传输
+# **由服务器下发**，客户端优先用服务器的值、读不到才回落到本地常量 500ms ——
+# 这样"后期换成 100MB/s 的水管"只改服务器环境变量，两端客户端不用重新发版。
+MIN_INTERVAL_MS = int(os.environ.get("WORKSHOP_MIN_INTERVAL_MS", "500"))
+MAX_CONCURRENT = int(os.environ.get("WORKSHOP_MAX_CONCURRENT", "1"))
 # 内置中转（/relay）：默认关。客户端已停用它（香港工坊 /relay 出于安全关闭），
 # 留着只是历史包袱 + 开放代理风险；真要临时用就显式设 WORKSHOP_RELAY=1。
 RELAY_ON = os.environ.get("WORKSHOP_RELAY", "0") == "1"
@@ -242,28 +272,57 @@ def _key_ok():
 
 
 # 上传限流：开放上传之后，唯一需要担心的就是"有人刷屏"。
-# 按 IP 记一小时内的次数，超了回 429（不影响正常用户：一个人一小时传不了几十个）。
+# 按 IP 记**两档**滑动窗口（1 分钟 / 1 小时），超了回 429 并带 Retry-After（秒），
+# 客户端据此退避重试（见两端客户端的 _ws_call / request）。
 _RATE_LOCK = threading.Lock()
 _RATE_HITS = {}
 
 
-def _rate_ok(limit=None):
-    n = RATE_PER_HOUR if limit is None else limit
-    if n <= 0:
-        return True
-    ip = request.headers.get("X-Real-IP") or request.remote_addr or "?"
+def _rate_check():
+    """滑动窗口限流（两档）。返回 (放行?, 建议等待秒数, 是哪一档超了)。
+
+    分钟档挡"并发突发"（客户端本该 500ms 一次串行发，连打十几次必是异常）；
+    小时档挡"整夜刷屏"。两档都不该挡到正常的每 0.5 秒一次。
+    """
     now = time.time()
+    ip = request.headers.get("X-Real-IP") or request.remote_addr or "?"
     with _RATE_LOCK:
         arr = [t for t in _RATE_HITS.get(ip, []) if now - t < 3600]
-        if len(arr) >= n:
-            _RATE_HITS[ip] = arr
-            return False
-        arr.append(now)
         _RATE_HITS[ip] = arr
+        if RATE_PER_HOUR > 0 and len(arr) >= RATE_PER_HOUR:
+            # 等最早那次滑出一个小时的窗口
+            return False, max(1.0, arr[0] + 3600 - now), "每小时 %d 次" % RATE_PER_HOUR
+        recent = [t for t in arr if now - t < 60]
+        if RATE_PER_MIN > 0 and len(recent) >= RATE_PER_MIN:
+            return False, max(0.5, recent[0] + 60 - now), "每分钟 %d 次" % RATE_PER_MIN
+        arr.append(now)
         if len(_RATE_HITS) > 2000:            # 顺手清掉两小时没动静的 IP
             for k in [k for k, v in _RATE_HITS.items() if not v or now - v[-1] > 7200][:500]:
                 _RATE_HITS.pop(k, None)
-    return True
+    return True, 0.0, ""
+
+
+def _rate_ok(limit=None):
+    """老接口：只问"能传吗"（limit 参数已废弃，保留是为了不打断老调用点）"""
+    return _rate_check()[0]
+
+
+def _rate_gate():
+    """限流闸门：放行返回 None，超限返回**带 Retry-After 的 429**。
+
+    Retry-After 是标准头（秒）：客户端读到就等这么久再来，
+    比让客户端自己猜"退避多久"靠谱 —— 猜短了继续撞墙，猜长了白等。
+    """
+    ok, wait, why = _rate_check()
+    if ok:
+        return None
+    secs = int(max(1.0, round(wait)))
+    resp = jsonify({"error": "上传太频繁了，歇一会儿再试（%s）" % why,
+                    "retry_after": secs, "limit": why})
+    resp.status_code = 429
+    resp.headers["Retry-After"] = str(secs)
+    resp.headers["X-RateLimit-Limit"] = str(RATE_PER_MIN)
+    return resp
 
 
 def write_auth(f):
@@ -301,6 +360,22 @@ def search_index(index, query):
 
 # ============ 基础接口 ============
 
+def _limits():
+    """服务器对客户端下发的**数值契约**（health 与 capabilities 同源）。
+
+    min_interval_ms / max_concurrent 是"传输节奏"：客户端据此排队，而不是各自
+    把 500ms 写死在代码里 —— 以后换 100MB/s 的水管只改服务器环境变量，
+    两端客户端不用重新发版。客户端读不到（老服务器）才回落到本地常量。
+    """
+    return {
+        "upload_max_mb": UPLOAD_MAX_MB,
+        "min_interval_ms": MIN_INTERVAL_MS,      # 同一设备两次传输的最小间隔
+        "max_concurrent": MAX_CONCURRENT,        # 同一设备同时允许几个传输
+        "rate_per_min": RATE_PER_MIN,            # 超出会得到 429 + Retry-After
+        "rate_per_hour": RATE_PER_HOUR,
+    }
+
+
 @app.get("/api/health")
 def health():
     """健康检查 + **能力协商**：客户端不必再猜服务端支持什么。
@@ -318,7 +393,7 @@ def health():
         "features": list(FEATURES),
         "read_key": bool(READ_KEY),
         "relay": bool(RELAY_ON),
-        "limits": {"upload_max_mb": UPLOAD_MAX_MB},
+        "limits": _limits(),
         "timestamp": datetime.now().isoformat(),
     })
 
@@ -339,8 +414,59 @@ def capabilities():
         "types": sorted(TYPES.keys()),
         "registry": [{"name": k, "label": v["label"], "ext": list(v["ext"])} for k, v in TYPES.items()],
         "features": list(FEATURES),
-        "limits": {"upload_max_mb": UPLOAD_MAX_MB},
+        # gzip 通道的细节（客户端只认 features 里的 "gzip"；这段是给人看的"怎么用"）
+        "gzip": {"upload": "/api/<type>/upload/gz",
+                 "download": "/api/<type>/<id>/gz",
+                 "min_bytes": COMPRESS_MIN_BYTES},
+        "limits": _limits(),
     })
+
+
+# ============ 全局响应压缩（下载方向省带宽） ============
+
+@app.after_request
+def _gzip_json_response(resp):
+    """客户端说 Accept-Encoding: gzip 时，把 JSON 响应压掉再发。
+
+    只动**自己的 JSON**，三条线一律不碰：
+      · 文件下载（send_file / 附件）—— 那是用户要的原始字节，压了客户端存下来的文件就废了；
+      · 已经压过的（例如 /api/<type>/<id>/gz 自己设了 Content-Encoding）；
+      · 非 application/json / 小于 COMPRESS_MIN_BYTES 的 —— 压了只会更大。
+
+    注意这是**响应**压缩，和上传方向的 gzip 体是两条独立的通道：
+    上传走专门的 /upload/gz，下载靠这里（客户端 requests / GZIPInputStream 都能自动解）。
+    """
+    try:
+        if resp.direct_passthrough:
+            return resp                  # send_file 的流式响应：get_data() 都取不了，绝不能碰
+        if resp.headers.get("Content-Encoding"):
+            return resp                  # 已经压过（gz 接口），别压第二遍
+        if resp.headers.get("Content-Disposition"):
+            return resp                  # 附件下载
+        ctype = (resp.headers.get("Content-Type") or "").split(";")[0].strip().lower()
+        if ctype != "application/json":
+            return resp
+        # 同一个 URL 的响应体随 Accept-Encoding 变 → 告诉缓存/代理按这个维度分桶。
+        # 压不压都该带，否则中间层可能把压缩过的版本发给没说要压缩的客户端。
+        vary = resp.headers.get("Vary") or ""
+        if "accept-encoding" not in vary.lower():
+            resp.headers["Vary"] = (vary + ", Accept-Encoding") if vary else "Accept-Encoding"
+        accept = (request.headers.get("Accept-Encoding") or "").lower()
+        if "gzip" not in accept:
+            return resp
+        raw = resp.get_data()
+        if len(raw) < COMPRESS_MIN_BYTES:
+            return resp
+        packed = gzip.compress(raw, 6)
+        if len(packed) >= len(raw):
+            return resp                  # 压不动（本身就短/高度随机），别白折腾
+        resp.set_data(packed)
+        resp.headers["Content-Encoding"] = "gzip"
+        resp.headers["Content-Length"] = str(len(packed))
+        resp.headers["X-Uncompressed-Length"] = str(len(raw))
+    except Exception:
+        pass                             # 压缩是优化，出错就当没压（绝不因为省带宽把请求搞挂）
+    return resp
 
 
 @app.before_request
@@ -661,11 +787,55 @@ def delete_world(world_id):
 
 # ============ 上传 ============
 
-def _store_upload(section, target_dir, original_name, content, form, ext_whitelist=None):
-    """把**已解析好的 JSON 内容**落盘 + 写索引。整包上传与分片上传共用这一处。
+# 上传前要剔掉的**本地历史/状态**键（"去历史，每次上传都是新卡"）。
+#
+# 为什么在服务器也剔一遍：老客户端不知道这条规矩，照样会把 history_tree 传上来。
+# 聊天树里是用户真实的私密对话 —— 传到公网工坊既是隐私泄漏，也让包体白白大好几倍
+# （实测 咲.json 16 KB → 去历史后 2 KB，gzip 之前就少了 87%）。
+#
+# 只删**明确的会话状态键**。卡面内容一个都不许动：
+#   name / system_prompt / personality / appearance / greeting / first_mes /
+#   scenario / description / tags / author / version / params / rules / entries（世界书）…
+# 也**不递归**进 params/rules 里面：那里的同名键是作者自己写的数据，不是运行期状态。
+LOCAL_STATE_KEYS = (
+    "history_tree", "_tree_ts", "tree_ts", "messages", "chat_history", "_history",
+    "memory", "memories", "preferences", "_indices", "_trpg_lock",
+    "last_leaf_id", "current_leaf_id", "session", "state",
+)
+
+
+def strip_local_state(content):
+    """剔除本地历史/状态键。返回 (清洗后的内容, 剔掉的键名列表)。
+
+    只处理 dict（list 那种格式原样放行）；不递归。**不改入参**（复制一份再删），
+    免得调用方手里的对象被悄悄改掉。
+    """
+    if not isinstance(content, dict):
+        return content, []
+    out = dict(content)
+    gone = [k for k in LOCAL_STATE_KEYS if k in out]
+    for k in gone:
+        out.pop(k, None)
+    return out, gone
+
+
+def _store_upload(section, target_dir, original_name, content, form, ext_whitelist=None,
+                  report=None):
+    """把**已解析好的 JSON 内容**落盘 + 写索引。整包上传、分片上传、gzip 上传共用这一处。
 
     ext_whitelist 给了就校验扩展名（类型注册表里的 ext），不在白名单里直接报错。
+    report 给了就往里塞"这次发生了什么"（目前是剔掉了哪些本地键），给响应/log 用；
+    不塞进索引 —— 索引是给所有客户端看的，不该带上传过程的细节。
+
+    落盘前统一过一遍 strip_local_state：**三种上传路径都走这里**，
+    所以"去历史"只需要在这一个地方生效（而不是每个视图各抄一遍、迟早漏一个）。
     """
+    content, stripped = strip_local_state(content)
+    if stripped and report is not None:
+        report["stripped"] = stripped
+    if stripped:
+        print("[上传] 已剔掉 %s%s 等 %d 个本地历史/状态键（每次上传都是新卡）"
+              % ("、".join(stripped[:3]), "…" if len(stripped) > 3 else "", len(stripped)))
     original_name = os.path.basename(original_name or "") or "upload.json"
     ext = (os.path.splitext(original_name)[1] or ".json").lower()
     if ext_whitelist and ext not in tuple(ext_whitelist):
@@ -704,8 +874,9 @@ def _store_upload(section, target_dir, original_name, content, form, ext_whiteli
 
 
 def handle_upload(section, target_dir, default_name):
-    if not _rate_ok():
-        return jsonify({"error": "上传太频繁了，歇一会儿再试（每 IP 每小时 %d 个）" % RATE_PER_HOUR}), 429
+    limited = _rate_gate()
+    if limited is not None:
+        return limited
     if "file" not in request.files:
         return jsonify({"error": "没有上传文件"}), 400
     file = request.files["file"]
@@ -720,10 +891,13 @@ def handle_upload(section, target_dir, default_name):
         return jsonify({"error": "内容必须是 JSON 对象或数组"}), 400
 
     original_name = os.path.basename(file.filename or "") or f"{default_name}.json"
-    entry = _store_upload(section, target_dir, original_name, content, request.form)
+    report = {}
+    entry = _store_upload(section, target_dir, original_name, content, request.form,
+                          report=report)
     return jsonify({
         "success": True,
         "id": entry["id"],
+        "stripped": report.get("stripped") or [],
         "message": f"上传成功：{entry['name']}"
     }), 201
 
@@ -796,6 +970,214 @@ def upload_any(rtype):
     if not spec:
         return _bad_type(rtype)
     return handle_upload(spec["index"], spec["dir"], spec["label"])
+
+
+# ============ gzip 传输通道（压缩 → 传输 → 解压 → 放置） ============
+#  为什么单独一条路而不是给 multipart 加 Content-Encoding：
+#    multipart 的包体里混着边界与头，整体压一遍客户端得自己拼 boundary 之外的部分，
+#    两边都容易写错。**body 就是 gzip(JSON)** 最干净：服务器解压后拿到的字节
+#    与 multipart 里 file 字段的内容一模一样，于是落盘可以走同一条 _store_upload。
+#  元数据（文件名/作者/标签）因为 body 被压缩体占满，改走请求头 —— 见下面的 _header_arg。
+
+class _GzError(Exception):
+    """解压失败（区分 400 坏包 / 413 超限：客户端要能分别提示）"""
+
+    def __init__(self, msg, code):
+        Exception.__init__(self, msg)
+        self.msg = msg
+        self.code = code
+
+
+def _repair_utf8_header(s):
+    """把「UTF-8 字节被当成 latin-1 解出来」的头值修回中文。
+
+    WSGI（PEP 3333）规定 environ 里的头是 latin-1 字节串。客户端要是直接塞 UTF-8
+    字节（curl 的 `-H 'X-Filename: 中文.json'` 就是这样），到服务端就成了
+    「ä¸­æ–‡」这种乱码，于是中文名/标签以乱码落库。这里把那串字符按 latin-1
+    还原成字节、再用 UTF-8 解一次；解不出来就原样返回（真正的 latin-1 名字不会被误改）。
+    """
+    s = str(s or "")
+    if not s or s.isascii():
+        return s
+    try:
+        return s.encode("latin-1").decode("utf-8")
+    except Exception:
+        return s
+
+
+def _url_unquote(raw):
+    """把百分号编码的文件名还原（安卓端只能发 ASCII 头，中文名是编码后传的）。
+
+    只在这三种情况下动手，其余原样返回：
+      · 含 % 且解码成功、解出来没有控制字符（百分号编码）；
+      · 是「UTF-8 被当 latin-1」的乱码（_repair_utf8_header 能修）；
+      · 别的（比如文件名真带一个 %）——原样用，别把人的名字改坏。
+    """
+    s = _repair_utf8_header(raw)
+    if "%" not in s:
+        return s
+    try:
+        from urllib.parse import unquote
+        out = unquote(s, encoding="utf-8", errors="strict")
+    except Exception:
+        return s
+    return out if out and not any(ord(c) < 32 for c in out) else s
+
+
+def _header_arg(name, default=""):
+    """从**请求头或 query string** 取一个字符串参数（头优先）。
+
+    gz 上传的 body 是压缩体，塞不进表单，所以元数据只能走这两处；
+    头带不了非 ASCII（安卓的 HttpURLConnection 按 ISO-8859-1 编），
+    query 那一路就是给中文文件名留的退路。
+    头里的 UTF-8 乱码在这里统一修回中文（见 _repair_utf8_header）。
+    """
+    v = request.headers.get(name)
+    if v is None:
+        v = request.args.get(name)
+    return _repair_utf8_header((default if v is None else str(v)).strip())
+
+
+def _decompress_gzip(raw, limit_mb=None):
+    """gzip 体 → bytes，带体积上限。超限抛 _GzError(413)，坏包抛 _GzError(400)。
+
+    两道关口，顺序是有意的：
+      ① 先看 gzip 尾部 4 字节 ISIZE（原长 mod 2^32）—— 压缩炸弹在这一步就挡掉，
+         不需要先把 64MB 展开进内存再发现超限；
+      ② 再 gzip.decompress() 后复核真实长度 —— ISIZE 可以伪造（改掉尾部几个字节即可），
+         所以它只能当"快速否决"，不能当"结论"。
+    """
+    limit = (UPLOAD_MAX_MB if limit_mb is None else limit_mb) * 1024 * 1024
+    if not raw:
+        raise _GzError("body 是空的（这条接口要 gzip(JSON) 压缩体）", 400)
+    if len(raw) >= 18 and raw[:2] == b"\x1f\x8b":
+        isize = struct.unpack("<I", raw[-4:])[0]
+        if isize > limit:
+            raise _GzError("解压后超过上限 %d MB" % UPLOAD_MAX_MB, 413)
+    try:
+        data = gzip.decompress(raw)
+    except Exception as e:
+        raise _GzError("不是合法的 gzip：%s" % str(e)[:120], 400)
+    if len(data) > limit:
+        raise _GzError("解压后超过上限 %d MB" % UPLOAD_MAX_MB, 413)
+    return data
+
+
+@app.post("/api/<rtype>/upload/gz")
+@write_auth
+def upload_any_gz(rtype):
+    """gzip 上传：body = gzip(JSON)，元数据走请求头。
+
+      X-Filename     文件名（决定扩展名白名单与索引里的 original_name；可放 query）
+      X-Author       作者（缺省 anonymous，与 multipart 的默认一致）
+      X-Tags         标签，逗号分隔
+      X-Description  描述（可选）
+
+    **落盘与 multipart 完全同一条路**：校验完扩展名/写索引/提预览字段全部在
+    _store_upload 里，这里只多做"解压"和"从头里取元数据"两件事——
+    压缩与否不该在服务器上分叉出第二套放置逻辑（那样迟早两边字段不一致）。
+
+    鉴权与普通上传一致（write_auth）：OPEN_UPLOAD=1（默认）时匿名可传，
+    设了 WORKSHOP_OPEN_UPLOAD=0 才要 X-API-Key。
+    """
+    spec = type_of(rtype)
+    if not spec:
+        return _bad_type(rtype)
+    limited = _rate_gate()
+    if limited is not None:
+        return limited
+
+    raw = request.get_data()
+    try:
+        data = _decompress_gzip(raw)
+    except _GzError as e:
+        return jsonify({"error": e.msg, "gzip": True}), e.code
+
+    try:
+        content = json.loads(data.decode("utf-8"))
+    except Exception as e:
+        return jsonify({"error": "解压后不是合法 JSON：%s" % str(e)[:120], "gzip": True}), 400
+    if not isinstance(content, (dict, list)):
+        return jsonify({"error": "内容必须是 JSON 对象或数组", "gzip": True}), 400
+
+    original_name = os.path.basename(_url_unquote(_header_arg("X-Filename") or _header_arg("filename")))
+    if not original_name:
+        original_name = "%s.json" % spec["index"]      # 没给名字也得有个带 .json 的默认
+    form = {"author": _header_arg("X-Author") or "anonymous",
+            "tags": _header_arg("X-Tags"),
+            "description": _header_arg("X-Description")}
+    report = {}
+    try:
+        entry = _store_upload(spec["index"], spec["dir"], original_name, content, form,
+                              spec["ext"], report=report)
+    except ValueError as e:
+        return jsonify({"error": str(e), "gzip": True}), 400
+
+    # sha256 只用于日志/统计（"这次实际省了多少"），**不拿来去重**：
+    # 语义是"每次上传都是新卡"，同内容传两次就该有两条记录、两个 id。
+    import hashlib
+    digest = hashlib.sha256(data).hexdigest()[:16]
+    print("[gzip 上传] %s %d → %d 字节（%.1f%%），sha256=%s"
+          % (entry["name"], len(data), len(raw),
+             (100.0 * len(raw) / len(data)) if data else 0.0, digest))
+    return jsonify({
+        "success": True,
+        "id": entry["id"],
+        "gzip": True,
+        "bytes_in": len(raw),            # 收到的压缩体
+        "bytes_out": len(data),          # 解压后的 JSON 字节数（压缩率的分母）
+        "ratio": round((float(len(raw)) / len(data)), 4) if data else 1.0,
+        "sha256": digest,                # 仅供日志/统计，不当去重键
+        "stripped": report.get("stripped") or [],
+        "message": "压缩上传成功：%s" % entry["name"],
+    }), 201
+
+
+@app.get("/api/<rtype>/<item_id>/gz")
+def download_any_gz(rtype, item_id):
+    """gzip 下载：把这个作品的 JSON 内容压一遍发出去。
+
+    与普通下载**同一个索引、同一个文件**（只是 Response 的编码不同），
+    所以不需要在磁盘上另存一份压缩副本 —— 作品是 JSON，压一次是毫秒级的事，
+    而另存一份就有"两份内容可能不一致"的风险（服务器重启/手改文件时最明显）。
+
+    特意**不看** Accept-Encoding：这是"我就要压缩体"的显式接口，
+    客户端（requests / GZIPInputStream）都会按 Content-Encoding 解。
+    """
+    spec = type_of(rtype)
+    if not spec:
+        return _bad_type(rtype)
+    with _index_lock:
+        index = load_index()
+        info = find_entry(index, spec["index"], item_id)
+        if not info:
+            return jsonify({"error": "%s不存在" % spec["label"]}), 404
+        filename = info.get("filename", "")
+        filepath = os.path.join(spec["dir"], filename)
+        if not filename or not os.path.exists(filepath):
+            return jsonify({"error": "文件丢失"}), 404
+        info["downloads"] = info.get("downloads", 0) + 1
+        save_index(index)
+    try:
+        with open(filepath, "rb") as f:
+            raw = f.read()
+    except OSError as e:
+        return jsonify({"error": "读取失败：%s" % str(e)[:120]}), 500
+    packed = gzip.compress(raw, 6)
+    resp = app.response_class(packed, mimetype="application/json")
+    resp.headers["Content-Encoding"] = "gzip"
+    resp.headers["Content-Length"] = str(len(packed))
+    resp.headers["Vary"] = "Accept-Encoding"
+    resp.headers["X-Uncompressed-Length"] = str(len(raw))
+    # 文件名用 RFC 5987 的 filename* 才支持中文；老客户端忽略它、按 URL 猜也行
+    try:
+        from urllib.parse import quote
+        resp.headers["Content-Disposition"] = (
+            "attachment; filename=\"%s.json\"; filename*=UTF-8''%s"
+            % (item_id, quote(str(info.get("original_name") or item_id), safe="")))
+    except Exception:
+        pass
+    return resp
 
 
 # ---- 分片上传：大文件（声库 / Live2D / 卡包）不再顶 body 上限 ----
@@ -872,10 +1254,13 @@ def upload_finish(rtype):
     except Exception as e:
         return jsonify({"error": "拼起来不是合法 JSON：%s" % e}), 400
     name = (_arg("filename") or "upload.json")
-    if not _rate_ok():
-        return jsonify({"error": "上传太频繁了，歇一会儿再试（每 IP 每小时 %d 个）" % RATE_PER_HOUR}), 429
+    limited = _rate_gate()
+    if limited is not None:
+        return limited
+    report = {}
     try:
-        entry = _store_upload(spec["index"], spec["dir"], name, content, request.form, spec["ext"])
+        entry = _store_upload(spec["index"], spec["dir"], name, content, request.form,
+                              spec["ext"], report=report)
     except ValueError as e:
         return jsonify({"error": str(e)}), 400
     for p in parts:
@@ -888,6 +1273,7 @@ def upload_finish(rtype):
     except OSError:
         pass
     return jsonify({"success": True, "id": entry["id"],
+                    "stripped": report.get("stripped") or [],
                     "message": "分片上传完成：%s" % entry["name"]}), 201
 
 
