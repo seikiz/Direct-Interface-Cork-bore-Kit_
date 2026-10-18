@@ -1,0 +1,105 @@
+# DICK 架构初衷与铁律
+
+> 这份文件不是"文档"，是**判断标准**。以后任何一次改动，如果和这里冲突，要么改这个文件（并说明为什么初衷变了），
+> 要么改代码。**不允许**"先上线再补"。
+
+---
+
+## 一、早期初衷（写下来，免得被忘掉）
+
+这个项目从第一天起就是这几件事，顺序不能颠倒：
+
+1. **本地优先**：数据在用户自己的机器上（`saves/`、`worlds/`、`config.json`、`workshop_data/`）。
+   云只用来"分享与同步显式想分享的东西"，**不托管用户资产**。
+2. **一个人也能跑起来**：解压即用，不装数据库、不装服务端、不注册账号。
+   想要局域网/公网协作时，跑一个 `net.py` 就够。
+3. **三端同一套语义**：电脑（Python + pywebview）、安卓（Kotlin/Compose）、播放器（Compose Multiplatform）。
+   同一份 `lang/strings.json`、同一份 `icons/icons.json`、同一个版本号 —— **只许一份真相**。
+4. **插件化扩展，而不是改核心**：加功能优先做成插件/模块；核心越薄越安全。
+5. **可降级**：没网络、没有 Key、没有某个模型 —— 仍然能用（免费链、本地模型、离线存档）。
+
+一句话：**它是"用户自己家里的工具"，不是"我们替他保管一切的服务"。**
+
+---
+
+## 二、我们是怎么滑向屎山的（实录，不粉饰）
+
+| 症状 | 具体表现 | 根因 |
+|---|---|---|
+| 单文件膨胀 | `web/index.html` 一度 **8330 行**（结构 + 样式 + 全部 JS）；`App.kt` 2734 行、`Dialogs.kt` 2906 行 | "先塞进去，回头再拆"——回头永远没来 |
+| 隐式全局 | 网页 59 个顶层可变 `var`，屏与屏靠全局变量串；屏间引用 **223 处** | 没有状态边界，谁都能改谁 |
+| 样式三套并存 | CSS 变量 + 行内 `style="…"`（414 处）+ Compose 里 `Color(0xFF…)` | 没有唯一真相，复制比查文档快 |
+| 文案硬编码 | 设置屏一半日文一半中文；UI 里 210 处 emoji 当图标 | 没有"文案/图标必须走表"的规矩 |
+| 无守护 | 拆完没人证明没拆坏；颜色费劲、emoji 穿帮都是用户先发现 | 缺少"边界即测试" |
+
+这些都不是技术难题，是**没有在早期确立边界**的代价。
+
+---
+
+## 三、现在的结构（微内核）
+
+```
+kernel/            微内核：装模块、给服务、发事件。不认识任何业务（不许出现"角色卡/世界卡/工坊"等词）
+  registry.py      服务注册/查找 —— 模块之间唯一的通信方式
+  bus.py           事件总线
+  loader.py        按 manifest 发现模块；单个模块加载失败只记日志，内核照常启动
+  config/paths/log/version   最小基础设施（复用现有实现，不另起炉灶）
+
+modules/<id>/      业务模块：一个模块一个目录，只能有一个入口
+  manifest.json    id / version / provides{services,routes,ui_screens,commands} / requires / lazy
+  module.py        def register(kernel) -> None
+
+shells             壳层：桌面主程序 / net.py / 安卓 / 播放器 —— 只负责"把内核和模块装配起来 + 画界面"
+```
+
+### 四条铁律（由 `tests/test_kernel_boundaries.py` 强制执行）
+
+1. **单向依赖**：`kernel ← modules ← shells`。
+   - `kernel/` 不得 import 任何模块或业务代码；
+   - **模块之间不得互相 import**（要协作就注册服务 / 发事件）；
+   - 模块不得 import 壳层。
+2. **一个模块只有一个入口**：`module.py:register(kernel)`；模块内部其它文件不许被外部 import。
+3. **可降级**：任何模块加载失败，内核仍能启动，并明确日志说明是哪个模块、什么错。
+4. **manifest 必须说真话**：声明 `provides` 的服务，`register` 时必须真的注册；注册了没声明的也算违规。
+
+---
+
+## 四、新功能该加在哪（决策树）
+
+```
+只影响一个屏/一个流程的展示？          → 壳层（screens/components），别进内核
+需要读写用户数据（存档/世界/工坊）？    → 新模块 + manifest；对外只暴露服务
+要给别的模块用？                      → 在 kernel.registry 注册服务（不要 import 对方）
+需要两个模块联动？                    → 发事件（kernel.bus），不要互相调用
+要三端一致？                          → 进"唯一真相"表（lang/strings.json、icons/icons.json、design/*.json）+ 生成器
+只是一次性脚本？                      → tools/，不进主程序
+```
+
+## 五、提交前自查（每题答"是"才能提）
+
+1. 我新增的文件，**属于哪一层**？（kernel / module / shell / tool / test）
+2. 我有没有让 `kernel/` 认识业务？有没有让模块 A import 模块 B？
+3. 新文案/新图标/新颜色/新版号，是改"唯一真相"再生成，还是又手写了一份？
+4. 这个行为有没有**测试**能证明它没坏？没测的话，下次谁改坏了靠什么发现？
+5. 我是不是又往 `index.html` / `App.kt` / `Dialogs.kt` 里塞了东西？那个文件现在多大？
+6. 出问题时能不能**降级**（没网/没 Key/模块挂了）？
+
+## 六、防漂移的机器（不靠自觉）
+
+| 手段 | 作用 |
+|---|---|
+| `tools/audit_kernel_boundaries.py` | AST 扫依赖方向 + 内核词表，违规即红；`--baseline` 防恶化 |
+| `tools/audit_ui_coupling.py` | UI 解耦分（大文件/行内样式/硬编码色/全局变量/屏间耦合/组件复用），基线比对 |
+| `tools/ui_snapshot.py` | 结构搬家前后的 DOM + CSS + 行内样式守恒 |
+| `tools/audit_contrast.py` + `tests/test_no_dim_text.py` | 文字对比度 ≥4.5，不许再写浅灰字 |
+| `tests/test_no_emoji_ui.py` | UI 文案里不许有 emoji 字符（图标走字体名） |
+| `tests/test_no_dev_copy.py` | 界面上不许出现 HTTP 码 / 地址 / gzip 技术说明 |
+| `gen_icons / gen_i18n / gen_tokens / gen_card_fields / gen_parity` 的 `--check` | 唯一真相与两端产物不许漂移 |
+| `tools/run_local_suite.py` | 一条命令跑全套；CI 三平台矩阵 |
+
+## 七、术语
+
+- **唯一真相**：一类数据只允许有一个来源文件，其它都是生成的。
+- **门面（facade）**：迁移期保留的旧接口，内部转调新模块 —— 让调用点不用改，但不许长期存在（要列清单逐个清）。
+- **可降级**：缺依赖/缺网络/模块崩了，主流程仍可用。
+- **解耦分**：`audit_ui_coupling.py` 的综合分，越高越松；只许上升，基线在 `tools/ui_coupling_baseline.json`。
