@@ -466,7 +466,12 @@ object Workshop {
     fun listResources(): Pair<List<J.Obj>, List<J.Obj>> {
         val (c1, b1) = request("/api/cards/list")
         val (c2, b2) = request("/api/worlds/list")
-        if (c1 >= 400 || c2 >= 400) throw IllegalStateException("HTTP $c1 / $c2")
+        if (c1 >= 400 || c2 >= 400) {
+            // 2026-12 文案清理：这条 message 会原样贴进界面状态行，所以只说人话，
+            // 状态码留给 logcat。
+            println("[工坊] 列表失败：HTTP $c1 / $c2")
+            throw IllegalStateException("作品列表没拉到，稍后再试一次")
+        }
         val cards = ((JsonS.parse(String(b1, Charsets.UTF_8)) as? J.Arr)?.items ?: emptyList()).mapNotNull { it as? J.Obj }
         val worlds = ((JsonS.parse(String(b2, Charsets.UTF_8)) as? J.Arr)?.items ?: emptyList()).mapNotNull { it as? J.Obj }
         return cards to worlds
@@ -477,7 +482,10 @@ object Workshop {
         if (q.isNotBlank()) params["q"] = q
         if (type.isNotBlank()) params["type"] = type
         val (code, body) = request("/api/search", params = params)
-        if (code >= 400) throw IllegalStateException("HTTP $code")
+        if (code >= 400) {
+            println("[工坊] 搜索失败：HTTP $code")
+            throw IllegalStateException("没搜到，稍后再试一次")
+        }
         return ((JsonS.parse(String(body, Charsets.UTF_8)) as? J.Arr)?.items ?: emptyList()).mapNotNull { it as? J.Obj }
     }
 
@@ -503,7 +511,10 @@ object Workshop {
                 request("/api/" + kind + "/" + id, timeoutMs = 30000)
             }
         }
-        if (resp.code >= 400) throw IllegalStateException("HTTP ${resp.code}")
+        if (resp.code >= 400) {
+            println("[工坊] 下载失败：HTTP ${resp.code}")
+            throw IllegalStateException("下载没成功，稍后再试一次")
+        }
         val body = resp.body
         var fname = filename.replace("..", "_")
         if (!fname.endsWith(".json")) fname += ".json"
@@ -588,7 +599,10 @@ object Workshop {
     /** 拉取插件列表（返回 在线插件, 本地已安装插件名） */
     fun listPlugins(): Pair<List<J.Obj>, List<String>> {
         val (code, body) = request("/api/plugins/list")
-        if (code >= 400) throw IllegalStateException("HTTP $code")
+        if (code >= 400) {
+            println("[工坊] 插件列表失败：HTTP $code")
+            throw IllegalStateException("插件列表没拉到，稍后再试一次")
+        }
         val plugins = ((JsonS.parse(String(body, Charsets.UTF_8)) as? J.Arr)?.items ?: emptyList())
             .mapNotNull { it as? J.Obj }
         val dir = AppEnv.dir("plugins")
@@ -600,7 +614,10 @@ object Workshop {
     /** 下载安装插件到 plugins/ 目录，返回安装的文件名 */
     fun installPlugin(id: String): String {
         val (code, body) = request("/api/plugins/" + id, timeoutMs = 30000)
-        if (code >= 400) throw IllegalStateException("HTTP $code")
+        if (code >= 400) {
+            println("[工坊] 安装插件失败：HTTP $code")
+            throw IllegalStateException("插件没装上，稍后再试一次")
+        }
         var fname = id + ".py"
         try {
             val (_, lb) = request("/api/plugins/list")
@@ -662,8 +679,10 @@ object Workshop {
         val fname = name.replace(Regex("[\\\\/:*?\"<>|]"), "_").take(60) + ".json"
         val f = File(targetDir, fname)
         if (!f.isFile) {
-            val have = targetDir.listFiles()?.count { it.isFile && it.name.endsWith(".json") } ?: 0
-            return "本地文件不存在：$fname（$targetDir 下共 $have 个 .json）"
+            // 2026-12 文案清理：原来回的是"本地文件不存在：x.json（<目录> 下共 N 个 .json）"，
+            // 文件名/目录名/数量都是实现细节。日志里留全量，界面只说下一步做什么。
+            println("[工坊] 上传失败：本地找不到 ${f.absolutePath}")
+            return "找不到这个文件，试试重新选一次"
         }
         // ① 去历史（在压缩之前做：先变小，再压，收益叠加）
         val (raw, gone) = stripLocalStateBytes(f.readBytes())
@@ -700,7 +719,8 @@ object Workshop {
                 }
             }
         } catch (e: Exception) {
-            return "网络错误：" + (e.message ?: e.javaClass.simpleName).take(80)
+            println("[工坊] 上传异常：${e.javaClass.simpleName} ${e.message}")
+            return "没连上，检查一下网络再试"
         }
         val costMs = System.currentTimeMillis() - t0
         if (resp.code < 400) {
@@ -708,22 +728,26 @@ object Workshop {
             logXfer("上传", raw.size, sent, costMs, gone, usedGz)
             return null
         }
-        if (resp.code == 429) return "链路限流，稍后再试（服务器一直回 429）"
+        // 2026-12 文案清理：这几条原来都把 HTTP 状态码和服务端原文拼进界面
+        // （"服务器要求 Key（HTTP 401）"、"（HTTP 404）——线上可能还是旧版"）。
+        // 用户原话是「去掉应用内所有技术说明部分」——状态码与原文进 println 日志，
+        // 返回给界面的只有一句能照着做的话。
         val detail = try {
             String(resp.body, Charsets.UTF_8).take(140)
         } catch (_: Exception) {
             ""
         }
+        println("[工坊] 上传失败：HTTP ${resp.code} $detail")
         return when {
             resp.code == 401 || resp.code == 403 ->
-                "服务器要求 Key（HTTP ${resp.code}）：请在「在线」页把 Key 填上再试" + (if (apiKey.isBlank()) "（当前没填）" else "（当前已填，可能不对）")
+                "没连上，先把 Key 填上再试" + (if (apiKey.isBlank()) "（当前没填）" else "（当前已填，可能不对）")
             resp.code == 404 ->
-                "服务器没有这个接口（HTTP 404）——线上可能还是旧版，没有「$type」这一类"
+                "工坊里还没有「$type」这一类"
             resp.code == 413 ->
-                "压缩包解压后超过服务器上限（HTTP 413）：${detail.ifBlank { "换小一点的卡再试" }}"
+                "这个文件太大了，换小一点的卡再试"
             resp.code == 400 ->
-                "服务器拒收（HTTP 400）：${detail.ifBlank { "压缩包/JSON 有问题" }}"
-            else -> "HTTP ${resp.code}：" + detail
+                "这个文件没被接受，换一个再试"
+            else -> "上传没成功，稍后再试一次"
         }
     }
 

@@ -143,7 +143,7 @@
 <div class="modal" id="codexModal">
   <div class="modal-box" style="width:720px">
     <h3 id="codexTitle">[ic:book] GAL制作器</h3>
-    <div style="font-size:11px;color:var(--sub);margin-bottom:8px">电脑端独有：选个文件夹自动归类立绘/背景/音乐/配音，改 codex.json 就能做出你的专属视觉小说</div>
+    <div style="font-size:11px;color:var(--sub);margin-bottom:8px">电脑端独有：选个文件夹自动归类立绘/背景/音乐/配音，换个剧本就能做出你的专属视觉小说</div>
     <div class="row" style="justify-content:flex-start">
       <button class="btn2" id="codexNewBtn">[ic:add] 新建</button>
       <button class="btn2" id="codexSampleBtn">[ic:movie] 一键示例包</button>
@@ -260,7 +260,7 @@
 <div class="modal" id="codexPasteModal">  <div class="modal-box" style="width:min(92vw,620px)">
     <h3>[ic:note] 粘贴剧本 → 自动转化</h3>
     <div style="font-size:11px;color:var(--sub);margin-bottom:8px">
-      直接粘贴 <b>codex.json</b>，或按约定写纯文本剧本自动转成可播格式：<br>
+      直接粘贴剧本内容，或按约定写纯文本剧本自动转成可播格式：<br>
  【场景】标题 · 【背景】xxx / 【音乐】xxx · &gt; 旁白 · 角色名：台词 · 【选项】后跟 “- 文字 → s2” · 【跳转】s2 · 【结局】标题
  </div>
     <textarea id="codexPasteInput" rows="12" style="width:100%;font-family:monospace;font-size:12px;background:var(--bg,#111);color:var(--text,#ddd);border:1px solid var(--line);border-radius:6px;padding:8px" placeholder="粘贴 JSON 或纯文本剧本…"></textarea>
@@ -347,7 +347,7 @@
   <div class="modal-box">
     <h3 data-i18n="newRoleTitle" id="nrTitle">新建角色</h3>
     <div class="field"><label data-i18n="name" id="nrName">名字</label><input id="nrNameInput"></div>
-    <div class="field"><label data-i18n="nrLegacy" id="nrLegacy">完整设定（旧版原文，可留空）</label><textarea id="nrLegacyInput" rows="2"></textarea></div>
+    <div class="field"><label data-i18n="nrLegacy" id="nrLegacy">完整设定（可选）</label><textarea id="nrLegacyInput" rows="2"></textarea></div>
     <div class="field"><label data-i18n="nrAppearance" id="nrAppearance">外貌</label><textarea id="nrAppearanceInput" rows="2"></textarea></div>
     <div class="field"><label data-i18n="nrPersonality" id="nrPersonality">性格</label><textarea id="nrPersonalityInput" rows="3"></textarea></div>
     <div class="field"><label data-i18n="nrBackground" id="nrBackground">过去经历</label><textarea id="nrBackgroundInput" rows="3"></textarea></div>
@@ -494,7 +494,7 @@
   <div class="modal-box">
     <h3 id="ppTitle">[ic:person] 玩家角色卡</h3>
     <div class="field"><label id="ppName">名字</label><input id="ppNameInput"></div>
-    <div class="field"><label id="ppLegacy">完整设定（旧版原文，可留空）</label><textarea id="ppLegacyInput" rows="2"></textarea></div>
+    <div class="field"><label id="ppLegacy">完整设定（可选）</label><textarea id="ppLegacyInput" rows="2"></textarea></div>
     <div class="field"><label id="ppAppearance">外貌</label><textarea id="ppAppearanceInput" rows="2"></textarea></div>
     <div class="field"><label id="ppPersonality">性格</label><textarea id="ppPersonalityInput" rows="3"></textarea></div>
     <div class="field"><label id="ppBackground">过去经历</label><textarea id="ppBackgroundInput" rows="3"></textarea></div>
@@ -558,7 +558,7 @@
         <p style="margin-top:8px;color:var(--sub);font-size:12px" id="onbVersion">版号读取中…</p></div>
       <div class="onb-step" data-onb="1"><h3>[ic:settings] 第一步：配置模型</h3>
         <p>点右上角「[ic:settings] 设置」→ 填 <b>API Key</b>、选模型商（DeepSeek 官方 / 免费链 / Ollama 本地等）。<br>
-        免费链可留空 Key 直接聊；直连不通会自动走内置代理。</p>
+        免 Key 的免费链直接就能聊；连不上时程序会自己换线路。</p>
         <p style="margin-top:8px"><b id="onbKeyStatus">[ic:warning] 尚未配置</b></p>
         <button class="btn" style="width:auto;margin-top:10px" id="onbKeyGuide">▶ 跟我一步步配置（箭头引导）</button>
       </div>
@@ -1038,7 +1038,7 @@ function fillProvider(pid, keepKeyInput) {
     var saved = apiKeysMap[pid] || '';
     ki.value = saved ? '••••••••' : '';
   }
-  document.getElementById('stBuyHint').textContent = p.free ? '无需付费，直接可用（高峰期可能限流）' : '';
+  document.getElementById('stBuyHint').textContent = p.free ? '无需付费，直接可用（高峰期会慢一点）' : '';
 }
 
 function appendMessage(m) {
@@ -1521,10 +1521,12 @@ function loadStateFill(s) {
     document.getElementById('stProxyInput').value = s.proxy || '';
     document.getElementById('stRelayInput').value = s.relay_url || '';
     var rs = document.getElementById('relayStatus');
-    if (rs) rs.textContent = s.relay_on ? '● 中转通道已启用（直连失败已自动切换）' : '○ 直连模式（直连失败自动走中转）';
+    // 2026-12 文案清理：说明"备用线路"就够了，不再向用户解释中转/直连的实现（用户原话：
+    // 「去掉应用内所有技术说明部分」）。
+    if (rs) rs.textContent = s.relay_on ? '● 备用线路已启用' : '○ 直连优先';
     document.getElementById('stStopInput').value = (s.stop_input || []).join(', ');
     var ss = document.getElementById('stopStatus');
-    if (ss) ss.textContent = '当前生效：' + ((s.stop_sequences || []).join(' | ') || '（无，跟随模型模板）');
+    if (ss) ss.textContent = '当前生效：' + ((s.stop_sequences || []).join(' | ') || '（默认）');
     // 正则规则预填（全局）
     try {
       pywebview.api.get_regex_rules().then(function (r) {
@@ -3510,7 +3512,9 @@ function setL2dSetting(key, value) {
   });
 }
 document.getElementById('stL2dModel').onclick = function () {
-  if (!l2dModels.length) { alert('未找到模型：请把 .model3.json 放入 web/live2d/models/'); return; }
+  // 2026-12 文案清理：原来这句把模型文件名与目录路径都念出来了（"请把 .model3.json 放入
+  // web/live2d/models/"），用户只需要知道"还没有模型可选"。
+  if (!l2dModels.length) { alert('还没有可用的看板娘模型：把模型放进程序目录后重启就能选到。'); return; }
   var cur = document.getElementById('stL2dModelName').textContent;
   var idx = l2dModels.indexOf(cur);
   var next = l2dModels[(idx + 1) % l2dModels.length];

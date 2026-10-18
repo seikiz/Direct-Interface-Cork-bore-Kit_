@@ -947,9 +947,9 @@
       ]
     },
     "nrLegacy": {
-      "zh": "完整设定（旧版原文，可留空）",
-      "en": "Full setting (legacy text, optional)",
-      "ja": "完全設定（旧版の原文・空欄可）",
+      "zh": "完整设定（可选）",
+      "en": "Full setting (optional)",
+      "ja": "完全設定（任意）",
       "used_by": [
         "desktop_web"
       ]
@@ -1220,9 +1220,9 @@
       ]
     },
     "vision_fail": {
-      "zh": "图片识别失败（免费视觉链被限流或网络问题），请稍后重试",
-      "en": "Image recognition failed (rate limit or network). Try again later.",
-      "ja": "画像の認識に失敗しました（制限またはネットワーク）。後でもう一度。",
+      "zh": "图片没认出来，稍后再试一次",
+      "en": "Couldn't read that image. Try again in a moment.",
+      "ja": "画像を読み取れませんでした。少し後でもう一度。",
       "used_by": [
         "desktop_py",
         "android"
@@ -1405,9 +1405,9 @@
       ]
     },
     "wsKey": {
-      "zh": "Key（可选，只有删除/管理才要；上传不用）",
-      "en": "Key (optional — only for delete/admin, not upload)",
-      "ja": "Key（任意・削除/管理のみ。アップロードは不要）",
+      "zh": "Key（可选）",
+      "en": "Key (optional)",
+      "ja": "Key（任意）",
       "used_by": [
         "desktop_web"
       ]
@@ -1453,9 +1453,9 @@
       ]
     },
     "wsProxy": {
-      "zh": "代理（一般留空直连；上传失败才考虑填）",
-      "en": "Proxy (leave empty to connect directly)",
-      "ja": "プロキシ（通常は空欄＝直接接続）",
+      "zh": "代理（可选）",
+      "en": "Proxy (optional)",
+      "ja": "プロキシ（任意）",
       "used_by": [
         "desktop_web"
       ]
@@ -1509,9 +1509,9 @@
       ]
     },
     "ws_key": {
-      "zh": "Key（可选，只有删除/管理才要）",
-      "en": "Key (optional — delete/admin only)",
-      "ja": "Key（任意・削除/管理のみ）",
+      "zh": "Key（可选）",
+      "en": "Key (optional)",
+      "ja": "Key（任意）",
       "used_by": [
         "android"
       ]
@@ -1638,10 +1638,18 @@
         "desktop_web"
       ]
     },
-    "st_base_hint": {
-      "zh": "选模型商时自动填",
-      "en": "filled automatically when you pick a provider",
-      "ja": "プロバイダー選択で自動入力",
+    "st_svc_url": {
+      "zh": "服务地址",
+      "en": "Server address",
+      "ja": "接続先",
+      "used_by": [
+        "android"
+      ]
+    },
+    "st_adv": {
+      "zh": "高级设置",
+      "en": "Advanced",
+      "ja": "詳細設定",
       "used_by": [
         "android"
       ]
@@ -1654,42 +1662,26 @@
         "android"
       ]
     },
-    "st_proxy_hint": {
-      "zh": "通道不通时填，如 http://127.0.0.1:7890",
-      "en": "fill in when the connection fails, e.g. http://127.0.0.1:7890",
-      "ja": "接続できない時に記入（例 http://127.0.0.1:7890）",
-      "used_by": [
-        "android"
-      ]
-    },
     "st_relay": {
-      "zh": "内置代理通道",
-      "en": "Built-in relay",
-      "ja": "内蔵リレー",
-      "used_by": [
-        "android"
-      ]
-    },
-    "st_relay_hint": {
-      "zh": "直连失败自动走中转",
-      "en": "falls back to the relay when direct fails",
-      "ja": "直結失敗時は自動で中継",
+      "zh": "备用线路",
+      "en": "Spare route",
+      "ja": "予備ルート",
       "used_by": [
         "android"
       ]
     },
     "st_relay_on": {
-      "zh": "● 中转通道已启用（直连失败已自动切换）",
-      "en": "● Relay enabled (switched automatically after a direct failure)",
-      "ja": "● リレー有効（直結失敗で自動切替）",
+      "zh": "● 备用线路已启用",
+      "en": "● Spare route on",
+      "ja": "● 予備ルート有効",
       "used_by": [
         "android"
       ]
     },
     "st_relay_off": {
-      "zh": "○ 直连模式（直连失败自动走中转）",
-      "en": "○ Direct mode (auto-falls back to the relay)",
-      "ja": "○ 直結モード（失敗時は自動で中継）",
+      "zh": "○ 直连优先",
+      "en": "○ Direct first",
+      "ja": "○ 直結優先",
       "used_by": [
         "android"
       ]
@@ -1698,14 +1690,6 @@
       "zh": "停止序列",
       "en": "Stop sequences",
       "ja": "停止シーケンス",
-      "used_by": [
-        "android"
-      ]
-    },
-    "st_stop_hint": {
-      "zh": "逗号分隔，如 <|im_end|>, </s>",
-      "en": "comma separated, e.g. <|im_end|>, </s>",
-      "ja": "カンマ区切り（例 <|im_end|>, </s>）",
       "used_by": [
         "android"
       ]
@@ -1743,9 +1727,17 @@
       ]
     },
     "st_regex": {
-      "zh": "正则规则（每行 id|名称|正则|替换|作用域；ai/user/both）",
-      "en": "Regex rules (one per line: id|name|pattern|replace|scope; ai/user/both)",
-      "ja": "正規表現ルール（1行 id|名前|正規表現|置換|スコープ；ai/user/both）",
+      "zh": "替换规则",
+      "en": "Replace rules",
+      "ja": "置換ルール",
+      "used_by": [
+        "android"
+      ]
+    },
+    "st_regex_hint": {
+      "zh": "每行：名称|正则|替换|作用域",
+      "en": "per line: name|pattern|replace|scope",
+      "ja": "1行ずつ：名前|正規表現|置換|スコープ",
       "used_by": [
         "android"
       ]
@@ -1762,14 +1754,6 @@
       "zh": "top_p",
       "en": "top_p",
       "ja": "top_p",
-      "used_by": [
-        "android"
-      ]
-    },
-    "st_hint_default": {
-      "zh": "留空 = 默认",
-      "en": "empty = default",
-      "ja": "空欄 = 既定",
       "used_by": [
         "android"
       ]
@@ -2100,7 +2084,14 @@
       "en": "Testing… (one real /models request)",
       "ja": "テスト中…（/models に実際に1回）",
       "used_by": [
-        "desktop_web",
+        "desktop_web"
+      ]
+    },
+    "apiWizTestingUi": {
+      "zh": "正在测试…",
+      "en": "Testing…",
+      "ja": "テスト中…",
+      "used_by": [
         "android"
       ]
     },

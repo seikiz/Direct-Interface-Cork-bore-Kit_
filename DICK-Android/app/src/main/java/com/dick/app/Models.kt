@@ -130,7 +130,7 @@ val PROVIDERS = listOf(
 
 // ---------- 角色卡结构化字段 / 世界卡参数（精细化创作） ----------
 val ROLE_FIELD_LABELS = listOf(
-    "legacy" to "完整设定（旧版原文，可留空）", "appearance" to "外貌", "personality" to "性格",
+    "legacy" to "整段设定", "appearance" to "外貌", "personality" to "性格",
     "background" to "过去经历", "speech" to "说话方式（语气/口癖/句式）", "first_mes" to "开场白",
     "mes_example" to "对话示例", "notes" to "备注",
 )

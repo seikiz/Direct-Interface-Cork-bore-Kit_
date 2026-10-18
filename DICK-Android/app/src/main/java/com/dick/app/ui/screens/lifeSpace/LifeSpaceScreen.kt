@@ -301,8 +301,8 @@ fun LifeSpaceScreen(vm: ChatViewModel, deps: DialogDeps) {
                     // ---------------- 世界卡库 ----------------
                     Head("世界卡库", theme)
                     Text(
-                        "随 APK 附带的成套世界卡（" + packs.size + " 张）。装进 worlds/ 之后，在「世界」里勾上它 —— " +
-                            "它会带上年代与地图，生活层/空间层跟着换口径。同名默认不覆盖（覆盖前会留一份 .bak-时间戳）。",
+                        "随 APK 附带的成套世界卡（" + packs.size + " 张）。装好之后，在「世界」里勾上它 —— " +
+                            "它会带上年代与地图，生活层/空间层跟着换口径。同名默认不覆盖。",
                         fontSize = 11.sp, color = theme.muted, lineHeight = 15.sp,
                     )
                     Spacer(Modifier.height(4.dp))
@@ -336,7 +336,7 @@ fun LifeSpaceScreen(vm: ChatViewModel, deps: DialogDeps) {
                         }
                     }
                     if (packs.isEmpty()) {
-                        Text("卡包列表是空的（第一次启动会把 APK 里的卡包释放到 world_packs/，稍后再看）。",
+                        Text("卡包列表还是空的，稍后再看看。",
                             fontSize = 11.sp, color = theme.muted)
                     }
                     if (status.isNotBlank()) {
@@ -345,7 +345,7 @@ fun LifeSpaceScreen(vm: ChatViewModel, deps: DialogDeps) {
                     }
                     Spacer(Modifier.height(10.dp))
                     Text(
-                        "开关 / 下拉 / 滑条立即生效（写 life_config.json / space_config.json，与电脑端同一套字段名）；" +
+                        "开关 / 下拉 / 滑条立即生效（与电脑端一致）；" +
                             "文本框里的内容在关面板时写入。命令入口仍然在：/生活、/在哪、/世界包。",
                         fontSize = 11.sp, color = theme.muted, lineHeight = 15.sp,
                     )

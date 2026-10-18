@@ -767,6 +767,20 @@ class HtmlApp:
         except Exception as e:
             print("[jobs] 分道初始化失败（不影响主流程）：%s" % str(e)[:120])
             self._jobs_seq = 0
+        # 微内核：只做"装模块、给服务、发事件"。业务在 modules/ 下，壳层只做接线。
+        # 内核起不来也不能拖死主程序 —— 那只意味着工坊/备份降级，其余功能照常。
+        self.kernel = None
+        try:
+            import kernel
+            self.kernel = kernel.boot(base_dir=self.base_dir)
+            try:
+                # 异步事件复用现成的运行线（jobs 的分道），不另造一套线程池
+                self.kernel.bind_jobs(jobs, lane="plugin")
+            except Exception as e:
+                print("[kernel] 异步事件没接上运行线（退化为一次性线程）：%s" % str(e)[:120])
+            print("[kernel] 已装模块：%s" % ("、".join(self.kernel.loaded_ids()) or "（无）"))
+        except Exception as e:
+            print("[kernel] 内核启动失败（工坊/备份将不可用）：%s" % str(e)[:160])
         self.ollama_online = False   # 本地 Ollama 是否可用（后台探测）
         self.codex_auto_open = None  # 双击 .codex 文件启动时，待自动打开的包名
         self.codex_volume = 100      # CODEX 播放器音量 0-100
@@ -1854,7 +1868,7 @@ class HtmlApp:
             self._start_fetch(node_id)
         else:
             self.busy = False
-            self._append_sys(i18n.t("vision_fail", "图片识别失败（免费视觉链被限流或网络问题），请稍后重试"))
+            self._append_sys(i18n.t("vision_fail", "图片没认出来，稍后再试一次"))
 
     def _vision_direct_done(self, node_id, direct):
         """DSFVE 直答完成：user 节点保持原样，新增 assistant 节点存 AI 回复。
@@ -3883,6 +3897,40 @@ class HtmlApp:
         return entries
 
 # ---------- 创意工坊（联网版，端口自 Tk 版） ----------
+    # ---- 工坊模块的宿主端口（modules/workshop 只经这些成员跟壳层说话）----
+    def _kernel(self):
+        """内核实例（懒启动）：启动时已经 boot 过，这里只兜底 ——
+        保证"内核没起来"只影响工坊/备份两块，不牵连别的功能。"""
+        k = getattr(self, "kernel", None)
+        if k is None:
+            import kernel as _kernel
+            k = _kernel.boot(base_dir=self.base_dir)
+            self.kernel = k
+        return k
+
+    def _kernel_service(self, name):
+        return self._kernel().service(name)
+
+    def _workshop_client(self):
+        """门面：工坊客户端已迁到 modules/workshop，这里只按内核找服务并绑宿主。
+
+        bind 是幂等的（每次取都重绑 self）：一个进程里会建多个 HtmlApp（测试尤其明显），
+        服务实例必须跟着当前宿主走，不能绑死在"第一个 App"上。
+        """
+        return self._kernel_service("workshop").bind(self, max_retry=XFER_MAX_RETRY)
+
+    def ws_strip_local_state(self, raw):
+        """给工坊模块用：上传前剔掉本地历史/状态（实现在本文件，唯此一份）"""
+        return strip_local_state_bytes(raw)
+
+    def ws_header_name(self, name):
+        """给工坊模块用：中文文件名 → ASCII 头（理由见 ws_header_name 的说明）"""
+        return ws_header_name(name)
+
+    def _ws_module_down(self, err):
+        """工坊模块没起来时的降级返回（界面读到 ok=False 就显示一句人话）"""
+        print("[工坊] 模块不可用：%s" % str(err)[:160])
+        return {"ok": False, "err": "工坊模块没加载起来，稍后再试一次"}
     def _ws_config_file(self):
         return os.path.join(BASE_DIR, "workshop_config.json")
 
@@ -4314,403 +4362,133 @@ class HtmlApp:
             pass
         self.selected_worlds = [n for n in self.selected_worlds if any(w.get("name") == n for w in self.worlds)]
 
+    # ---- 工坊面板的 17 个接口：门面（实现全在 modules/workshop/client.py）----
+    # 接口名/参数/返回形状一个字都没改 —— 前端与历史测试一行不用动。
     def api_workshop_state(self):
-        cfg = self._ws_load_config()
-        roles = [fn for fn in sorted(os.listdir(self.save_dir)) if not fn.startswith(".") and fn.endswith(".json")]
-        worlds = [fn for fn in sorted(os.listdir(self.world_dir)) if fn.endswith(".json")]
-        packs = [fn for fn in sorted(os.listdir(self.pack_dir)) if fn.endswith(".json")]
-        active = ""
+        """本地三种作品的文件名 + 连接配置（模块不可用也给空形状，界面不炸）"""
         try:
-            active = self._ws_active_server()
-        except Exception:
-            pass
-        return {"server_url": cfg.get("server_url", ""), "active_server": active,
-                "has_key": bool(cfg.get("api_key")),
-                "proxy": cfg.get("proxy", ""),
-                "local_roles": roles, "local_worlds": worlds, "local_packs": packs}
+            return self._workshop_client().state()
+        except Exception as e:
+            print("[工坊] 模块不可用：%s" % str(e)[:160])
+            return {"server_url": "", "active_server": "", "has_key": False, "proxy": "",
+                    "local_roles": [], "local_worlds": [], "local_packs": []}
 
     def api_workshop_save_conn(self, server_url, api_key, proxy=None):
-        self._ws_save_config(server_url or "", api_key or "", proxy or "")
-        return {"ok": True}
+        """存工坊连接信息（api_key 的加密落盘仍在 _ws_save_config 里）"""
+        try:
+            return self._workshop_client().save_conn(server_url, api_key, proxy)
+        except Exception as e:
+            return self._ws_module_down(e)
 
     def api_workshop_detect_proxy(self):
-        """自动检测本机代理：1) Windows 系统代理设置 2) 常见代理软件端口"""
-        import socket
-        found = []
-        # 1) Windows 系统代理（IE/系统设置里开的代理）
+        """自动检测本机代理（系统代理 + 常见代理软件端口）"""
         try:
-            import winreg
-            key = winreg.OpenKey(winreg.HKEY_CURRENT_USER,
-                                 r"Software\Microsoft\Windows\CurrentVersion\Internet Settings")
-            enable, _ = winreg.QueryValueEx(key, "ProxyEnable")
-            server, _ = winreg.QueryValueEx(key, "ProxyServer")
-            winreg.CloseKey(key)
-            if enable and server:
-                srv = str(server).strip()
-                # 可能形如 "127.0.0.1:7890" 或 "http=127.0.0.1:7890;https=..."; 取第一个
-                if "=" in srv:
-                    srv = srv.split(";")[0].split("=", 1)[1].strip()
-                if srv and "://" not in srv:
-                    srv = "http://" + srv
-                found.append(("系统代理", srv))
-        except Exception:
-            pass
-        # 2) 常见代理软件本地端口探测
-        common_ports = [7890, 7891, 10809, 10808, 1080, 8888, 1087, 8080, 20171, 9910]
-        for port in common_ports:
-            try:
-                s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                s.settimeout(0.25)
-                if s.connect_ex(("127.0.0.1", port)) == 0:
-                    found.append((f"本地端口 :{port}", f"http://127.0.0.1:{port}"))
-                s.close()
-            except Exception:
-                pass
-        # 去重（同一地址只保留一次）
-        seen = set()
-        result = []
-        for label, url in found:
-            if url not in seen:
-                seen.add(url)
-                result.append({"label": label, "url": url})
-        return {"ok": True, "found": result}
+            return self._workshop_client().detect_proxy()
+        except Exception as e:
+            return self._ws_module_down(e)
 
     def api_workshop_test(self):
-        import requests
+        """连通性自检（/api/health + /api/stats）"""
         try:
-            r = self._ws_call("GET", self._ws_url("/api/health"), timeout=6)
-            if r.status_code >= 400:
-                return {"ok": False, "err": "HTTP " + str(r.status_code)}
-            try:
-                health = r.json() if isinstance(r.json(), dict) else {}
-            except Exception:
-                health = {}
-            stats = {}
-            try:
-                sr = self._ws_call("GET", self._ws_url("/api/stats"), timeout=6)
-                if sr.status_code < 400:
-                    stats = sr.json()
-            except Exception:
-                pass
-            return {"ok": True, "health": health, "stats": stats}
+            return self._workshop_client().test()
         except Exception as e:
-            return {"ok": False, "err": str(e)[:200]}
+            return self._ws_module_down(e)
 
     def api_workshop_list(self):
-        """列出在线作品。角色卡/世界卡是基础能力（老服务器也有）；
-        世界卡包要看服务器能力清单，老服务器没有就别去问（否则整页报错）。"""
+        """在线作品列表（按服务器能力清单决定问哪几种，老服务器不问 packs）"""
         try:
-            caps = self._ws_caps()
-            types = list(caps.get("types") or [])
-            out = {"ok": True, "types": types, "server_old": bool(caps.get("old"))}
-            for name in ("cards", "worlds", "packs"):
-                if name == "packs" and "packs" not in types:
-                    continue    # 老服务器没有这种资源，问了只会 404
-                r = self._ws_call("GET", self._ws_url("/api/%s/list" % name), timeout=8)
-                if r.status_code >= 400:
-                    # 基础类型失败才算真失败；新增类型失败只是"这台服务器没开"
-                    if name != "packs":
-                        return {"ok": False, "err": "HTTP " + str(r.status_code)}
-                    out[name] = []
-                    continue
-                out[name] = r.json()
-            return out
+            return self._workshop_client().list_items()
         except Exception as e:
-            return {"ok": False, "err": str(e)[:200]}
+            return self._ws_module_down(e)
 
     def api_workshop_search(self, query, rtype):
-        import requests
         try:
-            params = {}
-            if query:
-                params["q"] = query
-            if rtype:
-                params["type"] = rtype
-            r = self._ws_call("GET", self._ws_url("/api/search"), params=params, timeout=8)
-            if r.status_code >= 400:
-                return {"ok": False, "err": "HTTP " + str(r.status_code)}
-            return {"ok": True, "results": r.json()}
+            return self._workshop_client().search(query, rtype)
         except Exception as e:
-            return {"ok": False, "err": str(e)[:200]}
+            return self._ws_module_down(e)
 
     def api_workshop_download(self, res_id, rtype, filename):
-        """下载在线作品。能力里有 gzip 就走 /gz（省带宽），否则走普通下载。
-
-        两条路都过同一个闸门（串行 + 最小间隔），并把"耗时/字节数/平均吞吐"打出来 ——
-        40Mbit 的水管有没有被打满，靠这个看，不靠感觉。
-        """
-        import requests
-        import time as _t
+        """下载（有 gzip 能力走 /gz，否则普通下载；两条路都在传输闸门里）"""
         try:
-            kind, _folder, _icon = self._ws_kind(rtype)
-            target_dir = self._ws_local_dir(rtype)
-            use_gz = self._ws_has_gzip()
-            t0 = _t.time()
-            with self._ws_xfer_slot():
-                if use_gz:
-                    r = self._ws_call("GET", self._ws_url("/api/" + kind + "/" + str(res_id) + "/gz"),
-                                      timeout=30)
-                    if r.status_code >= 400:
-                        use_gz = False      # 老服务器没这条 → 退回普通下载
-                if not use_gz:
-                    r = self._ws_call("GET", self._ws_url("/api/" + kind + "/" + str(res_id)),
-                                      timeout=30)
-                # requests 会按 Content-Encoding 自动解压；但"只回了压缩体、头被中间层
-                # 丢掉"的情况要自己按魔数解 —— 见 _ws_gz_body。
-                payload = self._ws_gz_body(r) if r.status_code < 400 else b""
-            if r.status_code >= 400:
-                return {"ok": False, "err": "HTTP " + str(r.status_code)}
-            cost = _t.time() - t0
-            fname = (filename or (str(res_id) + ".json")).replace("..", "_")
-            if not fname.endswith(".json"):
-                fname += ".json"
-            dst = os.path.join(target_dir, fname)
-            base, ext = os.path.splitext(dst)
-            i = 1
-            while os.path.exists(dst):
-                dst = base + "_" + str(i) + ext
-                i += 1
-            with open(dst, "wb") as f:
-                f.write(payload)
-            if cost > 0:
-                print("[工坊] 下载完成：%s %d 字节%s，耗时 %.2fs，平均 %.2f MB/s"
-                      % (os.path.basename(dst), len(payload),
-                         "（gzip 通道）" if use_gz else "", cost,
-                         (len(payload) / 1048576.0) / cost))
-            if rtype == "角色卡":
-                self._reload_roles()
-            elif rtype == "世界卡":
-                self._reload_worlds()
-            # 世界卡包下载到 world_packs/ 后刻意不自动装进 worlds/：装哪几张是用户的选择
-            return {"ok": True, "file": os.path.basename(dst), "gzip": bool(use_gz),
-                    "bytes": len(payload), "elapsed": round(cost, 3)}
+            return self._workshop_client().download(res_id, rtype, filename)
         except Exception as e:
-            return {"ok": False, "err": str(e)[:200]}
+            return self._ws_module_down(e)
 
     def api_workshop_like(self, res_id, rtype):
-        import requests
         try:
-            kind, _folder, _icon = self._ws_kind(rtype)
-            r = self._ws_call("POST", self._ws_url("/api/" + kind + "/" + str(res_id) + "/like"),
-                              timeout=8)
-            if r.status_code >= 400:
-                return {"ok": False, "err": "HTTP " + str(r.status_code)}
-            return {"ok": True}
+            return self._workshop_client().like(res_id, rtype)
         except Exception as e:
-            return {"ok": False, "err": str(e)[:200]}
+            return self._ws_module_down(e)
 
     def _ws_http_err(self, r, what="操作"):
-        """把工坊的 4xx/5xx 翻成能给人看的一句话（401 单独说，不然只会显示"HTTP 401"）"""
+        """把工坊的 4xx/5xx 翻成**人话**（2026-12 文案清理）。
+
+        用户原话：「去掉应用内所有技术说明部分，用户不需要看到这些」。
+        原来这里直接把状态码和服务端原文拼进界面（"HTTP 401：服务器要求 Key" /
+        "HTTP 500：<服务端 traceback 片段>"）。现在状态码与原文只进 stderr 日志
+        （开发者排查用），返回给界面的只有一句能照着做的话。
+        """
         detail = (r.text or "")[:140].replace("\n", " ").strip()
+        print("[工坊] %s失败：HTTP %s %s" % (what, r.status_code, detail))
         if r.status_code in (401, 403):
             has_key = bool(self._ws_headers().get("X-API-Key"))
             return {"ok": False,
-                    "err": "服务器要求 Key（HTTP %d）：在「🌐 在线」页填上 Key 再%s%s"
-                           % (r.status_code, what, "" if has_key else "（当前没填）")}
-        return {"ok": False, "err": "HTTP %d：%s" % (r.status_code, detail or "服务器无说明")}
+                    "err": "没连上，检查一下 Key 再%s%s"
+                           % (what, "" if has_key else "（当前没填）")}
+        return {"ok": False, "err": "%s没成功，稍后再试一次" % what}
 
     def api_workshop_delete(self, res_id, rtype):
-        import requests
         try:
-            kind, _folder, _icon = self._ws_kind(rtype)
-            r = self._ws_call("DELETE", self._ws_url("/api/" + kind + "/" + str(res_id)), timeout=8)
-            if r.status_code >= 400:
-                return self._ws_http_err(r, "删除")
-            return {"ok": True}
+            return self._workshop_client().delete(res_id, rtype)
         except Exception as e:
-            return {"ok": False, "err": str(e)[:200]}
+            return self._ws_module_down(e)
 
     def api_workshop_upload(self, rtype, name):
-        """上传本地作品：**有 gzip 能力就压缩上传**，否则照旧 multipart。
-
-        三件事按顺序发生：
-          ① 剔掉本地历史/状态（"每次上传都是新卡"，聊天树绝不外传）；
-          ② 有 gzip 能力就 gzip.compress 后 POST /api/<kind>/upload/gz（文件名走 X-Filename）；
-          ③ 接口不在（404/405/415/501）→ **自动回退 multipart**，不让用户感知。
-        整个传输在闸门里（串行 + 最小间隔），429 按 Retry-After 退避，最多 XFER_MAX_RETRY 次。
-        """
-        import requests
-        import time as _t
-        import gzip as _gz
+        """上传（gzip 优先、404 回退 multipart、429 退避；剔除本地历史在模块里）"""
         try:
-            kind, _folder, _icon = self._ws_kind(rtype)
-            target_dir = self._ws_local_dir(rtype)
-            fname = self._safe_name(name) + ".json"
-            path = os.path.join(target_dir, fname)
-            if not os.path.isfile(path):
-                return {"ok": False, "err": "本地文件不存在：" + fname}
-            with open(path, "rb") as f:
-                raw0 = f.read()      # 先读进内存：换通道重试时文件句柄已到末尾，必须能重发
-            raw, gone = strip_local_state_bytes(raw0)
-            use_gz = self._ws_has_gzip()
-            body = _gz.compress(raw) if use_gz else raw
-            t0 = _t.time()
-            r = None
-            for attempt in range(XFER_MAX_RETRY):
-                with self._ws_xfer_slot():
-                    if use_gz:
-                        # 压缩体走专门接口：body 就是 gzip(JSON)，元数据全靠请求头。
-                        # 不设 Content-Encoding 请求头 —— 有专门接口就不必让中间代理去猜。
-                        r = self._ws_call(
-                            "POST", self._ws_url("/api/" + kind + "/upload/gz"), data=body,
-                            headers=dict(self._ws_headers(), **{
-                                # 中文卡名必须转 ASCII：requests 按 latin-1 编头，
-                                # 直接塞中文会抛 UnicodeEncodeError（真机上必现）。
-                                "X-Filename": ws_header_name(fname),
-                                "Content-Type": "application/json",
-                            }),
-                            timeout=30)
-                        if r.status_code in (404, 405, 415, 501):
-                            use_gz = False      # 服务器没有这条接口 → 本轮改走 multipart
-                    if not use_gz:
-                        r = self._ws_call(
-                            "POST", self._ws_url("/api/" + kind + "/upload"),
-                            files={"file": (fname, raw, "application/json")},
-                            data={"name": name}, timeout=30)
-                if r.status_code != 429:
-                    break
-                wait = self._ws_retry_after(r)
-                print("[工坊] 链路限流（429），%.1f 秒后重试（第 %d/%d 次）"
-                      % (wait, attempt + 1, XFER_MAX_RETRY))
-                _t.sleep(wait)
-            else:
-                return {"ok": False, "err": "链路限流，稍后再试（服务器一直回 429）"}
-            cost = _t.time() - t0
-            if r.status_code >= 400:
-                return self._ws_http_err(r, "上传")
-            sent = len(body) if use_gz else len(raw)
-            if cost > 0:
-                print("[工坊] 上传完成：%s，耗时 %.2fs，平均 %.2f MB/s%s"
-                      % ("gzip %d→%d 字节（%.0f%%）" % (len(raw), sent,
-                                                        100.0 * sent / max(1, len(raw)))
-                         if use_gz else "明文 %d 字节" % len(raw),
-                         cost, (sent / 1048576.0) / cost,
-                         ("，已剔掉 " + "、".join(gone[:3])) if gone else ""))
-            return {"ok": True, "message": r.text[:200], "gzip": bool(use_gz),
-                    "bytes": sent, "raw_bytes": len(raw), "stripped": gone,
-                    "elapsed": round(cost, 3)}
+            return self._workshop_client().upload(rtype, name)
         except Exception as e:
-            return {"ok": False, "err": str(e)[:200]}
+            return self._ws_module_down(e)
 
     def api_workshop_preview(self, rtype, filename):
-        # 2026-12：上限 8000 → 512KB。前端已经改成**结构化卡片**（web/js/screens/ws.js 按
-        # design/card_fields.json 的分区表排版），截断会让 JSON 解析失败、整张卡退化成原文。
-        # 实测最大的世界卡 131KB，512KB 够放下任何一张卡，又不会被异常大文件拖住。
-        target_dir = self._ws_local_dir(rtype)
-        filename = os.path.basename((filename or "").replace("..", "_"))
-        path = os.path.join(target_dir, filename)
-        if not os.path.isfile(path):
-            return {"ok": False, "err": "文件不存在"}
+        """读本地卡内容给前端排版（512KB 上限）"""
         try:
-            with open(path, "r", encoding="utf-8") as f:
-                text = f.read(512 * 1024)
-            return {"ok": True, "preview": text}
+            return self._workshop_client().preview(rtype, filename)
         except Exception as e:
-            return {"ok": False, "err": str(e)}
+            return self._ws_module_down(e)
 
     def api_workshop_export(self, rtype, filename):
-        """本地文件导出到用户选择的位置"""
-        target_dir = self._ws_local_dir(rtype)
-        filename = os.path.basename((filename or "").replace("..", "_"))
-        src = os.path.join(target_dir, filename)
-        if not os.path.isfile(src):
-            return {"ok": False, "err": "文件不存在"}
+        """导出到用户选择的位置（保存对话框在模块里，走 pywebview）"""
         try:
-            import webview
-            win = webview.windows[0] if getattr(webview, "windows", None) else None
-            if win is None:
-                return {"ok": False, "err": "窗口未就绪"}
-            res = win.create_file_dialog(webview.FileDialog.SAVE, save_filename=filename,
-                                         file_types=("JSON (*.json)",))
-            if not res:
-                return {"ok": False, "err": "cancelled"}
-            import shutil
-            shutil.copy2(src, res[0])
-            return {"ok": True}
+            return self._workshop_client().export(rtype, filename)
         except Exception as e:
-            return {"ok": False, "err": str(e)[:200]}
+            return self._ws_module_down(e)
 
     def api_workshop_plugins(self):
-        """拉取工坊插件列表 + 本地已安装插件名（标记用）"""
-        import requests
+        """工坊插件列表 + 本地已装插件名"""
         try:
-            r = self._ws_call("GET", self._ws_url("/api/plugins/list"), timeout=8)
-            if r.status_code >= 400:
-                return {"ok": False, "err": "HTTP " + str(r.status_code)}
-            plugins = r.json()
+            return self._workshop_client().plugins()
         except Exception as e:
-            return {"ok": False, "err": str(e)[:200]}
-        local = set()
-        for d in getattr(self.plugin_manager, "plugin_dirs", []) or []:
-            if os.path.isdir(d):
-                for fn in os.listdir(d):
-                    if fn.endswith(".py") and not fn.startswith("_"):
-                        local.add(fn[:-3])
-        return {"ok": True, "plugins": plugins, "local": sorted(local)}
+            return self._ws_module_down(e)
 
     def api_workshop_install_plugin(self, plugin_id):
-        """下载插件到 plugins/ 目录并热加载"""
-        import requests
+        """下载插件到 plugins/ 并热加载"""
         try:
-            r = self._ws_call("GET", self._ws_url("/api/plugins/" + str(plugin_id)), timeout=30)
-            if r.status_code >= 400:
-                return {"ok": False, "err": "HTTP " + str(r.status_code)}
-            info = None
-            try:
-                lr = self._ws_call("GET", self._ws_url("/api/plugins/list"), timeout=8)
-                if lr.status_code < 400:
-                    info = next((p for p in lr.json() if str(p.get("id")) == str(plugin_id)), None)
-            except Exception:
-                pass
-            fname = (info or {}).get("original_name") or (str(plugin_id) + ".py")
-            fname = os.path.basename(str(fname).replace("..", "_"))
-            if not fname.endswith(".py"):
-                fname += ".py"
-            target_dir = getattr(self.plugin_manager, "plugin_dir", None) or "plugins"
-            os.makedirs(target_dir, exist_ok=True)
-            dst = os.path.join(target_dir, fname)
-            with open(dst, "wb") as f:
-                f.write(r.content)
-            try:
-                self.plugin_manager.reload_plugins()
-            except Exception as e:
-                print(f"[Plugin] 重载失败: {e}")
-            return {"ok": True, "name": (info or {}).get("name") or fname, "file": fname}
+            return self._workshop_client().install_plugin(plugin_id)
         except Exception as e:
-            return {"ok": False, "err": str(e)[:200]}
+            return self._ws_module_down(e)
 
     def api_workshop_delete_local(self, rtype, filename):
-        target_dir = self._ws_local_dir(rtype)
-        filename = os.path.basename((filename or "").replace("..", "_"))
-        path = os.path.join(target_dir, filename)
-        if not os.path.isfile(path):
-            return {"ok": False, "err": "文件不存在"}
         try:
-            os.remove(path)
-            if rtype == "角色卡":
-                self._reload_roles()
-            elif rtype == "世界卡":
-                self._reload_worlds()
-            return {"ok": True}
+            return self._workshop_client().delete_local(rtype, filename)
         except Exception as e:
-            return {"ok": False, "err": str(e)[:200]}
+            return self._ws_module_down(e)
 
     def api_workshop_open_folder(self, which):
         try:
-            if which == "roles":
-                target = self.save_dir
-            elif which == "worlds":
-                target = self.world_dir
-            elif which == "packs":
-                target = self.pack_dir
-            elif which == "plugins":
-                target = getattr(self.plugin_manager, "plugin_dir", None) or "plugins"
-            else:
-                target = self.save_dir
-            os.startfile(target)
-            return {"ok": True}
+            return self._workshop_client().open_folder(which)
         except Exception as e:
-            return {"ok": False, "err": str(e)}
+            return self._ws_module_down(e)
 
     def api_open_path(self, path):
         """在资源管理器中打开/定位文件（打包产物定位用）"""
@@ -5006,56 +4784,55 @@ class HtmlApp:
             out = os.path.join(os.path.expanduser("~"), "Desktop", fname)
         return out
 
+    def _backup_service(self):
+        """门面：加密备份已迁到 modules/backup，这里只按内核找服务"""
+        return self._kernel_service("backup")
+
+    def _backup_dirs(self):
+        """还原时允许写入的五个去处（模块不认识 App，只认这张表）"""
+        return {"root": self.base_dir,
+                "saves": self.save_dir,
+                "worlds": self.world_dir,
+                "personas": os.path.normpath(os.path.join(self.preset_dir, "..", "personas")),
+                "codex": self.codex_dir,
+                "config_file": self.config_file}
     # ---------- 加密备份 ----------
 
     BACKUP_EXT = ".dickbackup"
 
     def api_backup_password_check(self, password):
-        """给界面用：实时告诉用户口令够不够强（不存任何东西）"""
+        """门面：口令强度判定在 modules/backup（不存任何东西）"""
         try:
-            import crypto_core
-            lvl, msg = crypto_core.password_strength(password or "")
-            return {"ok": True, "level": lvl, "msg": msg,
-                    "ok_to_use": lvl >= 2}
+            return self._backup_service().password_check(password or "")
         except Exception as e:
             return {"ok": False, "err": str(e)[:120]}
 
     def api_backup_make_password(self):
-        """生成一个随机强口令。
-
-        为什么要这个：备份的安全性 100% 取决于口令，而人自己想的口令
-        普遍很弱（生日、拼音、叠字）。更麻烦的是【忘了就永久打不开】——
-        我们没留后门，也没有任何找回手段。
-        所以让程序给一个 32 字节随机的，用户抄在纸上收好，
-        这比「想一个好记的」既更安全、也更不容易忘。
-        """
+        """门面：随机强口令由 modules/backup 生成（32 字节 → base32，抄纸上收好）"""
         try:
-            import crypto_core
-            return {"ok": True, "password": crypto_core.make_recovery_code()}
+            return self._backup_service().make_password()
         except Exception as e:
             return {"ok": False, "err": str(e)[:120]}
 
     def api_export_backup_encrypted(self, password):
         """加密备份：整体打包 → 用口令加密成【一个文件】。
 
-        比「加密 zip」更好：连文件名、目录结构、有几个存档、config 里的字段
-        全都看不见 —— 加密 zip 只加密内容，文件名和结构仍是明文。
+        门面：打包内容（_backup_entries）与"存到哪"（保存对话框）留在壳层，
+        口令闸门与容器封装在 modules/backup —— 那部分必须能脱离界面被单独测。
         """
         try:
-            import crypto_core
-            import datetime as _dt
+            svc = self._backup_service()
         except Exception as e:
             return {"ok": False, "err": "缺少加密模块 crypto_core：" + str(e)[:120]}
-        lvl, msg = crypto_core.password_strength(password or "")
-        if lvl < 2:
-            return {"ok": False,
-                    "err": "口令不够强（%s）。加密备份的安全性 100%% 取决于口令强度，"
-                           "请至少 12 位、混合大小写字母和数字。" % msg}
+        ok, err = svc.require_strong(password)
+        if not ok:
+            return {"ok": False, "err": err}
         try:
+            import datetime as _dt
             ts = _dt.datetime.now().strftime("%Y%m%d_%H%M%S")
             entries = self._backup_entries()
             raw_zip = self._zip_entries(entries, "DICK_备份_" + ts)
-            blob = crypto_core.encrypt(password, raw_zip)
+            blob = svc.seal(raw_zip, password)
             out = self._pick_save_path("DICK_加密备份_" + ts + self.BACKUP_EXT,
                                        ("DICK 加密备份 (*" + self.BACKUP_EXT + ")",))
             if not out.lower().endswith(self.BACKUP_EXT):
@@ -5067,18 +4844,18 @@ class HtmlApp:
                     "entries": len(entries),
                     "zip_bytes": len(raw_zip),
                     "container_bytes": len(blob),
-                    "info": crypto_core.info(blob)}
+                    "info": svc.info(blob)}
         except Exception as e:
             return {"ok": False, "err": "加密备份失败：" + str(e)[:200]}
 
     def api_import_backup_encrypted(self, password):
         """还原加密备份：解密 → 解压 → 覆盖 saves/worlds/personas/config。
-        覆盖前会把原文件复制到 saves/backup/ 下，避免一失手全没了。"""
+        覆盖前会把原文件复制到 saves/backup/ 下，避免一失手全没了。
+
+        门面：解密与铺盘在 modules/backup；这里只问用户要哪个文件。
+        """
         try:
-            import crypto_core
-            import zipfile
-            import io
-            import datetime as _dt
+            svc = self._backup_service()
         except Exception as e:
             return {"ok": False, "err": "缺少加密模块：" + str(e)[:120]}
         try:
@@ -5100,14 +4877,17 @@ class HtmlApp:
         except Exception as e:
             return {"ok": False, "err": "读不到文件：" + str(e)[:120]}
         try:
-            raw_zip = crypto_core.decrypt(password, blob)
+            raw_zip = svc.unseal(blob, password)
         except Exception as e:
             return {"ok": False, "err": str(e)[:160]}
         try:
+            import io
+            import zipfile
             z = zipfile.ZipFile(io.BytesIO(raw_zip))
         except Exception as e:
             return {"ok": False, "err": "备份内容损坏：" + str(e)[:120]}
 
+        import datetime as _dt
         ts = _dt.datetime.now().strftime("%Y%m%d_%H%M%S")
         bak = os.path.join(self.save_dir, "backup", "restore_" + ts)
         try:
@@ -5123,60 +4903,11 @@ class HtmlApp:
                           restored["config"])}
 
     def _restore_from_zip(self, z, bak):
-        """把备份 zip 铺回磁盘。抽成独立方法是为了能脱离文件对话框测试 ——
-        这段逻辑包含「写到哪」的判断，出错的代价是覆盖用户数据，必须可测。"""
-        restored = {"saves": 0, "worlds": 0, "personas": 0, "config": 0, "codex": 0}
-        root = os.path.realpath(os.path.abspath(self.base_dir))
-        for info in z.infolist():
-            if info.is_dir():
-                continue
-            safe = info.filename.replace("\\", "/")
-            parts = safe.split("/")
-            if len(parts) < 2:
-                continue
-            # zip 路径穿越防护：'..' 若被写进备份，还原时就能写到 DICK 目录之外。
-            # GCM 已保证文件没被改过，这是纵深防御，成本几乎为零。
-            if ".." in parts:
-                continue
-            rel = "/".join(parts[1:])
-            if rel == "config.json":
-                dst = self.config_file
-                key = "config"
-            # 注意：这里判断的是 rel 里的层级，不是 parts 的长度 ——
-            # parts 还含最外层根目录名，用 len(parts)==2 会把全部条目跳过。
-            elif rel.startswith("saves/") and rel.count("/") == 1:
-                dst = os.path.join(self.save_dir, os.path.basename(rel))
-                key = "saves"
-            elif rel.startswith("worlds/") and rel.count("/") == 1:
-                dst = os.path.join(self.world_dir, os.path.basename(rel))
-                key = "worlds"
-            elif rel.startswith("personas/") and rel.count("/") == 1:
-                dst = os.path.normpath(
-                    os.path.join(self.preset_dir, "..", "personas", os.path.basename(rel)))
-                key = "personas"
-            elif rel.startswith("codex/"):
-                # codex 可能是目录，要保留子目录层级
-                dst = os.path.join(self.codex_dir,
-                                   rel[len("codex/"):].replace("/", os.sep))
-                key = "codex"
-            else:
-                continue
-            ap = os.path.realpath(os.path.abspath(dst))
-            if not (ap == root or ap.startswith(root + os.sep)):
-                continue
-            # 覆盖前先留一份原件
-            if os.path.isfile(dst):
-                try:
-                    os.makedirs(bak, exist_ok=True)
-                    import shutil as _sh
-                    _sh.copy2(dst, os.path.join(bak, os.path.basename(dst)))
-                except Exception:
-                    pass
-            os.makedirs(os.path.dirname(dst), exist_ok=True)
-            with open(dst, "wb") as f:
-                f.write(z.read(info))
-            restored[key] += 1
-        return restored
+        """门面：铺盘实现已迁到 modules/backup（含 zip 路径穿越防护与覆盖前留原件）。
+
+        这个方法名保留，是因为测试直接调它 ——「铺盘结果」是这条路上唯一重要的契约。
+        """
+        return self._backup_service().restore_zip(z, bak, self._backup_dirs())
 
     def api_export_backup(self):
         """一键备份：把所有角色卡(含聊天树)、世界卡、玩家卡、以及 config 打进一个 zip。

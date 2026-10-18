@@ -103,8 +103,8 @@ fun PersonaScreen(vm: ChatViewModel, deps: DialogDeps) {
         text = {
             Column(Modifier.verticalScroll(rememberScrollState())) {
                 OutlinedTextField(value = pName, onValueChange = { pName = it }, label = { Text("名字") }, singleLine = true)
-                IconText("完整设定（旧版原文，填了会整体覆盖，可留空）", fontSize = 11.sp, color = theme.muted, modifier = Modifier.padding(top = 6.dp), icon = "history_edu")
-                OutlinedTextField(value = pLegacy, onValueChange = { pLegacy = it }, label = { Text("Legacy 原文") }, minLines = 2)
+                IconText("整段设定（可选）", fontSize = 11.sp, color = theme.muted, modifier = Modifier.padding(top = 6.dp), icon = "history_edu")
+                OutlinedTextField(value = pLegacy, onValueChange = { pLegacy = it }, label = { Text("原文") }, minLines = 2)
                 IconText("结构化字段（与角色卡同标准）", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 10.dp), icon = "palette")
                 OutlinedTextField(value = pAppearance, onValueChange = { pAppearance = it }, label = { Text("外貌") }, minLines = 2)
                 OutlinedTextField(value = pPersonality, onValueChange = { pPersonality = it }, label = { Text("性格") }, minLines = 2)

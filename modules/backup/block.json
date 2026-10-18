@@ -1,0 +1,46 @@
+{
+  "block": "backup",
+  "layer": "module",
+  "id": "backup",
+  "owner": "seiki",
+  "files": [
+    "__init__.py",
+    "__main__.py",
+    "block.json",
+    "manifest.json",
+    "module.py",
+    "selftest.py",
+    "service.py"
+  ],
+  "selftest": {
+    "cmd": [
+      "python",
+      "-m",
+      "modules.backup",
+      "--selftest"
+    ],
+    "max_ms": 2000
+  },
+  "interface": {
+    "service": "backup",
+    "impls": [
+      {
+        "file": "service.py",
+        "class": "BackupService"
+      }
+    ],
+    "methods": [
+      "password_check",
+      "make_password",
+      "require_strong",
+      "seal",
+      "unseal",
+      "info",
+      "restore_zip"
+    ]
+  },
+  "budget": {
+    "soft_lines": 400,
+    "hard_lines": 800
+  }
+}

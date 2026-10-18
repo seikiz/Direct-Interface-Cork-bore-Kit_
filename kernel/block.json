@@ -1,0 +1,59 @@
+{
+  "block": "kernel",
+  "layer": "kernel",
+  "id": "kernel",
+  "owner": "seiki",
+  "files": [
+    "__init__.py",
+    "__main__.py",
+    "block.json",
+    "bus.py",
+    "config.py",
+    "loader.py",
+    "log.py",
+    "manifest.py",
+    "paths.py",
+    "README.md",
+    "registry.py",
+    "selftest.py",
+    "version.py"
+  ],
+  "selftest": {
+    "cmd": [
+      "python",
+      "-m",
+      "kernel",
+      "--selftest"
+    ],
+    "max_ms": 2000
+  },
+  "interface": {
+    "service": "kernel",
+    "impls": [
+      {
+        "file": "__init__.py",
+        "class": "Kernel"
+      }
+    ],
+    "methods": [
+      "boot",
+      "service",
+      "get_service",
+      "has_service",
+      "services",
+      "emit",
+      "on",
+      "off",
+      "bind_jobs",
+      "module_state",
+      "loaded_ids",
+      "failed_modules",
+      "summary",
+      "shutdown"
+    ]
+  },
+  "budget": {
+    "soft_lines": 400,
+    "hard_lines": 800
+  }
+}

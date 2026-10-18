@@ -100,8 +100,8 @@ window.GenScreen = (function (global) {
     var hint = document.getElementById('genNegativeHint');
     if (!hint) return;
     hint.textContent = (be === 'pollinations')
-      ? '免 Key 后端不支持负面提示词（填了会被忽略）；风格词建议写进「补充风格词」。'
-      : (be === 'comfyui' ? '本地 ComfyUI：负面提示词会进 7 号节点；尺寸以 512 的倍数为佳。' : '');
+      ? '这个后端不支持负面提示词，风格词请写进「补充风格词」。'
+      : (be === 'comfyui' ? '尺寸用 512 的倍数效果最好。' : '');
   }
 
   /* ---------------- 挂载 / 卸载（router 注入片段之后调用） ---------------- */

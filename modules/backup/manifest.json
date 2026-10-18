@@ -1,0 +1,20 @@
+{
+  "id": "backup",
+  "version": "1.0.0.0",
+  "provides": {
+    "services": ["backup"],
+    "routes": [
+      "api_backup_password_check",
+      "api_backup_make_password",
+      "api_export_backup_encrypted",
+      "api_import_backup_encrypted"
+    ],
+    "ui_screens": ["bk"],
+    "commands": []
+  },
+  "requires": {
+    "services": [],
+    "modules": []
+  },
+  "lazy": true
+}

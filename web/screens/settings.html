@@ -15,20 +15,29 @@
         <button data-i18n="stBuy" class="btn2 ghost" id="stBuyBtn" style="font-size:12px" data-i18n-prefix="[ic:key] ">[ic:key] 去官网注册 / 充值</button>
         <span id="stBuyHint" style="font-size:11px;color:var(--sub)"></span>
       </div>
-      <div class="field" style="margin-top:6px"><label data-i18n="baseUrl" id="stBase">Base URL（选模型商自动填）</label><input id="stBaseInput"></div>
-      <div class="field" style="margin-top:6px"><label id="stProxy">代理（可选，通道不通时填写，如 http://127.0.0.1:7890）</label><input id="stProxyInput" placeholder="http://127.0.0.1:7890"></div>
-      <div class="field" style="margin-top:6px"><label id="stRelay">内置代理通道（直连失败自动走中转；默认内置地址，可改）</label><input id="stRelayInput" placeholder="https://dick-workshop.seiki342008.workers.dev">
+      <!-- 2026-12 文案清理：用户原话「去掉应用内所有技术说明部分」。
+           连接与采样这些只有进阶用户会碰的项收进「高级设置」折叠区（默认收起），
+           **字段一个都不删**（服务地址 / 代理 / 备用线路 / 停止序列 / 替换规则 / 采样），
+           删掉的只是字段旁边那串解释（地址示例、留空=默认、存储前应用…）。 -->
+      <div class="mech-fold folded" id="foldAdvanced">
+        <div class="fold-head" onclick="toggleFold('foldAdvanced')"><span>[ic:tune] 高级设置</span><span class="fold-arrow">▾</span></div>
+        <div class="fold-body">
+      <div class="field" style="margin-top:6px"><label data-i18n="baseUrl" id="stBase">服务地址</label><input id="stBaseInput"></div>
+      <div class="field" style="margin-top:6px"><label id="stProxy">代理</label><input id="stProxyInput"></div>
+      <div class="field" style="margin-top:6px"><label id="stRelay">备用线路</label><input id="stRelayInput">
         <span id="relayStatus" style="font-size:11px;color:var(--sub)"></span></div>
-      <div class="field" style="margin-top:6px"><label id="stStop">停止序列（指令模板，逗号分隔；留空用预设/模型默认）</label><input id="stStopInput" placeholder="&lt;|im_end|&gt;, &lt;/s&gt;">
+      <div class="field" style="margin-top:6px"><label id="stStop">停止序列</label><input id="stStopInput">
         <span id="stopStatus" style="font-size:11px;color:var(--sub)"></span></div>
-      <div class="field" style="margin-top:6px"><label id="stRegex">[ic:text_fields] 正则规则（每行 id|名称|正则|替换|作用域；作用域 ai/user/both；\1 为捕获组）</label>
+      <div class="field" style="margin-top:6px"><label id="stRegex">[ic:text_fields] 替换规则</label>
         <textarea id="stRegexInput" rows="4" placeholder="rm_star|动作去星号|\*([^*]+)\*|（$1）|both&#10;strip_blank|去多余空行|\n{3,}|\n\n|both"></textarea>
-        <span style="font-size:11px;color:var(--sub)">存储前应用（树状回溯/分支看到的都是处理后的文本）；角色卡可配专属规则</span></div>
-      <div class="field" style="margin-top:6px"><label id="stSample">采样参数（温度 / top_p，留空 = 模型默认）</label>
+        <span style="font-size:11px;color:var(--sub)">角色卡也能单独配一套</span></div>
+      <div class="field" style="margin-top:6px"><label id="stSample">采样参数</label>
         <div class="row" style="justify-content:flex-start">
-          <input id="stTempInput" type="number" step="0.1" min="0" max="2" placeholder="温度 如 0.8" style="width:120px">
-          <input id="stTopPInput" type="number" step="0.05" min="0" max="1" placeholder="top_p 如 0.9" style="width:120px">
+          <input id="stTempInput" type="number" step="0.1" min="0" max="2" placeholder="温度" style="width:120px">
+          <input id="stTopPInput" type="number" step="0.05" min="0" max="1" placeholder="top_p" style="width:120px">
         </div></div>
+        </div>
+      </div>
     </div>
     <div class="field"><label data-i18n="apiKey" id="stKey">API Key</label><input id="stKeyInput" type="password"></div>
 <div class="field" style="margin-top:4px;display:flex;gap:8px;flex-wrap:wrap">
@@ -44,20 +53,20 @@
     <div class="mech-fold" id="foldImgGen">
       <div class="fold-head" onclick="toggleFold('foldImgGen')"><span>[ic:palette] 生图设置</span><span class="fold-arrow">▾</span></div>
       <div class="fold-body">
-        <div class="field"><label>生图后端（自动识别按端点判断；本地服务不在默认端口时手动选）</label>
+        <div class="field"><label>生图后端</label>
           <select id="stImgBackend">
             <option value="auto">自动识别（推荐）</option>
-            <option value="openai">OpenAI 兼容（需 Key）</option>
-            <option value="pollinations">Pollinations 免 Key 免费</option>
-            <option value="sdwebui">本地 A1111 / Forge（/sdapi）</option>
-            <option value="comfyui">本地 ComfyUI（8188）</option>
+            <option value="openai">OpenAI 兼容</option>
+            <option value="pollinations">Pollinations 免费</option>
+            <option value="sdwebui">本地 A1111 / Forge</option>
+            <option value="comfyui">本地 ComfyUI</option>
           </select></div>
-        <div class="field"><label>生图 API Key（硅基流动 / 智谱 / 任意兼容中转；免 Key 端点留空即可）</label>
-          <input id="stImgKey" type="password" placeholder="sk-...（免 Key 端点可留空）"></div>
-        <div class="field"><label>生图端点（OpenAI 兼容 /images/generations；填 https://image.pollinations.ai 则免 Key 免费出图）</label>
-          <input id="stImgBase" placeholder="https://api.siliconflow.cn/v1　或　https://image.pollinations.ai"></div>
-        <div class="field"><label>生图模型（免 Key 端点填 flux / turbo；本地 ComfyUI 填 checkpoint 文件名 .safetensors）</label>
-          <input id="stImgModel" placeholder="black-forest-labs/FLUX.1-schnell　或　flux　或　sd_xl_base_1.0.safetensors"></div>
+        <div class="field"><label>生图 Key</label>
+          <input id="stImgKey" type="password" placeholder="可留空"></div>
+        <div class="field"><label>生图地址</label>
+          <input id="stImgBase"></div>
+        <div class="field"><label>生图模型</label>
+          <input id="stImgModel" placeholder="如 flux / turbo"></div>
         <button class="btn2 ghost" id="stImgSave" style="width:auto;margin:0">[ic:save] 保存生图设置</button>
         <div style="font-size:11px;color:var(--sub);margin-top:6px" id="stImgState"></div>
       </div>
@@ -94,7 +103,7 @@
     <div class="mech-fold" id="foldL2d">
       <div class="fold-head" onclick="toggleFold('foldL2d')"><span>[ic:toys] 看板娘（核心·Live2D）</span><span class="fold-arrow">▾</span></div>
       <div class="fold-body">
-        <div class="field"><label>模型（web/live2d/models/ 下）</label>
+        <div class="field"><label>模型</label>
           <button class="btn" style="width:auto" id="stL2dModel">选择模型</button><span id="stL2dModelName" style="font-size:11px;color:var(--sub);margin-left:6px"></span>
         </div>
         <div class="field"><label>缩放（%）</label>
@@ -106,7 +115,7 @@
         <div class="field"><label>可拖拽 / 呼吸动画</label>
           <label class="chkline" style="display:inline-flex;gap:10px"><input type="checkbox" id="stL2dDrag"> 可拖拽 <input type="checkbox" id="stL2dBreath"> 呼吸动画</label>
         </div>
-        <div style="font-size:11px;color:var(--sub)">把 .model3.json 放入 web/live2d/models/ 即生效；渲染库放 web/live2d/vendor/。</div>
+        <div style="font-size:11px;color:var(--sub)">新模型放进程序目录后，重启就能在这里选到。</div>
       </div>
     </div>
     <div class="field"><label id="stLang">语言 / Language / 言語</label>
@@ -126,10 +135,10 @@
       <label class="chkline"><input type="checkbox" id="stDevModeInput"> <span id="stDevModeHint">解锁角色卡高级设置（内置游戏 / 额外提示 / 卡片快捷回复）</span></label>
     </div>
     <div class="field"><label id="stHumanize">[ic:accessibility_new] 去 AI 味</label>
-      <label class="chkline"><input type="checkbox" id="stHumanizeInput"> <span id="stHumanizeHint">注入人性化对话规则（具体细节 / 生活有变化 / 口语不完美 / 引用共同记忆）</span></label>
+      <label class="chkline"><input type="checkbox" id="stHumanizeInput"> <span id="stHumanizeHint">让对话更像真人（具体细节 / 生活有变化 / 口语不完美 / 引用共同记忆）</span></label>
     </div>
     <div class="field"><label id="stStyleGuard">[ic:tune] 风格闸（防文学化漂移）</label>
-      <label class="chkline"><input type="checkbox" id="stStyleGuardInput"> <span id="stStyleGuardHint">确定性洗文学腔表达（拆长句/收堆叠副词），不改内容；配合角色锚点从架构外掐断自增强</span></label>
+      <label class="chkline"><input type="checkbox" id="stStyleGuardInput"> <span id="stStyleGuardHint">洗掉文学腔（拆长句 / 收堆叠副词），不改内容</span></label>
       <label class="chkline"><input type="checkbox" id="stStyleGuardLongInput"> <span id="stStyleGuardLongHint">[ic:waves] 长句模式：不拆长句，允许更流畅/文学化的表达（默认关，短句口语更"活人"）</span></label>
     </div>
     <div class="field"><label data-i18n="stFont" id="stFont" data-i18n-prefix="[ic:text_fields] ">[ic:text_fields] 字体大小</label>

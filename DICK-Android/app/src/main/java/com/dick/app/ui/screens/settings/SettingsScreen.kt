@@ -122,7 +122,9 @@ fun SettingsScreen(vm: ChatViewModel, acts: SettingsActions) {
     }
     fun runProbe() {
         testing = true
-        testLine = I18n.t("apiWizTesting", "正在测试…（真实请求一次 /models）")
+        // 2026-12 文案清理：原来这句写着"真实请求一次 /models"——接口路径不该出现在界面上。
+        // 走新键 apiWizTestingUi（apiWizTesting 仍归 API 教程页，那边按用户口径一字不改）。
+        testLine = I18n.t("apiWizTestingUi", "正在测试…")
         val base = baseUrl.trim()
         val key = if (freeNow) "" else apiKey.trim()
         val mdl = model
@@ -224,16 +226,13 @@ fun SettingsScreen(vm: ChatViewModel, acts: SettingsActions) {
                         )
                     }
                     Spacer(Modifier.height(6.dp))
-                    Text(I18n.t("st_base_url", "Base URL") + "：" + (curProvider?.baseUrl ?: baseUrl),
-                        fontSize = 11.sp, color = theme.muted)
+                    // 2026-12 文案清理：原来这里还把 Base URL 的地址整条打出来（"Base URL：https://…"）。
+                    // 地址是进阶项，只在下面的输入框里出现；这一步只告诉用户"选的是谁、用哪个模型"。
                     Text(I18n.t("st_model", "模型") + "：" + model, fontSize = 11.sp, color = theme.muted)
                 } else {
                     // ---- ③ 测试并保存 ----
                     Text(curProvider?.name ?: "", fontSize = 14.sp, fontWeight = FontWeight.SemiBold,
                         color = theme.text, modifier = Modifier.padding(bottom = 6.dp))
-                    Text(I18n.t("st_base_url", "Base URL") + "：" +
-                        baseUrl.trim().ifBlank { curProvider?.baseUrl ?: "" },
-                        fontSize = 11.sp, color = theme.muted)
                     Text(I18n.t("st_model", "模型") + "：" + model, fontSize = 11.sp, color = theme.muted)
                     Spacer(Modifier.height(8.dp))
                     Text(testLine, fontSize = 12.sp,
@@ -271,24 +270,22 @@ fun SettingsScreen(vm: ChatViewModel, acts: SettingsActions) {
                         variant = DickButtonVariant.Plain,
                         fontSize = 12.sp,
                     )
+                    // 2026-12 文案清理：字段全留，**只删字段旁边那串解释**
+                    // （地址示例、留空=默认、通道/中转说法）。原话："去掉应用内所有技术说明部分"。
                     DickLabeledField(value = baseUrl, onValueChange = { baseUrl = it },
-                        label = I18n.t("st_base_url", "Base URL"),
-                        hint = I18n.t("st_base_hint", "选模型商时自动填"), singleLine = true)
+                        label = I18n.t("st_svc_url", "服务地址"), singleLine = true)
                     Spacer(Modifier.height(6.dp))
                     DickLabeledField(value = proxy, onValueChange = { proxy = it },
-                        label = I18n.t("st_proxy", "代理"),
-                        hint = I18n.t("st_proxy_hint", "通道不通时填，如 http://127.0.0.1:7890"), singleLine = true)
+                        label = I18n.t("st_proxy", "代理"), singleLine = true)
                     Spacer(Modifier.height(6.dp))
                     DickLabeledField(value = relayUrl, onValueChange = { relayUrl = it },
-                        label = I18n.t("st_relay", "内置代理通道"),
-                        hint = I18n.t("st_relay_hint", "直连失败自动走中转"), singleLine = true)
-                    Text(if (engine.relayOn) I18n.t("st_relay_on", "● 中转通道已启用（直连失败已自动切换）")
-                         else I18n.t("st_relay_off", "○ 直连模式（直连失败自动走中转）"),
+                        label = I18n.t("st_relay", "备用线路"), singleLine = true)
+                    Text(if (engine.relayOn) I18n.t("st_relay_on", "● 备用线路已启用")
+                         else I18n.t("st_relay_off", "○ 直连优先"),
                         fontSize = 11.sp, color = theme.muted)
                     Spacer(Modifier.height(6.dp))
                     DickLabeledField(value = stopInput, onValueChange = { stopInput = it },
-                        label = I18n.t("st_stop", "停止序列"),
-                        hint = I18n.t("st_stop_hint", "逗号分隔，如 <|im_end|>, </s>"), singleLine = true)
+                        label = I18n.t("st_stop", "停止序列"), singleLine = true)
                     Spacer(Modifier.height(4.dp))
                     DickActionButton(
                         label = I18n.t("apiWizLater", "稍后再说（先用免费链）"),
@@ -323,7 +320,7 @@ fun SettingsScreen(vm: ChatViewModel, acts: SettingsActions) {
                         onClick = { step += 1; testLine = ""; wiz.apiStep = step })
                 } else {
                     DickActionButton(
-                        label = if (testing) I18n.t("apiWizTesting", "正在测试…（真实请求一次 /models）")
+                        label = if (testing) I18n.t("apiWizTestingUi", "正在测试…")
                                 else I18n.t("apiWizStep3", "③ 测试并保存"),
                         variant = DickButtonVariant.Primary, fontSize = 12.sp,
                         enabled = !testing,
@@ -363,22 +360,28 @@ fun SettingsScreen(vm: ChatViewModel, acts: SettingsActions) {
                     )
                 }
                 Spacer(Modifier.height(6.dp))
-                DickLabeledField(value = regexInput, onValueChange = { regexInput = it },
-                    label = I18n.t("st_regex", "正则规则（每行 id|名称|正则|替换|作用域；ai/user/both）"),
-                    minLines = 4)
-                Spacer(Modifier.height(6.dp))
-                Row {
-                    DickLabeledField(value = tempInput, onValueChange = { tempInput = it },
-                        label = I18n.t("st_temp", "温度"),
-                        hint = I18n.t("st_hint_default", "留空 = 默认"),
-                        singleLine = true, modifier = Modifier.weight(1f))
-                    Spacer(Modifier.width(6.dp))
-                    DickLabeledField(value = topPInput, onValueChange = { topPInput = it },
-                        label = I18n.t("st_topp", "top_p"),
-                        hint = I18n.t("st_hint_default", "留空 = 默认"),
-                        singleLine = true, modifier = Modifier.weight(1f))
+                // 2026-12 文案清理：替换规则 / 温度 / top_p 是**进阶项**（原来它们在首屏上、
+                // 还各带一句说明）。现在整段收进「高级设置」折叠区，默认收起；
+                // 字段一个都没删，只有解释文字被拿掉。
+                FoldHead(I18n.t("st_adv", "高级设置"), state.foldAdv,
+                    onToggle = { state.foldAdv = !state.foldAdv }, icon = "tune")
+                if (!state.foldAdv) {
+                    DickLabeledField(value = regexInput, onValueChange = { regexInput = it },
+                        label = I18n.t("st_regex", "替换规则"),
+                        hint = I18n.t("st_regex_hint", "每行：名称|正则|替换|作用域"),
+                        minLines = 4)
+                    Spacer(Modifier.height(6.dp))
+                    Row {
+                        DickLabeledField(value = tempInput, onValueChange = { tempInput = it },
+                            label = I18n.t("st_temp", "温度"),
+                            singleLine = true, modifier = Modifier.weight(1f))
+                        Spacer(Modifier.width(6.dp))
+                        DickLabeledField(value = topPInput, onValueChange = { topPInput = it },
+                            label = I18n.t("st_topp", "top_p"),
+                            singleLine = true, modifier = Modifier.weight(1f))
+                    }
+                    Spacer(Modifier.height(6.dp))
                 }
-                Spacer(Modifier.height(6.dp))
                 // 界面语言：三选一（中文 / English / 日本語）。当前那档是实心按钮，
                 // 点别的档立刻生效并落盘（config.json 的 language）。
                 Text(I18n.t("st_lang", "语言"), fontSize = 13.sp, color = theme.muted)

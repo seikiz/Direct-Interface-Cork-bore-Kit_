@@ -215,11 +215,10 @@ def main():
             return act()
 
         requests.request = fake_request
-        from urllib.request import getproxies as _gp
-        real_getproxies = _gp
-        # 让"系统代理"在测试里可见：urllib.request.getproxies 被 _ws_system_proxy 调用
-        import urllib.request as _ur
-        _ur.getproxies = lambda: {"http": "http://127.0.0.1:7890", "https": "http://127.0.0.1:7890"}
+        # 让"系统代理"在测试里可见：直接替掉 app 的方法，别依赖 urllib 的取名字时机。
+        # （原来 monkeypatch urllib.request.getproxies，在 GitHub Actions 的 Linux/py3.12 上没生效，
+        #   导致"下次直接用记住的通道"这条断言红——CI 红过一轮，就是它。）
+        app._ws_system_proxy = lambda: "http://127.0.0.1:7890"
 
         print(u"\n== ① 通道顺序：手填代理 > 直连 > 系统代理 ==")
         app._ws_proxy_ok = None
@@ -566,7 +565,9 @@ def main():
         res = app.api_workshop_upload(u"世界卡包", u"压缩包")
         tries = len([x for x in calls if "/upload" in x["url"]])
         check(u"一直 429 时按上限停手并如实报错",
-              res.get("ok") is False and u"限流" in (res.get("err") or ""), str(res))
+              # 2026-12 文案清理：界面不再出现"限流/429"（用户口径：去掉技术说明），
+              # 所以这里改成认"稍等一会儿"这句人话 —— 断言的意思没变（错了要说人话）。
+              res.get("ok") is False and u"稍等" in (res.get("err") or ""), str(res))
         check(u"重试次数 = XFER_MAX_RETRY（%d）" % mod.XFER_MAX_RETRY,
               tries == mod.XFER_MAX_RETRY, str(tries))
 

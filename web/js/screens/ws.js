@@ -49,9 +49,11 @@ window.WsScreen = (function (global) {
       if (!s) return;
       var stEl = document.getElementById('wsAutoStatus');
       if (stEl) {
+        // 2026-12 文案清理：这里原来把 active_server 的地址整个摊在界面上（用户不需要看
+        // 端点），现在只说"已连接 / 连接中"。
         stEl.innerHTML = s.active_server
-          ? '[ic:satellite_alt] 自动连接：<span style="color:var(--accent)">' + escapeHtml(s.active_server) + '</span>'
-          : '[ic:satellite_alt] 自动连接中...';
+          ? '[ic:satellite_alt] 已连接'
+          : '[ic:satellite_alt] 连接中...';
       }
     }).catch(function () {});
   }
@@ -64,8 +66,8 @@ window.WsScreen = (function (global) {
       var stEl = document.getElementById('wsAutoStatus');
       if (stEl) {
         stEl.innerHTML = s.active_server
-          ? '[ic:satellite_alt] 自动连接：<span style="color:var(--accent)">' + escapeHtml(s.active_server) + '</span>'
-          : '[ic:satellite_alt] 自动连接中...';
+          ? '[ic:satellite_alt] 已连接'
+          : '[ic:satellite_alt] 连接中...';
       }
       var rl = document.getElementById('wsLocalRoles');
       var wl = document.getElementById('wsLocalWorlds');
@@ -487,7 +489,7 @@ window.WsScreen = (function (global) {
     var box = document.getElementById('wsOnlineList');
     box.innerHTML = '';
     if (!wsOnlineCache.length) {
-      box.innerHTML = '<div class="ws-empty">暂无作品（服务器可能未启动）</div>';
+      box.innerHTML = '<div class="ws-empty">暂无作品</div>';
       return;
     }
     wsOnlineCache.forEach(function (r, i) {
@@ -523,7 +525,7 @@ window.WsScreen = (function (global) {
       var plugins = r.plugins || [];
       var local = r.local || [];
       if (!plugins.length) {
-        box.innerHTML = '<div class="ws-empty">插件市场暂无内容（工坊服务器未启动或未上传插件）</div>';
+        box.innerHTML = '<div class="ws-empty">插件市场暂无内容</div>';
         wsSetPluginStatus('共 0 个插件');
         return;
       }
@@ -584,8 +586,9 @@ window.WsScreen = (function (global) {
         };
         var all = mk(r.cards, '角色卡').concat(mk(r.worlds, '世界卡')).concat(mk(r.packs, '世界卡包'));
         wsFillOnline(all);
-        wsSetStatus('共 ' + all.length + ' 个作品'
-          + (r.server_old ? '（服务器为旧版，无世界卡包）' : ''));
+        // 2026-12 文案清理：原来 server_old 会补一句"（服务器为旧版，无世界卡包）"——
+        // 那是服务端的实现状态，用户看不到也不需要知道，直接不显示。
+        wsSetStatus('共 ' + all.length + ' 个作品');
       } else {
         wsFillOnline([]);
         wsSetStatus('[ic:error] ' + ((r && r.err) || '加载失败'));
@@ -599,14 +602,16 @@ window.WsScreen = (function (global) {
       document.getElementById('wsModal').classList.add('open');
       wsSwitchTab('local');
       wsLoadLocal();
-      // 代理探测：只提示本机有哪些代理，**不自动填入**。
-      // 系统/本机代理常把稍大的上传包体截断（实测传 1.3KB 请求体经 127.0.0.1:7890 得 502，
+      // 代理探测：只提示"本机有代理可用"，**不显示地址、不自动填入**。
+      // 系统/本机代理常把稍大的上传包体截断（实测传 1.3KB 请求体经本机代理得 502，
       // 同一份文件直连 201），所以默认直连，只有用户明确要代理时才走它。
       var px = document.getElementById('wsProxyInput');
       if (px && !px.value.trim() && pywebview.api.workshop_detect_proxy) {
         pywebview.api.workshop_detect_proxy().then(function (r) {
           if (r && r.ok && r.found && r.found.length) {
-            wsSetStatus('[ic:satellite_alt] 直连优先；本机检测到 ' + r.found[0].url + '（要走代理再填进上面那栏）');
+            // 2026-12 文案清理：原来把 r.found[0].url 直接拼进状态行（用户看到的是
+            // "http://127.0.0.1:7890" 这种地址），现在只说有这么个东西，地址留在输入框里。
+            wsSetStatus('[ic:satellite_alt] 优先直连；本机有可用的代理通道，需要时填在上面的框里');
           }
         }).catch(function () {});
       }
@@ -658,7 +663,9 @@ window.WsScreen = (function (global) {
       jobWait('workshop.test', []).then(function (r) {
         if (r && r.ok) {
           var st = r.stats || {};
-          wsSetStatus('[ic:check_circle] 已连接（认证: ' + ((r.health && r.health.auth) || 'open') + ' · 下载 ' + (st.downloads || 0) + ' · 点赞 ' + (st.likes || 0) + '）');
+          // 2026-12 文案清理：原来这里拼的是 `认证: key`（服务端的鉴权模式），
+          // 用户只需要知道"连上了"和几个统计数字。
+          wsSetStatus('[ic:check_circle] 已连接（下载 ' + (st.downloads || 0) + ' · 点赞 ' + (st.likes || 0) + '）');
         } else wsSetStatus('[ic:error] ' + ((r && r.err) || '连接失败'));
       });
     };

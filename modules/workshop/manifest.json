@@ -1,0 +1,32 @@
+{
+  "id": "workshop",
+  "version": "1.0.0.0",
+  "provides": {
+    "services": ["workshop"],
+    "routes": [
+      "api_workshop_state",
+      "api_workshop_save_conn",
+      "api_workshop_detect_proxy",
+      "api_workshop_test",
+      "api_workshop_list",
+      "api_workshop_search",
+      "api_workshop_download",
+      "api_workshop_like",
+      "api_workshop_delete",
+      "api_workshop_upload",
+      "api_workshop_preview",
+      "api_workshop_export",
+      "api_workshop_plugins",
+      "api_workshop_install_plugin",
+      "api_workshop_delete_local",
+      "api_workshop_open_folder"
+    ],
+    "ui_screens": ["ws"],
+    "commands": []
+  },
+  "requires": {
+    "services": [],
+    "modules": []
+  },
+  "lazy": false
+}

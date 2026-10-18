@@ -1,0 +1,61 @@
+{
+  "block": "workshop",
+  "layer": "module",
+  "id": "workshop",
+  "owner": "seiki",
+  "files": [
+    "__init__.py",
+    "__main__.py",
+    "block.json",
+    "client.py",
+    "manifest.json",
+    "module.py",
+    "selftest.py",
+    "transfer.py"
+  ],
+  "selftest": {
+    "cmd": [
+      "python",
+      "-m",
+      "modules.workshop",
+      "--selftest"
+    ],
+    "max_ms": 2000
+  },
+  "interface": {
+    "service": "workshop",
+    "impls": [
+      {
+        "file": "client.py",
+        "class": "WorkshopClient"
+      },
+      {
+        "file": "transfer.py",
+        "class": "TransferMixin"
+      }
+    ],
+    "methods": [
+      "bind",
+      "state",
+      "save_conn",
+      "detect_proxy",
+      "test",
+      "list_items",
+      "search",
+      "download",
+      "upload",
+      "like",
+      "delete",
+      "preview",
+      "export",
+      "plugins",
+      "install_plugin",
+      "delete_local",
+      "open_folder"
+    ]
+  },
+  "budget": {
+    "soft_lines": 400,
+    "hard_lines": 800
+  }
+}

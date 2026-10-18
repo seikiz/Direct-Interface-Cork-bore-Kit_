@@ -351,6 +351,14 @@ def step_selfcheck():
         # Tk 时代结束：ui_root/ui_fonts 随三个 Tk 插件一起退役；插件要界面走 host_ui
         ("host_ui.py", "插件向宿主要界面的通道：缺了插件的选文件/提示全失效"),
         ("jobs.py", "模块分道执行：缺了入口/插件里的 jobs.submit 全报错"),
+        # 微内核与两个试点模块：内核/模块都是【运行时按目录装配】的，
+        # PyInstaller 静态分析跟不上 —— 缺了不会崩，只会让工坊/备份静默降级，更难发现。
+        ("kernel/__init__.py", "微内核：缺了内核起不来 → 工坊/备份两块降级"),
+        ("kernel/manifest.py", "模块清单校验器：缺了所有模块都装不上"),
+        ("modules/backup/manifest.json", "加密备份模块清单：缺了加载器认不出这个模块"),
+        ("modules/backup/module.py", "加密备份模块入口：缺了备份功能整个消失"),
+        ("modules/workshop/manifest.json", "工坊模块清单：缺了加载器认不出这个模块"),
+        ("modules/workshop/module.py", "工坊客户端模块入口：缺了工坊面板全部接口降级"),
         ("mem_isolate.py", "记忆隔离检测：记忆链插件 import 它，缺了插件加载失败"),
         ("life_core.py", "生活层（吃饭）：缺了每轮的【生活·那边】注入静默消失，/生活 命令也废"),
         ("space_core.py", "空间层（不能瞬移）：缺了每轮的【空间】注入静默消失，/在哪 命令也废"),

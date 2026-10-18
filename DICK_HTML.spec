@@ -57,6 +57,10 @@ datas = [('web', 'web'), ('plugins', 'plugins'), ('saves', 'saves'), ('worlds', 
          ('crypto_core.py', '.'),
          # 独立解密工具：备份能不能救回来不该依赖 DICK 本体，所以它必须随包发出去
          ('dick_backup_tool.py', '.'),
+         # 微内核 + 业务模块：模块是**运行时按目录装配**的（kernel/loader.py 用 importlib
+         # 合成包名加载 modules/<id>/module.py），静态分析看不到这些 import ——
+         # 不当数据拷进去，打包版就会「工坊面板全废、加密备份消失」，而且不报错只降级。
+         ('kernel', 'kernel'), ('modules', 'modules'),
          ('PLUGIN_DEV.md', '.'), ('状态变量说明.md', '.'), ('声库安装说明.txt', '.'),
          ('financial_history.json', '.'),
          # 侧车脚本（独立 python 运行：创工坊/跑团主机），随包分发
@@ -69,6 +73,9 @@ datas = [('web', 'web'), ('plugins', 'plugins'), ('saves', 'saves'), ('worlds', 
 binaries = []
 hiddenimports = ['openai', 'PIL', 'requests', 'flask', 'openpyxl', 'docx', 'edge_tts', 'pygame',
                  'html.parser', 'html', 'urllib.parse', 'asyncio', 'random', 'importlib.util',
+                 # 微内核：壳层在 HtmlApp.__init__ 里函数内 import，显式列出更保险
+                 'kernel', 'kernel.bus', 'kernel.loader', 'kernel.manifest', 'kernel.registry',
+                 'kernel.config', 'kernel.paths', 'kernel.log', 'kernel.version',
                  'webview', 'webview.platforms.edgechromium', 'webview.platforms.winforms',
                  'clr_loader', 'pythonnet', 'bottle',
                  'voice_engine', 'plugins.jp_patch_plugin', 'voicebank_importer', 'image_gen',

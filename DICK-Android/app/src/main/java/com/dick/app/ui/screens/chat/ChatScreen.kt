@@ -1462,7 +1462,7 @@ val importCardLauncher = rememberLauncherForActivityResult(ActivityResultContrac
                 withContext(Dispatchers.Main) {
                     if (desc == null) {
                         busy = false
-                        sysMsgs.add(ChatMsg("系统", I18n.t("vision_fail", "⚠️ 图片识别失败（免费视觉链被限流或网络问题），请稍后重试")))
+                        sysMsgs.add(ChatMsg("系统", I18n.t("vision_fail", "图片没认出来，稍后再试一次")))
                         refreshChain()
                     } else {
                         doSend(text, img.bmp, "【图片描述】" + desc)
@@ -2649,7 +2649,7 @@ fun wsRefreshLocal() {
                 // 标题只留纯文本（文案里不再有 emoji 字符）。
                 val guide = listOf(
                     Triple("waving_hand", "欢迎使用 DICK", "装好即聊的角色扮演聊天室：手机 / 电脑进度互通，支持角色卡、世界书、回档、内置游戏。"),
-                    Triple("settings", "配置模型", "设置 → 填 API Key、选模型商（DeepSeek 官方 / 免费链 / Ollama 本地）。免费链可留空直接聊。"),
+                    Triple("settings", "配置模型", "设置 → 填 API Key、选模型商（DeepSeek 官方 / 免费链 / Ollama 本地）。免 Key 的免费链直接就能聊。"),
                     Triple("theater_comedy", "选择角色", "角色列表勾选即可开聊（多选 = 群聊，@角色名 指定发言）；可新建或导入酒馆卡 v1/v2/v3/PNG。"),
                     Triple("chat", "开聊", "输入消息发送；↻ 重生成、◀▶ 滑条、编辑。面板有骰子 / 记忆 / GAL 选项 / 快捷回复。"),
                     Triple("account_tree", "进阶玩法", "回档：主线平铺、分支收纳；GAL 选项点选即演；世界书平行世界；存档自动守护。"),

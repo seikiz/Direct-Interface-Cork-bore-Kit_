@@ -206,12 +206,14 @@ fun WorkshopScreen(vm: ChatViewModel, acts: WorkshopActions) {
                         DickTextButton(label = I18n.t("ws_upload", "上传"), onClick = { wsUploadLocal() }, fontSize = 12.sp, icon = "upload")
                     }
                 } else if (wsTabOnline) {
+                    // 2026-12 文案清理：原来这里打的是 "自动连接：http://<服务器地址>"。
+                    // 用户不需要看见端点，只告诉他"连上了没有"。
                     if (wsServerInput.isNotBlank()) {
-                        DickTag("自动连接：" + wsServerInput,
+                        DickTag("已连接",
                             fontSize = 12.sp, iconSize = 13.dp,
                             modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp), icon = "satellite_alt")
                     } else {
-                        DickLoading("自动连接中...",
+                        DickLoading("连接中...",
                             fontSize = 12.sp, iconSize = 13.dp,
                             modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp), icon = "satellite_alt")
                     }
@@ -233,10 +235,12 @@ fun WorkshopScreen(vm: ChatViewModel, acts: WorkshopActions) {
                                             val auth = h.fields["auth"]?.str() ?: "open"
                                             val dl = (s?.fields?.get("downloads") as? J.Num)?.v?.toInt() ?: 0
                                             val lk = (s?.fields?.get("likes") as? J.Num)?.v?.toInt() ?: 0
-                                            // auth=key 的服务器：上传/删除没 Key 就是 401，这里直接说清楚，
-                                            // 否则用户只看到" 上传失败"，会以为是网络或服务器坏了。
+                                            // 上传/删除没 Key 就是 401，这里直接说清楚，否则用户只看到
+                                            // "上传失败"，会以为是网络或服务器坏了。
+                                            // 2026-12 文案清理：状态行不再显示"认证:key"这种协议词
+                                            // （用户原话：去掉应用内所有技术说明），统计数字保留。
                                             val needKey = auth == "key" && wsKeyInput.isBlank()
-                                            wsSetStatus("已连接（认证:" + auth + " · ↓" + dl + " 赞" + lk + "）" +
+                                            wsSetStatus("已连接（↓" + dl + " 赞" + lk + "）" +
                                                 if (needKey) " · 上传/删除要先填 Key" else "", "check_circle")
                                         } else wsSetStatus("连接失败", "error")
                                     }
@@ -316,7 +320,7 @@ fun WorkshopScreen(vm: ChatViewModel, acts: WorkshopActions) {
                     }
                 } else {
                     if (wsPlugins.isEmpty()) {
-                        DickEmptyState("插件市场暂无内容（工坊服务器未启动或未上传插件）", icon = "extension")
+                        DickEmptyState("插件市场暂无内容", icon = "extension")
                     }
                     wsPlugins.forEach { p ->
                         val id = p.fields["id"]?.str() ?: return@forEach

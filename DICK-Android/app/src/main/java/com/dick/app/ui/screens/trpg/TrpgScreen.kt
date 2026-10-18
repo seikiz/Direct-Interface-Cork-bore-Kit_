@@ -124,7 +124,9 @@ fun TrpgScreen(vm: ChatViewModel, deps: DialogDeps) {
                 } else if (gmSession != null && !gmStarted) {
                     // ---- 二：本机当 GM 模式（未开始配置） ----
                     IconText("本机 GM · 设 GM/队伍", fontSize = 12.sp, iconSize = 13.dp, icon = "mic")
-                    if (lanAddr.isNotBlank()) IconText("别的设备连这里加入: http://$lanAddr", fontSize = 12.sp, color = deps.accent, iconSize = 13.dp, icon = "link")
+                    // 2026-12 文案清理：这里必须给用户一个"照抄就能连"的地址，所以保留地址本身，
+                    // 但不再带 http:// 这种协议前缀（用户原话：别把技术说明摊在界面上）。
+                    if (lanAddr.isNotBlank()) IconText("别的设备输入 $lanAddr 加入", fontSize = 12.sp, color = deps.accent, iconSize = 13.dp, icon = "link")
                     OutlinedTextField(value = gmSession!!.gm, onValueChange = { gmSession!!.gm = it },
                         label = { Text("GM 卡名") }, singleLine = true, modifier = Modifier.fillMaxWidth())
                     Text("房间名：", fontSize = 11.sp)
