@@ -15,6 +15,7 @@
 注意：打包前一定要先关掉正在运行的 DICK-HTML.exe，否则它会锁住 debug.log 导致打包失败。
 """
 import glob
+import json
 import os
 import shutil
 import subprocess
@@ -391,6 +392,133 @@ def step_selfcheck():
         fail("包内缺少 %d 个必需文件（见上）。检查 DICK_HTML.spec 的 datas。" % bad2)
 
 
+# ============================================================
+#  4.6) 自检：微内核 + 两个试点模块（真在包里 且 真的装得上）
+# ============================================================
+# 为什么单独一步，而不是只在上面 required 里加几行：
+#   kernel/ 与 modules/ 是**运行时按目录装配**的（kernel/loader.py 用 importlib 合成包名
+#   加载 modules/<id>/module.py）。PyInstaller 的静态分析跟不到这条链 ——
+#   少拷一个文件不会崩，只会让工坊/备份**静默降级**（功能消失，日志里就一行 warn）。
+# 所以这里不只查"文件在不在"，还把壳层真正干的事做一遍：
+#   在 _internal 目录上 boot 内核 → 取两个块的服务（懒模块会被逼着 register）。
+# 这一段是本批（2026-10）新加的：微内核第一批落地后**从没真跑过 PyInstaller**，
+# 是整条发布链上唯一的"没验证项"。
+KERNEL_PROBE = r"""
+import json, os, sys, tempfile
+internal = sys.argv[1]
+sys.path.insert(0, internal)
+out = {"ok": False}
+try:
+    import kernel
+    base = tempfile.mkdtemp(prefix="dick_kernel_probe_")
+    k = kernel.boot(base_dir=base, modules_dir=os.path.join(internal, "modules"), echo=False)
+    out["version"] = kernel.KERNEL_VERSION
+    out["summary_boot"] = k.summary()
+    out["failed_boot"] = k.failed_modules()
+    svc = {}
+    for name in ("backup", "workshop"):
+        try:
+            got = k.service(name)               # 懒模块在这里被 ensure() 真装一次
+            svc[name] = "ok" if got is not None else "空对象"
+        except Exception as e:
+            svc[name] = "%s: %s" % (type(e).__name__, str(e)[:140])
+    out["service"] = svc
+    out["summary_after"] = k.summary()
+    out["failed_after"] = k.failed_modules()
+    out["ok"] = True
+except Exception as e:
+    out["error"] = "%s: %s" % (type(e).__name__, str(e)[:300])
+print("__PROBE__" + json.dumps(out, ensure_ascii=False))
+"""
+
+
+def step_selfcheck_kernel():
+    """自检：_internal/kernel 与 _internal/modules/* 真在包里，清单可解析，内核能 boot、两块能 register。"""
+    print("== 4.6) 自检：微内核与模块（真在包里 + 真的装得上）==")
+    internal = os.path.join(BUILD, "_internal")
+    bad = 0
+    for rel in ("kernel", "modules", "modules/backup", "modules/workshop"):
+        d = os.path.join(internal, *rel.split("/"))
+        files = sorted(f for f in os.listdir(d)
+                       if os.path.isfile(os.path.join(d, f))) if os.path.isdir(d) else []
+        py = [f for f in files if f.endswith(".py")]
+        ok = os.path.isdir(d) and bool(files)
+        print("   %s _internal/%-18s 文件 %2d 个（.py %d 个）"
+              % ("OK  " if ok else "FAIL", rel + "/", len(files), len(py)))
+        if not ok:
+            bad += 1
+    # 清单必须存在且是合法 JSON：内核认不出清单 = 这个模块根本没被装上（不会报错，只会降级）
+    for rel in ("modules/backup/manifest.json", "modules/workshop/manifest.json",
+                "modules/backup/block.json", "modules/workshop/block.json"):
+        p = os.path.join(internal, *rel.split("/"))
+        data, why = None, "文件不存在"
+        if os.path.isfile(p):
+            try:
+                with open(p, encoding="utf-8") as f:
+                    data = json.load(f)
+                why = ""
+            except Exception as e:
+                why = "JSON 解析失败：%s" % str(e)[:120]
+        ok = isinstance(data, dict) and not why
+        tag = ""
+        if ok:
+            tag = "  id=%s" % (data.get("id") or data.get("block") or "?")
+        print("   %s _internal/%-26s 可解析%s" % ("OK  " if ok else "FAIL", rel, tag))
+        if not ok:
+            bad += 1
+            print("        → %s" % why)
+    if bad:
+        fail("包内微内核/模块不对（%d 项）。检查 DICK_HTML.spec 的 datas 是否还收着 kernel/ 与 "
+             "modules/（模块是运行时按目录装配的，静态分析看不到）" % bad)
+
+    # 真的装一遍：boot 内核 + 取两个块的服务
+    probe_py = PY if os.path.isfile(PY) else sys.executable
+    try:
+        r = subprocess.run([probe_py, "-X", "utf8", "-c", KERNEL_PROBE, internal],
+                           capture_output=True, timeout=180)
+    except Exception as e:
+        fail("内核 boot 自检跑不起来：%s" % str(e)[:200])
+    stdout = r.stdout.decode("utf-8", "replace")
+    stderr = r.stderr.decode("utf-8", "replace")
+    probe = None
+    for line in stdout.splitlines():
+        if line.startswith("__PROBE__"):
+            try:
+                probe = json.loads(line[len("__PROBE__"):])
+            except Exception:
+                probe = None
+    if probe is None:
+        tail = " | ".join((stdout + "\n" + stderr).strip().splitlines()[-6:])[:700]
+        print("   FAIL 内核 boot 探针没有输出（rc=%d）：%s" % (r.returncode, tail or "（无输出）"))
+        fail("包内核心里没起来（探针没输出）。见上面的报错，多半是 kernel/ 没随包")
+    if not probe.get("ok"):
+        print("   FAIL 内核 boot 探针报错：%s" % probe.get("error"))
+        fail("包内核心里没起来：%s" % probe.get("error"))
+    print("   OK   内核 boot 成功：kernel %s，模块状态 %s"
+          % (probe.get("version"), json.dumps(probe.get("summary_boot"), ensure_ascii=False)))
+    after = probe.get("summary_after") or {}
+    failed_after = probe.get("failed_after") or {}
+    if failed_after:
+        print("   FAIL 模块装载失败：%s" % json.dumps(failed_after, ensure_ascii=False))
+        fail("包内模块装不上（%s）。模块文件缺了不会崩，只会让工坊/备份静默降级 —— "
+             "必须修" % "、".join(sorted(failed_after)))
+    for mid in ("backup", "workshop"):
+        st = after.get(mid)
+        ok = st == "loaded"
+        print("   %s 模块 %-9s register 后状态=%s" % ("OK  " if ok else "FAIL", mid, st))
+        if not ok:
+            bad += 1
+    svc = probe.get("service") or {}
+    for mid in ("backup", "workshop"):
+        ok = svc.get(mid) == "ok"
+        print("   %s kernel.service(%-9r) → %s" % ("OK  " if ok else "FAIL", mid, svc.get(mid)))
+        if not ok:
+            bad += 1
+    if bad:
+        fail("微内核自检没通过（%d 项）：包里的内核/boot/register 有问题，不许发布" % bad)
+    print("   OK   微内核自检通过：kernel 能 boot，backup / workshop 两块都能 register")
+
+
 def step_zip():
     print("== 5) 打 zip ==")
     os.makedirs(REL, exist_ok=True)
@@ -566,6 +694,7 @@ def main():
     step_postprocess()
     step_bundle_player()
     step_selfcheck()
+    step_selfcheck_kernel()
     step_scrub()
     zpath, size = step_zip()
     step_report()

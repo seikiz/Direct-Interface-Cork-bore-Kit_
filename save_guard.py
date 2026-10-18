@@ -60,8 +60,149 @@ def backup_dir_for(path):
     return os.path.join(os.path.dirname(os.path.abspath(path)), BACKUP_SUBDIR)
 
 
+# ============================================================
+#  备份挑选：同秒 / mtime 不可靠时必须保守，绝不静默挑旧的那份
+# ============================================================
+# 备份文件名 = <存档名>.<14 位备份时刻>[-<同秒序号>]
+#
+# 为什么名字里要带序号：时间戳只到秒，同一秒内连做两次备份会算出**同一个路径**，
+# 后一次直接覆盖前一次 —— 那不是"挑错"，是"备份凭空少了一份"。
+# 为什么 mtime 不能单独当判据：`shutil.copy2` 会把**源文件的 mtime** 一起搬过来，
+# 于是备份上的 mtime 记的是"内容时间"而不是"备份时间"；再叠加系统时钟回拨、
+# 跨盘/网络共享拷贝、FAT 只到 2 秒，按 mtime 挑"最新备份"完全可能挑到旧的那份 ——
+# 而 newest_backup 的唯一用途就是**恢复存档**，挑错的代价是数据回退。
+BACKUP_TS_FMT = "%Y%m%d%H%M%S"
+_BACKUP_TAIL_RE = re.compile(r"^(\d{14})(?:-(\d+))?$")
+
+
+class AmbiguousBackupError(Exception):
+    """多份备份分不出谁更新（同秒 / mtime 与文件名打架 / mtime 读不到）。
+
+    这个异常的意义就是**不许瞎猜**：调用方拿到它必须停下来告诉用户
+    「有多份备份分不出新旧，请手动选择要恢复哪一份」。
+    静默挑一个的代价是拿旧备份盖掉新进度（数据回退），比"这次没恢复成功"严重得多。
+    """
+
+    def __init__(self, path, candidates, reason):
+        self.path = path
+        self.candidates = list(candidates or [])     # [dict]：每份备份的元信息
+        self.reason = reason
+        Exception.__init__(self, "%s：%s" % (os.path.basename(path), reason))
+
+    def describe(self, limit=8):
+        """候选清单（一行一份，新的排前面），给人手动挑选用"""
+        lines = []
+        for c in self.candidates[:limit]:
+            lines.append("· %s（文件名时刻 %s 序号 %s，mtime %s）"
+                         % (os.path.basename(c["path"]),
+                            c["name_ts"] if c["name_ts"] is not None else "无",
+                            c["name_seq"], _fmt_mtime_ns(c["mtime_ns"])))
+        if len(self.candidates) > limit:
+            lines.append("· ……另有 %d 份" % (len(self.candidates) - limit))
+        return "\n".join(lines)
+
+
+def _fmt_mtime_ns(ns):
+    """纳秒 mtime → 人能读的串（读不到就直说，别装成 1970）"""
+    if ns is None:
+        return "读不到"
+    sec, frac = divmod(int(ns), 1000000000)
+    return "%s.%06d" % (time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(sec)),
+                        frac // 1000)
+
+
+def _backup_meta(full_path, stem):
+    """收集一份备份的两路"新旧证据"：文件名里的 (时刻, 序号) + 文件系统 mtime（纳秒）
+
+    两路都可能不可靠：
+      · 文件名：老版本 / 手工拷进来的备份没有时间戳段 → name_ts = None
+      · mtime：copy2 留下的是内容时间；时钟回拨、拷贝、文件系统精度也都算坑
+    所以这里只负责**取证**，判断交给 _rank_backups()。
+    """
+    meta = {"path": full_path, "name_ts": None, "name_seq": 0, "mtime_ns": None}
+    name = os.path.basename(full_path)
+    if name.startswith(stem + "."):
+        m = _BACKUP_TAIL_RE.match(name[len(stem) + 1:])
+        if m:
+            meta["name_ts"] = int(m.group(1))
+            meta["name_seq"] = int(m.group(2) or 0)
+    try:
+        meta["mtime_ns"] = os.stat(full_path).st_mtime_ns   # 纳秒：同秒也能分出先后
+    except OSError:
+        meta["mtime_ns"] = None
+    return meta
+
+
+def _backup_metas(path):
+    """该存档在 backup/ 下的全部候选元信息（不排序、不判断）"""
+    bdir = backup_dir_for(path)
+    if not os.path.isdir(bdir):
+        return []
+    stem = os.path.basename(path)
+    try:
+        names = [f for f in os.listdir(bdir) if f.startswith(stem + ".")]
+    except OSError:
+        return []
+    return [_backup_meta(os.path.join(bdir, f), stem) for f in sorted(names)]
+
+
+def _rank_backups(path, metas):
+    """按"新→旧"排好；分不出就抛 AmbiguousBackupError（绝不返回"猜的"那个）
+
+    判据（两路证据互相印证）：
+      ① 先比 mtime（st_mtime_ns，纳秒级）；
+      ② mtime 并列 → 比文件名里的 时刻 + 同秒序号；
+      ③ mtime 读不到、两路证据打架、或连②也并列 → 抛异常，交给人选。
+    """
+    if len(metas) <= 1:
+        return list(metas)
+
+    def mkey(m):
+        return (m["mtime_ns"], m["name_ts"] if m["name_ts"] is not None else -1,
+                m["name_seq"])
+
+    unknown = [m for m in metas if m["mtime_ns"] is None]
+    if unknown:
+        raise AmbiguousBackupError(
+            path, metas,
+            "有 %d 份备份读不到修改时间（%s），判断不出新旧"
+            % (len(unknown), "、".join(os.path.basename(m["path"]) for m in unknown)))
+
+    by_mtime = sorted(metas, key=mkey, reverse=True)
+    best = by_mtime[0]
+    if len(by_mtime) > 1 and mkey(by_mtime[1]) == mkey(best):
+        raise AmbiguousBackupError(
+            path, by_mtime,
+            "有 %d 份备份的 mtime 与文件名时间戳完全相同，分不出谁更新"
+            % sum(1 for m in by_mtime if mkey(m) == mkey(best)))
+
+    # 两路证据互相打架：mtime 说 A 新、文件名说 B 新 → 谁都不能信，报错让人选。
+    # （copy2 保留内容时间、时钟回拨、手工拷备份都会造成这种局面。）
+    named = [m for m in metas if m["name_ts"] is not None]
+    if named:
+        by_name = sorted(named, key=lambda m: (m["name_ts"], m["name_seq"],
+                                               m["mtime_ns"]), reverse=True)
+        nbest = by_name[0]
+        if nbest["path"] != best["path"]:
+            raise AmbiguousBackupError(
+                path, by_mtime,
+                "修改时间与文件名时刻指向不同的备份（mtime 说 %s 新，文件名说 %s 新），"
+                "不敢替用户挑" % (os.path.basename(best["path"]),
+                                  os.path.basename(nbest["path"])))
+    return by_mtime
+
+
+def list_backups(path):
+    """该存档的全部备份元信息，按"新→旧"排好（无备份返回 []）。
+
+    注意：分不出新旧时抛 AmbiguousBackupError —— 调用方必须显式处理，
+    不允许"先当它没有备份"或者"随便拿第一个"。
+    """
+    return _rank_backups(path, _backup_metas(path))
+
+
 def backup_file(path, keep=BACKUP_KEEP, throttle=BACKUP_THROTTLE_S):
-    """把 path 当前内容备份到 <dir>/backup/<stem>.<ts><ext>，节流 + 清理旧备份。
+    """把 path 当前内容备份到 <dir>/backup/<stem>.<ts>[-序号]，节流 + 清理旧备份。
     返回备份路径或 None（文件不存在 / 节流内跳过）。"""
     if not os.path.exists(path):
         return None
@@ -76,19 +217,39 @@ def backup_file(path, keep=BACKUP_KEEP, throttle=BACKUP_THROTTLE_S):
             return None
     except Exception:
         pass
-    ts = time.strftime("%Y%m%d%H%M%S")
+    ts = time.strftime(BACKUP_TS_FMT)
     dst = os.path.join(bdir, f"{stem}.{ts}")
+    # 同秒重复备份：绝不覆盖上一份（覆盖 = 少一份备份），改用 -2/-3… 序号区分
+    n = 1
+    while os.path.exists(dst):
+        n += 1
+        dst = os.path.join(bdir, f"{stem}.{ts}-{n}")
     try:
+        # 先取时间戳再拷：让备份的 mtime **不晚于**此刻。否则下面 throttle 的
+        # "现在 - mtime" 会是负数，把自己刚做的备份当成"未来的备份"而不节流。
+        now_ns = time.time_ns()
         shutil.copy2(path, dst)
+        # copy2 连 mtime 一起搬 —— 那样备份上的 mtime 是"内容时间"而不是"备份时间"，
+        # 按 mtime 挑最新备份就可能挑错（数据回退事故的根源之一）。
+        # 这里显式改成"备份发生的时刻"：让 mtime 与文件名里的备份时刻说同一件事。
+        try:
+            os.utime(dst, ns=(now_ns, now_ns))
+        except OSError:
+            pass
     except Exception:
         return None
-    # 清理：同名备份只留最近 keep 份
+    # 清理：同名备份只留最近 keep 份（"新→旧"按 list_backups 的口径；
+    # 分不出新旧时退化成保守排序：宁可多留，不可误删可能更新的那几份）
     try:
-        same = sorted((os.path.join(bdir, f) for f in os.listdir(bdir) if f.startswith(stem + ".")),
-                      key=os.path.getmtime)
-        for old in same[:-keep]:
+        metas = _backup_metas(path)
+        try:
+            ordered = _rank_backups(path, metas)
+        except AmbiguousBackupError:
+            ordered = sorted(metas, key=lambda m: ((m["name_ts"] or 0), m["name_seq"],
+                                                   m["mtime_ns"] or 0), reverse=True)
+        for meta in ordered[keep:]:
             try:
-                os.remove(old)
+                os.remove(meta["path"])
             except Exception:
                 pass
     except Exception:
@@ -97,18 +258,14 @@ def backup_file(path, keep=BACKUP_KEEP, throttle=BACKUP_THROTTLE_S):
 
 
 def newest_backup(path):
-    """返回 path 最新的备份文件路径（无则 None）"""
-    bdir = backup_dir_for(path)
-    if not os.path.isdir(bdir):
-        return None
-    stem = os.path.basename(path)
-    try:
-        same = [os.path.join(bdir, f) for f in os.listdir(bdir) if f.startswith(stem + ".")]
-        if not same:
-            return None
-        return max(same, key=os.path.getmtime)
-    except Exception:
-        return None
+    """返回 path 最新的备份文件路径（无则 None）。
+
+    **分不出新旧时抛 AmbiguousBackupError**（同秒 / mtime 与文件名打架 / mtime 读不到）：
+    这个函数只服务于"恢复存档"，挑错等于拿旧数据盖掉新进度，
+    所以宁可让上层提示用户手选，也不返回一个猜的。
+    """
+    cands = list_backups(path)
+    return cands[0]["path"] if cands else None
 
 
 def _read_json_file(path):
@@ -298,12 +455,29 @@ def repair_save_data(data):
     return data, issues
 
 
+def _recover_source(path):
+    """挑一份可用于恢复的备份。返回 (备份路径或 None, 需要人介入的说明或 "")。
+
+    分不出新旧（AmbiguousBackupError）时**一份都不恢复**，把候选列清楚交给用户 ——
+    这就是"绝不静默回退数据"的落点：恢复失败只是麻烦，恢复错了是丢进度。
+    """
+    try:
+        return newest_backup(path), ""
+    except AmbiguousBackupError as e:
+        msg = ("%s 有多份备份分不出新旧，已停止自动恢复：%s；%s；"
+               "请在 %s 里手动挑一份（或把多余的备份挪走再试）"
+               % (os.path.basename(path), e.reason,
+                  e.describe().replace("\n", " "), backup_dir_for(path)))
+        print("[存档守护] " + msg)
+        return None, msg
+
+
 def guard_loaded(path, kind="role"):
     """加载存档并守护：读不了 → 从备份恢复；结构坏了 → 留底 + 修复 + 原子写回。
     返回修复后的数据 dict；无法恢复时返回 None。应用加载存档时调用。"""
     data, err = _read_json_file(path)
     if data is None:
-        bak = newest_backup(path)
+        bak, why = _recover_source(path)
         if bak:
             bdata, _ = _read_json_file(bak)
             if bdata is not None:
@@ -313,6 +487,8 @@ def guard_loaded(path, kind="role"):
             else:
                 print(f"[存档守护] {os.path.basename(path)} JSON 损坏且备份也损坏，跳过")
                 return None
+        elif why:
+            return None          # 备份分不出新旧：_recover_source 已把候选清单打出来了
         else:
             print(f"[存档守护] {os.path.basename(path)} JSON 损坏且无备份，跳过")
             return None
@@ -344,12 +520,14 @@ def guard_file(path, do_repair=True, do_backup=True, kind="role"):
     if data is None:
         # 读不了 → 尝试从备份恢复
         if do_repair:
-            bak = newest_backup(path)
+            bak, why = _recover_source(path)
             if bak:
                 bdata, _ = _read_json_file(bak)
                 if bdata is not None:
                     atomic_write_json(path, bdata)
                     return "recovered", f"JSON 损坏（{err}），已从备份 {os.path.basename(bak)} 恢复"
+            if why:                      # 备份分不出新旧：不恢复，让用户手选
+                return "failed", f"JSON 损坏（{err}）；{why}"
             return "failed", f"JSON 损坏（{err}），且无可用备份"
         return "failed", f"JSON 损坏（{err}）"
     if kind == "world":

@@ -12,5 +12,8 @@
     "net.py": 1438,
     "DICK_core.py": 2991,
     "Direct-Interface Cork-bore Kit.py": 7292
-  }
+  },
+  "limits_comment": "limits 里的每个数字 = **设置当天的实际行数**（2026-10-18 用 tools/audit_kernel_boundaries.py::measure_lines 现场量的当前值，不是目标值、不是拍脑袋的预算）。含义只有一条：从今天起这些文件**只许降**。核对口径：同一张表在 tools/audit_kernel_boundaries.py 的 LINE_LIMITS 里，accept.py 第 ④ 项拿两边对照 —— 工具里调高会红，这里调高也会红（只许下调）。真要拆文件就先拆，再把两边一起改成新的实测值。注意：`python tools/audit_kernel_boundaries.py --force` 会按扫描结果整体重写本文件，届时这个说明字段会被覆盖，重写后请补回来。",
+  "limits_measured_at": "2026-10-18",
+  "limits_measured_with": "tools/audit_kernel_boundaries.py::measure_lines（len(splitlines())）"
 }

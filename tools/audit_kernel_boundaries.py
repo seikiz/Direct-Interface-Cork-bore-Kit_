@@ -73,8 +73,12 @@ SHARED_LEAF_LIBS = {
 # 内核词表（铁律 3 的落点）。注释与 docstring 里许出现 —— 那是给人看的解释。
 KERNEL_FORBIDDEN_WORDS = ("角色卡", "世界卡", "工坊", "聊天", "记忆")
 
-# 巨型文件行数上限（只许下调）。数字是**本批实测的当前值**，不是拍脑袋的目标值。
-# 想调高 = 改铁律，按 ARCHITECTURE.md 第八节走；工具与基线会双重拦。
+# 巨型文件行数上限（只许下调）。数字是**实测的当前值**，不是拍脑袋的目标值：
+# 2026-10-18 用本文件的 measure_lines() 现场量过一遍，六个数字与当天实际行数完全相等
+# （web/index.html 6278 / App.kt 30 / Dialogs.kt 142 / net.py 1438 / DICK_core.py 2991 /
+#  Direct-Interface Cork-bore Kit.py 7292），所以「上限」此刻就是「当前值」，没有余量。
+# 与 tools/kernel_boundaries_baseline.json 的 limits 是同一张表（两处都调高才可能绕过，
+# 而两处都各有棘轮拦着）。想调高 = 改铁律，按 ARCHITECTURE.md 第八节走。
 LINE_LIMITS = {
     "web/index.html": 6278,
     "DICK-Android/app/src/main/java/com/dick/app/App.kt": 30,

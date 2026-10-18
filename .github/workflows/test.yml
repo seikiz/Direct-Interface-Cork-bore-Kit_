@@ -60,6 +60,24 @@ jobs:
       - name: 环境报告（贴日志里，省得以后猜"CI 上是什么环境"）
         run: python tools/env_report.py
 
+      # 架构闸门（"代码政变"防线）：块自检 + 依赖环 + 行数棘轮 + 内核边界 + 接口签名快照，
+      # 一条命令跑完（tools/accept.py）。放在全量测试**之前** —— 接口/边界被偷偷改了，
+      # 先在这一步红，别等几百个测试跑完才看见。
+      # 它成功时最后一行是 ALL_BLOCKS_OK；失败时**第一行**就是 `FAIL <块>: <原因>`，
+      # 所以注解里直接贴首行 + 末尾几行：PR 页面不点进日志也知道为什么红。
+      - name: 架构闸门（内核边界 + 块自检 + 接口签名 + 行数棘轮）
+        run: |
+          set -o pipefail
+          LOG="$(mktemp)"
+          if ! python tools/accept.py 2>&1 | tee "$LOG"; then
+            FIRST="$(head -n 1 "$LOG" | sed 's/%/%25/g; s/\r//g')"
+            TAIL="$(tail -n 15 "$LOG" | sed 's/%/%25/g; s/\r//g' | awk '{printf "%s%%0A", $0}')"
+            echo "::error::架构闸门未通过：$FIRST%0A--- 失败明细 ---%0A$TAIL"
+            rm -f "$LOG"
+            exit 1
+          fi
+          rm -f "$LOG"
+
       - name: 运行全量测试
         env:
           PYTHONIOENCODING: utf-8
@@ -144,6 +162,22 @@ jobs:
       - name: 环境报告
         shell: bash
         run: python tools/env_report.py
+
+      # Windows 侧同样先过架构闸门：GBK/路径大小写这些坑在 Linux 看不见，
+      # 而接口签名/行数棘轮跟平台无关，两边各跑一遍才不会出现"只在一半的矩阵里红"。
+      - name: 架构闸门（内核边界 + 块自检 + 接口签名 + 行数棘轮）
+        shell: bash
+        run: |
+          set -o pipefail
+          LOG="$(mktemp)"
+          if ! python tools/accept.py 2>&1 | tee "$LOG"; then
+            FIRST="$(head -n 1 "$LOG" | sed 's/%/%25/g; s/\r//g')"
+            TAIL="$(tail -n 15 "$LOG" | sed 's/%/%25/g; s/\r//g' | awk '{printf "%s%%0A", $0}')"
+            echo "::error::架构闸门未通过：$FIRST%0A--- 失败明细 ---%0A$TAIL"
+            rm -f "$LOG"
+            exit 1
+          fi
+          rm -f "$LOG"
 
       - name: 运行全量测试
         shell: bash
