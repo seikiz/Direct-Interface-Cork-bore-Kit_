@@ -48,28 +48,9 @@
    它仍然排在 components.css 之前（<link> 顺序见 index.html 头部），层叠一字未动。 */
 .avatar{ width:28px; height:28px; border-radius:50%; object-fit:cover; flex:none; background:var(--line); }
 .avatar.letter{ display:flex; align-items:center; justify-content:center; color:var(--text); font-weight:700; font-size:13px; }
-/* GAL 制作器 · 线-点-分支 全屏编辑器 */
-.gal-line{ margin:10px 0; border:1px solid var(--line); border-radius:10px; background:var(--panel); }
-.gal-line-head{ display:flex; align-items:center; gap:8px; padding:8px 12px; cursor:pointer; border-bottom:1px dashed var(--line); }
-.gal-line-head b{ font-size:14px; color:var(--warn); }
-.gal-line-head .gal-count{ font-size:11px; color:var(--sub); }
-/* 顶部工具条：按钮收进自己能换行的组里，避免被 flex:1 占位顶出窗口 */
-.gal-top{ display:flex; align-items:center; gap:10px 12px; padding:14px 18px; border-bottom:1px solid var(--line); flex-wrap:wrap; }
-.gal-top .gal-actions{ display:flex; align-items:center; gap:10px 12px; flex-wrap:wrap; justify-content:flex-end; margin-left:auto; min-width:0; }
-.gal-top .gal-actions .btn2{ white-space:nowrap; flex:0 0 auto; }
-.gal-top #galStats{ white-space:nowrap; }
-.gal-body{ display:flex; flex-wrap:wrap; gap:0; align-items:flex-start; padding:8px 10px; }
-.gal-chip{ display:inline-flex; align-items:center; gap:6px; padding:7px 10px; margin:0; border:1px solid var(--line); border-radius:8px; background:var(--bubble); color:var(--text); font-size:12px; cursor:grab; white-space:nowrap; min-width:60px; }
-.gal-chip.choice{ background:color-mix(in srgb, var(--warn) 14%, var(--bubble)); border-color:var(--warn); color:var(--warn); }
-.gal-chip .gal-k{ font-size:10px; color:var(--sub); }
-.gal-chip.drag-over{ outline:2px dashed var(--warn); }
-.gal-insert{ width:22px; height:22px; flex:none; align-self:center; margin:0 2px; border-radius:50%; background:var(--bubble); color:var(--sub); border:1px dashed var(--line); cursor:pointer; font-size:12px; line-height:20px; text-align:center; }
-.gal-insert:hover{ background:color-mix(in srgb, var(--warn) 20%, var(--bubble)); color:var(--warn); }
-.gal-fork{ font-size:10px; color:var(--warn); margin:0 4px; white-space:nowrap; align-self:center; }
-.gal-editor{ background:var(--bubble); border:1px solid var(--line); border-radius:10px; padding:10px 12px; margin:6px 0; }
-.gal-editor .row{ margin:4px 0; }
-.gal-editor input,.gal-editor select,.gal-editor textarea{ background:var(--panel); border:1px solid var(--line); border-radius:6px; color:var(--text); padding:5px 8px; font-size:12px; }
-.gal-opt{ display:inline-flex; gap:4px; align-items:center; margin:3px 4px; }
+/* GAL 制作器（.gal-*）：这一段的 18 条规则搬到了 styles/screens/gal.css（阶段 5，随 gal 屏一起搬）。
+   它仍然紧跟本文件之后加载（<link> 顺序见 index.html 头部）—— .gal-top .gal-actions .btn2 与
+   components.css 的 .modal-box .btn2 特异性相同，靠的就是这个前后关系，别动顺序。 */
 .btn{ display:block; width:calc(100% - 24px); margin:5px 12px; padding:7px 10px; border-radius:8px;
   border:1px solid var(--line); background:var(--bubble); color:var(--text); cursor:pointer; font-size:13px; text-align:left; }
 .btn:hover{ border-color:var(--accent); }

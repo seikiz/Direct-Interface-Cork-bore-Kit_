@@ -1,0 +1,29 @@
+/* web/styles/screens/gal.css —— GAL 制作器专属规则（原 web/styles/screens.css 第 51-72 行原样搬出）。
+ *
+ * 只搬「真的以这一屏命名、别处不用」的规则（.gal-*）；声明一行没动，只是换了存放位置。
+ * <link> 紧跟 styles/screens.css（在 save.css / api_guide.css / components.css 之前）—— 层叠顺序一字未动：
+ *   .gal-top .gal-actions .btn2 与 .modal-box .btn2 特异性相同，谁在后面谁赢，所以位置不能挪。
+ */
+
+/* GAL 制作器 · 线<seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌-点-分支 全屏编辑器 */
+.gal-line{ margin:10px 0; border:1px solid var(--line); border-radius:10px; background:var(--panel); }
+.gal-line-head{ display:flex; align-items:center; gap:8px; padding:8px 12px; cursor:pointer; border-bottom:1px dashed var(--line); }
+.gal-line-head b{ font-size:14px; color:var(--warn); }
+.gal-line-head .gal-count{ font-size:11px; color:var(--sub); }
+/* 顶部工具条：按钮收进自己能换行的组里，避免被 flex:1 占位顶出窗口 */
+.gal-top{ display:flex; align-items:center; gap:10px 12px; padding:14px 18px; border-bottom:1px solid var(--line); flex-wrap:wrap; }
+.gal-top .gal-actions{ display:flex; align-items:center; gap:10px 12px; flex-wrap:wrap; justify-content:flex-end; margin-left:auto; min-width:0; }
+.gal-top .gal-actions .btn2{ white-space:nowrap; flex:0 0 auto; }
+.gal-top #galStats{ white-space:nowrap; }
+.gal-body{ display:flex; flex-wrap:wrap; gap:0; align-items:flex-start; padding:8px 10px; }
+.gal-chip{ display:inline-flex; align-items:center; gap:6px; padding:7px 10px; margin:0; border:1px solid var(--line); border-radius:8px; background:var(--bubble); color:var(--text); font-size:12px; cursor:grab; white-space:nowrap; min-width:60px; }
+.gal-chip.choice{ background:color-mix(in srgb, var(--warn) 14%, var(--bubble)); border-color:var(--warn); color:var(--warn); }
+.gal-chip .gal-k{ font-size:10px; color:var(--sub); }
+.gal-chip.drag-over{ outline:2px dashed var(--warn); }
+.gal-insert{ width:22px; height:22px; flex:none; align-self:center; margin:0 2px; border-radius:50%; background:var(--bubble); color:var(--sub); border:1px dashed var(--line); cursor:pointer; font-size:12px; line-height:20px; text-align:center; }
+.gal-insert:hover{ background:color-mix(in srgb, var(--warn) 20%, var(--bubble)); color:var(--warn); }
+.gal-fork{ font-size:10px; color:var(--warn); margin:0 4px; white-space:nowrap; align-self:center; }
+.gal-editor{ background:var(--bubble); border:1px solid var(--line); border-radius:10px; padding:10px 12px; margin:6px 0; }
+.gal-editor .row{ margin:4px 0; }
+.gal-editor input,.gal-editor select,.gal-editor textarea{ background:var(--panel); border:1px solid var(--line); border-radius:6px; color:var(--text); padding:5px 8px; font-size:12px; }
+.gal-opt{ display:inline-flex; gap:4px; align-items:center; margin:3px 4px; }

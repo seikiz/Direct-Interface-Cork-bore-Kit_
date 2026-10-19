@@ -203,6 +203,47 @@ def main():
     check(u"audit_contrast.py 自己报 '无浅色字声明'",
           u"无浅色字声明" in (proc.stdout or ""), tail)
 
+    # ------------------------------------------------------------------
+    # ⑩ 自绘底色区域：只许 2 片、理由固定、暗色下仍然要达标
+    # ------------------------------------------------------------------
+    print(u"\n== ⑩ 自绘底色区域（全屏播放器的黑幕 / 状态徽标）==")
+    regions = []
+    unpaired = []
+    for path in AC.text_scan_files():
+        rel = os.path.relpath(path, ROOT).replace(os.sep, "/")
+        begin = None
+        for i, ln in enumerate(read(path).split("\n"), 1):
+            m = AC.SKIP_BEGIN.search(ln)
+            if m:
+                if begin:
+                    unpaired.append(u"%s:%d 起了又起" % (rel, i))
+                begin = (m.group(1), i)
+            elif AC.SKIP_END in ln:
+                if not begin:
+                    unpaired.append(u"%s:%d 只有结束没有开始" % (rel, i))
+                else:
+                    regions.append((rel, begin[0], begin[1], i))
+                    begin = None
+        if begin:
+            unpaired.append(u"%s:%d 起了没关" % (rel, begin[1]))
+    check(u"围栏成对（起止各一行）", not unpaired, u"；".join(unpaired[:4]))
+    check(u"自绘底色区域 ≤2 片（现在 %d 片）" % len(regions), len(regions) <= 2,
+          u"、".join(u"%s:%d-%d(%s)" % (r[0], r[2], r[3], r[1]) for r in regions))
+    check(u"区域理由只有 fixed-dark / badge",
+          all(r[1] in AC.SKIP_REASONS for r in regions),
+          u"、".join(sorted({r[1] for r in regions})))
+    skipped = [u for u in units if u.get("skip")]
+    print(u"       区域内的文字色声明 %d 条（%s）"
+          % (len(skipped), u"、".join(sorted({u["skip"] for u in skipped})) or u"无"))
+    # fixed-dark 只是"浅色主题那一遍跳过"：暗色下必须照样达标（⑥ 已算，这里点名核对）
+    fd_ids = {(u["rel"], u["line"]) for u in skipped if u["skip"] == "fixed-dark"}
+    fd = [p for p in judged if p["theme"] == "dark" and (p["rel"], p["line"]) in fd_ids]
+    check(u"固定深色区（播放器）的暗色对比度全部 ≥4.5",
+          bool(fd) and all(p["ratio"] >= p["need"] for p in fd),
+          u"检查 %d 条，最差 %.2f" % (len(fd), min([p["ratio"] for p in fd]) if fd else 0))
+    for rel, reason, a, b in regions:
+        print(u"       · %s:%d-%d  %s" % (rel, a, b, reason))
+
     print("\n" + "=" * 66)
     print(u"通过 %d / 失败 %d" % (PASS, FAIL))
     if not FAIL:

@@ -41,6 +41,20 @@ SCAN_GLOBS = [
 # 生成物：它们本来就该满是令牌色，扫它们等于自己跟自己比
 SKIP_BASENAMES = {"theme.css", "Tokens.kt", "IconNames.kt", "icons.js", "i18n.js"}
 
+# ---------------------------------------------------------------- 自绘底色区域
+# 有些界面的底色不是"主题底色"，而是**这一屏自己画的**：全屏 GALGAME 播放器压在纯黑幕 +
+# 作者给的立绘上，状态徽标压在它自己的同色相浅底上。拿"主题最有利底"去套它们，得到的
+# 数字（#eee vs 浅色 --surface = 1.16）并不代表玩家看到的对比度。
+#
+# 所以给它们一个**显式声明**：片段里起止各一行注释围栏，工具只认下面两个理由 ——
+#   fixed-dark  自带纯黑画布：浅色主题那一遍跳过（暗色下仍然必须 ≥4.5，照查）
+#   badge       瞬时状态徽标（文字与底色同色相）：不算正文，整条豁免
+# 这是"记录已知欠债"，不是免检：条数上限（≤2 片）与理由白名单由 tests/test_no_dim_text.py 钉住，
+# 区域内的文字色仍然要过用例 ⑥ 的暗色对比度。想加第三片，先改测试、再说明为什么值得。
+SKIP_BEGIN = re.compile(r"<!--\s*contrast-skip:(fixed-dark|badge)\s*-->")
+SKIP_END = "<!-- /contrast-skip -->"
+SKIP_REASONS = ("fixed-dark", "badge")
+
 HEX6 = re.compile(r"^#[0-9a-fA-F]{6}$")
 
 
@@ -372,11 +386,20 @@ def web_text_units():
                 for d in _RE_TEXT.finditer(body):
                     out.append(dict(rel=rel, line=line, sel=sel[:120], prop=d.group(1),
                                     value=d.group(2).strip(), bg=bgs[0] if bgs else None,
+                                    skip=None,
                                     whitelist=("::placeholder" if _is_placeholder(sel) else
                                                "disabled" if _is_disabled(sel, "") else None)))
         else:
             # HTML 行内 style / JS 里的 cssText 字符串：一行一条，按行判最稳
+            skip = None            # 自绘底色区域的状态（见 SKIP_BEGIN）
             for i, line in enumerate(txt.split("\n"), 1):
+                m = SKIP_BEGIN.search(line)
+                if m:
+                    skip = m.group(1)
+                    continue
+                if SKIP_END in line:
+                    skip = None
+                    continue
                 for d in _RE_TEXT.finditer(";" + line):
                     body = ";" + line
                     bgs = [b.group(2).strip() for b in _RE_BG.finditer(body)]
@@ -392,7 +415,7 @@ def web_text_units():
                         reason = "watermark"
                     out.append(dict(rel=rel, line=i, sel=("<inline>" if not js else "<js>"),
                                     prop=d.group(1), value=d.group(2).strip(),
-                                    bg=bgs[0] if bgs else None, whitelist=reason))
+                                    bg=bgs[0] if bgs else None, whitelist=reason, skip=skip))
     return out
 
 
@@ -483,6 +506,8 @@ def check_no_dim_text(data):
     pals = palettes_of(data)
     viol, white = [], []
     for u in web_text_units():
+        if u.get("skip"):
+            continue           # 自绘底色区域（见 SKIP_BEGIN）：条数上限由测试钉住
         dim = dim_reason(u["value"], pals["dark"])
         if not dim:
             continue
@@ -521,8 +546,11 @@ def text_pairs(data):
                 need = PLACEHOLDER_MIN
             elif u["whitelist"] in ("disabled", "console", "watermark"):
                 continue
-            if theme == "light" and not _theme_aware(u["rel"]):
-                continue
+            skip = u.get("skip")
+            if skip == "badge":
+                continue                       # 状态徽标：不算正文（见 SKIP_BEGIN）
+            if theme == "light" and (skip == "fixed-dark" or not _theme_aware(u["rel"])):
+                continue                       # 自带纯黑画布 / 独立固定调色板页：只按暗色判
             fg, a = parse_color(u["value"], pal)
             if not fg:
                 out.append(dict(ratio=None, need=need, rel=u["rel"], line=u["line"],

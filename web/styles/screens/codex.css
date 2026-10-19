@@ -1,0 +1,10 @@
+/* web/styles/screens/codex.css —— 编年史（codex）专属规则。
+ *
+ * 现状：**一条也没有**（搬之前 screens.css 里就没有 codex 前缀的规则）。这一屏的观感全部来自
+ *   · 共用组件类：.modal / .modal-box / .row / .btn2 / .role-card / .section-label
+ *   · 行内 style：从 index.html 逐字搬过来的那些（搬运口径要求原样，不许借机抽类名）
+ * 文件先立在这儿，是因为 block 清单里它属于 codex 这个块；以后真出现 codex 独有的规则就写这里，
+ * 并按 index.html 头部的注释调整 <link> 顺序（顺序即层叠）。
+ */
+
+/* <seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌

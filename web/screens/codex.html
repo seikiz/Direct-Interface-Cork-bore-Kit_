@@ -1,0 +1,158 @@
+<!-- web/screens/codex.html —— 编年史（codex）这一屏的 DOM（阶段 5 从 web/index.html 逐字搬出）。
+     四块：codexModal（包列表/详情/JSON 编辑器/节点图）→ codexPasteModal（粘贴转化）
+           → codexAdvancedModal（改播放器模板）→ codexPlayer（全屏播放器）。
+     JS：js/screens/codex-editor.js（+graph / pack / player / player-scene / bind）。
+     类名、行内 style、事件属性一个字没改（ui_snapshot 逐字节核对）。 -->
+
+<div class="modal" id="codexModal">
+  <div class="modal-box" style="width:720px">
+    <h3 id="codexTitle">[ic:book] GAL制作器</h3>
+    <div style="font-size:11px;color:var(--sub);margin-bottom:8px">电脑端独有：选个文件夹自动归类立绘/背景/音乐/配音，换个剧本就能做出你的专属视觉小说</div>
+    <div class="row" style="justify-content:flex-start">
+      <button class="btn2" id="codexNewBtn">[ic:add] 新建</button>
+      <button class="btn2" id="codexSampleBtn">[ic:movie] 一键示例包</button>
+      <button class="btn2" id="codexDraftBtn">[ic:smart_toy] AI 起草</button>
+      <button class="btn2 ghost" id="codexPasteBtn">[ic:note] 粘贴剧本</button>
+      <button class="btn2 ghost" id="codexImportBtn">[ic:folder] 导入文件夹</button>
+      <button class="btn2 ghost" id="codexImportZipBtn">[ic:inventory] 导入 zip</button>
+      <button class="btn2 ghost" id="codexImportCodexBtn">[ic:inbox] 导入 .codex</button>
+      <button class="btn2 ghost" id="codexAssocBtn">[ic:link] 注册双击打开</button>
+      <span style="flex:1"></span>
+      <span id="codexStatus" style="font-size:12px;color:var(--sub)"></span>
+    </div>
+    <div id="codexList" style="max-height:260px;overflow:auto;margin-top:8px"></div>
+    <!-- 编辑/播放 <seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌详情面板 -->
+    <div id="codexDetail" style="display:none;margin-top:10px;border-top:1px solid var(--line);padding-top:10px">
+      <div class="row" style="justify-content:flex-start">
+        <b id="codexDetailName" style="font-size:14px"></b>
+        <span style="flex:1"></span>
+        <button class="btn2" id="codexPlayBtn">[ic:play] 播放</button>
+        <button class="btn2" id="codexReleaseBtn">[ic:rocket_launch] 发布</button>
+        <button class="btn2" id="codexPackBtn">[ic:inventory] 打包 HTML</button>
+        <button class="btn2" id="codexExeBtn">[ic:desktop_windows] 打包 EXE</button>
+        <button class="btn2 ghost" id="codexPackSaveBtn">[ic:description] 另存为…</button>
+        <button class="btn2 ghost" id="codexEditBtn">[ic:movie] 编辑(线-点-分支)</button>
+        <button class="btn2 ghost" id="codexVoiceBtn">[ic:mic] 一键配音</button>
+        <button class="btn2 ghost" id="codexSpriteBtn">[ic:style] 导入立绘</button>
+        <button class="btn2 ghost" id="codexAdvancedBtn">[ic:settings] 高级</button>
+        <button class="btn2 ghost" id="codexExportBtn">[ic:upload] 导出 zip</button>
+        <button class="btn2 ghost" id="codexExportCodexBtn">[ic:inventory] 导出 .codex</button>
+        <button class="btn2 ghost" id="codexFilesBtn">[ic:folder_open] 资源</button>
+        <button class="btn2 ghost" id="codexDelBtn" style="color:var(--danger)">[ic:delete] 删除</button>
+      </div>
+      <div id="codexIntro" style="font-size:12px;color:var(--sub);margin:6px 0;white-space:pre-wrap"></div>
+      <div id="codexPackInfo" style="display:none;font-size:12px;color:var(--sub);margin:6px 0;padding:8px;background:rgba(46,160,67,.1);border:1px solid rgba(46,160,67,.4);border-radius:6px"></div>
+      <!-- 剧本 JSON 编辑器 -->
+      <div id="codexEditor" style="display:none;margin-top:8px">
+        <textarea id="codexJsonInput" rows="14" style="width:100%;font-family:monospace;font-size:12px;background:var(--bg,#111);color:var(--text,#ddd);border:1px solid var(--line);border-radius:6px;padding:8px"></textarea>
+        <div class="row" style="margin-top:6px">
+          <button class="btn2 ghost" id="codexFmtBtn">[ic:palette] 格式化</button>
+          <button class="btn2 ghost" id="codexCheckBtn">[ic:search] 校验</button>
+          <button class="btn2 ghost" id="codexGraphBtn">[ic:movie] 节点图</button>
+          <button class="btn2" id="codexSaveBtn">[ic:save] 保存</button>
+          <span style="flex:1"></span>
+          <span id="codexEditorStatus" style="font-size:12px;color:var(--sub)"></span>
+        </div>
+      </div>
+      <!-- 节点图编辑器（线-点-分支 剪辑，GAL 制作器主界面） -->
+      <div id="codexGraphWrap" style="display:none;margin-top:8px">
+        <div class="row" style="justify-content:flex-start;margin-bottom:6px">
+          <button class="btn2" id="cxGraphSaveBtn">[ic:save] 保存</button>
+          <button class="btn2" id="cxGraphAddBtn">[ic:add] 加线(场景)</button>
+          <button class="btn2 ghost" id="cxGraphJsonBtn">[ic:note] JSON 高级</button>
+          <span style="flex:1"></span>
+          <span id="cxGraphStatus" style="font-size:12px;color:var(--sub)"></span>
+        </div>
+        <div class="row" style="justify-content:flex-start;margin-bottom:6px;font-size:11px;color:var(--sub)">
+          <span>[ic:movie] 线=过程 · 点=节拍 · 分支=岔口（[ic:shuffle] 选项 / [ic:lock] 条件）。点「线」或任意「点」即可编辑该线步骤。</span>
+        </div>
+        <div id="cxGraphCanvas" style="width:100%;height:320px;overflow:auto;background:var(--bg,#0d0d12);border:1px solid var(--line);border-radius:8px"></div>
+        <!-- 场景步骤编辑器 -->
+        <div id="cxSceneEdit" style="display:none;margin-top:8px;border-top:1px solid var(--line);padding-top:8px"></div>
+      </div>
+      <!-- 资源文件列表 -->
+      <div id="codexFiles" style="display:none;margin-top:8px;max-height:200px;overflow:auto"></div>
+    </div>
+    <div class="row" style="margin-top:10px"><button class="btn2 ghost" id="codexCloseBtn">关闭</button></div>
+  </div>
+</div>
+
+<!-- CODEX 粘贴剧本 → 自动转化 -->
+<div class="modal" id="codexPasteModal">  <div class="modal-box" style="width:min(92vw,620px)">
+    <h3>[ic:note] 粘贴剧本 → 自动转化</h3>
+    <div style="font-size:11px;color:var(--sub);margin-bottom:8px">
+      直接粘贴剧本内容，或按约定写纯文本剧本自动转成可播格式：<br>
+ 【场景】标题 · 【背景】xxx / 【音乐】xxx · &gt; 旁白 · 角色名：台词 · 【选项】后跟 “- 文字 → s2” · 【跳转】s2 · 【结局】标题
+ </div>
+    <textarea id="codexPasteInput" rows="12" style="width:100%;font-family:monospace;font-size:12px;background:var(--bg,#111);color:var(--text,#ddd);border:1px solid var(--line);border-radius:6px;padding:8px" placeholder="粘贴 JSON 或纯文本剧本…"></textarea>
+    <div class="row" style="margin-top:8px">
+      <button class="btn2" id="codexPasteConvertBtn">[ic:auto_fix_high] 自动转化</button>
+      <button class="btn2 ghost" onclick="document.getElementById('codexPasteModal').classList.remove('open')">取消</button>
+      <span id="codexPasteStatus" style="font-size:12px;color:var(--sub);margin-left:8px"></span>
+    </div>
+  </div>
+</div>
+
+<!-- CODEX 高级模式：直接改 GALGAME 播放器代码 -->
+<div class="modal" id="codexAdvancedModal">
+  <div class="modal-box" style="width:min(96vw,900px);height:88vh;display:flex;flex-direction:column">
+    <div style="padding:8px 12px;display:flex;justify-content:space-between;align-items:center">
+      <strong>[ic:settings] CODEX 高级 · 直接改播放器代码</strong>
+      <button class="btn2 ghost" onclick="codexAdvancedModal.classList.remove('open')">[ic:close] 关闭</button>
+    </div>
+    <div style="font-size:11px;color:var(--sub);padding:0 12px 6px">
+      这是完整播放器 HTML/JS/CSS 源（系统内置模板）。改任何地方，<b>只需保留 <code>__CODEX_PAYLOAD__</code></b> 数据注入点；
+      点「[ic:play] 试玩」用当前包实时渲染预览，点「[ic:save] 保存模板」写入本包，之后打包 HTML/EXE 都沿用这份自定义模板。
+    </div>
+    <div style="display:flex;flex:1;min-height:0;gap:8px;padding:0 12px 12px">
+      <div style="flex:1;display:flex;flex-direction:column;min-width:0">
+        <textarea id="codexTplInput" spellcheck="false" style="flex:1;min-height:0;width:100%;font-family:monospace;font-size:12px;background:var(--bg,#111);color:var(--text,#ddd);border:1px solid var(--line);border-radius:6px;padding:8px;white-space:pre"></textarea>
+        <div class="row" style="margin-top:6px">
+          <button class="btn2" id="codexTplPlayBtn">[ic:play] 试玩</button>
+          <button class="btn2 ghost" id="codexTplSaveBtn">[ic:save] 保存模板</button>
+          <button class="btn2 ghost" id="codexTplResetBtn">[ic:settings_backup_restore] 恢复默认</button>
+          <span id="codexTplStatus" style="font-size:12px;color:var(--sub);margin-left:6px"></span>
+        </div>
+      </div>
+      <div style="flex:1;display:flex;flex-direction:column;min-width:0;border:1px solid var(--line);border-radius:6px;background:#000">
+        <div style="padding:4px 8px;font-size:11px;color:var(--sub)">[ic:tv] 试玩预览</div>
+        <iframe id="codexTplPreview" sandbox="allow-scripts" style="flex:1;border:0;background:#000"></iframe>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- CODEX 全屏播放器 -->
+<!-- contrast-skip:fixed-dark -->  <!-- #codexPlayer 自带纯黑幕（background:#000）+ 作者给的立绘：这里的字只按暗色判 -->
+<div id="codexPlayer" style="display:none;position:fixed;inset:0;z-index:9999;background:#000;overflow:hidden">
+  <div id="cxBg" style="position:absolute;inset:0;background-size:cover;background-position:center;background-color:#0a0a12"></div>
+  <div id="cxSprites" style="position:absolute;left:0;right:0;bottom:120px;top:40px;pointer-events:none;z-index:2"></div>
+  <div id="cxImages" style="position:absolute;left:0;right:0;bottom:120px;top:40px;pointer-events:none;z-index:1;display:none;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap"></div>
+  <div id="cxTextbox" style="position:absolute;left:0;right:0;bottom:0;padding:18px 24px 26px;background:linear-gradient(transparent,rgba(0,0,0,.92) 35%);min-height:150px;cursor:pointer">
+    <div id="cxSpeaker" style="font-size:17px;font-weight:bold;color:#ffd76e;margin-bottom:6px;display:none"></div>
+    <div id="cxText" style="font-size:18px;line-height:1.7;color:#eee;min-height:58px;white-space:pre-wrap"></div>
+    <div id="cxChoice" style="margin-top:12px;display:none"></div>
+    <div id="cxNote" style="font-size:14px;color:#9aa;font-style:italic;min-height:20px"></div>
+  </div>
+  <div style="position:absolute;top:10px;right:12px;display:flex;gap:6px;z-index:10">
+    <button id="cxFull" class="btn2 ghost" style="font-size:12px">[ic:fullscreen] 全屏</button>
+    <input id="cxVol" type="range" min="0" max="100" value="100" style="width:70px" title="音量">
+    <button id="cxSave" class="btn2 ghost" style="font-size:12px">[ic:save] 存档</button>
+    <button id="cxLoad" class="btn2 ghost" style="font-size:12px">[ic:folder] 读档</button>
+    <button id="cxRewind" class="btn2 ghost" style="font-size:12px">[ic:fast_rewind] 回溯</button>
+    <button id="cxBack" class="btn2 ghost" style="font-size:12px">[ic:close] 退出</button>
+    <button id="cxAuto" class="btn2 ghost" style="font-size:12px">[ic:fast_forward] 自动</button>
+  </div>
+  <div id="cxTitle" style="position:absolute;inset:0;display:none;background:rgba(0,0,0,.94);z-index:5;flex-direction:column;align-items:center;justify-content:center;text-align:center;cursor:pointer">
+    <div id="cxTitleName" style="font-size:34px;font-weight:bold;color:#ffd76e;margin-bottom:10px"></div>
+    <div id="cxTitleIntro" style="font-size:15px;color:#bbb;max-width:560px;line-height:1.8;white-space:pre-wrap"></div>
+    <div id="cxChapterList" style="margin-top:18px;max-width:560px;max-height:160px;overflow:auto;text-align:left"></div>
+    <div style="margin-top:22px;font-size:13px;color:#9aa">点击开始 ▸</div>
+  </div>
+  <div id="cxEnd" style="position:absolute;inset:0;display:none;background:radial-gradient(circle at 50% 40%,rgba(255,215,110,.12),#000 70%);z-index:5;flex-direction:column;align-items:center;justify-content:center;text-align:center;cursor:pointer">
+    <div id="cxEndTitle" style="font-size:28px;font-weight:bold;color:#ffd76e;margin-bottom:8px"></div>
+    <div style="font-size:13px;color:#888">— END —</div>
+    <div style="margin-top:22px;font-size:13px;color:#9aa">点击返回</div>
+  </div>
+</div>
+<!-- /contrast-skip -->

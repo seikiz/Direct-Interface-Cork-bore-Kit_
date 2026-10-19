@@ -73,6 +73,9 @@
     'codex.codexExeTimer': null,
     'codex._gScript': null,
     'codex._gSel': null,
+    // 阶段 5 收尾：播放器要不要占屏（播放器写 / 编辑器读 → 动播放器容器的 display）。
+    // 这两块屏之间原来靠"播放器函数直接摸编辑器的容器 id"，现在只剩这一个布尔状态。
+    'codex.playerOpen': false,
     // ---- 阶段 5：GAL 制作器（gal）数据层 ----
     'gal.galScript': null,
     'gal.galBodies': {},

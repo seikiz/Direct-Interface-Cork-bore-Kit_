@@ -30,6 +30,12 @@ import codex_core as CX  # noqa: E402
 PASS = 0
 FAIL = 0
 INDEX = os.path.join(ROOT, "web", "index.html")
+# 2026-11 阶段 5 收尾：内嵌预览的 JS 从 index.html 搬到了这两个屏模块
+# （codex-player.js = 开播/素材/音频，codex-player-scene.js = 场景推进/条件/打字机）。
+# 所以"内嵌预览"的语料 = index.html 的无 src 内联脚本 + 这两个文件。
+# 只加这两个，不把 gal 的屏模块也拼进来 —— 那会把编辑器里的 `ln.kind === 'say'` 算成播放器能力，比出来是假差异。
+PREVIEW_MODULES = [os.path.join(ROOT, "web", "js", "screens", n)
+                   for n in ("codex-player.js", "codex-player-scene.js")]
 
 
 def check(name, cond, detail=""):
@@ -83,11 +89,16 @@ def main():
     # 2026-11 阶段2：页面里不止一段内联 <script> 了（最前面还有一段几行的路由引导脚本），
     # 只取第一段会拿到引导脚本、什么都扫不到 —— 所以把所有**无 src 的内联块**按顺序拼起来。
     inapp = "\n".join(re.findall(r"<script(?![^>]*\bsrc=)[^>]*>(.*?)</script>", html, re.S))
+    for _p in PREVIEW_MODULES:
+        if not os.path.isfile(_p):
+            check(u"内嵌预览模块存在 %s" % os.path.basename(_p), False, "搬家后路径不对")
+            continue
+        inapp += "\n" + io.open(_p, encoding="utf-8").read()
     exported = CX.STANDALONE_PLAYER_JS
 
     print(u"\n== ① 两个播放器的 JS 都必须是合法 JS ==")
     ok, err = node_check(inapp)
-    check(u"内嵌预览（web/index.html）语法合法", ok, err)
+    check(u"内嵌预览（index.html 内联脚本 + codex-player*.js）语法合法", ok, err)
     ok, err = node_check(exported)
     check(u"导出播放器（codex_core.STANDALONE_PLAYER_JS）语法合法", ok, err)
 

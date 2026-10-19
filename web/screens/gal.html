@@ -1,0 +1,47 @@
+<!-- web/screens/gal.html —— GAL 制作器这一屏的 DOM（galEditor 全屏画布）。
+     从 web/index.html 逐字搬出（阶段 5）；index.html 原位只剩挂载点。
+     JS：js/screens/gal-editor.js（+canvas / scene / player / lines）。
+     .gal-* 样式在 styles/screens/gal.css，<link> 紧跟 screens.css（层叠顺序见 index.html 头部）。 -->
+
+<div id="galEditor" style="display:none;position:fixed;inset:0;z-index:9999;background:var(--bg,#0b0e14);flex-direction:column">
+  <div class="gal-top">
+    <b id="galTitle" style="font-size:16px;color:var(--text,#eee)">[ic:book] GAL制作器</b>
+    <select id="galPkgSel" style="max-width:260px;background:var(--panel);border:1px solid var(--line);border-radius:8px;color:var(--text);padding:7px 10px;font-size:13px"></select>
+    <button class="btn2" id="galNewBtn">[ic:add] 新建</button>
+    <span id="galStats" style="font-size:12px;color:var(--sub,#8a93a3)"></span>
+    <div class="gal-actions">
+      <button class="btn2 ghost" id="galUndoBtn" title="撤销 (Ctrl+Z)">[ic:undo] 撤销</button>
+      <button class="btn2 ghost" id="galRedoBtn" title="重做 (Ctrl+Shift+Z)">[ic:redo] 重做</button>
+      <button class="btn2" id="galPlayBtn">[ic:play] 预览</button>
+      <button class="btn2 ghost" id="galImportBtn">[ic:inbox] 导入</button>
+      <button class="btn2 ghost" id="galExeBtn">[ic:desktop_windows] EXE</button>
+      <button class="btn2 ghost" id="galPlayerBtn" title="导出成原生播放器（真正的软件，不是网页；可再打包成 EXE / APK）">[ic:movie] 播放器</button>
+      <button class="btn2" id="galSaveBtn">[ic:save] 保存</button>
+      <button class="btn2 ghost" id="galCheckBtn" title="剧本体检：不可达场景 / 死行 / 走不到结局 / 素材缺失 / 预览与导出不一致">[ic:search] 体检</button>
+      <button class="btn2" id="galRoleBtn">[ic:group] 角色</button>
+      <button class="btn2" id="galAddLineBtn">[ic:add] 加线</button>
+      <button class="btn2 ghost" id="galKeyBtn">[ic:star] 仅看关键</button>
+      <button class="btn2 ghost" id="galJsonBtn">[ic:note] JSON</button>
+      <button class="btn2 ghost" id="galCloseBtn">[ic:close]</button>
+    </div>
+  </div>
+  <div style="padding:6px 16px;font-size:11px;color:var(--sub,#8a93a3);border-bottom:1px solid var(--line)">▸ <b style="color:var(--text-sub)">进行</b>=点击继续到下一节点(灰蓝实线) · [ic:shuffle] <b style="color:var(--warn)">选项</b>=玩家选择分支(橙线) · [ic:lock]=带条件 · 点「节点」编它内部，拖节点移动</div>
+  <!-- contrast-skip:badge -->  <!-- #ga<seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌lToast 是瞬时状态徽标：文字与底色同色相（--ok），不算正文 -->
+  <div id="galToast" style="display:none;position:fixed;right:20px;top:20px;z-index:10001;background:rgba(34,197,94,.18);border:1px solid rgba(34,197,94,.6);color:var(--ok);padding:8px 14px;border-radius:8px;font-size:13px;opacity:0;transition:opacity .3s"></div>
+  <!-- /contrast-skip -->
+  <div id="galOptPop" style="display:none;position:fixed;z-index:10002;min-width:300px;background:var(--panel);border:1px solid color-mix(in srgb, #f59e0b 55%, var(--line));border-radius:10px;padding:10px 12px;box-shadow:0 10px 40px rgba(0,0,0,.6)"></div>
+  <div id="galLines" style="flex:1;overflow:auto;padding:12px 16px;position:relative;background:radial-gradient(circle, var(--line) 1px, transparent 1px);background-size:22px 22px;background-position:0 0"></div>
+  <div id="galScenePanel" style="display:none;border-top:1px solid var(--line);min-height:200px;max-height:56vh;overflow:auto;resize:vertical;background:var(--panel)"></div>
+  <div id="galRolePanel" style="display:none;border-top:1px solid var(--line);max-height:320px;overflow:auto;background:var(--panel)"></div>
+  <!-- 剧本体检结果（见 galCheckRun）：结构问题 / 预览不一致 / 素材 / 统计 -->
+  <div id="galCheckPanel" style="display:none;border-top:1px solid var(--line);max-height:46vh;overflow:auto;background:var(--panel);padding:10px 14px;font-size:13px"></div>
+  <!-- 右键菜单 -->
+  <div id="galCtx" style="display:none;position:fixed;z-index:10000;min-width:180px;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:4px;box-shadow:0 8px 30px rgba(0,0,0,.5)"></div>
+  <!-- 缩放控件 -->
+  <div id="galZoom" style="position:fixed;left:16px;bottom:14px;z-index:10000;display:flex;align-items:center;gap:4px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:4px 8px;box-shadow:0 6px 20px rgba(0,0,0,.4)">
+    <button id="galZoomOut" class="btn2 ghost" title="缩小" style="width:30px;height:30px;padding:0">−</button>
+    <span id="galZoomVal" style="min-width:46px;text-align:center;font-size:12px;color:var(--text,#ddd)">100%</span>
+    <button id="galZoomIn" class="btn2 ghost" title="放大" style="width:30px;height:30px;padding:0">＋</button>
+    <button id="galZoomFit" class="btn2 ghost" title="适应窗口" style="font-size:12px;padding:4px 8px">⤢ 适应</button>
+  </div>
+</div>
