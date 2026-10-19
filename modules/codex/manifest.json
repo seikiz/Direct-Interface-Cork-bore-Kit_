@@ -1,0 +1,35 @@
+{
+  "id": "codex",
+  "version": "1.0.0.0",
+  "provides": {
+    "services": ["codex"],
+    "routes": [
+      "api_codex_list",
+      "api_codex_create",
+      "api_codex_sample",
+      "api_codex_get",
+      "api_codex_save",
+      "api_codex_validate",
+      "api_codex_delete",
+      "api_codex_export",
+      "api_codex_import_zip",
+      "api_codex_pack",
+      "api_codex_pack_save_as",
+      "api_codex_pack_exe",
+      "api_codex_export_player",
+      "api_codex_export_codex",
+      "api_codex_import_codex",
+      "api_codex_import_script",
+      "api_codex_import_sprites",
+      "api_codex_render",
+      "api_codex_analyze"
+    ],
+    "ui_screens": ["codex"],
+    "commands": []
+  },
+  "requires": {
+    "services": [],
+    "modules": []
+  },
+  "lazy": true
+}

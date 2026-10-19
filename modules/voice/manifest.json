@@ -1,0 +1,15 @@
+{
+  "id": "voice",
+  "version": "1.0.0.0",
+  "provides": {
+    "services": ["voice"],
+    "routes": [],
+    "ui_screens": ["st"],
+    "commands": []
+  },
+  "requires": {
+    "services": [],
+    "modules": []
+  },
+  "lazy": true
+}

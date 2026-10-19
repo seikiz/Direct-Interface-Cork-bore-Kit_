@@ -1,0 +1,21 @@
+{
+  "id": "image_gen",
+  "version": "1.0.0.0",
+  "provides": {
+    "services": ["image_gen"],
+    "routes": [
+      "api_gen_image",
+      "api_gen_presets",
+      "api_get_image_presets_file",
+      "api_save_image_presets_file",
+      "api_save_image_gen"
+    ],
+    "ui_screens": ["gen"],
+    "commands": []
+  },
+  "requires": {
+    "services": [],
+    "modules": []
+  },
+  "lazy": true
+}

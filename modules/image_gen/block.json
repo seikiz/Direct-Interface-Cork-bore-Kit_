@@ -1,0 +1,60 @@
+{
+  "block": "image_gen",
+  "layer": "module",
+  "id": "image_gen",
+  "owner": "seiki",
+  "files": [
+    "README.md",
+    "__init__.py",
+    "__main__.py",
+    "backends.py",
+    "block.json",
+    "cases.py",
+    "harness.py",
+    "manifest.json",
+    "module.py",
+    "presets.py",
+    "selftest.py",
+    "service.py"
+  ],
+  "selftest": {
+    "cmd": [
+      "python",
+      "-m",
+      "modules.image_gen",
+      "--selftest"
+    ],
+    "max_ms": 2000
+  },
+  "interface": {
+    "service": "image_gen",
+    "impls": [
+      {
+        "file": "service.py",
+        "class": "ImageGenService"
+      }
+    ],
+    "methods": [
+      "bind",
+      "generate",
+      "quick_test",
+      "backend_of",
+      "resolve_backend",
+      "needs_key",
+      "split_size",
+      "mime_of",
+      "presets_path",
+      "load_presets",
+      "save_presets",
+      "user_presets_json",
+      "list_presets"
+    ]
+  },
+  "requires": {
+    "pip": []
+  },
+  "budget": {
+    "soft_lines": 400,
+    "hard_lines": 800
+  }
+}

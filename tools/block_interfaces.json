@@ -3,6 +3,9 @@
   "interface_hashes": {
     "kernel": "9f8ffcff147883c1",
     "backup": "0cffd3d7aee13745",
+    "codex": "7890d99358f011a9",
+    "image_gen": "62958dc6d85724cc",
+    "voice": "e4fe24cac7c32bcb",
     "workshop": "ecef771d04befe10"
   }
 }

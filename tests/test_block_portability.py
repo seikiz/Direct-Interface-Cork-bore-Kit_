@@ -98,7 +98,7 @@ def cleanup_tmp():
     for d, base in _TMP:
         shutil.rmtree(d, ignore_errors=True)
     _TMP[:] = []
-    # 兜底的共享临时根目录：只在确实是空的时候删，别拆了并行任务正在用的目录
+    # 兜底的共享临时根目录：只在确实是空<seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌的时候删，别拆了并行任务正在用的目录
     shared = os.path.join(ROOT, "tmp_kernel_tests")
     try:
         os.rmdir(shared)
@@ -164,14 +164,17 @@ def fake_repo(label, module_extra="", selftest_extra=""):
     return root, d, bj
 
 
-# ======================================<seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌========================== A. 真实三块
+# ================================================================ A. 真实块
+BLOCK_IDS = ("backup", "codex", "image_gen", "kernel", "voice", "workshop")
+
+
 def test_real_blocks():
-    print(u"\n== A. 真实三块：搬走之后还能装上、自检通过、没有宿主模块 ==")
+    print(u"\n== A. 真实块：搬走之后还能装上、自检通过、没有宿主模块 ==")
     res = pc.check_all()
-    check(u"搬家测试覆盖三块（kernel / backup / workshop）", res["total"] == 3,
-          str(sorted(res["blocks"])))
+    check(u"搬家测试覆盖六块（kernel / backup / workshop / image_gen / voice / codex）",
+          res["total"] == len(BLOCK_IDS), str(sorted(res["blocks"])))
     passed = 0
-    for bid in ("kernel", "backup", "workshop"):
+    for bid in BLOCK_IDS:
         r = res["blocks"].get(bid) or {}
         check(u"%s 可移植（portable=True）" % bid, r.get("portable") is True,
               str(r.get("violations"))[:300])
@@ -182,8 +185,8 @@ def test_real_blocks():
               str(r.get("violations"))[:300])
         if r.get("portable"):
             passed += 1
-    check(u"三块 portable 计数 = 3/3", passed == 3, str(passed))
-    check(u"三块都只声明 stdlib + kernel（requires.pip 为空）",
+    check(u"六块 portable 计数 = 6/6", passed == len(BLOCK_IDS), str(passed))
+    check(u"六块都只声明 stdlib + kernel（requires.pip 为空）",
           all(not (res["blocks"].get(b) or {}).get("declared") for b in res["blocks"]),
           str({b: (res["blocks"][b] or {}).get("declared") for b in res["blocks"]}))
 

@@ -1,0 +1,53 @@
+{
+  "block": "voice",
+  "layer": "module",
+  "id": "voice",
+  "owner": "seiki",
+  "files": [
+    "README.md",
+    "__init__.py",
+    "__main__.py",
+    "block.json",
+    "cases.py",
+    "engines.py",
+    "harness.py",
+    "manifest.json",
+    "module.py",
+    "selftest.py",
+    "service.py"
+  ],
+  "selftest": {
+    "cmd": [
+      "python",
+      "-m",
+      "modules.voice",
+      "--selftest"
+    ],
+    "max_ms": 2000
+  },
+  "interface": {
+    "service": "voice",
+    "impls": [
+      {
+        "file": "service.py",
+        "class": "VoiceService"
+      }
+    ],
+    "methods": [
+      "bind",
+      "synthesize",
+      "pick",
+      "engines",
+      "is_ready",
+      "detect_conflicts",
+      "analyze_tone"
+    ]
+  },
+  "requires": {
+    "pip": []
+  },
+  "budget": {
+    "soft_lines": 400,
+    "hard_lines": 800
+  }
+}

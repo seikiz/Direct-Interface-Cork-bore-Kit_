@@ -1,0 +1,82 @@
+{
+  "block": "codex",
+  "layer": "module",
+  "id": "codex",
+  "owner": "seiki",
+  "files": [
+    "README.md",
+    "__init__.py",
+    "__main__.py",
+    "analyze.py",
+    "block.json",
+    "cases.py",
+    "constants.py",
+    "exe.py",
+    "flow.py",
+    "harness.py",
+    "manifest.json",
+    "module.py",
+    "pack.py",
+    "player.py",
+    "player_js.py",
+    "rules.py",
+    "scene.py",
+    "selftest.py",
+    "service.py"
+  ],
+  "selftest": {
+    "cmd": [
+      "python",
+      "-m",
+      "modules.codex",
+      "--selftest"
+    ],
+    "max_ms": 2000
+  },
+  "interface": {
+    "service": "codex",
+    "impls": [
+      {
+        "file": "service.py",
+        "class": "CodexService"
+      }
+    ],
+    "methods": [
+      "bind",
+      "pack_dir",
+      "list_packages",
+      "classify_file",
+      "parse_script_text",
+      "normalize_script",
+      "sanitize_html",
+      "validate_codex",
+      "step_kind",
+      "evaluate_condition",
+      "filter_choices",
+      "cond_pass",
+      "simulate",
+      "run_path",
+      "analyze_codex",
+      "make_template",
+      "import_folder",
+      "make_sample_package",
+      "export_zip",
+      "import_zip",
+      "safe_name",
+      "load_custom_template",
+      "build_standalone_html",
+      "build_standalone_file",
+      "render_standalone",
+      "build_exe_shell",
+      "pyinstaller_cmd",
+      "build_standalone_exe"
+    ]
+  },
+  "requires": {
+    "pip": []
+  },
+  "budget": {
+    "soft_lines": 400,
+    "hard_lines": 800
+  }
+}

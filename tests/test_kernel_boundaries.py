@@ -35,6 +35,11 @@ FAIL = 0
 _TMP = []
 _TEMP_BASE = None
 
+# 块清单（唯一真相是各目录里的 block.json；这里只是"不许悄悄少一块"的钉子）。
+# 2026-10 第二批：image_gen / voice / codex 三个块迁完，从 3 个变成 6 个。
+BLOCK_IDS = ("backup", "codex", "image_gen", "kernel", "voice", "workshop")
+MODULE_IDS = ("backup", "codex", "image_gen", "voice", "workshop")
+
 
 def check(name, cond, detail=""):
     global PASS, FAIL
@@ -147,7 +152,7 @@ def test_real_repo():
     check(u"壳层只留门面：原来的 17 个工坊接口不再自己发请求",
           "_ws_call(\"GET\", self._ws_url(\"/api/cards/list\")" not in shell)
 
-    for mid in ("backup", "workshop"):
+    for mid in MODULE_IDS:
         d = os.path.join(ROOT, "modules", mid)
         files = sorted(os.listdir(d))
         check(u"模块 %s 的入口只有 module.py（其余是内部实现）" % mid,
@@ -551,8 +556,8 @@ def test_block_protocol():
     print(u"\n== F. 积木协议：block.json + 块自检 + 一条命令验收 ==")
     import blocks_graph as bg
     blocks = bg.blocks()
-    check(u"三个块都有 block.json（kernel + 两个试点）",
-          set(blocks) == {"kernel", "backup", "workshop"}, str(sorted(blocks)))
+    check(u"六个块都有 block.json（kernel + 五个业务块）",
+          set(blocks) == set(BLOCK_IDS), str(sorted(blocks)))
     for bid, info in sorted(blocks.items()):
         bj = info.get("block") or {}
         check(u"块 %s 声明了 files / selftest / interface 三样" % bid,
@@ -561,7 +566,8 @@ def test_block_protocol():
 
     graph = bg.check()
     check(u"依赖图无环、无坏边、无接口漂移", not graph["problems"], str(graph["problems"]))
-    check(u"接口签名哈希算得出来（3 个块）", len(graph["hashes"]) == 3, str(graph["hashes"]))
+    check(u"接口签名哈希算得出来（6 个块）", len(graph["hashes"]) == len(BLOCK_IDS),
+          str(graph["hashes"]))
 
     env = dict(os.environ, PYTHONIOENCODING="utf-8", PYTHONPATH=ROOT)
     tool = os.path.join(ROOT, "tools", "accept.py")
@@ -576,7 +582,7 @@ def test_block_protocol():
     check(u"验收报告里有搬家测试那一段", u"搬家测试" in out, out[-300:])
     check(u"验收报告带变更摘要（新增/删除/行数/接口签名）",
           u"接口签名变化" in out and u"行数变化" in out, out[-300:])
-    for bid in ("kernel", "backup", "workshop"):
+    for bid in BLOCK_IDS:
         r2 = subprocess.run([sys.executable, "-m", bid if bid == "kernel"
                              else "modules." + bid, "--selftest"],
                             capture_output=True, env=env, cwd=ROOT, timeout=120)
