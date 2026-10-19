@@ -69,7 +69,7 @@ jobs:
         run: |
           set -o pipefail
           LOG="$(mktemp)"
-          if ! python tools/accept.py 2>&1 | tee "$LOG"; then
+          if ! python -X utf8 tools/accept.py 2>&1 | tee "$LOG"; then
             FIRST="$(head -n 1 "$LOG" | sed 's/%/%25/g; s/\r//g')"
             TAIL="$(tail -n 15 "$LOG" | sed 's/%/%25/g; s/\r//g' | awk '{printf "%s%%0A", $0}')"
             echo "::error::架构闸门未通过：$FIRST%0A--- 失败明细 ---%0A$TAIL"
@@ -170,7 +170,7 @@ jobs:
         run: |
           set -o pipefail
           LOG="$(mktemp)"
-          if ! python tools/accept.py 2>&1 | tee "$LOG"; then
+          if ! python -X utf8 tools/accept.py 2>&1 | tee "$LOG"; then
             FIRST="$(head -n 1 "$LOG" | sed 's/%/%25/g; s/\r//g')"
             TAIL="$(tail -n 15 "$LOG" | sed 's/%/%25/g; s/\r//g' | awk '{printf "%s%%0A", $0}')"
             echo "::error::架构闸门未通过：$FIRST%0A--- 失败明细 ---%0A$TAIL"

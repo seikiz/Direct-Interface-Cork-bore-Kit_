@@ -32,6 +32,14 @@ sys.path.insert(0, HERE)
 import audit_kernel_boundaries as audit          # noqa: E402
 import blocks_graph as bg                        # noqa: E402
 
+# Windows 控制台默认 cp1252，打印中文会 UnicodeEncodeError（CI 上就是这么红的）。
+# 工具自己把输出设成 UTF-8，任何 shell 跑都稳。
+for _s in (sys.stdout, sys.stderr):
+    try:
+        _s.reconfigure(encoding="utf-8")
+    except Exception:
+        pass
+
 SNAPSHOT = os.path.join(HERE, "block_interfaces.json")
 
 
