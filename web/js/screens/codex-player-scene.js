@@ -71,7 +71,10 @@
       var b = document.createElement('button');
       b.className = 'btn2';
       b.textContent = o.text || '';
+      // contrast-skip:fixed-dark —— 这一条画在 #codexPlayer 的纯黑幕里（同名围栏见 web/screens/codex.html）：
+      // 白色 8% 覆层盖在黑幕上，浅色主题下播放器仍是黑的，所以底色不跟主题换。
       b.style.cssText = 'display:block;width:100%;margin:6px 0;text-align:left;font-size:15px;padding:10px 14px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.25);color:var(--text);border-radius:8px;cursor:pointer';
+      // /contrast-skip
       b.onclick = function () {
         box.style.display = 'none';
         codexStopAuto();

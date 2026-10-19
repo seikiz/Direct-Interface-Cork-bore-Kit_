@@ -15,8 +15,11 @@
 .wentry .we-row select{ width:92px; flex:none; }
 .wentry .we-dot{ width:9px; height:9px; border-radius:50%; display:inline-block; flex:none;
  background:var(--line); }
-.wentry .we-dot.on{ background:#4ade80; }
-.wentry .we-dot.const{ background:#60a5fa; }
+/* 2026-11 容器令牌化：这两点原来是手写的暗色值 #4ade80 / #60a5fa（浅色主题下 --ok 是
+   #15803d、--accent 是 #2563eb，硬编码就等于"只有暗色一份"）。换成令牌后暗色取值
+   逐字节相同（--ok 暗=#4ade80、--accent 暗=#60a5fa）。 */
+.wentry .we-dot.on{ background:var(--ok); }
+.wentry .we-dot.const{ background:var(--accent); }
 .wentry .we-del{ background:none; border:none; color:var(--danger); cursor:pointer; font-size:14px; }
 .wentry .we-chk{ display:inline-flex; align-items:center; gap:4px; font-size:11px; color:var(--sub); }
 .wentry .we-chk input{ width:auto; }

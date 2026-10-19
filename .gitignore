@@ -34,7 +34,9 @@ utau_env/
 __pycache__/
 *.pyc
 tts_cache/
-codex/
+# CODEX 作品目录（用户数据，在数据根下）。只忽略**仓库根**那一级 ——
+# 少了开头的斜杠会把 modules/codex/ 这个源码块一起吞掉（2026-10-20 第二批迁移时踩到）。
+/codex/
 
 # Android 构建
 DICK-Android/build/
@@ -144,3 +146,6 @@ dick_lock_*.json
 # 空间层：位置状态目录（一个角色一个 json）与它的运行时设置
 space/
 space_config.json
+
+# 测试用的仓库内临时目录（本机 %TEMP% 会卡死，见 tests/test_android_colors.py）
+.tmp_test/

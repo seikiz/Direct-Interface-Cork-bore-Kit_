@@ -165,7 +165,7 @@ function galEditorEl(sc, i, body) {
         r.appendChild(galInput(o.text || '', '选项文字', function (v) { o.text = v; }));
         r.appendChild(galInput(o.goto || '', 'goto', function (v) { o.goto = v; }));
         var c = galInput(o.if ? JSON.stringify(o.if) : '', '[ic:lock] 条件 {"aff":">=85"}', function (v) { try { o.if = v.trim() ? JSON.parse(v) : undefined; } catch (e) { o.if = undefined; } });
-        c.style.cssText = 'flex:1;min-width:150px;background:var(--bubble,#161b22);border:1px solid rgba(245,158,11,.4);border-radius:6px;color:var(--warn);padding:5px 8px;font-size:12px';
+        c.style.cssText = 'flex:1;min-width:150px;background:var(--bubble);border:1px solid rgba(245,158,11,.4);border-radius:6px;color:var(--warn);padding:5px 8px;font-size:12px';
         r.appendChild(c);
         var del = document.createElement('button'); del.className = 'btn2 ghost'; del.textContent = '[ic:close]'; del.style.cssText = 'font-size:11px;padding:2px 6px;color:var(--danger)'; del.onclick = function () { opts.splice(k, 1); renderOpts(); };
         r.appendChild(del);
@@ -252,7 +252,8 @@ function galCheckRender(r) {
   if (issues.length) {
     h.push('<div style="color:var(--danger);margin:6px 0 4px"><b>结构问题 ' + issues.length + ' 条（会真的坏）</b></div>');
     issues.forEach(function (t) {
-      h.push('<div style="padding:3px 0 3px 14px;border-left:2px solid #f87171;margin-bottom:3px">' + galCheckEsc(t) + '</div>');
+      // 2026-11 容器令牌化：原来写死 #f87171（＝暗色 --danger），浅色主题下不变 → 换令牌，暗色取值逐字节相同。
+      h.push('<div style="padding:3px 0 3px 14px;border-left:2px solid var(--danger);margin-bottom:3px">' + galCheckEsc(t) + '</div>');
     });
   }
   if (warns.length) {

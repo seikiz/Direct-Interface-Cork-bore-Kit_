@@ -222,9 +222,9 @@ function galEditOption(srcId, idx, eo, ev) {
   var p = document.getElementById('galOptPop');
   if (!p || !sc || !o) return;
   p.innerHTML = '<b style="font-size:13px;color:var(--warn)">[ic:edit] 编辑选项</b>';
-  var t = galInput(o.text || '', '选项文字', function (v) { o.text = v; }); t.style.cssText = 'display:block;width:100%;margin-top:6px;background:var(--bubble,#161b22);border:1px solid var(--line);border-radius:6px;color:var(--text,#ddd);padding:6px 8px;font-size:12px'; p.appendChild(t);
-  var g = galInput(o.goto || '', '目标场景 id (goto)', function (v) { o.goto = v; }); g.style.cssText = 'display:block;width:100%;margin-top:6px;background:var(--bubble,#161b22);border:1px solid var(--line);border-radius:6px;color:var(--text,#ddd);padding:6px 8px;font-size:12px'; p.appendChild(g);
-  var c = galInput(o.if ? JSON.stringify(o.if) : '', '[ic:lock] 条件 {"aff":">=85"}（可留空）', function (v) { try { o.if = v.trim() ? JSON.parse(v) : undefined; } catch (e) { o.if = undefined; } }); c.style.cssText = 'display:block;width:100%;margin-top:6px;background:var(--bubble,#161b22);border:1px solid rgba(245,158,11,.4);border-radius:6px;color:var(--warn);padding:6px 8px;font-size:12px'; p.appendChild(c);
+  var t = galInput(o.text || '', '选项文字', function (v) { o.text = v; }); t.style.cssText = 'display:block;width:100%;margin-top:6px;background:var(--bubble);border:1px solid var(--line);border-radius:6px;color:var(--text,#ddd);padding:6px 8px;font-size:12px'; p.appendChild(t);
+  var g = galInput(o.goto || '', '目标场景 id (goto)', function (v) { o.goto = v; }); g.style.cssText = 'display:block;width:100%;margin-top:6px;background:var(--bubble);border:1px solid var(--line);border-radius:6px;color:var(--text,#ddd);padding:6px 8px;font-size:12px'; p.appendChild(g);
+  var c = galInput(o.if ? JSON.stringify(o.if) : '', '[ic:lock] 条件 {"aff":">=85"}（可留空）', function (v) { try { o.if = v.trim() ? JSON.parse(v) : undefined; } catch (e) { o.if = undefined; } }); c.style.cssText = 'display:block;width:100%;margin-top:6px;background:var(--bubble);border:1px solid rgba(245,158,11,.4);border-radius:6px;color:var(--warn);padding:6px 8px;font-size:12px'; p.appendChild(c);
   var btns = document.createElement('div'); btns.style.cssText = 'display:flex;justify-content:space-between;align-items:center;margin-top:8px';
   var del = document.createElement('button'); del.className = 'btn2 ghost'; del.textContent = '[ic:delete] 删选项'; del.style.cssText = 'color:var(--danger);padding:5px 12px'; del.onclick = function () { galPushUndo(); opts.splice(eo, 1); galOptPopClose(); galRenderGraph(); }; btns.appendChild(del);
   var right = document.createElement('div');
@@ -308,7 +308,7 @@ function galOpenScenePanel(sid, focusIdx) {
   var renderS = function () {
     sList.innerHTML = '';
     sc.images.forEach(function (f, i) {
-      var inp = galInput(f, '图片文件', function (v) { sc.images[i] = v; }); inp.style.cssText = 'width:150px;background:var(--bubble,#161b22);border:1px solid var(--line);border-radius:6px;color:var(--text,#ddd);padding:6px 8px;font-size:12px';
+      var inp = galInput(f, '图片文件', function (v) { sc.images[i] = v; }); inp.style.cssText = 'width:150px;background:var(--bubble);border:1px solid var(--line);border-radius:6px;color:var(--text,#ddd);padding:6px 8px;font-size:12px';
       var rm = document.createElement('button'); rm.textContent = '[ic:close]'; rm.className = 'btn2 ghost'; rm.style.cssText = 'color:var(--danger);font-size:12px;padding:4px 8px'; rm.onclick = function () { galPushUndo(); sc.images.splice(i, 1); renderS(); };
       sList.appendChild(inp); sList.appendChild(rm);
     });
@@ -339,7 +339,9 @@ function galOpenScenePanel(sid, focusIdx) {
     var lines = sc.lines || []; sc.lines = lines;
     for (var i = 0; i < lines.length; i++) {
       var r = galScenePointRow(sc, lines[i], render);
-      if (i === focusIdx) { r.style.outline = '2px solid #f59e0b'; r.style.outlineOffset = '2px'; focused = r; }
+      // 2026-11 容器令牌化：选中框原来写死 #f59e0b（＝暗色 --warn）；浅色主题下 --warn 是 #b45309
+      // （#f59e0b 压白只有 2.13:1，作为焦点框不达标），换令牌后暗色取值逐字节相同。
+      if (i === focusIdx) { r.style.outline = '2px solid var(--warn)'; r.style.outlineOffset = '2px'; focused = r; }
       body.appendChild(r);
     }
     var add = document.createElement('button'); add.className = 'btn2'; add.textContent = '[ic:add] 加一点'; add.onclick = function () { galPushUndo(); lines.push({ kind: 'say', text: '' }); render(); };

@@ -7,7 +7,7 @@
 function galScenePointRow(sc, ln, re) {
   var row = document.createElement('div');
   row.className = 'gal-editor';
-  row.style.cssText = 'margin:0;flex-basis:auto;flex-wrap:wrap;gap:10px;padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:var(--bubble,#161b22)';
+  row.style.cssText = 'margin:0;flex-basis:auto;flex-wrap:wrap;gap:10px;padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:var(--bubble)';
   var sel = document.createElement('select');
   Object.keys(_gKindNames).forEach(function (k) { var o = document.createElement('option'); o.value = k; o.textContent = _gKindNames[k]; sel.appendChild(o); });
   sel.value = ln.kind || 'say';
@@ -22,7 +22,7 @@ function galScenePointRow(sc, ln, re) {
         r.appendChild(galInput(o.text || '', '选项文字', function (v) { o.text = v; }));
         r.appendChild(galInput(o.goto || '', 'goto', function (v) { o.goto = v; }));
         var c = galInput(o.if ? JSON.stringify(o.if) : '', '[ic:lock] 条件', function (v) { try { o.if = v.trim() ? JSON.parse(v) : undefined; } catch (e) { o.if = undefined; } });
-        c.style.cssText = 'flex:1;min-width:150px;background:var(--bubble,#161b22);border:1px solid rgba(245,158,11,.4);border-radius:6px;color:var(--warn);padding:5px 8px;font-size:12px';
+        c.style.cssText = 'flex:1;min-width:150px;background:var(--bubble);border:1px solid rgba(245,158,11,.4);border-radius:6px;color:var(--warn);padding:5px 8px;font-size:12px';
         r.appendChild(c);
         var del = document.createElement('button'); del.className = 'btn2 ghost'; del.textContent = '[ic:close]'; del.style.cssText = 'color:var(--danger);font-size:11px;padding:2px 6px'; del.onclick = function () { galPushUndo(); ln.choice.splice(k, 1); ro(); }; r.appendChild(del);
         optBox.appendChild(r);
@@ -55,7 +55,7 @@ function galScenePointRow(sc, ln, re) {
   var renderImgs = function () {
     imgList.innerHTML = '';
     ln.images.forEach(function (f, i) {
-      var inp = galInput(f, '图片文件', function (v) { ln.images[i] = v; }); inp.style.cssText = 'width:150px;background:var(--bubble,#161b22);border:1px solid var(--line);border-radius:6px;color:var(--text,#ddd);padding:6px 8px;font-size:12px';
+      var inp = galInput(f, '图片文件', function (v) { ln.images[i] = v; }); inp.style.cssText = 'width:150px;background:var(--bubble);border:1px solid var(--line);border-radius:6px;color:var(--text,#ddd);padding:6px 8px;font-size:12px';
       var rm = document.createElement('button'); rm.textContent = '[ic:close]'; rm.className = 'btn2 ghost'; rm.style.cssText = 'color:var(--danger);font-size:12px;padding:4px 8px'; rm.onclick = function () { galPushUndo(); ln.images.splice(i, 1); renderImgs(); };
       imgList.appendChild(inp); imgList.appendChild(rm);
     });

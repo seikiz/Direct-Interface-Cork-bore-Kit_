@@ -2,10 +2,10 @@
 <div class="modal" id="cropModal">
   <div class="modal-box" style="width:420px">
     <h3>[ic:content_cut] 裁剪头像</h3>
-    <div style="position:relative;width:360px;height:360px;margin:10px auto;overflow:hidden;background:#111;border-radius:8px" id="cropStage">
+    <div style="position:relative;width:360px;height:360px;margin:10px auto;overflow:hidden;background:var(--stage);border-radius:8px" id="cropStage">
       <img id="cropImg" style="position:absolute;max-width:none;user-select:none;cursor:move" draggable="false">
       <div id="cropOverlay" style="position:absolute;inset:0;pointer-events:none">
-        <div style="position:absolute;left:50%;top:50%;width:200px;height:200px;transform:translate(-50%,-50%);border:2px solid #fff;box-shadow:0 0 0 9999px rgba(0,0,0,.55)"></div>
+        <div style="position:absolute;left:50%;top:50%;width:200px;height:200px;transform:translate(-50%,-50%);border:2px solid var(--stage-line);box-shadow:0 0 0 9999px rgba(0,0,0,.55)"></div>
       </div>
     </div>
     <div style="display:flex;align-items:center;gap:8px;padding:0 20px">

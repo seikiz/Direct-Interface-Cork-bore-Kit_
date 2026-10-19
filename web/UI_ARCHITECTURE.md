@@ -368,6 +368,36 @@ Button({
 <!-- contrast-skip:fixed-dark -->   … <!-- /contrast-skip -->
 ```
 
+### 容器底色令牌化闸门（`tests/test_web_surfaces.py`，2026-11）
+
+为什么要有：安卓那边的同类 bug 根因是"主题只映射了 `surface`，弹窗取的却是
+`surfaceContainerHigh`，没映射 → 落回 M3 默认淡紫"，于是弹窗白得像硬编码。
+网页端的等价病灶是**容器底色不来自令牌**，两种长法：
+
+1. 硬编码 hex/rgba（`.modal{background:rgba(0,0,0,.55)}`、`#mechbar … {background:#f87171}`）；
+2. **令牌 + 只有暗色一份的兜底** —— `background:var(--bubble,#161b22)`。第 2 种最阴：看着走了
+   令牌，但 `#161b22` 是暗色值的第二份手写副本，`--bubble` 一取不到值就整块退回暗色。
+
+闸门的口径（只认 `background` / `background-color`，只扫 `web/screens/*.html`、
+`web/styles/**/*.css`、`web/js/screens/*.js`）：
+一条底色声明**合规** ⇔ 值里没有颜色字面量（`#rgb/#rrggbb/rgb()/rgba()/hsl()/hsla()`）。
+`var(--surface)`、`color-mix(in srgb, var(--warn) 14%, var(--bubble))`、`transparent`、`none` 都合规。
+不合规的必须落在**围栏**（复用上面那套 `contrast-skip:<理由>`，JS 里用 `//` 写，片数 ≤4）
+或**白名单**（测试内，≤5 条，每条带 reason + 命中条数并钉死 = 只许缩短）之一。
+
+本轮结果：140 条底色声明里 **126 条（90%）** 只来自令牌；删掉 24 处"暗色兜底"（18 JS + 6 HTML）、
+把 8 处"暗色副本"字面量换成令牌（暗色取值逐字节不变，测试 ⑨ 逐条钉住）；
+剩下 6 条白名单（2 幕布 `.modal`/`.onb-mask`、1 预览纯黑底、2 同色相浅染 `#trpgBar`/`#codexPackInfo`）
++ 8 条围栏（播放器黑幕族 / galToast 徽标族）。
+
+已知欠债（下一步，别忘）：
+- 「预览纯黑底」那条白名单等 `design/tokens.json` 补一个恒定角色 `canvas:#000000`（暗/浅同值）
+  之后就能删（白名单 5 → 4 条）；
+- `#trpgBar` 的 `rgba(8,47,73,.45)` 是**唯一一处浅色主题下观感确实不够**的表面，但改它必须新造一个
+  浅色取值（设计决定，得人来拍板），所以本轮只登记不修；
+- 容器**描边**里还有 11 处同色相浅染/琥珀色字面量（`#galOptPop`、`#trpgBar` 的 `#38bdf8`、
+  `rgba(245,158,11,.4)` 若干、`#fbbf24`）：描边不在本闸门范围，且改它们都会动暗色观感。
+
 ## 已知问题（本轮没修，写下来别忘）
 1. **`web/index.html` 里有一处会让对比度审计瞎掉 747 行的 `/*`**：
    `<input type="file" id="fileInput" accept="image/*" …>` —— `tools/audit_contrast.py` 的

@@ -57,6 +57,20 @@ import gen_tokens as GT              # noqa: E402  角色表（唯一真相的�
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8")
 
+def _tmpdir(prefix):
+    """建临时目录：**先仓库内**，系统 TEMP 只兜底。
+
+    本机 %TEMP% 会间歇性卡死（mkdtemp 卡 145s / 偶发 WinError 5），
+    直接用它会把整套测试拖到超时（2026-10 真发生过）。
+    """
+    base = os.path.join(ROOT, ".tmp_test")
+    try:
+        os.makedirs(base, exist_ok=True)
+        return tempfile.mkdtemp(prefix=prefix, dir=base)
+    except Exception:
+        return tempfile.mkdtemp(prefix=prefix)
+
+
 APP_DIR = os.path.join("DICK-Android", "app", "src", "main", "java", "com", "dick", "app")
 UI_DIR = os.path.join(APP_DIR, "ui")
 THEME = os.path.join(UI_DIR, "theme", "Theme.kt")
@@ -530,7 +544,7 @@ def main():
     proc = subprocess.run([sys.executable, "-X", "utf8",
                            os.path.join(TOOLS, "gen_tokens.py"), "--check"],
                           cwd=ROOT, capture_output=True, text=True,
-                          encoding="utf-8", errors="replace")
+                          encoding="utf-8", errors="replace", timeout=120)
     tail = u"\n".join((proc.stdout or "").strip().split("\n")[-3:])
     check(u"gen_tokens.py --check 退出码 0", proc.returncode == 0,
           u"退出码 %s\n%s\n%s" % (proc.returncode, tail, (proc.stderr or "")[-300:]))
@@ -616,7 +630,7 @@ def main():
     # ⑨ 反向验证：闸门必须真的会红
     # ------------------------------------------------------------------
     print(u"\n== ⑨ 反向验证（塞坏数据，闸门必须红） ==")
-    tmp = tempfile.mkdtemp(prefix="dick_colors_", dir=os.environ.get("TEMP") or None)
+    tmp = _tmpdir("dick_colors_")
     try:
         fake_ui = os.path.join(tmp, UI_DIR)
         os.makedirs(os.path.join(fake_ui, "theme"))

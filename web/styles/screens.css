@@ -121,8 +121,11 @@
 #mechbar .mb-item b{ color:var(--text); font-weight:600; }
 #mechbar .mb-bar{ display:inline-block; width:90px; height:5px; border-radius:3px; background:var(--bubble); overflow:hidden; vertical-align:middle; margin-left:2px; }
 #mechbar .mb-bar i{ display:block; height:100%; background:var(--accent); border-radius:3px; }
-#mechbar .mb-bar.fight i{ background:#f87171; }
-#mechbar .mb-bar.mp i{ background:#60a5fa; }
+/* 2026-11 容器令牌化：原来这里是手写的暗色值 #f87171 / #60a5fa —— 它们在浅色主题下
+   不变（浅色 --danger=#cf2222、--accent=#2563eb），等于"只有暗色一份"。
+   换成令牌后暗色取值逐字节相同（--danger 暗=#f87171、--accent 暗=#60a5fa）。 */
+#mechbar .mb-bar.fight i{ background:var(--danger); }
+#mechbar .mb-bar.mp i{ background:var(--accent); }
 #mechbar .mb-moves{ display:inline-flex; gap:6px; align-items:center; }
 #mechbar .mb-item.buff{ color:var(--accent); }
 .mech-fold{ margin-top:8px; }

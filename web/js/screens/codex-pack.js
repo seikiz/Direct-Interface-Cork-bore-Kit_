@@ -149,7 +149,7 @@ function codexShowFiles() {
       html += '<div class="section-label">' + labels[k] + '（' + files.length + '）</div>';
       if (!files.length) { html += '<div style="font-size:11px;color:var(--sub);padding:2px 0 6px">空</div>'; continue; }
       html += '<div style="display:flex;flex-wrap:wrap;gap:6px;padding:2px 0 8px">' +
-        files.map(function (f) { return '<span style="font-size:11px;background:var(--bg,#111);border:1px solid var(--line);border-radius:4px;padding:2px 6px">' + escapeHtml(f) + '</span>'; }).join('') +
+        files.map(function (f) { return '<span style="font-size:11px;background:var(--bg);border:1px solid var(--line);border-radius:4px;padding:2px 6px">' + escapeHtml(f) + '</span>'; }).join('') +
         '</div>';
     }
     box.innerHTML = html;

@@ -44,7 +44,7 @@
       <div id="codexPackInfo" style="display:none;font-size:12px;color:var(--sub);margin:6px 0;padding:8px;background:rgba(46,160,67,.1);border:1px solid rgba(46,160,67,.4);border-radius:6px"></div>
       <!-- 剧本 JSON 编辑器 -->
       <div id="codexEditor" style="display:none;margin-top:8px">
-        <textarea id="codexJsonInput" rows="14" style="width:100%;font-family:monospace;font-size:12px;background:var(--bg,#111);color:var(--text,#ddd);border:1px solid var(--line);border-radius:6px;padding:8px"></textarea>
+        <textarea id="codexJsonInput" rows="14" style="width:100%;font-family:monospace;font-size:12px;background:var(--bg);color:var(--text,#ddd);border:1px solid var(--line);border-radius:6px;padding:8px"></textarea>
         <div class="row" style="margin-top:6px">
           <button class="btn2 ghost" id="codexFmtBtn">[ic:palette] 格式化</button>
           <button class="btn2 ghost" id="codexCheckBtn">[ic:search] 校验</button>
@@ -66,7 +66,7 @@
         <div class="row" style="justify-content:flex-start;margin-bottom:6px;font-size:11px;color:var(--sub)">
           <span>[ic:movie] 线=过程 · 点=节拍 · 分支=岔口（[ic:shuffle] 选项 / [ic:lock] 条件）。点「线」或任意「点」即可编辑该线步骤。</span>
         </div>
-        <div id="cxGraphCanvas" style="width:100%;height:320px;overflow:auto;background:var(--bg,#0d0d12);border:1px solid var(--line);border-radius:8px"></div>
+        <div id="cxGraphCanvas" style="width:100%;height:320px;overflow:auto;background:var(--bg);border:1px solid var(--line);border-radius:8px"></div>
         <!-- 场景步骤编辑器 -->
         <div id="cxSceneEdit" style="display:none;margin-top:8px;border-top:1px solid var(--line);padding-top:8px"></div>
       </div>
@@ -84,7 +84,7 @@
       直接粘贴剧本内容，或按约定写纯文本剧本自动转成可播格式：<br>
  【场景】标题 · 【背景】xxx / 【音乐】xxx · &gt; 旁白 · 角色名：台词 · 【选项】后跟 “- 文字 → s2” · 【跳转】s2 · 【结局】标题
  </div>
-    <textarea id="codexPasteInput" rows="12" style="width:100%;font-family:monospace;font-size:12px;background:var(--bg,#111);color:var(--text,#ddd);border:1px solid var(--line);border-radius:6px;padding:8px" placeholder="粘贴 JSON 或纯文本剧本…"></textarea>
+    <textarea id="codexPasteInput" rows="12" style="width:100%;font-family:monospace;font-size:12px;background:var(--bg);color:var(--text,#ddd);border:1px solid var(--line);border-radius:6px;padding:8px" placeholder="粘贴 JSON 或纯文本剧本…"></textarea>
     <div class="row" style="margin-top:8px">
       <button class="btn2" id="codexPasteConvertBtn">[ic:auto_fix_high] 自动转化</button>
       <button class="btn2 ghost" onclick="document.getElementById('codexPasteModal').classList.remove('open')">取消</button>
@@ -106,7 +106,7 @@
     </div>
     <div style="display:flex;flex:1;min-height:0;gap:8px;padding:0 12px 12px">
       <div style="flex:1;display:flex;flex-direction:column;min-width:0">
-        <textarea id="codexTplInput" spellcheck="false" style="flex:1;min-height:0;width:100%;font-family:monospace;font-size:12px;background:var(--bg,#111);color:var(--text,#ddd);border:1px solid var(--line);border-radius:6px;padding:8px;white-space:pre"></textarea>
+        <textarea id="codexTplInput" spellcheck="false" style="flex:1;min-height:0;width:100%;font-family:monospace;font-size:12px;background:var(--bg);color:var(--text,#ddd);border:1px solid var(--line);border-radius:6px;padding:8px;white-space:pre"></textarea>
         <div class="row" style="margin-top:6px">
           <button class="btn2" id="codexTplPlayBtn">[ic:play] 试玩</button>
           <button class="btn2 ghost" id="codexTplSaveBtn">[ic:save] 保存模板</button>

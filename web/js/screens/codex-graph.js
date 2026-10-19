@@ -141,7 +141,7 @@ function codexEditSceneGraph(sid) {
   var h = document.createElement('div');
   h.className = 'row';
   h.style.cssText = 'justify-content:flex-start;align-items:center;margin-bottom:6px';
-  h.innerHTML = '<b style="font-size:14px">场景 ' + escapeHtml(sc.id) + '</b> <input id="cxSceneTitle" style="flex:1;min-width:120px;background:var(--bubble,#161b22);border:1px solid var(--line);border-radius:6px;color:var(--text,#ddd);padding:5px 8px;font-size:13px">';
+  h.innerHTML = '<b style="font-size:14px">场景 ' + escapeHtml(sc.id) + '</b> <input id="cxSceneTitle" style="flex:1;min-width:120px;background:var(--bubble);border:1px solid var(--line);border-radius:6px;color:var(--text,#ddd);padding:5px 8px;font-size:13px">';
   panel.appendChild(h);
   document.getElementById('cxSceneTitle').value = sc.title || '';
   document.getElementById('cxSceneTitle').oninput = function () { sc.title = this.value; };
@@ -168,7 +168,7 @@ function codexEditSceneGraph(sid) {
   }
   function renderStepRow(sc, ln, i) {
     var row = document.createElement('div');
-    row.style.cssText = 'display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:4px 0;padding:6px;border:1px solid var(--line);border-radius:6px;background:var(--bubble,#161b22)';
+    row.style.cssText = 'display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:4px 0;padding:6px;border:1px solid var(--line);border-radius:6px;background:var(--bubble)';
     var selKind = document.createElement('select');
     Object.keys(_gKindNames).forEach(function (k) { var o = document.createElement('option'); o.value = k; o.textContent = _gKindNames[k]; selKind.appendChild(o); });
     selKind.value = ln.kind || 'say';
@@ -188,14 +188,14 @@ function codexEditSceneGraph(sid) {
       row.appendChild(inp);
     } else {
       inp = mkInput(ln.text || '', '台词文本', function (v) { ln.text = v; });
-      inp.style.cssText = 'flex:2;min-width:150px;background:var(--bubble,#161b22);border:1px solid var(--line);border-radius:6px;color:var(--text,#ddd);padding:5px 8px;font-size:12px';
+      inp.style.cssText = 'flex:2;min-width:150px;background:var(--bubble);border:1px solid var(--line);border-radius:6px;color:var(--text,#ddd);padding:5px 8px;font-size:12px';
       row.appendChild(inp);
       if (ln.kind === 'say') {
         var sp = mkInput(ln.sprite || '', '立绘文件', function (v) { ln.sprite = v; });
-        sp.style.cssText = 'flex:1;min-width:80px;background:var(--bubble,#161b22);border:1px solid var(--line);border-radius:6px;color:var(--text,#ddd);padding:5px 8px;font-size:12px';
+        sp.style.cssText = 'flex:1;min-width:80px;background:var(--bubble);border:1px solid var(--line);border-radius:6px;color:var(--text,#ddd);padding:5px 8px;font-size:12px';
         row.appendChild(sp);
         var vo = mkInput(ln.voice || '', '语音', function (v) { ln.voice = v; });
-        vo.style.cssText = 'flex:1;min-width:80px;background:var(--bubble,#161b22);border:1px solid var(--line);border-radius:6px;color:var(--text,#ddd);padding:5px 8px;font-size:12px';
+        vo.style.cssText = 'flex:1;min-width:80px;background:var(--bubble);border:1px solid var(--line);border-radius:6px;color:var(--text,#ddd);padding:5px 8px;font-size:12px';
         row.appendChild(vo);
       }
       if (ln.kind === 'setflag') { var fk = mkInput((ln.flag && ln.flag.k) || '', 'flag 名', function (v) { ln.flag = { k: v, v: true }; }); row.appendChild(fk); }
@@ -209,9 +209,9 @@ function codexEditSceneGraph(sid) {
   function renderChoiceItem(row, ln, o) {
     var box = document.createElement('span');
     box.style.cssText = 'display:inline-flex;gap:4px;align-items:center;margin:2px 4px';
-    var ot = document.createElement('input'); ot.value = o.text || ''; ot.placeholder = '选项文字'; ot.style.cssText = 'background:var(--bubble,#161b22);border:1px solid var(--line);border-radius:6px;color:var(--text,#ddd);padding:3px 6px;font-size:12px;width:110px'; ot.oninput = function () { o.text = ot.value; }; box.appendChild(ot);
-    var og = document.createElement('input'); og.value = o.goto || ''; og.placeholder = 'goto'; og.style.cssText = 'background:var(--bubble,#161b22);border:1px solid var(--line);border-radius:6px;color:var(--text,#ddd);padding:3px 6px;font-size:12px;width:70px'; og.oninput = function () { o.goto = og.value; }; box.appendChild(og);
-    var oc = document.createElement('input'); oc.value = o.if ? JSON.stringify(o.if) : ''; oc.placeholder = '条件 {aff:>=85}'; oc.style.cssText = 'background:var(--bubble,#161b22);border:1px solid rgba(245,158,11,.4);border-radius:6px;color:var(--warn);padding:3px 6px;font-size:12px;width:150px'; oc.oninput = function () { try { o.if = oc.value.trim() ? JSON.parse(oc.value) : undefined; } catch (e) { o.if = undefined; } }; box.appendChild(oc);
+    var ot = document.createElement('input'); ot.value = o.text || ''; ot.placeholder = '选项文字'; ot.style.cssText = 'background:var(--bubble);border:1px solid var(--line);border-radius:6px;color:var(--text,#ddd);padding:3px 6px;font-size:12px;width:110px'; ot.oninput = function () { o.text = ot.value; }; box.appendChild(ot);
+    var og = document.createElement('input'); og.value = o.goto || ''; og.placeholder = 'goto'; og.style.cssText = 'background:var(--bubble);border:1px solid var(--line);border-radius:6px;color:var(--text,#ddd);padding:3px 6px;font-size:12px;width:70px'; og.oninput = function () { o.goto = og.value; }; box.appendChild(og);
+    var oc = document.createElement('input'); oc.value = o.if ? JSON.stringify(o.if) : ''; oc.placeholder = '条件 {aff:>=85}'; oc.style.cssText = 'background:var(--bubble);border:1px solid rgba(245,158,11,.4);border-radius:6px;color:var(--warn);padding:3px 6px;font-size:12px;width:150px'; oc.oninput = function () { try { o.if = oc.value.trim() ? JSON.parse(oc.value) : undefined; } catch (e) { o.if = undefined; } }; box.appendChild(oc);
     var del = document.createElement('button'); del.textContent = '[ic:close]'; del.className = 'btn2 ghost'; del.style.cssText = 'color:var(--danger);font-size:11px;padding:2px 6px'; del.onclick = function () { ln.choice = ln.choice.filter(function (x) { return x !== o; }); renderSteps(); }; box.appendChild(del);
     row.appendChild(box);
   }
@@ -221,7 +221,7 @@ function codexEditSceneGraph(sid) {
   function mkInput(val, ph, cb) {
     var x = document.createElement('input'); x.value = val; x.placeholder = ph; firstInput(x); return x;
   }
-  function firstInput(x) { x.style.cssText = 'flex:1;min-width:90px;background:var(--bubble,#161b22);border:1px solid var(--line);border-radius:6px;color:var(--text,#ddd);padding:5px 8px;font-size:12px'; x.oninput = function () { cb(x.value); }; }
+  function firstInput(x) { x.style.cssText = 'flex:1;min-width:90px;background:var(--bubble);border:1px solid var(--line);border-radius:6px;color:var(--text,#ddd);padding:5px 8px;font-size:12px'; x.oninput = function () { cb(x.value); }; }
   renderSteps();
   codexRenderGraph();
 }

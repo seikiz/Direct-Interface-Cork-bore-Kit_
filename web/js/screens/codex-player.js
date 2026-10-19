@@ -47,7 +47,10 @@ window.CodexPlayer = (function (global) {
         var lbl = sc.title || sc.id || ('章节 ' + (idx + 1));
         var b = document.createElement('button');
         b.textContent = (idx === 0 ? '▶ ' : '[ic:menu_book] ') + lbl;
+        // contrast-skip:fixed-dark —— 这一条画在 #codexPlayer 的纯黑幕里（同名围栏见 web/screens/codex.html）：
+        // 白色 6% 覆层盖在黑幕上，浅色主题下播放器仍是黑的，所以底色不跟主题换。
         b.style.cssText = 'display:block;width:100%;text-align:left;margin:3px 0;padding:5px 10px;font-size:13px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.15);color:var(--text);border-radius:6px;cursor:pointer';
+        // /contrast-skip
         b.onclick = function (e) {
           e.stopPropagation();
           document.getElementById('cxTitle').style.display = 'none';
