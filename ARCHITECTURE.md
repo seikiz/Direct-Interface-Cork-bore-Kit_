@@ -131,6 +131,8 @@ shells             壳层：桌面主程序 / net.py / 安卓 / 播放器 ——
 |---|---|---|---|
 | 2026-10-18 | 建立本文件 | 项目进入运维期，先把初衷与边界写死 | seiki |
 | 2026-10-19 | `modules/backup` 公开接口新增 `bind(host, crypto)`：加解密由宿主注入（接口签名快照已同步）；`workshop.export` 的保存对话框改走宿主端口 `_pick_save_path`；`kernel` 自检去掉 `/tmp` 字面量；`crypto_core` 的共享叶子库白名单随之清空（模块已不再 import 它） | 搬家测试（十二）发现块长在宿主身上：backup 直接 `import crypto_core`、workshop 直接 `import pywebview` 并读 `webview.windows` 全局单例 —— 搬去别的项目当场 ModuleNotFoundError。改完三块 `portable` 全过 | seiki |
+| 2026-10-20 | **第二批块迁移**（原 3 块 → 6 块）：新增 `modules/image_gen`（四后端生图，10 文件）、`modules/voice`（utau/hanasu 两引擎，9 文件）、`modules/codex`（2030 行按 400 行预算拆 9 个实现文件 + 接口表，17 文件）。三个仓库根模块降级为**门面**（`image_gen.py` / `voice_engine.py` / `codex_core.py` 只转调，函数名一个不少），主程序 `Direct-Interface Cork-bore Kit.py` **0 行改动**。`bind(host)` 新增注入项：image_gen 的 `time/proxy/log/progress`、voice 的 `utau_python/voicebank/utau_speak/synth/synth_ready/voicevox_url`、codex 的 `codex_dir/mark`。为了 `shared-state = 0`，`modules/codex/constants.py` 的两张查表与 `modules/image_gen/presets.py` 的 `PRESETS` 改成只读视图/元组。接口签名快照新增 3 块（走 `--accept-signatures`）；`tests/test_kernel_boundaries.py`、`tests/test_block_portability.py` 里写死的"三块"改"六块"。`python tools/accept.py` → `ALL_BLOCKS_OK portable: 6/6` | 搬家测试（十二）要求块只依赖 stdlib + kernel，但三块原先把宿主当自己的地基：codex 在导出播放器里 `import dick_mark`、voice 在进程内合成里 `import putao` 并把 `utau_env\Scripts\python.exe` 与 `utau_voicebanks\默认声库` 写死成相对仓库根的路径（260 行里有 3 处）、image_gen 则被主程序按模块级函数直调、无法脱离界面测四个后端的协议。它们搬去别的项目都会当场 ModuleNotFoundError。另外 `codex_core.py` 单文件 2030 行早已超过 400 行预算（九.1），必须按块拆分。改完三块 `portable:true`，全套 95 脚本 / 0 失败 | seiki |
+| 2026-10-19 | App.kt 行数上限 30 -> 40 | 安卓主题根必须包在 App() 里（弹窗原先落在 DickTheme 之外 -> M3 默认浅色 -> 白底/黑字看不清），一次性 +6 行为接线、非功能膨胀；边界审计 0 违规、主题角色测试全绿 | seiki |
 
 
 ---
@@ -263,3 +265,5 @@ python tools/accept.py          # 全块自检 + 依赖环 + 行数 + 边界 + �
 - 以后做新软件（另一个 App、一个插件、一个命令行工具）可以直接把 `modules/<id>/` 整目录拷过去，改 `manifest.json` 就能用；
 - 因为没有宿主依赖，所以**不会传染**：宿主怎么改都不会把块改坏，反之亦然；
 - "抄自己"是这套结构给的正当权利——**唯一的前提是：块本身搬得动**。
+
+<!-- <seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌ -->

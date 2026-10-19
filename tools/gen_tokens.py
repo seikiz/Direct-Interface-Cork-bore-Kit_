@@ -7,7 +7,7 @@
 `DICK-Android/.../Theme.kt` 的 `THEMES`/`ACCENTS`、以及组件里几百处 `Color(0xFF…)` 与
 `#rrggbb`。三处对不上就是"两端漂"：网页改了安卓没改，或者浅色主题下某块面板还是深色。
 
-现在**唯一真相是 `design/tokens.json`**（14 个颜色角色 × 暗/浅 + 圆角/间距/字号阶梯），
+现在**唯一真相是 `design/tokens.json`**（19 个颜色角色 × 暗/浅 + 圆角/间距/字号阶梯），
 两端产物由本脚本生成：
 
   · `web/theme.css`      `:root{…}`（暗色默认）+ `@media (prefers-color-scheme:light)`（浅色覆写）
@@ -51,8 +51,12 @@ KT_OUT = os.path.join(ROOT, "DICK-Android", "app", "src", "main", "java", "com",
                       "app", "ui", "theme", "Tokens.kt")
 
 # 颜色角色：暗/浅必须同名同数（顺序即 CSS / Kotlin 字段顺序）
+# 前 14 个是"跟着主题变"的语义色；后 5 个是 2026-12 加的**恒定角色**（三套主题同值，
+# 见 tokens.json 的 _why_fixed）：幕布/裁剪台/身份色上的墨。它们进这张表的理由是
+# "颜色只许从令牌来" —— 恒定的颜色也是颜色，留在代码里就是野生 hex。
 ROLES = ["bg", "surface", "surface_2", "border", "border_strong", "text", "text_sub",
-         "text_dim", "accent", "accent_text", "danger", "warn", "ok", "focus_ring"]
+         "text_dim", "accent", "accent_text", "danger", "warn", "ok", "focus_ring",
+         "scrim", "scrim_soft", "stage", "stage_line", "on_identity"]
 # 非颜色令牌：名字 → 生成时的后缀单位
 SIZES = {
     "radius": ["sm", "md", "lg", "pill"],
@@ -61,7 +65,9 @@ SIZES = {
     "line_height": ["tight", "normal", "loose"],
     "icon_size": ["sm", "md", "lg", "xl"],
 }
-HEX = re.compile(r"^#[0-9a-fA-F]{6}$")
+# 6 位 = #rrggbb（不透明）；8 位 = #rrggbbaa（CSS Color 4 的写法，给幕布/遮罩用）。
+# 令牌里**允许**带 alpha，是为了让"80% 的幕布"也是一个令牌，而不是代码里 copy(alpha = 0.8f)。
+HEX = re.compile(r"^#(?:[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$")
 ZW = re.compile(u"[\u200b-\u200f\u2060\ufeff\u00ad]+")
 
 HEADER_CSS = (u"/* 生成物：由 tools/gen_tokens.py 从 design/tokens.json 生成，别手改。\n"
@@ -244,8 +250,15 @@ def _num(v):
 
 # ---------------- Android Tokens.kt ----------------
 def c(hexv):
-    """'#0f1115' → 'Color(0xFF0F1115)'（Compose 要求 AARRGGBB）。"""
-    return u"Color(0xFF%s)" % hexv.lstrip(u"#").upper()
+    """'#0f1115' → 'Color(0xFF0F1115)'（Compose 要求 AARRGGBB）。
+
+    8 位 '#rrggbbaa'（CSS 写法）要**转序**成 AARRGGBB：'#0a0c10cc' → 'Color(0xCC0A0C10)'。
+    转错的话幕布会变成完全不透明的黑，界面直接黑屏，所以这里单独一条分支 + 测试。
+    """
+    h = hexv.lstrip(u"#").upper()
+    if len(h) == 8:
+        return u"Color(0x%s%s)" % (h[6:8], h[0:6])
+    return u"Color(0xFF%s)" % h
 
 
 def _kt_palette(pal, indent=u"        "):
@@ -264,6 +277,7 @@ def gen_kt(data):
     o.append(u"import androidx.compose.material3.MaterialTheme")
     o.append(u"import androidx.compose.material3.darkColorScheme")
     o.append(u"import androidx.compose.material3.lightColorScheme")
+    o.append(u"import androidx.compose.material3.LocalContentColor")
     o.append(u"import androidx.compose.runtime.Composable")
     o.append(u"import androidx.compose.runtime.CompositionLocalProvider")
     o.append(u"import androidx.compose.runtime.staticCompositionLocalOf")
@@ -362,7 +376,14 @@ def gen_kt(data):
     o.append(u"    ) else darkColorScheme(")
     o.extend(_scheme_args())
     o.append(u"    )")
-    o.append(u"    CompositionLocalProvider(LocalDickPalette provides pal) {")
+    o.append(u"    CompositionLocalProvider(")
+    o.append(u"        LocalDickPalette provides pal,")
+    o.append(u"        // 兜底文字色：Compose 的 LocalContentColor 默认是 **纯黑**，谁没显式给色就压黑字 ——")
+    o.append(u"        // 深色主题下等于看不见（2026-12「选中卡片标题发暗/看不清」就是这条链路：")
+    o.append(u"        // Surface 的 contentColorFor() 认不出自定义令牌色 → 退回 LocalContentColor → 黑）。")
+    o.append(u"        // 在主题根上把它指到 pal.text：任何没写 color 的 Text/IconText 也永远跟随令牌。")
+    o.append(u"        LocalContentColor provides pal.text,")
+    o.append(u"    ) {")
     o.append(u"        MaterialTheme(colorScheme = scheme, content = content)")
     o.append(u"    }")
     o.append(u"}")
@@ -375,11 +396,31 @@ for _r in ROLES:
 
 
 def _scheme_args():
+    """MaterialTheme 只映射这几个槽位（不整套替换，见 gen_kt 的注释）。
+
+    2026-10 事故：原来只映射了 surface/background/primary/error/outline，
+    AlertDialog 取的是 surfaceContainerHigh —— 没映射就落回 M3 默认淡紫（#F7F2FA），
+    深色主题下弹窗白得像硬编码。当时的修法是**手改 Tokens.kt**，于是生成器与产物漂了
+    （`--check` 直接判过期）。现在这些槽位写在生成器里：产物与令牌永远同源，
+    `tests/test_android_theme_roles.py` 继续盯"每个容器角色映射了 2 次"。
+    scrim 走令牌 pal.scrim（原来写死 Color.Black，是 Tokens.kt 里最后两处字面色）。
+    """
     return [
         u"        primary = acc, onPrimary = pal.accentText,",
         u"        background = pal.bg, onBackground = pal.text,",
         u"        surface = pal.surface, onSurface = pal.text,",
         u"        surfaceVariant = pal.surface2, onSurfaceVariant = pal.textSub,",
+        u"        // 容器类角色（弹窗/抽屉/卡片用它）：不映射就会落回 M3 默认淡紫，",
+        u"        // 深色主题下弹窗会白得像硬编码（2026-10 用户截图就是这个问题）。",
+        u"        surfaceContainerLowest = pal.bg,",
+        u"        surfaceContainerLow = pal.surface,",
+        u"        surfaceContainer = pal.surface,",
+        u"        surfaceContainerHigh = pal.surface2,",
+        u"        surfaceContainerHighest = pal.surface2,",
+        u"        surfaceBright = pal.surface2,",
+        u"        surfaceDim = pal.bg,",
+        u"        inverseSurface = pal.text, inverseOnSurface = pal.surface,",
+        u"        scrim = pal.scrim,",
         u"        outline = pal.border, outlineVariant = pal.borderStrong,",
         u"        error = pal.danger, onError = pal.accentText,",
     ]

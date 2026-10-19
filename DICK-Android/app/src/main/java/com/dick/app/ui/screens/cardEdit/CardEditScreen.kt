@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -233,7 +232,7 @@ fun CardEditScreen(vm: ChatViewModel, deps: DialogDeps) {
             }
         }
     }
-    AlertDialog(
+    DickDialog(
         onDismissRequest = { roleEditName = null },
         title = { Text(if (editing.isBlank()) I18n.t("btn_new_role", "新建角色") else "编辑角色：" + editing) },
         text = {
@@ -649,9 +648,11 @@ fun CardEditScreen(vm: ChatViewModel, deps: DialogDeps) {
         dismissButton = { TextButton(onClick = { roleEditName = null }) { Text(I18n.t("btn_cancel", "取消")) } },
     )
     if (rCardFacePrev) {
-        AlertDialog(
+        // 空卡面的占位文字色也走令牌（原来 HTML 里写死灰值：深色底上只有 3.0:1，看不清）
+        val hintCss = LocalDickPalette.current.textSub.toCssHex()
+        DickDialog(
             onDismissRequest = { rCardFacePrev = false },
-            text = { HtmlCard(rCardFace.ifBlank { "<div style='color:#666;padding:20px'>（空卡面，保存后生效）</div>" }, Modifier.fillMaxWidth().height(400.dp)) },
+            text = { HtmlCard(rCardFace.ifBlank { "<div style='color:$hintCss;padding:20px'>（空卡面，保存后生效）</div>" }, Modifier.fillMaxWidth().height(400.dp)) },
             confirmButton = {},
             dismissButton = { TextButton(onClick = { rCardFacePrev = false }) { Text(I18n.t("btn_cancel", "关闭")) } },
         )

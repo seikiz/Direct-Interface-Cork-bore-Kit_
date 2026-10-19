@@ -20,6 +20,11 @@
   --warn:#f59e0b;
   --ok:#4ade80;
   --focus-ring:#93c5fd;
+  --scrim:#0a0c10cc;
+  --scrim-soft:#00000099;
+  --stage:#111111;
+  --stage-line:#ffffff;
+  --on-identity:#0b1220;
   /* 尺寸令牌（px；行高是倍数） */
   --radius-sm:6px;
   --radius-md:12px;
@@ -64,6 +69,11 @@
     --warn:#b45309;
     --ok:#15803d;
     --focus-ring:#1d4ed8;
+    --scrim:#0a0c10cc;
+    --scrim-soft:#00000099;
+    --stage:#111111;
+    --stage-line:#ffffff;
+    --on-identity:#0b1220;
   }
 }
 /* body.dark —— 显式选深色：系统即使是浅色也压回暗色 */
@@ -83,6 +93,11 @@ body.dark{
   --warn:#f59e0b;
   --ok:#4ade80;
   --focus-ring:#93c5fd;
+  --scrim:#0a0c10cc;
+  --scrim-soft:#00000099;
+  --stage:#111111;
+  --stage-line:#ffffff;
+  --on-identity:#0b1220;
 }
 /* body.light —— 显式选浅色 */
 body.light{
@@ -101,6 +116,11 @@ body.light{
   --warn:#b45309;
   --ok:#15803d;
   --focus-ring:#1d4ed8;
+  --scrim:#0a0c10cc;
+  --scrim-soft:#00000099;
+  --stage:#111111;
+  --stage-line:#ffffff;
+  --on-identity:#0b1220;
 }
 /* body.oled —— OLED：暗色压黑（只有 bg/surface/surface_2 换，其它角色共用暗色） */
 body.oled{
@@ -119,6 +139,11 @@ body.oled{
   --warn:#f59e0b;
   --ok:#4ade80;
   --focus-ring:#93c5fd;
+  --scrim:#0a0c10cc;
+  --scrim-soft:#00000099;
+  --stage:#111111;
+  --stage-line:#ffffff;
+  --on-identity:#0b1220;
 }
 /* 旧变量名 → 语义令牌（一次性映射，见 tokens.json 的 web_aliases）：
    网页现有 CSS 与 JS 还在用 --panel/--bubble/--sub/--line/--user，这里让它们指向新角色。

@@ -8,6 +8,7 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.staticCompositionLocalOf
@@ -32,7 +33,12 @@ data class DickPalette(
     val danger: Color,
     val warn: Color,
     val ok: Color,
-    val focusRing: Color
+    val focusRing: Color,
+    val scrim: Color,
+    val scrimSoft: Color,
+    val stage: Color,
+    val stageLine: Color,
+    val onIdentity: Color
 )
 
 /** 一枚可选强调色：暗色 / 浅色各一个（浅色底上原亮色当文字色不达标，另给深色版）。 */
@@ -65,6 +71,11 @@ object DickTokens {
         warn = Color(0xFFF59E0B),
         ok = Color(0xFF4ADE80),
         focusRing = Color(0xFF93C5FD),
+        scrim = Color(0xCC0A0C10),
+        scrimSoft = Color(0x99000000),
+        stage = Color(0xFF111111),
+        stageLine = Color(0xFFFFFFFF),
+        onIdentity = Color(0xFF0B1220),
     )
     /** 浅色（跟随系统时用） */
     val light = DickPalette(
@@ -82,6 +93,11 @@ object DickTokens {
         warn = Color(0xFFB45309),
         ok = Color(0xFF15803D),
         focusRing = Color(0xFF1D4ED8),
+        scrim = Color(0xCC0A0C10),
+        scrimSoft = Color(0x99000000),
+        stage = Color(0xFF111111),
+        stageLine = Color(0xFFFFFFFF),
+        onIdentity = Color(0xFF0B1220),
     )
     /** OLED：暗色压黑 */
     val oled = DickPalette(
@@ -99,6 +115,11 @@ object DickTokens {
         warn = Color(0xFFF59E0B),
         ok = Color(0xFF4ADE80),
         focusRing = Color(0xFF93C5FD),
+        scrim = Color(0xCC0A0C10),
+        scrimSoft = Color(0x99000000),
+        stage = Color(0xFF111111),
+        stageLine = Color(0xFFFFFFFF),
+        onIdentity = Color(0xFF0B1220),
     )
 
     /** 可选强调色（与网页端 ACCENTS 同一份） */
@@ -187,7 +208,7 @@ fun DickTheme(
         surfaceBright = pal.surface2,
         surfaceDim = pal.bg,
         inverseSurface = pal.text, inverseOnSurface = pal.surface,
-        scrim = Color.Black,
+        scrim = pal.scrim,
         outline = pal.border, outlineVariant = pal.borderStrong,
         error = pal.danger, onError = pal.accentText,
     ) else darkColorScheme(
@@ -205,11 +226,18 @@ fun DickTheme(
         surfaceBright = pal.surface2,
         surfaceDim = pal.bg,
         inverseSurface = pal.text, inverseOnSurface = pal.surface,
-        scrim = Color.Black,
+        scrim = pal.scrim,
         outline = pal.border, outlineVariant = pal.borderStrong,
         error = pal.danger, onError = pal.accentText,
     )
-    CompositionLocalProvider(LocalDickPalette provides pal) {
+    CompositionLocalProvider(
+        LocalDickPalette provides pal,
+        // 兜底文字色：Compose 的 LocalContentColor 默认是 **纯黑**，谁没显式给色就压黑字 ——
+        // 深色主题下等于看不见（2026-12「选中卡片标题发暗/看不清」就是这条链路：
+        // Surface 的 contentColorFor() 认不出自定义令牌色 → 退回 LocalContentColor → 黑）。
+        // 在主题根上把它指到 pal.text：任何没写 color 的 Text/IconText 也永远跟随令牌。
+        LocalContentColor provides pal.text,
+    ) {
         MaterialTheme(colorScheme = scheme, content = content)
     }
 }

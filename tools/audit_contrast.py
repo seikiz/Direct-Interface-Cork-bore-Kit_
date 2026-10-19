@@ -156,12 +156,19 @@ RE_RGBA = re.compile(r"rgba?\(\s*\d+\s*,\s*\d+\s*,\s*\d+")
 RE_COMPOSE = re.compile(r"Color\(\s*0x([0-9a-fA-F]{6,8})\s*\)")
 
 
-def _norm_hex(h):
+def _norm_hex(h, compose=False):
+    """归一成 #rrggbb。
+
+    `compose=True` 表示这串来自 `Color(0xAARRGGBB)`：Compose 的 alpha 在**前面**，
+    而 CSS 的 `#rrggbbaa` 在**后面**。2026-12 修：原来一律按 CSS 处理，于是
+    `Color(0xFF60A5FA)` 被归一成 "#ff60a5"，令牌里的 #60a5fa 永远匹配不上 ——
+    Theme.kt 那 8 枚身份色被误报成"不在令牌里"（Android 漂移数虚高 8 处）。
+    """
     h = h.lstrip(u"#").lower()
     if len(h) == 3:
         h = u"".join(ch * 2 for ch in h)
-    if len(h) == 8:          # #rrggbbaa → 丢掉 alpha（漂移清单只关心色相/明度）
-        h = h[:6]
+    if len(h) == 8:          # 丢掉 alpha（漂移清单只关心色相/明度）
+        h = h[2:] if compose else h[:6]
     return u"#" + h
 
 
@@ -223,7 +230,8 @@ def scan_drift(data):
             for m in RE_RGBA.finditer(line):
                 found.append(m.group(0).replace(u" ", u""))
             for m in RE_COMPOSE.finditer(line):
-                found.append(_norm_hex(u"#" + m.group(1)))
+                # Compose 是 AARRGGBB：alpha 在前，归一化时要丢掉前两位（见 _norm_hex）
+                found.append(_norm_hex(u"#" + m.group(1), compose=True))
             if not found:
                 continue
             total += len(found)

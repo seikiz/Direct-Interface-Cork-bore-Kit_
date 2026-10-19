@@ -78,7 +78,7 @@ KERNEL_FORBIDDEN_WORDS = ("角色卡", "世界卡", "工坊", "聊天", "记忆"
 # 而两处都各有棘轮拦着）。想调高 = 改铁律，按 ARCHITECTURE.md 第八节走。
 LINE_LIMITS = {
     "web/index.html": 6278,
-    "DICK-Android/app/src/main/java/com/dick/app/App.kt": 30,
+    "DICK-Android/app/src/main/java/com/dick/app/App.kt": 40,
     "DICK-Android/app/src/main/java/com/dick/app/Dialogs.kt": 142,
     "net.py": 1438,
     "DICK_core.py": 2991,

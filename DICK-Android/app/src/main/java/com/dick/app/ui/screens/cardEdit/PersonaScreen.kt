@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -97,7 +96,7 @@ fun PersonaScreen(vm: ChatViewModel, deps: DialogDeps) {
     }
     var foldPBattle by remember { mutableStateOf(pBattleEnabled) }
     var foldPRegex by remember { mutableStateOf(pRegex.isNotBlank()) }
-    AlertDialog(
+    DickDialog(
         onDismissRequest = { showPersonaEdit = false },
         title = { Text(I18n.t("btn_persona_card", "玩家角色卡")) },
         text = {

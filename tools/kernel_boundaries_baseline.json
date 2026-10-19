@@ -5,7 +5,7 @@
   "whitelist_count": 0,
   "limits": {
     "web/index.html": 6278,
-    "DICK-Android/app/src/main/java/com/dick/app/App.kt": 30,
+    "DICK-Android/app/src/main/java/com/dick/app/App.kt": 40,
     "DICK-Android/app/src/main/java/com/dick/app/Dialogs.kt": 142,
     "net.py": 1438,
     "DICK_core.py": 2991,

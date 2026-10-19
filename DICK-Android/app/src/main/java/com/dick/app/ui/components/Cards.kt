@@ -61,6 +61,12 @@ fun DickSurfaceTone.color(): Color {
  * `outline` / `outlineWidth`（2026-12 加）是**描边**，默认不画（null = 与加它之前逐像素一致）：
  * 用户反馈工坊的列表项「看起来不像卡片」——纯底色在浅色主题下是白压白、在暗色下是一块灰。
  * 需要「看得出是卡片」的地方传 `theme.line`，选中态传 `theme.palette.accent`。
+ *
+ * `contentColor`（2026-12 加，必须显式给）：Material3 的 `Surface` 会拿 `color` 去反查
+ * `contentColorFor()`，而那张表只认它自己的语义槽位 —— 自定义令牌色（surface_2 这一档）
+ * 查不到就退回 `LocalContentColor.current`。用户反馈「选中项是深蓝底、标题字发暗几乎看不清」
+ * 就是这条链路（弹窗里那个 MaterialTheme 是默认浅色，onSurface 近黑 → 深底压黑字）。
+ * 所以卡片统一 `contentColor = 令牌 text`，不再靠 M3 推导。
  */
 @Composable
 fun DickCard(
@@ -74,6 +80,8 @@ fun DickCard(
     Surface(
         shape = RoundedCornerShape(radius),
         color = tone.color(),
+        // 卡片内的字一律用正文令牌（不看 M3 的 contentColorFor 猜）。
+        contentColor = LocalDickPalette.current.text,
         border = outline?.let { BorderStroke(outlineWidth, it) },
         modifier = modifier,
         content = content,

@@ -15,6 +15,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.viewinterop.AndroidView
 import com.dick.core.AppEnv
@@ -119,7 +120,11 @@ fun IconText(
     modifier: Modifier = Modifier,
     fontSize: TextUnit = TextUnit.Unspecified,
     fontWeight: FontWeight? = null,
-    color: Color = Color.Unspecified,
+    // 默认色从 `Color.Unspecified` 改成令牌 text（2026-12）：哨兵值会让 Text 退回
+    // `LocalContentColor`，而 Compose 给它的默认是**纯黑** —— 深色主题下没写字色的调用点
+    // 就是黑字压深底（用户反馈的「字发暗/看不见」）。显式传 `Color.Unspecified` 仍然
+    // 表示"跟随所在控件"（Button 的 onPrimary、禁用态等），那条路留给控件内部用。
+    color: Color = LocalDickPalette.current.text,
     iconSize: Dp = 16.dp,
     gap: Dp = 3.dp,
     maxLines: Int = Int.MAX_VALUE,
@@ -245,11 +250,14 @@ fun Avatar(name: String, cache: MutableMap<String, ImageBitmap?>) {
     if (bmp != null) {
         Image(bmp, contentDescription = null, modifier = Modifier.size(36.dp).clip(CircleShape))
     } else {
+        // 首字压的是**身份色**（speakerColor，不随主题）：白字压在那 8 枚亮身份色上只有
+        // 1.67~2.77:1（最亮那枚最差），全都不达标。改走令牌的 on_identity（深墨，最差 6.77:1）。
+        val pal = LocalDickPalette.current
         Box(
             modifier = Modifier.size(36.dp).clip(CircleShape).background(speakerColor(name)),
             contentAlignment = Alignment.Center,
         ) {
-            Text((name.ifBlank { "A" }).first().toString(), color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+            Text((name.ifBlank { "A" }).first().toString(), color = pal.onIdentity, fontSize = 16.sp, fontWeight = FontWeight.Bold)
         }
     }
 }
@@ -347,6 +355,17 @@ fun DrawerItem(label: String, arrow: Boolean = false, arrowAngle: Float = 0f, co
         if (arrow) Text("▸", modifier = Modifier.rotate(arrowAngle))
     }
 }
+/**
+ * 令牌色 → CSS 十六进制（`#rrggbb`）。
+ * 为什么要它：卡面是 WebView 里的 HTML，只能吃 CSS 颜色；以前占位文字在 HTML 里写死灰值，
+ * 深色主题下对 #1a1e26 只有 3.0:1（用户口径"看不清"）。有了这个函数，HTML 里的字色也从令牌来。
+ */
+fun Color.toCssHex(): String {
+    val a = toArgb()
+    return String.format(Locale.US, "#%02x%02x%02x",
+        (a shr 16) and 0xFF, (a shr 8) and 0xFF, a and 0xFF)
+}
+
 /** 卡面：把一段 HTML 渲染成 WebView（角色卡面可视化；非强制） */
 @Composable
 fun HtmlCard(html: String, modifier: Modifier = Modifier) {

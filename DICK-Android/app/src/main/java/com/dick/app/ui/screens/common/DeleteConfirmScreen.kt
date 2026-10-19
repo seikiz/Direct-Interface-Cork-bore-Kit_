@@ -5,7 +5,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -41,7 +40,7 @@ fun DeleteConfirmScreen(
     val pd = vm.pendingDelete.value ?: return
     val (name, kind) = pd
     val label = if (kind == "role") "角色卡「$name」" else "世界卡「$name」"
-    AlertDialog(
+    DickDialog(
         onDismissRequest = { vm.pendingDelete.value = null },
         title = { IconText("确认删除", icon = "warning") },
         text = {

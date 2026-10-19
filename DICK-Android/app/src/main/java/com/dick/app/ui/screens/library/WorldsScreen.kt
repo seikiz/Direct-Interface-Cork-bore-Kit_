@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -43,7 +42,7 @@ fun WorldsScreen(vm: ChatViewModel, deps: DialogDeps) {
     var showWorldEdit by vm.showWorldEdit
     var pendingDelete by vm.pendingDelete
     if (showWorlds) {
-        AlertDialog(
+        DickDialog(
             onDismissRequest = { showWorlds = false },
             title = { Text(I18n.t("dlg_worlds", "选择世界（多选=平行世界）")) },
             text = {

@@ -5,7 +5,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -93,7 +92,7 @@ fun TrpgScreen(vm: ChatViewModel, deps: DialogDeps) {
         vm.showTrpg.value = false; base = ""; roomId = ""; myPc = ""; story = emptyList(); pcs = emptyList(); action = ""; roomInfo = null
     }
 
-    AlertDialog(
+    DickDialog(
         onDismissRequest = { leaveAll() },
         title = { IconText("跑团 · 房间", icon = "theater_comedy") },
         text = {

@@ -28,7 +28,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.MaterialTheme
@@ -2638,7 +2637,10 @@ fun wsRefreshLocal() {
 
     // 首次启动引导框
     if (showGuide) {
-        Box(Modifier.fillMaxSize().background(Color(0xCC0A0C10)).clickable { }, contentAlignment = Alignment.Center) {
+        // 幕布走令牌（theme.palette.scrim = 80% 近黑石板）：原来这里是字面量 0xCC0A0C10。
+        // 令牌值就是那个字面量（换算回去逐位相同），所以观感不变；
+        // 但从此改幕布只需改 design/tokens.json，屏里再也拼不出野生 hex。
+        Box(Modifier.fillMaxSize().background(theme.palette.scrim).clickable { }, contentAlignment = Alignment.Center) {
             Surface(
                 modifier = Modifier.fillMaxWidth().padding(22.dp),
                 shape = RoundedCornerShape(16.dp),
@@ -2693,7 +2695,7 @@ fun wsRefreshLocal() {
     // ---------- 彻底清空历史（红色 · 二次确认） ----------
     if (showClearHistory) {
         var alsoClearMemory by remember { mutableStateOf(false) }
-        AlertDialog(
+        DickDialog(
             onDismissRequest = { showClearHistory = false },
             title = { IconText("彻底清空历史", color = theme.danger, icon = "warning") },
             text = {

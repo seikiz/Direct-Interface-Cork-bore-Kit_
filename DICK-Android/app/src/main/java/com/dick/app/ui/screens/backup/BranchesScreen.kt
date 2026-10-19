@@ -18,7 +18,6 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -70,7 +69,7 @@ fun BranchesScreen(
 ) {
     var showBranches by vm.showBranches
     if (showBranches) {
-        AlertDialog(
+        DickDialog(
             onDismissRequest = { showBranches = false },
             title = { IconText("回档（二维分支 · 双指缩放/拖动 · 点节点跳到那里）", icon = "account_tree") },
             text = { TreeGraph(vm, tree, mech, accent, saveTree, refreshChain, restoreOptions) },

@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -74,7 +73,7 @@ fun RolesScreen(vm: ChatViewModel, deps: DialogDeps) {
     var pendingDelete by vm.pendingDelete
     var saveRole by remember { mutableStateOf<String?>(null) }
     if (vm.showRoles.value) {
-    AlertDialog(
+    DickDialog(
         onDismissRequest = { vm.showRoles.value = false },
         title = { Text(I18n.t("dlg_roles", "选择角色（多选=群聊）")) },
         text = {

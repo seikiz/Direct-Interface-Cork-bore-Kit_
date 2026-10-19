@@ -1,7 +1,6 @@
 package com.dick.app
 
 import androidx.compose.foundation.layout.Column
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -32,7 +31,7 @@ fun EditMsgScreen(vm: ChatViewModel, deps: DialogDeps) {
     var editMsgText by vm.editMsgText
     if (editMsgTarget != null) {
         val target = editMsgTarget!!
-        AlertDialog(
+        DickDialog(
             onDismissRequest = { editMsgTarget = null },
             title = { Text(I18n.t("edit_title", "编辑消息")) },
             text = {

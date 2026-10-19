@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -25,7 +24,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
@@ -54,6 +52,9 @@ import java.io.File
 @Composable
 fun AvatarCropScreen(vm: ChatViewModel, deps: DialogDeps) {
     val theme = deps.theme
+    // 裁剪台/遮罩/框线都是「恒定角色」（design/tokens.json 的 stage / scrim_soft / stage_line，
+    // 三套主题同值）。它们仍然不随主题变，但不再是屏里的野生 hex。
+    val pal = theme.palette
     val cropBitmap = vm.cropBitmap
     val avatarTarget = vm.avatarTarget
     var cropScale by vm.cropScale
@@ -62,7 +63,7 @@ fun AvatarCropScreen(vm: ChatViewModel, deps: DialogDeps) {
     var cropStagePx by vm.cropStagePx
     if (cropBitmap.value != null && avatarTarget.value != null) {
         val bmp = cropBitmap.value!!
-        AlertDialog(
+        DickDialog(
             onDismissRequest = { vm.cropBitmap.value = null; vm.avatarTarget.value = null },
             title = { IconText("裁剪头像", icon = "content_cut") },
             text = {
@@ -71,9 +72,10 @@ fun AvatarCropScreen(vm: ChatViewModel, deps: DialogDeps) {
                         modifier = Modifier
                             .size(280.dp)
                             .clip(RoundedCornerShape(12.dp))
-                            // 裁剪台底板与遮罩**刻意**不进令牌<seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌：这里要的是"照片外面那圈中性黑"，
-                            // 跟主题深浅无关（浅色主题下变白会让裁剪边界糊掉），下面 4 条 0x99000000 同理。
-                            .background(Color(0xFF111111))
+                            // 裁剪台底板与遮罩走令牌里的恒定角色（stage / scrim_soft / stage_line）<seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌：这里要的是"照片外面那圈中性黑"，
+                            // 跟主题深浅无关（浅色主题下变白会让裁剪边界糊掉），所以令牌里给的是**恒定值**：
+                            // 三套主题同色 —— 「不进令牌」和「不随主题变」是两件事，前者才是硬编码。
+                            .background(pal.stage)
                             .onSizeChanged { cropStagePx = it.width.toFloat() }
                             .pointerInput(bmp) {
                                 detectTransformGestures { _, pan, zoom, _ ->
@@ -96,11 +98,11 @@ fun AvatarCropScreen(vm: ChatViewModel, deps: DialogDeps) {
                                 dstOffset = IntOffset(imgLeft.toInt(), imgTop.toInt())
                             )
                             val inset = s * 0.23f
-                            drawRect(Color(0x99000000), topLeft = Offset(0f, 0f), size = Size(s, inset))
-                            drawRect(Color(0x99000000), topLeft = Offset(0f, s - inset), size = Size(s, inset))
-                            drawRect(Color(0x99000000), topLeft = Offset(0f, inset), size = Size(inset, s - inset * 2))
-                            drawRect(Color(0x99000000), topLeft = Offset(s - inset, inset), size = Size(inset, s - inset * 2))
-                            drawRect(Color.White, topLeft = Offset(inset, inset),
+                            drawRect(pal.scrimSoft, topLeft = Offset(0f, 0f), size = Size(s, inset))
+                            drawRect(pal.scrimSoft, topLeft = Offset(0f, s - inset), size = Size(s, inset))
+                            drawRect(pal.scrimSoft, topLeft = Offset(0f, inset), size = Size(inset, s - inset * 2))
+                            drawRect(pal.scrimSoft, topLeft = Offset(s - inset, inset), size = Size(inset, s - inset * 2))
+                            drawRect(pal.stageLine, topLeft = Offset(inset, inset),
                                 size = Size(s - inset * 2, s - inset * 2),
                                 style = androidx.compose.ui.graphics.drawscope.Stroke(width = 6f))
                         }
