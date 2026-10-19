@@ -1,6 +1,6 @@
 # Direct-Interface Cork-bore Kit（DICK）
 
-> 本地 AI 角色扮演 / 交互叙事平台 · 树状记忆 · 机制养成 · 战斗系统 · CODEX 成作引擎
+> 本地 AI 角色扮演 / 交互叙事平台 · 树状记忆 · 机制养成 · CODEX 成作引擎
 > **电脑**（Python + pywebview）· **手机**（Kotlin + Compose）· **原生播放器**（Compose Multiplatform）
 > 免费 · 离线优先 · 数据全在你自己机器上
 
@@ -8,249 +8,143 @@
 
 ![GAL 制作器：线-点-分支节点图编辑器](docs/screens/gal-editor.png)
 
-## English (short)
+---
 
-**DICK** (Direct-Interface Cork-bore Kit) is a **local-first AI roleplay / interactive-narrative platform** —
-a lightweight alternative in the same sandbox as SillyTavern, focused on turning character cards into
-playable things (choice-driven scenes, mechanics/affection systems, one-click story export).
+## 一分钟看懂
 
-- **Three targets, one spec:** Python + pywebview desktop · Kotlin/Compose Android · Compose Multiplatform
-  native player (EXE & APK from the same codebase, not a web wrapper)
-- **~86k lines** of source · **22 plugins** (declarative settings/UI, lifecycle + context hooks) ·
-  **14 providers / 106 models** (incl. keyless & local Ollama) · **4 image-generation backends**
-  (OpenAI-compatible, keyless Pollinations, local A1111, local ComfyUI)
-- **Engineering discipline:** 64 test scripts / **1,583 assertions** run on Python 3.11 & 3.12 by GitHub
-  Actions; 120 icons code-generated from a single dictionary into Android VectorDrawables with drift tests;
-  battle formulas evaluated by an **AST whitelist (never `eval`)**; atomic-write save recovery; DPAPI-encrypted
-  keys; encrypted `.dickbackup` container with a **standalone decrypt tool**
-- **Runs from source:** `pip install -r requirements.txt` then `python "Direct-Interface Cork-bore Kit.py"`
-  (Python 3.11/3.12, Windows)
-- **Your data stays on your machine** · MIT licensed
-
-> The **UI ships in three languages** (中文 / English / 日本語 — Settings → Language, auto-detected on
-> first launch); docs and plugin commands are still Chinese-first, and English documentation is not
-> available yet.
-> Real-world feedback currently arrives over QQ rather than GitHub Issues — see the note near the bottom.
+| 项 | 现状 |
+|---|---|
+| **是什么** | 和 SillyTavern（酒馆）同一沙盒的另一种玩法：轻量、开箱即用，侧重"把角色卡变成能玩的东西"（GAL 选项 / 机制养成 / 一键成作）。角色卡与酒馆互通（v1/v2/v3、PNG 嵌卡） |
+| **三端** | 桌面（Python + pywebview）· 安卓（Kotlin + Compose）· 原生播放器（Compose Multiplatform，EXE 与 APK 同源） |
+| **规模** | 受控文件 **505 个**；Python 224 / Kotlin 110 / JS 28；单测 **96 个脚本**（整套 91 个脚本 / **3,103 条断言 / 0 失败**） |
+| **架构** | **微内核**：`kernel/`（装模块、给服务、发事件）+ `modules/<id>/`（业务块）+ 壳层（桌面/安卓/服务器）。规则见 [ARCHITECTURE.md](ARCHITECTURE.md) |
+| **版号** | `version.json` 是唯一真相，四段 `大版本.架构大改.插件更新.功能测试`，当前 **1.0.0.1**（code 1000001） |
+| **许可** | MIT |
 
 ---
 
-## 这是什么
+## 怎么跑起来
 
-**DICK**（全称 Direct-Interface Cork-bore Kit）是一个本地运行的 AI 角色扮演平台，和 SillyTavern（酒馆）是同一个沙盒的两种玩法：
+### 桌面（Windows，Python 3.11 / 3.12）
 
-- **DICK**：轻量、开箱即用，侧重"把角色卡变成能玩的东西"（GAL 选项 / 机制养成 / 一键成作）
-- **酒馆**：硬核、插件生态深、折腾友好
-
-两者角色卡互通：酒馆的卡（v1/v2/v3 / PNG 嵌卡）DICK 可直接导入，DICK 导出的卡（v2 JSON / PNG 嵌卡）酒馆可直接用。仓库自带酒馆安装器 `tavern-installer/`。
-
-> ⚠️ 互通边界：转换保留人设（描述/性格/台词/开场白）与世界书；DICK 独有的树状记忆、机制卡（好感/状态/战斗）是扩展字段，转入酒馆时会被剥离，转回来需重新配置。
-
-## 技术概览（给看代码的人）
-
-| 维度 | 事实 |
-|---|---|
-| **规模** | 源码约 **86k 行**（Python 160 文件 / 44,386 行；Kotlin 60 / 16,040；JS 71 / 17,224；HTML 4 / 8,502，均排除依赖与构建产物） |
-| **桌面端** | 单个 `HtmlApp` 类（6,659 行）对外暴露 **154 个 `api_*`**，经 pywebview js_api 桥接；前端是单页 `web/index.html`（8,119 行） |
-| **三端实现** | 桌面（Python + pywebview）· 安卓（Kotlin + Compose）· 原生播放器（Compose Multiplatform，EXE 与 APK 同源） |
-| **跨端一致性** | 三件事都收敛到「单一真相 + 生成 + 防漂测试」：**图标** `icons/icons.json`（emoji → Material Symbols 名字）→ `tools/gen_icons.py` → 网页 `web/icons.js`（字体连字）+ 安卓 `IconNames.kt`，字体随包（woff2 342.6 KB / ttf 976.8 KB，Apache-2.0，不连 CDN）；**文案** `lang/strings.json` → `web/i18n.js` + 安卓 `I18nStrings.kt`；**版号** `version.json` → 两端构建时读。改一处两端一起变，改漏了测试会红（`test_android_icons.py` / `test_icons.js` / `test_i18n_langs.py` / `test_version_consistency.py`） |
-| **界面文案（三语）** | 唯一真相是 `lang/strings.json`（中文 / English / 日本語，每个键的 `used_by` 标明哪端在用）。`web/i18n.js`（页面 `setT()` 原来内联三段表）与安卓 `I18nStrings.kt` 都是 `tools/gen_i18n.py` **生成**，`i18n.py` 运行时读 json —— **改一条文案只改一个地方，三端一起变**。`tools/gen_i18n.py --check`（CI 跑）与 `tests/test_i18n_langs.py`（93 条）盯着"谁还在自己写一份"，并核对桌面调用点的中文默认值 == json 的 zh、`used_by` 说的端源码里真的在用、三端入口都是三选一；当年三份手写表合并时有 91 个键三端都不再引用，收进 json 的 `_legacy` 段留档（不参与硬校验） |
-| **版本号** | 唯一真相是仓库根目录的 `version.json`（四段 `大版本.架构大改.插件更新.功能测试`：**前两位不变 = 兼容**，无法兼容直接进 2.0；架构大改涨第二位、**补位只用来标记「加了官方可选插件」**、第四位是功能测试（实验），纯修补不涨号（手动跑 `tools/bump_version.py major|minor|patch|exp`））。桌面端运行时读它（`app_version.py`：窗口标题 / 启动欢迎语）、安卓与播放器在 Gradle 配置阶段读同一份（`versionName` + 由四段算出的 `versionCode`，1.0.0.1 → 1000001，实测 merged manifest 就是这个值）、前端由 `api_state()` 带回（欢迎页与控制台横幅）。改号只改一个文件，没有第二处需要同步；`tests/test_version_consistency.py` 盯着别处不许写死 |
-| **测试** | `tests/` **80 个独立脚本 / 2,453 次断言**（实跑汇总，2026-10）+ Node 图标回归 + 安卓 kotlinc 自检（`DICK-Android/selftest/run.ps1`：TextGuard + 机制重置 + 生活/空间对拍 45+277 条）+ 安卓分道执行的结构检查（`test_android_lanes.py`）+ 跨端对拍前置检查（`test_android_parity.py`：表是否最新 / 基准有没有被用到 / 接线有没有断）；GitHub Actions 跑 **三个作业：Linux(3.11/3.12) + Windows(3.12)**，任一失败即红。环境写进文件而不是靠记忆：`Dockerfile`/`.devcontainer`（本机一条命令跑 Linux 全套）、`tools/env_report.py`（一条命令看清跑测试的是哪套环境）、`tools/ci_dep_check.py`（装完自检，失败直接点名缺哪个包） |
-| **插件架构** | 24 个插件（23 个 `PluginBase` 插件类 + 1 个子进程协议示例；4 个默认关闭）；声明式 `settings_schema` / `ui_buttons` 自动生成界面；钩子 `on_load/on_unload/on_message_send/on_message_received/contextInjection/on_command`；另有子进程 JSON-RPC 协议插件。**插件要界面走 `host_ui`**（宿主的原生文件对话框 + 聊天内提示），不许自带 GUI 库 |
-| **生活层（吃饭）** | `life_core.py`：**世界时钟**（系统时间 = 1× 起源，累加虚拟秒）+ **厨具历史库**（10 个年代的工具表，卡住做法：史前没甑不能蒸、没铁锅不能炒）+ **食材/做法库**（辣椒番茄土豆玉米明末才传入）。菜单是确定性抽样（种子 = 角色\|世界第几天\|哪一餐）→ 重启/回档/换端一致，不需新增存档；每轮只注入 ≤240 字，角色卡 `advanced.life` 可单独覆盖年代/地域/口味/忌口 |
-| **空间层（不能瞬移）** | `space_core.py`：**轮辐地图**（家为圆心，A→B 按经过家估，偏保守；`links` 可精确覆盖）+ 交通方式系数（走路 1.0 / 骑车 0.4 / 打车 0.35 / 高铁 0.06）+ **营业时间** + **家屋室内**（卧室/厨房… 0.5 分钟，不算赶路）。世界时间决定"来不来得及"：路费 > 那之后过去的世界时间就判穿帮，**照样记下新位置**、下一轮注入点名要求补交代（最多两次）。位置由模型用 `[loc:地名]` 标注（标签从显示文本剥掉，没机制卡也能用），另有 `/在哪`、`/空间` 命令与卡内 `advanced.space` 自定义地图 |
-| **世界卡库 + 常识库** | `world_packs/`（受版本控制，`worlds/` 是被忽略的运行时目录）+ `commonsense.py`：**6 张成套世界卡**（现代都市/江南水乡·明末/仙侠·云梦宗/末世·废土/校园日常/赛博港区），每张带自己的地图、屋里格局、交通与年代参数；**12 种年代口径**（史前→现代 + 仙侠/末世）各有地点/交通/屋型表，与生活层的厨具食材年代表**同一批 key**（有测试断言不许漂移）。卡包**同名不覆盖**、覆盖前留备份；`/世界包` 列出/查看/装入 |
-| **安全与可靠** | 战斗公式走 **AST 白名单求值**（绝不 `eval`）；存档 **原子写 + 备份 + 校验自愈**；API Key 用 Windows DPAPI 加密落盘；加密备份容器 `.dickbackup` **配独立解密工具**（没有 DICK 也能开自己的档） |
-| **打包** | PyInstaller onedir + 自检流水线：包内 `web/index.html` 必须与源码一致且含 **16 个特征串**（专治打包缓存旧前端）；**不打包 Tcl/Tk**（Tk 时代遗产已清，每次发布少 ~3.5 MB 与一类窗口级故障） |
-| **手机端对齐（生活 / 空间 / 世界卡库）** | 手机版原来只有聊天：同一个角色在电脑上"唐宋的江南、早上小米粥、骑车去码头"，换手机就变成没有日子、能瞬移、默认现代都市。现在这三层补齐了（`core/LifeCore.kt`、`SpaceCore.kt`、`WorldPacks.kt` + `/生活`、`/在哪`、`/世界包`）。**表只有一份真相**：`core/Tables.kt` 由 `tools/gen_parity.py` 从 Python 那几张表生成，手改/忘生成会被 `--check` 判过期（CI 跑这条）；**行为逐字对拍**：同一个脚本把电脑端结果冻成 `selftest/ParityGoldens.kt`（9 组、几十条：认年代、三餐含 720×、注入文本、地图快照、路费、够去哪、营业时间、标签解析、空间注入），`selftest/run.ps1` 第 3 步逐条比对。菜单能对拍是因为它确定性抽样 —— 为此 `core/PyRandom.kt` 逐位复刻了 CPython 的 `random.Random(字符串)`（含"key 数组低位在前"那个坑）。配置/状态文件名与字段和电脑端一致，数据目录可互读 |
-| **世界记忆（演化）** | `world_memory.py`：把剧情里发生的**世界级事实**（"城南的桥塌了""宗门换了掌门"）沉淀成"这个世界现在是什么样"。**规则优先**抽取（问句/否定/未然/假设不记，"你不能这样"不算规则）；键 = `类别:主体`，**同一主体只留一条**、重复提及增强、冲突按时间**取最新**（桥先塌后修好 → 只留"修好了"，旧状态进 `prev_state`）。强度=「此刻多值得提醒」，按**那边的时间**衰减 `0.5**(世界天/半衰期)`（规则不衰减、地点/物品 30 天、组织/关系 7 天，门槛 0.35 = `salience.KEEP_THRESHOLD`）；淡出只是不进注入，档案不删、重提即回满、可 `/世界记忆 钉`。注入 `【世界·演化】` ≤240 字、插在【空间】之后，**只读**（重试不刷强度）。落 `memory/_world/<世界名>.json`（原子写、人可读）；`/世界记忆` 看/忘/钉/松/开/关/长/清。**清空聊天记录与回档时不清**（它与世界卡绑定，是另一条带） |
-| **并发模型** | **模块分道执行**：电脑端 `jobs.py`（一个模块一条运行线 —— 对话/插件钩子/落盘保序（1 工作线程），网络 3 条、看图 2 条可并行；队列有上限（满了明确拒绝而不是堆内存），任务级超时、耗时与错误全部可见；异步结果走现有 poll 回前端，工坊那 8 个 `api_*` 已从"同步等"改为异步）；**手机端同一套想法**在 `Lanes.kt`（`io`/`vision`/`plugin` 各 1、`net` 4），主线程只负责"取快照"，整树序列化、机制状态、角色卡进出的写盘全在线里 |
-| **多厂商** | 内置 14 家 / 106 个模型，含免 Key 免费链与本地 Ollama；生图引擎四种后端（OpenAI 兼容 / Pollinations 免 Key / 本地 A1111 / 本地 ComfyUI） |
-| **文档** | 6 份使用与开发文档；其中《状态变量说明》与实现的一致性由测试锁定（改了代码不改文档会红） |
-
-## 核心特性
-
-### 聊天
-- **树状记忆**：主线平铺、分支收纳，随时回溯任意节点；分支可折叠成「选项骨架」只看选项
-- 多候选回复（滑条）、重生成、编辑消息（用户消息编辑开新分支，AI 消息原地改）
-- **群聊**：多选角色即开聊，每个角色独立请求、**物理隔离**（各自的 system 只含本人人设），@角色名指定发言 + 自动接话
-- 世界卡 / 世界书（关键词 / 正则 / 递归深度 / 权重 / 概率 / 常驻）/ **平行世界穿越**
-- 上下文预算 4K–128K + 滚动摘要 + 记忆链归档（大存档自动分片，历史不丢）
-- **离线推进**：你不在的时候世界自己走一小步 —— 回来时按「现实时长 × 时间流速」结算（好感缓慢下滑、数值状态回归、回合推进让事件冷却前进），先给方案再决定要不要应用，**应用错了可以一键撤销**
-
-### 玩法
-- **机制卡**：好感度（百分比制）/ 状态字段（int、enum）/ 事件触发（含冷却、次数、结局链）
-- **战斗系统**：伤害公式走 AST 白名单求值（绝不 eval）、招式、buff，玩家与角色同规格
-- **GAL 选项**：AI 生成剧情选项 + 隐藏 ROLL（坍缩 / 天选 / 暴击 / 稀有 / 大失败）。
-  选项是按钮上的**短标签**，点下去发出去的是同一趟生成好的 **`say`**（补全成玩家第一人称的台词与动作）——
-  记录里那句才像人说的话，而不是"温柔关心她"这种舞台指示；旧选项 / 模型没给 `say` 时自动退回标签
-  （开关在插件设置里：`use_say`，默认开；两端同一套）
-- **软件时间流速**：世界那边比现实快多少倍（对数表盘，10 ~ 1000 万倍），影响模型看到的时间上下文
-- **UTAU 语音**：`[ja]` 日文配音（电脑端完整版 / 手机端系统 TTS）；UTAU 环境已内置，声库自备（`/voicebank` 导入，见 `声库安装说明.txt`）
-
-### 成作（CODEX）
-- 剧本 JSON（`codex/1.0` 开放格式）→ 一键打包**独立 HTML / EXE / `.codex` 包**（可分发、可卖）
-- 傻瓜化导入素材（立绘/背景/音乐/配音）、AI 起草剧本、一键配音
-- **`DICK-Narrative`**：Compose Multiplatform 写的**原生播放器**（EXE + APK 同源，不是网页套壳），与 GAL 制作器**零转换**互通
-
-### 界面
-- **图标只用一份真相（`icons/icons.json`），字形来自谷歌 Material Symbols（Outlined / wght 300，细线少边）**：网页端 `@font-face` + 连字（`<span class="ms">名字</span>`），安卓端同一份字体走 Compose；改一处两端都变。选图标时看 `python tools/gen_icon_preview.py` 生成的总览页
-- 深色 / 浅色 / OLED 三套主题 + 四色强调色；文字与图标颜色全部跟随主题
-- 手机端「彻底清空历史」= 机制状态回到初始值 **且重演一遍开场白**（状态如初，连第一句也在）
-
-### 生图
-- **一个入口，四种后端**：只改「生图端点」，后端自动认（也能手选，本地服务不在默认端口时用）
-  | 端点 | 后端 | 要 Key 吗 |
-  |---|---|---|
-  | `https://image.pollinations.ai` | Pollinations | **不要**（免费公共档，会限流） |
-  | `https://api.siliconflow.cn/v1` 等 | OpenAI 兼容（硅基流动 FLUX / 智谱 CogView / 任意中转） | 要 |
-  | `http://127.0.0.1:7860` | 本地 A1111 / Forge / SD.Next（`/sdapi/v1/txt2img`） | 不要 |
-  | `http://127.0.0.1:8188` | 本地 ComfyUI（`/prompt` + `/history` 轮询 + `/view`） | 不要 |
-- **提示词分两层**：风格预设（自动拼前缀）+ 内容，另有「补充风格词」追加在末尾 —— 调提示词时不用重复敲风格
-- **种子 + 🎲 重抽**：留空=随机，填了就能复现同一张；重抽=换个随机种子再来一张，挑到满意就把种子留下
-- **预设可自己加**：设置 → 生图预设，写 `image_presets.json`（同名 id 覆盖内置预设），不写就用内置 6 套
-- 出图直接进聊天（点输入框旁的 🎨），上次填的内容自动回填
-- 免 Key 免费档的实测边界：**右下角带 pollinations.ai 水印**（`nologo=true` 去不掉），请求 1024 也可能只回 768 —— 要干净大图就填 Key 或走本地 SD
-
-### 其他
-- **插件系统**：20 个内置插件（Python 后端，含 1 个协议示例），`.py` 丢进 `plugins/` 即用，无商店无审核；**声明式**设置与界面按钮（写 `settings_schema` / `ui_buttons` 就自动生成 UI）；要文件对话框/提示就调 **`host_ui`**（宿主提供，插件不必自带 GUI 库）。标准见 `PLUGIN_DEV.md`；另有子进程 JSON-RPC 协议插件
-- 正则管道（ai/user 作用域）、去 AI 味、文本/风格闸门（零宽字符防线）
-- 财报助手（10 个官方政策源深爬 + 本地政策库 + 49 条金融史年表 1617–2026）、A 股技术面分析、联网搜索、日中互译、骰子、文档读写（Word/Excel）
-- **多厂商**：内置 **14 家 / 106 个模型**（DeepSeek、OVH 免 Key 免费链、阿里百炼、智谱、硅基流动、Moonshot、火山方舟、百度千帆、MiniMax、阶跃星辰、OpenAI、Anthropic、Gemini、Ollama 本地），可自定义 base_url 与模型名；支持代理与中转
-
-## 三端形态
-
-```
-             GAL 制作器（web/index.html 内嵌 · 线-点-分支编辑器）
-                              │ 产出 codex.json + 素材
-                              ▼
-                    叙事引擎（同一份 scenes[]/lines[] 规格）
-             ┌────────────────┼────────────────┐
-             ▼                ▼                ▼
-   DICK 主程序内嵌播放   DICK-Narrative    独立 HTML
-                        （EXE / APK）
-手机端 DICK-Android ⇄ 电脑端：角色卡/世界卡文件名即 ID，进度按时间戳后写胜同步
-```
-
-## 快速开始
-
-### 电脑（release 包）
-1. 解压 `DICK-电脑版.zip` → 双击 **`DICK-HTML.exe`**
-   > ⚠️ 必须**整文件夹**使用：`DICK-HTML.exe` 与 `_internal/` 必须同级，不要只拷 exe
-2. 首次启动弹欢迎页 → 填 API Key（DeepSeek 等；界面内有「去官网注册/充值」直达）
-3. 左侧勾选角色 → 开始聊天（Ctrl/Shift 多选 = 群聊）
-
-### 手机
-- 安装 apk（debug 签名）→ 设置里填 API Key → 选角色开聊
-
-### 从源码跑（电脑）
-```bash
+```powershell
 pip install -r requirements.txt
 python "Direct-Interface Cork-bore Kit.py"
 ```
 
-> 需要 **Python 3.11 / 3.12**（CI 两个版本都跑；开发环境为 3.11）。依赖清单见 `requirements.txt`，
-> 其中 `flask` / `edge-tts` / `httpx` 是**可选**的（只影响侧车服务与日文 TTS，不装也能启动聊天）。
-> 跑测试：`pip install -r requirements-test.txt` 后 `python tests/test_*.py`。
+### 安卓
 
-> `html_app.py` **不是入口**，它是 49 行的兼容垫片（供历史测试 `from html_app import HtmlApp` 用），直接运行它什么都不会发生。
-> 源码运行**不会自带 API Key**：Key 存在 `config.json`，而它默认不进版本库（见「数据与隐私」）。
-
-## 想玩酒馆？
-
-```bash
-cd tavern-installer
-node install.js     # 或双击 install.bat
-```
-装完酒馆，你的角色卡两边都能用。
-
-## 开发
-
-### 目录导航
-
-| 路径 | 干什么 |
-|---|---|
-| `Direct-Interface Cork-bore Kit.py` | **桌面入口**：单个类 `HtmlApp`（约 6000 行），对外暴露 154 个 `api_*` 供前端 js_api 调用 |
-| `web/index.html` | 前端单页（约 8000 行）：聊天、GAL 编辑器、CODEX 编辑器/播放器、插件坞、图标字典 |
-| `DICK_core.py` | 聊天核心：树状记忆、上下文裁剪、群聊隔离、机制/战斗结算的胶水层 |
-| `image_gen.py` | 生图引擎：四种后端（OpenAI 兼容 / Pollinations 免 Key / 本地 SD / 本地 ComfyUI）+ 预设覆盖层 + seed |
-| `codex_core.py` | CODEX 成作引擎（剧本解析 → 校验 → 独立 HTML / EXE / `.codex` 包） |
-| `plugins/` | 19 个插件 + `protocol/` 协议插件（共 20 个）；插件要界面统一走 `host_ui.py` |
-| `DICK-Android/` | 安卓端（Compose）：`core` / `app` / `plugins` / `tools` 四层 |
-| `DICK-Narrative/` | Compose Multiplatform 原生 GALGAME 播放器（EXE + APK），故事格式见其 README |
-| `tests/` | 82 个 Python 测试脚本（逐个独立运行）+ JS 图标回归 |
-| `tools/` | `gen_icons.py`（图标唯一真相 → 两端产物）、`gen_i18n.py`（文案唯一真相 → 两端产物）、`gen_parity.py`（生活/空间表与对拍基准）、`bump_version.py`（版号）、`gen_icon_preview.py`（图标总览页）、存档同步 |
-| `tree_weight.py` `salience.py` `lookahead.py` `ranker.py` `rubric.py` | 记忆权重与剪枝 / 有损遗忘曲线 / 前瞻展开 / 排序器 / 价值判据 |
-| `save_guard.py` `crypto_core.py` `dick_backup_tool.py` | 原子写+备份+校验自愈 / 加密备份容器 / 独立解密工具 |
-| `net.py` `trpg_server.py` | 创意工坊服务端 / 跑团房间服务端（Flask，独立启动）；工坊的资源类型由 `TYPES` 注册表驱动，部署与自检见 [创意工坊服务器部署.md](创意工坊服务器部署.md) |
-
-### 命令
-
-```bash
-# 电脑
-python "Direct-Interface Cork-bore Kit.py"           # 源码运行
-python -m PyInstaller DICK_HTML.spec --noconfirm    # 打包 onedir EXE
-python build_release.py --build                     # 清缓存 + 打包 + 自检 + 打 zip
-python build_release.py                             # 已打包过：只做后处理/自检/打 zip
-
-# 测试
-python tests/test_*.py                              # 逐个跑（82 个脚本）
-node tests/test_icons.js                            # 前端图标系统回归（需 Node）
-powershell -File DICK-Android/selftest/run.ps1      # 安卓自检（TextGuard + 机制状态重置 + 生活/空间对拍）
-python tools/gen_parity.py --check                 # 手机端的表/对拍基准是不是最新的（CI 也跑这条）
-
-# 手机
-cd DICK-Android && gradle :app:assembleDebug        # → app/build/outputs/apk/debug/
-
-# 改过 icons/icons.json 之后：重生成两端图标产物（网页 icons.js + 安卓 IconNames.kt）
-python tools/gen_icons.py --check
-python tools/gen_icon_preview.py                    # → _icons_preview.html，肉眼过一遍
+```powershell
+cd DICK-Android
+.\gradlew.bat :app:assembleDebug --offline --no-daemon
+# 产物：app\build\outputs\apk\debug\app-debug.apk
 ```
 
-### 发布流水线
+### 创意工坊服务器（可选，局域网 / 公网分享用）
 
-`build_release.py` 做四件事：① 后处理（把 `tavern-installer` 从 `_internal/` 提到顶层 + 生成 `start.bat`）② **自检**：包内 `web/index.html` 必须与源码一致且含 16 个特征串（专治 PyInstaller 缓存旧前端）③ 打 zip 到 `../DICK-发布/DICK-电脑版.zip`（包内平铺，解压即用）④ 核对手机 apk 时间戳是否过期。
+```powershell
+python net.py --host 0.0.0.0 --port 8080        # 有 waitress 自动用它跑多线程
+python deploy\selfcheck_workshop.py --base http://127.0.0.1:8080 --full
+```
 
-> ⚠️ 打包前**必须关掉正在运行的 `DICK-HTML.exe`**，否则它会锁住 `debug.log` 导致打包失败。
-> ⚠️ 安装包：`build_installer.py` 需要 Inno Setup 与 `installer/DICK_Setup.iss`，**该目录未随仓库提供**，所以目前不产出 `DICK-Setup.exe`——直接用便携版 zip。
+部署/迁移/扩容见 [创意工坊服务器部署.md](创意工坊服务器部署.md)；一键部署器 `deploy/deploy_workshop.py`。
 
-### 测试与 CI
+---
 
-`.github/workflows/test.yml`：push / PR 时在 **Python 3.11 与 3.12** 上逐个运行 `tests/test_*.py`，并跑一次 **Node 图标回归**；任一失败即红。安卓侧另有 `DICK-Android/selftest/`（kotlinc 直跑，不需要 Android SDK；路径写在该脚本顶部）—— 那份对拍需要 Kotlin 工具链，所以 CI 上跑的是它的**前置检查**：`tools/gen_parity.py --check`（表/基准是否与 Python 一致）+ `tests/test_android_parity.py`（基准有没有被真的用到、接线有没有断）。
+## 工程纪律（这是本项目最反常的地方）
 
-## 数据与隐私
+**代码不是写给人读的，是写给"三个月后的自己"审的。** 所以规矩都做成了机器能查的东西，而不是文档里的口号：
 
-便携式设计：数据都在 exe 旁，不写注册表 —— `saves/`（角色卡与聊天树）、`worlds/`、`personas/`、`prompt_presets/`、`memory/`、`plugin_settings/`、`exports/`、`config.json`（全局设置与 API Key）、`image_presets.json`（自定义生图预设）。
+| 闸门 | 命令 | 拦住什么 |
+|---|---|---|
+| 块验收 | `python tools/accept.py` → `ALL_BLOCKS_OK` | 块自检、依赖成环、行数棘轮、接口签名漂移、唯一真相互检 |
+| 内核边界 | `python tools/audit_kernel_boundaries.py` | 内核认识业务、模块互相 import、`# noqa` 绕过、块内可变全局 |
+| 可移植性 | `python tools/portability_check.py` | 块偷偷依赖宿主（搬家测试：只带 `kernel/` 拷到临时目录还能自检通过） |
+| UI 解耦 | `python tools/audit_ui_coupling.py` | 大文件、行内样式、硬编码颜色、全局变量、屏间耦合、组件复用（只看分数是否上升） |
+| 结构守恒 | `python tools/ui_snapshot.py --check` | 搬家时 DOM / CSS / 行内样式是否被顺手改掉 |
+| 视觉 | `python tools/audit_contrast.py`、`tests/test_no_dim_text.py` | 浅灰字、对比度 <4.5 |
+| 文案 | `tests/test_no_emoji_ui.py`、`tests/test_no_dev_copy.py` | UI 里的 emoji 字符、HTTP 码/地址/gzip 这类技术说明 |
+| 唯一真相 | `tools/gen_*.py --check` | 手改了生成产物（图标/文案/令牌/卡片字段/对拍表） |
+| 全套 | `python tools/run_local_suite.py` | 91 脚本 / 3,103 断言；CI 三平台（Linux 3.11/3.12 + Windows）都跑，并且**先跑 `accept.py` 再跑全测** |
 
-`.gitignore` 已排除**存档、世界卡、玩家卡、插件设置、`config.json`、导出与缓存**，所以克隆下来是干净的；反过来说，**源码克隆没有 Key，首次启动需要自己填**。
+规矩本身怎么改，写在 [ARCHITECTURE.md](ARCHITECTURE.md) 第八节（反修正主义：改铁律要写原因、同期改测试与基线、留修订记录）；改代码的手艺在第九/十节（**替换优先**、**积木协议：架构由人定，AI 只在已声明的块里填文件**）。
 
-## 文档
+---
 
-- `说明书.md` — 完整使用说明（安装 / 角色 / 世界 / 记忆 / 办公 / 财报 / 语音 / 命令大全 / FAQ）
-- `PLUGIN_DEV.md` — 插件编写标准（钩子 / 声明式设置 / UI 按钮 / 访问 core / 调试发布）
-- `状态变量说明.md` — 机制卡 / 战斗 / 好感度标签速查（给不写代码的人看）
-- `待办与想法.md` — 未开工的方案与**已验证过的前提**（例：画面抓取/录屏联动的依赖现状与代价）
-- `DICK-Narrative/README.md` — 播放器与 `codex/1.0` 故事格式规格
-- `声库安装说明.txt` — UTAU 声库怎么找、怎么装
+## 代码地图
 
-## 关于反馈与 Issue（为什么仓库里一条 Issue 都没有）
+```
+kernel/                    微内核：registry(服务) / bus(事件) / loader(按 manifest 装配) / manifest(五校验)
+                           config / paths / log / version —— 不认识任何业务
+modules/                   业务块（每块一个目录，唯一入口 module.py:register(kernel)）
+  backup/                  加密备份（crypto_core 能力 + 铺盘/回滚）
+  workshop/                创意工坊客户端（列表/上传/下载/点赞/进度，gzip 通道 + 500ms 闸门）
 
-怕被误读成"没人用、也没人维护"，这里先说清楚：
+Direct-Interface Cork-bore Kit.py  壳层：HtmlApp（对外 api_* 门面，内部转调块）
+DICK_core.py               对话内核（树状记忆、机制判定、提示词装配）
+net.py                     创意工坊服务器（类型注册表 cards/worlds/plugins/packs、gzip、限流、waitress）
+save_guard.py              存档修复/备份恢复（同秒备份分不出新旧时**停止自动恢复**，不静默挑一个）
 
-- **这个项目是我一个人在持续开发、而且更新很勤**：功能、文档、测试、打包流水线都是同一个人在推；
-  提交历史是连续的开发轨迹，不是一次性上传的存档。
-- **为什么没有 Issue**：我的现实用户不在 GitHub 上——他们直接在 **QQ 里跟我描述"哪里不对劲/这是个 BUG"**，
-  我照着描述**复现 → 定位 → 修 → 补一条回归测试 → 提交**（修 BUG 的过程会先在本地留取证截图，
-  那些图含私人界面内容，不随仓库发布）。所以"没有 Issue"= 反馈走了私聊渠道，不等于没人提问题。
-- **不代表不欢迎 Issue / PR**：欢迎提，附上 `debug.log`、复现步骤和版本号能省很多时间。
-  只是要接受一个现实——**我可能回得慢**（一人项目，QQ 那边的反馈天然优先）。
+web/                       桌面前端（单页 + 碎片屏）
+  index.html               挂载点 + 骨架（13 个屏片段通过 <!--@screen:name--> 挂入）
+  screens/*.html           13 个屏片段
+  js/screens/*.js          屏逻辑；js/state.js(状态与总线) / js/router.js / js/store/
+  styles/*.css             令牌与各屏样式（全部从 HTML 抽出）
+  icons.js / i18n.js       生成物（来源 icons/icons.json、lang/strings.json）
 
-## 已知边界
+DICK-Android/              安卓（单包多模块目录）
+  ui/screens/<feature>/    10 个 feature 包（chat/settings/workshop/lifeSpace/trpg/cardEdit/backup/library/common/api）
+  ui/components/           共享组件（按钮/卡片/输入/对话框/空态）
+  core/                    平台能力（Workshop 客户端、CardIo、I18n…）
 
-- **仅 Windows**（`secret_store.py` 用 DPAPI、打包用 PyInstaller、语音走 Windows 区域检测）；安卓端是独立实现
-- 软件是个人学习项目，AI 回复由第三方模型生成，不代表本项目立场；财报/股票分析仅供参考，不构成投资建议
-- 政策爬取只访问公开官方页面，请遵守目标站点条款
+design/ · lang/ · icons/   唯一真相源（令牌 / 文案三语 / 图标名），改这里再生成
+tools/                     生成器 + 审计器 + 部署器 + 跑批（19 个脚本）
+tests/                     96 个独立测试脚本（含 Node 图标回归、安卓结构检查、跨端对拍）
+deploy/                    工坊服务器部署器 / 自检 / nginx 样例
+```
 
-## 许可
+---
 
-MIT —— 自由使用、修改、分发。数据与作品归你自己。
+## 唯一真相与生成链
+
+改**一处**，三端一起变；改漏了测试会红。
+
+| 数据 | 唯一真相 | 生成物 | 防漂移 |
+|---|---|---|---|
+| 界面文案（中/英/日） | `lang/strings.json` | `web/i18n.js`、`I18nStrings.kt` | `gen_i18n.py --check` + `test_i18n_langs.py` |
+| 图标（名字 → Material Symbols） | `icons/icons.json` | `web/icons.js`、`IconNames.kt` | `gen_icons.py --check` + `test_icon_scopes.py` |
+| 设计令牌（颜色/间距/字号） | `design/tokens.json` | `web/theme.css`、`Tokens.kt`、`DickTheme` | `gen_tokens.py --check` + `audit_contrast.py` |
+| 角色卡字段渲染顺序 | `design/card_fields.json` | `web/card_fields.js`、`CardFields.kt` | `gen_card_fields.py --check` + `test_card_view.py` |
+| 版号 | `version.json` | 桌面运行时 / Gradle / 前端 `api_state()` | `test_version_consistency.py` |
+
+---
+
+## 现在的欠账（不粉饰）
+
+| 欠账 | 规模 | 什么时候必须还 |
+|---|---|---|
+| `web/index.html` 仍是巨石 | 6,081 行；codex（编年史）/ gal（GAL 制作器）正在搬出 | 正在还（前端解耦批次） |
+| 网页组件层还很薄 | 只有 `Button.js`，`index.html` 里仍有大量裸控件 | 做主题/浅色适配时 |
+| 硬编码颜色残留 | 审计 ~268 处 | 同上 |
+| 内核只迁了 2 个块 | 剩余清单：`image_gen` → `voice` → `codex` → 导出/文档 → `world_packs` → `trpg` → `cards` → `memory` → `chat`(DICK_core，最硬) | 按批次迁，不搞大手术 |
+| 索引是单个 `index.json` | 作品数到 300~500 会疼 | 到量换 SQLite（WAL） |
+
+---
+
+## English (short)
+
+**DICK** is a **local-first AI roleplay / interactive-narrative platform** — a lightweight alternative in the
+same sandbox as SillyTavern, focused on turning character cards into playable things (choice-driven scenes,
+mechanics/affection systems, one-click story export).
+
+- **Three targets, one spec:** Python + pywebview desktop · Kotlin/Compose Android · Compose Multiplatform player
+- **Micro-kernel architecture:** `kernel/` (services, event bus, manifest-driven loader) + `modules/<id>/`
+  portability-checked blocks + thin shells. Rules live in [ARCHITECTURE.md](ARCHITECTURE.md)
+- **Engineering gates in CI:** block acceptance (`tools/accept.py`), kernel boundaries, portability
+  relocation tests, UI coupling score, contrast/emoji/dev-copy gates, and generated-artifact drift checks —
+  91 scripts / 3,103 assertions, green on Linux 3.11/3.12 and Windows
+- **Runs from source:** `pip install -r requirements.txt` then `python "Direct-Interface Cork-bore Kit.py"`
+  (Python 3.11/3.12, Windows). The UI ships in 中文 / English / 日本語
+- **Your data stays on your machine** · MIT licensed
+
+Issue reports currently arrive over QQ rather than GitHub Issues; English docs are not available yet.
