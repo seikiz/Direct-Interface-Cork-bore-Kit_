@@ -177,6 +177,17 @@ fun DickTheme(
         background = pal.bg, onBackground = pal.text,
         surface = pal.surface, onSurface = pal.text,
         surfaceVariant = pal.surface2, onSurfaceVariant = pal.textSub,
+        // 容器类角色（弹窗/抽屉/卡片用它）：不映射就会落回 M3 默认淡紫，
+        // 深色主题下弹窗会白得像硬编码（2026-10 用户截图就是这个问题）。
+        surfaceContainerLowest = pal.bg,
+        surfaceContainerLow = pal.surface,
+        surfaceContainer = pal.surface,
+        surfaceContainerHigh = pal.surface2,
+        surfaceContainerHighest = pal.surface2,
+        surfaceBright = pal.surface2,
+        surfaceDim = pal.bg,
+        inverseSurface = pal.text, inverseOnSurface = pal.surface,
+        scrim = Color.Black,
         outline = pal.border, outlineVariant = pal.borderStrong,
         error = pal.danger, onError = pal.accentText,
     ) else darkColorScheme(
@@ -184,6 +195,17 @@ fun DickTheme(
         background = pal.bg, onBackground = pal.text,
         surface = pal.surface, onSurface = pal.text,
         surfaceVariant = pal.surface2, onSurfaceVariant = pal.textSub,
+        // 容器类角色（弹窗/抽屉/卡片用它）：不映射就会落回 M3 默认淡紫，
+        // 深色主题下弹窗会白得像硬编码（2026-10 用户截图就是这个问题）。
+        surfaceContainerLowest = pal.bg,
+        surfaceContainerLow = pal.surface,
+        surfaceContainer = pal.surface,
+        surfaceContainerHigh = pal.surface2,
+        surfaceContainerHighest = pal.surface2,
+        surfaceBright = pal.surface2,
+        surfaceDim = pal.bg,
+        inverseSurface = pal.text, inverseOnSurface = pal.surface,
+        scrim = Color.Black,
         outline = pal.border, outlineVariant = pal.borderStrong,
         error = pal.danger, onError = pal.accentText,
     )
