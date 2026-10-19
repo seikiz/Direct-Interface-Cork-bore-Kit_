@@ -281,11 +281,57 @@ def _blank(m):
     return re.sub(r"[^\n]", " ", m.group(0))
 
 
+def _blank_keep_nl(seg):
+    """把一段注释抹成空格，但保留换行 —— 否则行号会整体前移（2026-10 踩过）。"""
+    return "".join("\n" if c == "\n" else " " for c in seg)
+
+
 def strip_comments(text, js=False):
-    text = _RE_COMMENT.sub(_blank, text)
-    if js:
-        text = re.sub(r"(?m)//[^\n]*", lambda m: " " * len(m.group(0)), text)
-    return text
+    """去掉注释，但**绝不吞掉属性值里的 `/*`**。
+
+    历史 bug（2026-10）：`web/index.html` 里 `<input accept="image/*">` 的 `/*`
+    被正则当成 CSS 注释开头，一路吞到下一个 `*/`，**747 行文字色从未被扫描过**。
+
+    现在用小状态机：引号（" 或 '）里的内容原样保留，只有引号外才认注释；
+    被删掉的字符统一换成等长空格，行号与偏移保持不变（上层靠偏移报位置）。
+    """
+    out = []
+    i, n = 0, len(text)
+    quote = None
+    while i < n:
+        ch = text[i]
+        if quote:
+            out.append(ch)
+            if ch == quote and (i == 0 or text[i - 1] != "\\"):
+                quote = None
+            i += 1
+            continue
+        if ch in "\"'":
+            quote = ch
+            out.append(ch)
+            i += 1
+            continue
+        if ch == "<" and text.startswith("<!--", i):
+            j = text.find("-->", i + 4)
+            end = n if j < 0 else j + 3
+            out.append(_blank_keep_nl(text[i:end]))
+            i = end
+            continue
+        if ch == "/" and text.startswith("/*", i):
+            j = text.find("*/", i + 2)
+            end = n if j < 0 else j + 2
+            out.append(_blank_keep_nl(text[i:end]))
+            i = end
+            continue
+        if js and ch == "/" and text.startswith("//", i):
+            j = text.find("\n", i)
+            end = n if j < 0 else j
+            out.append(_blank_keep_nl(text[i:end]))
+            i = end
+            continue
+        out.append(ch)
+        i += 1
+    return "".join(out)
 
 
 def role_value(role, pal):
@@ -391,15 +437,24 @@ def web_text_units():
                                                "disabled" if _is_disabled(sel, "") else None)))
         else:
             # HTML 行内 style / JS 里的 cssText 字符串：一行一条，按行判最稳
-            skip = None            # 自绘底色区域的状态（见 SKIP_BEGIN）
+            # 围栏必须从**原文行**里找：txt 已把注释剥成空格，标记会消失。
+            # 2026-10 的真实 bug：围栏写了但审计认不出（strip_comments 吃掉注释），
+            # 于是 codex/gal 一搬出 index.html 就整片报红。
+            fence = {}
+            _cur = None
+            for _i, _rl in enumerate(raw_lines, 1):
+                _m = SKIP_BEGIN.search(_rl)
+                if _m:
+                    _cur = _m.group(1)
+                    fence[_i] = _cur
+                    continue
+                if SKIP_END in _rl:
+                    _cur = None
+                    fence[_i] = None
+                    continue
+                fence[_i] = _cur
             for i, line in enumerate(txt.split("\n"), 1):
-                m = SKIP_BEGIN.search(line)
-                if m:
-                    skip = m.group(1)
-                    continue
-                if SKIP_END in line:
-                    skip = None
-                    continue
+                skip = fence.get(i)
                 for d in _RE_TEXT.finditer(";" + line):
                     body = ";" + line
                     bgs = [b.group(2).strip() for b in _RE_BG.finditer(body)]
