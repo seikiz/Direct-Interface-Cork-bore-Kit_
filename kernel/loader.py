@@ -201,10 +201,14 @@ class ModuleLoader(object):
             st.error = "%s: %s" % (type(e).__name__, str(e)[:300])
             self._rollback(st)
             self._err("模块 %s 装载失败（内核继续启动）：%s" % (m.id, st.error))
-            try:
-                traceback.print_exc()
-            except Exception:
-                pass
+            # 完整栈只在真的调试时打：默认只留上面那一行 error。
+            # 原因：CI 的日志解析器会把 traceback 的 `File "...", line N` 认成注解，
+            # 于是"故意炸掉"这类正常测试会在 Actions 页面变成一片红点（2026-10 真发生过）。
+            if str(os.environ.get("DICK_DEBUG", "")).strip().lower() in ("1", "true", "yes"):
+                try:
+                    traceback.print_exc()
+                except Exception:
+                    pass
             self.kernel.bus.emit("kernel.module.failed", module=m.id, error=st.error)
             return st
 
