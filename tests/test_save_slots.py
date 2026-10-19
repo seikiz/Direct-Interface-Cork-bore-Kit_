@@ -25,6 +25,9 @@ def check(c, m):
 tmp = tempfile.mkdtemp(prefix="dick_saveslots_")
 html_app.BASE_DIR = tmp
 app = html_app.HtmlApp()
+# 测试必须自洽：勾选角色时会去工坊服务器拉该角色最新进度；本机 workshop_config.json
+# 配了公网工坊 → 会拉回别的会话推上去的树（进度 2 变 5）。测试不联网，同步关掉。
+app._ws_sync_enabled = lambda: False
 
 # 带去重：用一套<seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌可复现的机制卡
 mech = {"mechanics": {
