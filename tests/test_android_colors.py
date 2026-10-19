@@ -670,7 +670,7 @@ def main():
         shutil.rmtree(tmp, ignore_errors=True)
 
     print("\n" + "=" * 66)
-    print(u"通过 %d ／ 失败 %d" % (PASS, FAIL))
+    print(u"通过 %d / 失败 %d" % (PASS, FAIL))
     if not FAIL:
         print("ANDROID_COLORS_OK")
     return 1 if FAIL else 0

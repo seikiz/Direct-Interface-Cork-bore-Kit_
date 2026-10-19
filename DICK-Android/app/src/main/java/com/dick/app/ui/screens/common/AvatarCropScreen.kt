@@ -104,7 +104,7 @@ fun AvatarCropScreen(vm: ChatViewModel, deps: DialogDeps) {
                             drawRect(pal.scrimSoft, topLeft = Offset(s - inset, inset), size = Size(inset, s - inset * 2))
                             drawRect(pal.stageLine, topLeft = Offset(inset, inset),
                                 size = Size(s - inset * 2, s - inset * 2),
-                                style = androidx.compose.ui.graphics.drawscope.Stroke(width = 6f))
+                                style = androidx.compose.ui.graphics.drawscope.Stroke(width = 6.dp.toPx()))
                         }
                     }
                     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp)) {

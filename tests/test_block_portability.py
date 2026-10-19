@@ -88,7 +88,9 @@ def tmpdir(label):
             break
         except Exception:
             continue
-    d = os.path.join(base, "dick_port_%s_%d" % (label, len(_TMP)))
+    # 目录名带 PID：这台机器上常有**两条测试流水线并行跑**（迁移批次与网页批次），
+    # 只用顺序号会让两边的同名目录撞在一起（FileExistsError），把绿判成红。
+    d = os.path.join(base, "dick_port_%s_%d_%d" % (label, os.getpid(), len(_TMP)))
     os.makedirs(d, exist_ok=True)
     _TMP.append((d, base))
     return d
