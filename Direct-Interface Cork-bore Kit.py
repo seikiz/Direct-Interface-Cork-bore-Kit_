@@ -4785,8 +4785,9 @@ class HtmlApp:
         return out
 
     def _backup_service(self):
-        """门面：加密备份已迁到 modules/backup，这里只按内核找服务"""
-        return self._kernel_service("backup")
+        """门面：加密备份已迁到 modules/backup；加密能力由宿主（crypto_core）注入"""
+        import crypto_core
+        return self._kernel_service("backup").bind(self, crypto_core)
 
     def _backup_dirs(self):
         """还原时允许写入的五个去处（模块不认识 App，只认这张表）"""
@@ -4794,8 +4795,7 @@ class HtmlApp:
                 "saves": self.save_dir,
                 "worlds": self.world_dir,
                 "personas": os.path.normpath(os.path.join(self.preset_dir, "..", "personas")),
-                "codex": self.codex_dir,
-                "config_file": self.config_file}
+                "codex": self.codex_dir, "config_file": self.config_file}
     # ---------- 加密备份 ----------
 
     BACKUP_EXT = ".dickbackup"

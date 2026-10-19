@@ -14,6 +14,9 @@
     上传前净身  ws_strip_local_state(raw_bytes) -> (bytes, 被剔掉的键名)
     文件名    ws_header_name(name) / _safe_name(name)
     界面      _reload_roles() / _reload_worlds()
+    导出      _pick_save_path(name, file_types) -> 目标路径 | None
+              （保存对话框是"问用户存哪"的宿主能力：块不 import pywebview，也不碰
+                webview.windows 这种壳层全局单例。名字沿用壳层已有的 _pick_save_path）
     数据      save_dir / world_dir / pack_dir / plugin_manager
 
 文件划分（ARCHITECTURE.md 九.1：单文件目标 ≤400 行）：

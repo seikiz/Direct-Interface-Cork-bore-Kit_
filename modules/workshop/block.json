@@ -54,6 +54,9 @@
       "open_folder"
     ]
   },
+  "requires": {
+    "pip": []
+  },
   "budget": {
     "soft_lines": 400,
     "hard_lines": 800

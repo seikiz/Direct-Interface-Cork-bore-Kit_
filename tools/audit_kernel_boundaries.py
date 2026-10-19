@@ -60,15 +60,12 @@ SHELL_FILES = {
 
 # 共享叶子库白名单：**只许缩短**。每加一条都要写清 reason（否则测试直接红），
 # 并且要按 ARCHITECTURE.md 第八节走流程 —— 白名单是"记录已知欠债"，不是"解决方案"。
-SHARED_LEAF_LIBS = {
-    "crypto_core": {
-        "reason": "场景无关的纯密码学叶子库（只依赖标准库 + cryptography）。"
-                  "dick_backup_tool.py 是独立解密工具，必须能脱离 DICK 本体单独运行，"
-                  "所以它不能搬进 modules/backup —— 只能由模块单向依赖它。",
-        "owner": "modules/backup",
-        "cleanup": "不清理：叶子库不是业务模块，ARCHITECTURE.md 第三节已把它归为基础设施",
-    },
-}
+#
+# 2026-10-19 清空：`crypto_core` 曾经在册（modules/backup 直接 import 它）。
+# 可移植性（十二）要求块只依赖 stdlib + kernel，于是加解密改成 `bind(host)` 注入，
+# 模块里再没有对 crypto_core 的 import —— 这条欠债已经还掉，白名单随之缩短到 0。
+# 以后再有"模块 import 仓库根叶子库"的冲动，请先想清楚它搬不搬得走。
+SHARED_LEAF_LIBS = {}
 
 # 内核词表（铁律 3 的落点）。注释与 docstring 里许出现 —— 那是给人看的解释。
 KERNEL_FORBIDDEN_WORDS = ("角色卡", "世界卡", "工坊", "聊天", "记忆")

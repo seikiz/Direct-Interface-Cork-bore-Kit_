@@ -6,21 +6,20 @@
     · 主程序 HtmlApp 的 `_restore_from_zip`：解密后按目录铺回磁盘（含路径穿越防护）
     · 主程序 `api_backup_*` 里的口令闸门与错误文案
 
-一个刻意的边界：**写文件对话框、时间戳、选桌面路径留在壳层**。
-    模块负责"密码学 + 铺盘规则"，壳层负责"问用户存哪"。这样模块可以脱离界面被测试，
-    而壳层换掉 pywebview 也不影响备份格式。
-
-依赖说明：
-    `import crypto_core` 是本模块唯一的项目内依赖，它是**场景无关的纯密码学叶子库**
-    （不 import 任何业务、也不 import 任何壳层），并且必须留在仓库根目录 ——
-    `dick_backup_tool.py`（独立解密工具）要能脱离 DICK 本体单独运行。
-    `tests/test_kernel_boundaries.py` 的白名单里只承认 crypto_core / secret_store 这两个叶子库。
+两个刻意的边界：
+  ① **写文件对话框、时间戳、选桌面路径留在壳层**。模块负责"密码学 + 铺盘规则"，
+     壳层负责"问用户存哪"。这样模块可以脱离界面被测试，壳层换掉 pywebview 也不影响备份格式。
+  ② **加密能力由 `bind(host)` 注入**（ARCHITECTURE.md 十二：块只许依赖 stdlib + kernel）。
+     以前这里 `import crypto_core` —— 那是仓库根目录的宿主代码，块搬去别的项目当场就
+     ModuleNotFoundError。现在宿主把加解密实现（生产环境就是 crypto_core）用
+     `bind(host, crypto=…)` 送进来；块只认 5 个方法：
+         password_strength(pw) / make_recovery_code() / encrypt(pw, raw, iters=None)
+         decrypt(pw, blob) / info(blob)
+     铺盘（restore_zip）不需要任何宿主能力，所以它单独也能跑 —— 救数据的路不依赖加密实现。
 """
 
 import os
 import shutil
-
-import crypto_core
 
 # 容器里允许还原的五个去处（<seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌键名与返回的计数表一一对应）
 RESTORE_KEYS = ("saves", "worlds", "personas", "config", "codex")
@@ -32,23 +31,43 @@ class BackupService(object):
     def __init__(self, log=None):
         self.log = log
         self.last_error = ""
+        self.host = None
+        self.crypto = None
+
+    # ---------------------------------------------------------------- 宿主注入
+    def bind(self, host, crypto=None):
+        """把宿主接进来（幂等：壳层每次取服务都调一次也没关系）。
+
+        `crypto` 是加解密实现（生产环境 = `crypto_core`）；不给时取 `host.crypto`。
+        缺了它，seal/unseal/口令相关的方法会当场说清楚，而不是偷偷去 import 宿主。
+        """
+        self.host = host
+        impl = crypto if crypto is not None else getattr(host, "crypto", None)
+        if impl is not None:
+            self.crypto = impl
+        return self
+
+    def _c(self):
+        if self.crypto is None:
+            raise RuntimeError("备份模块还没绑定加密能力（壳层没调 bind(host) 或宿主没有 crypto）")
+        return self.crypto
 
     # ---------------------------------------------------------------- 口令
     def password_check(self, password):
         """给界面用：实时告诉用户口令够不够强（不存任何东西）"""
-        lvl, msg = crypto_core.password_strength(password or "")
+        lvl, msg = self._c().password_strength(password or "")
         return {"ok": True, "level": lvl, "msg": msg, "ok_to_use": lvl >= 2}
 
     def make_password(self):
         """生成一个随机强口令（32 字节 → base32，抄纸上比"想一个好记的"更可靠）"""
-        return {"ok": True, "password": crypto_core.make_recovery_code()}
+        return {"ok": True, "password": self._c().make_recovery_code()}
 
     def require_strong(self, password):
         """口令闸门：返回 (是否放行, 不达标时的界面文案)。
 
         文案与搬家前逐字一致 —— 前端已经按这句话做排版，改字等于改界面。
         """
-        lvl, msg = crypto_core.password_strength(password or "")
+        lvl, msg = self._c().password_strength(password or "")
         if lvl >= 2:
             return True, ""
         return False, ("口令不够强（%s）。加密备份的安全性 100%% 取决于口令强度，"
@@ -58,20 +77,20 @@ class BackupService(object):
     def seal(self, raw_zip, password, iters=None):
         """zip 字节 → 容器字节（压缩 + 填充 + AES-GCM，头参与认证）"""
         if iters is None:
-            return crypto_core.encrypt(password, raw_zip)
-        return crypto_core.encrypt(password, raw_zip, iters=iters)
+            return self._c().encrypt(password, raw_zip)
+        return self._c().encrypt(password, raw_zip, iters=iters)
 
     def unseal(self, blob, password):
-        """容器字节 → zip 字节。口令错/被篡改都抛 ValueError（文案来自 crypto_core）"""
-        return crypto_core.decrypt(password, blob)
+        """容器字节 → zip 字节。口令错/被篡改都抛 ValueError（文案来自加密实现）"""
+        return self._c().decrypt(password, blob)
 
     def info(self, blob):
         """容器头（公开信息：版本/算法/迭代数/大小），用于界面显示与排查"""
-        return crypto_core.info(blob)
+        return self._c().info(blob)
 
     # ---------------------------------------------------------------- 铺盘
     def restore_zip(self, z, bak, dirs):
-        """把备份 zip 铺回磁盘。返回各类计数。
+        """把备份 zip 铺回磁盘。返回各类计数（**不需要宿主能力**）。
 
         dirs 由壳层给（模块不认识 `App` 这个对象）：
             {"root": 数据根, "saves":…, "worlds":…, "personas":…,

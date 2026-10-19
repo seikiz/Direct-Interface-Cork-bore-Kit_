@@ -164,8 +164,11 @@ def case_version_rules():
     _eq(_version.compat_line("1.2.3.4"), "1.2", "兼容线取前两位")
 
 def case_paths_are_parameterised():
-    _eq(paths.get_base_dir("/tmp/x"), os.path.abspath("/tmp/x"), "显式 base_dir 优先")
-    _true(paths.get_config_file("a.json", "/tmp/x").endswith("a.json"), "配置路径规则")
+    # 探针路径用 os.sep 拼，不写字面量绝对路径：块要能原封不动搬去别的项目
+    # （ARCHITECTURE.md 十二.3：`C:\`、/tmp/ 这类字面量出现即违规）。
+    probe = os.path.join(os.sep, "kernel_selftest_abs")
+    _eq(paths.get_base_dir(probe), os.path.abspath(probe), "显式 base_dir 优先")
+    _true(paths.get_config_file("a.json", probe).endswith("a.json"), "配置路径规则")
 
 
 def _cases():

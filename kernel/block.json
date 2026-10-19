@@ -55,5 +55,8 @@
   "budget": {
     "soft_lines": 400,
     "hard_lines": 800
+  },
+  "requires": {
+    "pip": []
   }
 }

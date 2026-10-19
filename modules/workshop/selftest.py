@@ -2,7 +2,7 @@
 """modules/workshop/selftest.py —— workshop 块的自检（闭环：不惊动任何别的块）
 
 `python -m modules.workshop --selftest`  → 成功时**只有一行** JSON：
-    {"block": "workshop", "pass": 11, "fail": 0, "ms": 9, "deps": []}
+    {"block": "workshop", "pass": 13, "fail": 0, "ms": 40, "deps": []}
 
 失败时追加：FAIL <case>: <原因> + 一行最小复现命令。
 
@@ -49,6 +49,7 @@ class FakeHost(object):
                 "世界卡包": ("packs", "packs", "x")}
 
     def __init__(self, root, fail_cards=False):
+        self.root = root
         self.save_dir = os.path.join(root, "saves")
         self.world_dir = os.path.join(root, "worlds")
         self.pack_dir = os.path.join(root, "packs")
@@ -59,6 +60,18 @@ class FakeHost(object):
         self.reloaded = []
         self.plugin_manager = None
         self.fail_cards = fail_cards
+        # 宿主端口：导出时"问用户存哪"。None=自动给一个临时位置，False=模拟用户取消。
+        self.save_path = None
+        self.picked = []
+        self.exported = []
+
+    def _pick_save_path(self, name, types):
+        self.picked.append((name, tuple(types)))
+        if self.save_path is False:
+            return None
+        path = self.save_path or os.path.join(self.root, "exported_" + name)
+        self.exported.append(path)
+        return path
 
     def _ws_kind(self, rtype):
         return self.WS_KINDS.get(str(rtype or "").strip(), self.WS_KINDS["世界卡"])
@@ -286,6 +299,34 @@ def case_save_conn():
         shutil.rmtree(tree, ignore_errors=True)
 
 
+def case_export_uses_host_dialog():
+    """导出：保存位置由宿主去问（块不 import pywebview、不碰 webview.windows）"""
+    cli, tree = _client()
+    try:
+        with io.open(os.path.join(cli.host.save_dir, "e.json"), "w", encoding="utf-8") as f:
+            f.write('{"name": "一张卡"}')
+        got = cli.export("角色卡", "e.json")
+        _eq(got["ok"], True, "导出应成功")
+        _true(len(cli.host.exported) == 1 and os.path.isfile(cli.host.exported[0]),
+              "文件要落到宿主给的位置：%r" % (cli.host.exported,))
+        _eq(cli.host.picked, [("e.json", ("JSON (*.json)",))], "文件名/类型要交给宿主")
+    finally:
+        shutil.rmtree(tree, ignore_errors=True)
+
+
+def case_export_cancelled():
+    """坏输入：用户取消保存对话框 → 如实报 cancelled，不偷偷写盘"""
+    cli, tree = _client()
+    cli.host.save_path = False          # 模拟"宿主问完，用户点了取消"
+    try:
+        with io.open(os.path.join(cli.host.save_dir, "e.json"), "w", encoding="utf-8") as f:
+            f.write("{}")
+        got = cli.export("角色卡", "e.json")
+        _eq((got["ok"], got["err"]), (False, "cancelled"), "取消要如实报")
+    finally:
+        shutil.rmtree(tree, ignore_errors=True)
+
+
 def case_download_writes_file():
     cli, tree = _client()
     try:
@@ -308,6 +349,8 @@ def _cases():
         "upload_missing_file": case_upload_missing_file,
         "delete_local": case_delete_local,
         "save_conn": case_save_conn,
+        "export_uses_host_dialog": case_export_uses_host_dialog,
+        "export_cancelled": case_export_cancelled,
         "download_writes_file": case_download_writes_file,
     }
 

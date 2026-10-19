@@ -30,6 +30,7 @@
       }
     ],
     "methods": [
+      "bind",
       "password_check",
       "make_password",
       "require_strong",
@@ -38,6 +39,9 @@
       "info",
       "restore_zip"
     ]
+  },
+  "requires": {
+    "pip": []
   },
   "budget": {
     "soft_lines": 400,

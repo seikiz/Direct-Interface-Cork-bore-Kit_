@@ -1,12 +1,13 @@
 # -*- coding: utf-8 -*-
 """accept.py —— 一条命令验收（懒人版：只读最后一行）
 
-判断标准：ARCHITECTURE.md 十一「闭环与低耦」。这个脚本把五件事一次跑完：
+判断标准：ARCHITECTURE.md 十一「闭环与低耦」+ 十二「块的可移植性」。这个脚本把六件事一次跑完：
     ① 每个块的自检（`python -m <块> --selftest`，一行 JSON）
-    ② 依赖环（tools/blocks_graph.py）
-    ③ 单文件行数（软 400 / 硬 800）
-    ④ 边界审计（tools/audit_kernel_boundaries.py，含白名单棘轮与行数上限棘轮）
-    ⑤ 唯一真相互检（block.json / manifest.json / 目录名 / 服务名 / 接口方法）
+    ② 搬家测试（tools/portability_check.py：只带 kernel/ + 块目录，换个目录跑一遍）
+    ③ 依赖环（tools/blocks_graph.py）
+    ④ 单文件行数（软 400 / 硬 800）
+    ⑤ 边界审计（tools/audit_kernel_boundaries.py，含白名单棘轮与行数上限棘轮）
+    ⑥ 唯一真相互检（block.json / manifest.json / 目录名 / 服务名 / 接口方法）
 
 用法：
     python tools/accept.py                    # 人看
@@ -14,7 +15,7 @@
     python tools/accept.py --json             # 机器可读（供 CI 解析）
 
 出口约定（ARCHITECTURE.md 十一）：
-    成功 → 最后一行为 `ALL_BLOCKS_OK`
+    成功 → 最后一行为 `ALL_BLOCKS_OK   portable: N/M`
     失败 → **第一行**就是 `FAIL <块名>: <一行原因>`，后面才是细节
 """
 
@@ -31,6 +32,7 @@ sys.path.insert(0, HERE)
 
 import audit_kernel_boundaries as audit          # noqa: E402
 import blocks_graph as bg                        # noqa: E402
+import portability_check as pc                   # noqa: E402
 
 # Windows 控制台默认 cp1252，打印中文会 UnicodeEncodeError（CI 上就是这么红的）。
 # 工具自己把输出设成 UTF-8，任何 shell 跑都稳。
@@ -111,6 +113,30 @@ def check_selftests(blocks):
         if not r["ok"]:
             failures.append(_fail(bid, r["why"]))
     return out, failures
+
+
+# ================================================================ ② 搬家测试
+def check_portability(blocks):
+    """块能不能"只带 kernel/ 就搬走"（ARCHITECTURE.md 十二）。
+
+    放在块自检之后：自检证明"块自己没坏"，搬家测试证明"块没长在宿主身上"。
+    两者都过，才敢说这个块能抄去别的项目。
+    """
+    results, failures = {}, []
+    for bid in sorted(blocks):
+        info = blocks[bid]
+        block_json = info.get("block")
+        if not block_json:
+            continue                  # block.json 读不出来由「唯一真相」那一段报
+        r = pc.check_block(bid, info["dir"], block_json,
+                           str(info.get("layer") or "module"), ROOT)
+        results[bid] = r
+        if not r["portable"]:
+            failures.append(_fail(bid, "不可移植（%s）"
+                                  % "；".join(pc.short(v) for v in r["violations"][:2])))
+    summary = {"portable": sum(1 for r in results.values() if r["portable"]),
+               "total": len(results)}
+    return results, failures, summary
 
 
 # ================================================================ ⑤ 唯一真相
@@ -271,6 +297,9 @@ def main(argv=None):
     self_results, f1 = check_selftests(blocks)
     failures += f1
 
+    port_results, f2, port_summary = check_portability(blocks)
+    failures += f2
+
     graph = bg.check()
     for p in graph["problems"]:
         failures.append(_fail("graph", p))
@@ -297,6 +326,10 @@ def main(argv=None):
         "blocks": sorted(blocks),
         "selftests": {b: {k: v for k, v in r.items() if k in ("ok", "why", "json")}
                       for b, r in self_results.items()},
+        "portability": {b: {"portable": r["portable"], "ms": r["ms"],
+                            "violations": r["violations"]}
+                        for b, r in port_results.items()},
+        "portable": port_summary,
         "failures": failures,
         "cycles": graph["cycles"],
         "lines": graph["lines"],
@@ -322,28 +355,35 @@ def main(argv=None):
         print("")
 
     print("=" * 70)
-    print("验收：块自检 / 依赖环 / 行数 / 边界 / 唯一真相（ARCHITECTURE.md 十一）")
+    print("验收：块自检 / 搬家测试 / 依赖环 / 行数 / 边界 / 唯一真相（ARCHITECTURE.md 十一、十二）")
     print("=" * 70)
-    print("\n[1/5] 块自检（%d 块）" % len(self_results))
+    print("\n[1/6] 块自检（%d 块）" % len(self_results))
     for bid, r in sorted(self_results.items()):
         j = r.get("json") or {}
         print("  %-10s pass=%-3s fail=%-2s ms=%-4s %s"
               % (bid, j.get("pass", "?"), j.get("fail", "?"), j.get("ms", "?"),
                  "OK" if r["ok"] else "FAIL ← %s" % r["why"]))
-    print("\n[2/5] 依赖环：%s" % ("无环" if not graph["cycles"] else
+    print("\n[2/6] 搬家测试（只带 kernel/ + 块目录）：portable %d/%d"
+          % (port_summary["portable"], port_summary["total"]))
+    for bid, r in sorted(port_results.items()):
+        print("  %-10s portable=%-5s ms=%-4s %s"
+              % (bid, bool(r["portable"]), r["ms"],
+                 "OK" if r["portable"] else
+                 "FAIL ← " + "；".join(pc.short(v) for v in r["violations"][:2])))
+    print("\n[3/6] 依赖环：%s" % ("无环" if not graph["cycles"] else
                                   "发现 %d 个环" % len(graph["cycles"])))
     for e in graph["edges"]:
         print("  %s → %s" % (e["from"], e["to"]))
     top = graph["lines"][0] if graph["lines"] else {"file": "-", "lines": 0}
-    print("\n[3/5] 行数：最大 %s（%d 行），软 %d / 硬 %d"
+    print("\n[4/6] 行数：最大 %s（%d 行），软 %d / 硬 %d"
           % (top["file"], top["lines"], bg.SOFT_LINES, bg.HARD_LINES))
     for r in soft:
         print("  ⚠ %s %d 行 > 软上限 %d（不影响验收，但该拆了）"
               % (r["file"], r["lines"], bg.SOFT_LINES))
-    print("\n[4/5] 边界审计：%d 违规；白名单 %s；行数上限 %d 项"
+    print("\n[5/6] 边界审计：%d 违规；白名单 %s；行数上限 %d 项"
           % (len(boundary_res["violations"]), result["whitelist"],
              len(boundary_res["limits"])))
-    print("\n[5/5] 唯一真相 + 接口签名：服务 %s；签名快照 %s"
+    print("\n[6/6] 唯一真相 + 接口签名：服务 %s；签名快照 %s"
           % ("、".join("%s→%s" % (s, b) for s, b in sorted(services.items())) or "（无）",
              "一致" if not sig_changed else "有变化"))
 
@@ -360,7 +400,8 @@ def main(argv=None):
         print("\n结论：%d 项不通过（%dms）" % (len(failures), total_ms))
         return 1
     print("\n耗时 %dms" % total_ms)
-    print("ALL_BLOCKS_OK")
+    print("ALL_BLOCKS_OK   portable: %d/%d"
+          % (port_summary["portable"], port_summary["total"]))
     return 0
 
 

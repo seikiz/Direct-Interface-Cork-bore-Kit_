@@ -130,6 +130,7 @@ shells             壳层：桌面主程序 / net.py / 安卓 / 播放器 ——
 | 日期 | 改了什么 | 因为什么 | 提出人 |
 |---|---|---|---|
 | 2026-10-18 | 建立本文件 | 项目进入运维期，先把初衷与边界写死 | seiki |
+| 2026-10-19 | `modules/backup` 公开接口新增 `bind(host, crypto)`：加解密由宿主注入（接口签名快照已同步）；`workshop.export` 的保存对话框改走宿主端口 `_pick_save_path`；`kernel` 自检去掉 `/tmp` 字面量；`crypto_core` 的共享叶子库白名单随之清空（模块已不再 import 它） | 搬家测试（十二）发现块长在宿主身上：backup 直接 `import crypto_core`、workshop 直接 `import pywebview` 并读 `webview.windows` 全局单例 —— 搬去别的项目当场 ModuleNotFoundError。改完三块 `portable` 全过 | seiki |
 
 
 ---

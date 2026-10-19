@@ -409,7 +409,9 @@ def test_pilots():
           deleted.get("ok") is True and host.reloaded == ["roles"], str(host.reloaded))
 
     # ---- 备份模块 ----
-    bk = k.service("backup")
+    # 加解密是**宿主能力**（ARCHITECTURE.md 十二）：这里把真 crypto_core 注入，
+    # 所以下面验的仍是"真容器格式没变"，而不是自检里的替身。
+    bk = k.service("backup").bind(None, crypto_core)
     ok_weak, err_weak = bk.require_strong("123456")
     ok_strong, _e = bk.require_strong("Abcdefgh1234Xy")
     check(u"弱口令被拦下，且文案与搬家前一致",
@@ -497,11 +499,18 @@ def test_ratchet_actually_red():
     res = audit.scan()
     limits = {k: v["limit"] for k, v in res["limits"].items()}
 
-    # (1) 白名单被调长 → 红
+    # (1) 白名单被调长 → 红。当前白名单可以已经是 0 条（欠债还完了），所以这里
+    #     临时加一条"当前白名单"再与 0 条的基线比 —— 断言的是棘轮行为，不是仓库现状。
     p1 = os.path.join(d, "base_wl.json")
     write(p1, json.dumps({"schema": 1, "violations": [], "whitelist": [],
                           "whitelist_count": 0, "limits": limits}, ensure_ascii=False))
-    check(u"白名单变长 → 比对返回非 0", audit.compare_baseline(res, p1) != 0)
+    audit.SHARED_LEAF_LIBS["probe_leaf"] = {
+        "reason": "棘轮自检用的临时白名单条目，跑完立刻摘掉", "owner": "tests"}
+    try:
+        grown = audit.scan()
+        check(u"白名单变长 → 比对返回非 0", audit.compare_baseline(grown, p1) != 0)
+    finally:
+        audit.SHARED_LEAF_LIBS.pop("probe_leaf", None)
 
     # (2) 行数上限被调高 → 红（基线里某个上限比现在小）
     p2 = os.path.join(d, "base_lim.json")
@@ -561,8 +570,10 @@ def test_block_protocol():
     out = r.stdout.decode("utf-8", "replace") + r.stderr.decode("utf-8", "replace")
     lines = [ln.strip() for ln in out.strip().splitlines() if ln.strip()]
     check(u"tools/accept.py 退出码 0", r.returncode == 0, out[-500:])
-    check(u"验收最后一行是 ALL_BLOCKS_OK", bool(lines) and lines[-1] == "ALL_BLOCKS_OK",
+    check(u"验收最后一行是 ALL_BLOCKS_OK，且带 portable 汇总（ARCHITECTURE.md 十二）",
+          bool(lines) and lines[-1].startswith("ALL_BLOCKS_OK") and "portable:" in lines[-1],
           lines[-1] if lines else "")
+    check(u"验收报告里有搬家测试那一段", u"搬家测试" in out, out[-300:])
     check(u"验收报告带变更摘要（新增/删除/行数/接口签名）",
           u"接口签名变化" in out and u"行数变化" in out, out[-300:])
     for bid in ("kernel", "backup", "workshop"):

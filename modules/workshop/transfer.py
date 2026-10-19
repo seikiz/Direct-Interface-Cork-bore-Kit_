@@ -193,7 +193,12 @@ class TransferMixin(object):
             return {"ok": False, "err": str(e)}
 
     def export(self, rtype, filename):
-        """本地文件导出到用户选择的位置"""
+        """本地文件导出到用户选择的位置。
+
+        保存对话框是**宿主能力**（选路径 = 界面的事）：块不 import pywebview、也不碰
+        `webview.windows[0]` 这个壳层全局单例，只调宿主端口 `_pick_save_path(name, types)`
+        —— 换个宿主（命令行/网页/别的 App）只要实现这一个方法，导出就还能用。
+        """
         h = self._h()
         target_dir = h._ws_local_dir(rtype)
         filename = os.path.basename((filename or "").replace("..", "_"))
@@ -201,16 +206,11 @@ class TransferMixin(object):
         if not os.path.isfile(src):
             return {"ok": False, "err": "文件不存在"}
         try:
-            import webview
-            win = webview.windows[0] if getattr(webview, "windows", None) else None
-            if win is None:
-                return {"ok": False, "err": "窗口未就绪"}
-            res = win.create_file_dialog(webview.FileDialog.SAVE, save_filename=filename,
-                                         file_types=("JSON (*.json)",))
-            if not res:
+            dst = h._pick_save_path(filename, ("JSON (*.json)",))
+            if not dst:
                 return {"ok": False, "err": "cancelled"}
             import shutil
-            shutil.copy2(src, res[0])
+            shutil.copy2(src, dst)
             return {"ok": True}
         except Exception as e:
             return {"ok": False, "err": str(e)[:200]}
