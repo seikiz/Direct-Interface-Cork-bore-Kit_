@@ -92,8 +92,11 @@ window.WsScreen = (function (global) {
   function wsShowLocalPreview(rtype, filename) {
     wsCurLocal = { rtype: rtype, filename: filename };
     pywebview.api.workshop_preview(rtype, filename).then(function (r) {
-      wsCardShow(r ? (r.ok ? r.preview : '') : '', filename,
-                 r && !r.ok ? (r.err || '') : '');
+      var text = r ? (r.ok ? r.preview : '') : '';
+      var err = r && !r.ok ? (r.err || '') : '';
+      // 原文留一份给详情弹窗：世界书 / 机制住在窄条预览不显示的隐藏槽里，只有原文能拿到
+      wsCardSrc = { text: text, file: filename, rtype: rtype, err: err };
+      wsCardShow(text, filename, err);
     });
   }
 
@@ -113,6 +116,7 @@ window.WsScreen = (function (global) {
 
   var wsCardCur = null;          // 当前卡片模型（展开/收起只重画这个）
   var wsCardOpen = {};           // 分区 id → 是否展开
+  var wsCardSrc = null;          // 最近一次预览的原文（详情弹窗要的，卡片详情屏自己排版）
 
   function wsCardCfg() { return window.DICK_CARD_FIELDS || {}; }
 
@@ -423,10 +427,14 @@ window.WsScreen = (function (global) {
     if (!box) return;
     var m = wsCardCur;
     if (!m) { box.innerHTML = ''; return; }
+    // 悬停提示：这张卡点了会开完整详情（入口绑在 bindLocalOnline 的 onclick 上）
+    box.title = '点击查看详情';
     box.innerHTML = wsCardRender(m);
     var btns = box.querySelectorAll('.cv-more');
     for (var b = 0; b < btns.length; b++) {
-      btns[b].onclick = function () {
+      btns[b].onclick = function (e) {
+        // 「展开 / 收起 N 行」是预览自己的动作：吞掉冒泡，否则会顺带把详情弹窗打开
+        if (e && e.stopPropagation) { e.stopPropagation(); }
         var id = this.getAttribute('data-cv');
         wsCardOpen[id] = !wsCardOpen[id];
         wsCardPaint();
@@ -467,7 +475,21 @@ window.WsScreen = (function (global) {
   function wsCardClear() {
     wsCardCur = null;
     wsCardOpen = {};
+    wsCardSrc = null;
     wsCardPaint();
+  }
+
+  /* 打开卡片详情：本屏只发「点了哪张卡」，排版归 ws-detail.js（屏间只经 DICK.bus）。 */
+  function wsOpenDetail() {
+    if (!wsCardSrc || !DICK.bus) { return; }
+    DICK.bus.emit('ws:detail:open', wsCardSrc);
+  }
+
+  /* 详情弹窗底部的动作：直接点本屏已有的按钮，不复制第二份实现（导入归外壳，走 bus）。 */
+  function wsDetailAction(name) {
+    var ids = { export: 'wsExportBtn', delete: 'wsLocalDelBtn', upload: 'wsUploadBtn' };
+    var btn = ids[name] ? document.getElementById(ids[name]) : null;
+    if (btn) { btn.click(); }
   }
 
   function wsSwitchTab(tab) {
@@ -645,6 +667,7 @@ window.WsScreen = (function (global) {
         if (r && r.ok) {
           wsCurLocal = null;
           wsCardClear();
+          DICK.bus.emit('ws:detail:close');   // 卡已经被删掉，详情弹窗自己收起来
           wsLoadLocal();
           reloadRoles();
           reloadWorlds();
@@ -714,6 +737,11 @@ window.WsScreen = (function (global) {
         else wsSetStatus('[ic:error] ' + ((r && r.err) || '删除失败'));
       });
     };
+    // 卡片详情：单击右侧那张结构化卡（#wsPreview）→ 完整详情弹窗。
+    // 列表选择 / 双击 / 长按一个字都没动（选择仍然只刷新窄条预览）。
+    var pv = document.getElementById('wsPreview');
+    if (pv) { pv.onclick = function () { wsOpenDetail(); }; }
+    DICK.bus.on('ws:detail:action', function (p) { wsDetailAction(p && p.action); });
   }
 
   /* ---------------- 挂载 / 卸载（router 注入片段之后调用） ---------------- */

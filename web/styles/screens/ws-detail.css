@@ -1,0 +1,53 @@
+/* web/styles/screens/ws-detail.css —— 创意工坊「卡片详情」弹窗（2026-12）
+ * 行为在 web/js/screens/ws-detail.js，DOM 在 web/screens/ws.html 的 #wsDetailModal。
+ *
+ * 层叠位置：index.html 里排在 styles/screens/ws.css **之后**（本屏最后一条 <link>）。
+ * 为什么放最后：`.modal-box .btn2{ color:var(--accent-text) }` 是 (0,2,0)，本文件里
+ * `.ws-detail-acts .ws-detail-del{ color:var(--danger) }` 也是 (0,2,0) —— 靠"在后面"取胜。
+ *
+ * 颜色只用令牌（--surface / --surface-2 / --text / --text-sub / --border / --accent），
+ * 不写 hex / rgba：tests/test_web_surfaces.py（底色）、test_no_dim_text.py（文字色）盯着。
+ * 弹窗不用行内 style（行内 style 归 ui_snapshot 逐字节守恒，新增控件一律走这里）。 */
+#wsDetailModal{ z-index:60; }        /* 比 .modal 的 50 高：它要从创意工坊上面弹出来 */
+.ws-detail-box{ background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-md);
+  width:min(92vw,720px); max-height:84vh; padding:0; overflow:hidden;
+  display:flex; flex-direction:column; }
+.ws-detail-head{ display:flex; gap:10px; align-items:center; padding:12px 16px;
+  border-bottom:1px solid var(--border); }
+.ws-detail-av{ flex:0 0 auto; min-width:44px; }
+.ws-detail-av .avatar{ width:44px; height:44px; border-radius:var(--radius-md); font-size:var(--font-xl); }
+.ws-detail-head-main{ flex:1; min-width:0; }
+.ws-detail-title{ font-size:var(--font-lg); font-weight:700; color:var(--text); word-break:break-word; }
+.ws-detail-meta{ font-size:var(--font-xs); color:var(--text-sub); margin-top:2px; word-break:break-word; }
+.ws-detail-tags{ font-size:var(--font-xs); color:var(--accent); margin-top:3px; word-break:break-word; }
+.ws-detail-scroll{ flex:1 1 auto; min-height:0; overflow:auto; padding:12px 16px;
+  font-size:var(--font-sm); line-height:var(--lh-normal); }
+.ws-detail-sec{ margin-bottom:12px; }
+.ws-detail-sec-label{ font-size:var(--font-xs); font-weight:600; color:var(--text-sub); margin-bottom:4px; }
+.ws-detail-sub{ font-size:var(--font-xs); color:var(--text-sub); margin:6px 0 2px; }
+.ws-detail-p p{ margin:0 0 6px; color:var(--text); white-space:pre-wrap; word-break:break-word; }
+.ws-detail-p p:last-child{ margin-bottom:0; }
+.ws-detail-kv{ display:grid; grid-template-columns:34% 66%; gap:3px 10px; margin:2px 0 8px; }
+.ws-detail-k{ font-size:var(--font-xs); color:var(--text-sub); word-break:break-word; }
+.ws-detail-v{ font-size:var(--font-xs); color:var(--text); word-break:break-word; }
+.ws-detail-ul{ margin:0 0 8px; padding-left:16px; }
+.ws-detail-ul li{ font-size:var(--font-sm); color:var(--text); margin-bottom:3px; word-break:break-word; }
+/* 三块 extras：标题一行（可点）+ 内容块<seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌；默认收起（hidden 属性），点标题才展开 */
+.ws-detail-x{ border:1px solid var(--border); border-radius:var(--radius-sm); margin-top:8px;
+  overflow:hidden; }
+.ws-detail-x-head{ display:flex; gap:8px; align-items:center; width:100%; padding:7px 10px;
+  cursor:pointer; background:var(--surface-2); border:0; color:var(--text);
+  font-size:var(--font-sm); text-align:left; }
+.ws-detail-x-title{ font-weight:600; }
+.ws-detail-x-sum{ color:var(--text-sub); font-size:var(--font-xs); }
+.ws-detail-x-arrow{ margin-left:auto; color:var(--text-sub); }
+.ws-detail-x-body{ padding:8px 10px; border-top:1px solid var(--border); }
+.ws-detail-entry{ padding:6px 0; border-bottom:1px dashed var(--border); }
+.ws-detail-entry:last-child{ border-bottom:0; }
+.ws-detail-more{ font-size:var(--font-xs); color:var(--text-sub); padding-top:4px; }
+.ws-detail-acts{ display:flex; gap:8px; align-items:center; padding:10px 16px;
+  border-top:1px solid var(--border); }
+.ws-detail-gap{ flex:1; }
+.ws-detail-acts .ws-detail-del{ color:var(--danger); }
+/* 入口提示：右侧那张结构化卡本身可点（单击 = 打开详情），光标就是唯一的提示 */
+#wsPreview{ cursor:pointer; }

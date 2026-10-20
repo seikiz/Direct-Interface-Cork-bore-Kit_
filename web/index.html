@@ -20,6 +20,7 @@
 <link rel="stylesheet" href="styles/panels.css">
 <link rel="stylesheet" href="styles/screens/wm.css">
 <link rel="stylesheet" href="styles/screens/ws.css">
+<link rel="stylesheet" href="styles/screens/ws-detail.css">
 </head>
 <body class="dark">
 <!-- Live2D 看板娘容器（<seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌插件启用且资源存在时才显示） -->
@@ -451,6 +452,7 @@
 <script src="js/screens/bk.js"></script>
 <script src="js/screens/wm.js"></script>
 <script src="js/screens/ws.js"></script>
+<script src="js/screens/ws-detail.js"></script>
 <script src="js/screens/settings.js"></script>
 <script src="js/screens/api_guide.js"></script>
 <script src="js/screens/codex-editor.js"></script>
@@ -2571,6 +2573,9 @@ document.getElementById('btnImportCard').onclick = function () {
     }
   });
 };
+// 卡片详情弹窗的「导入」也走这里（2026-12）：详情屏只发事件，按钮与去向归外壳自己，
+// 免得它隔着屏去摸 #btnImportCard（屏间只经 DICK.bus）。
+DICK.bus.on('card:import', function () { document.getElementById('btnImportCard').click(); });
 // ---- 消息操作：编辑 / 重新生成 / 滑条 ----
 document.getElementById('chat').addEventListener('click', function (e) {
   var btn = e.target.closest ? e.target.closest('button[data-act]') : null;

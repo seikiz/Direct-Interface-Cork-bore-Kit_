@@ -56,3 +56,23 @@
     <div class="row"><button data-i18n="wsClose" class="btn2 ghost" id="wsCloseBtn">关闭</button></div>
   </div>
 </div>
+<!-- 卡片详情弹窗（行为在 web/js/screens/ws-detail.js，样式在 styles/screens/ws-detail.css）
+     窄条预览只够「扫一眼」：这里把同一份字段表**全部展开**（不折叠），再补世界书 / 机制 / 文件
+     三块数据；底部四个按钮复用本屏与外壳已有的动作（不新增后端接口）。 -->
+<div class="modal ws-detail" id="wsDetailModal">
+  <div class="modal-box ws-detail-box">
+    <div class="ws-detail-head">
+      <div class="ws-detail-av" id="wsDetailAvatar"></div>
+      <div class="ws-detail-head-main" id="wsDetailHead"></div>
+    </div>
+    <div class="ws-detail-scroll" id="wsDetailBody"></div>
+    <div class="ws-detail-acts">
+      <button class="btn2 ghost" data-i18n="importCard" id="wsDetailImport" data-i18n-prefix="[ic:inbox] ">[ic:inbox] 导入角色卡</button>
+      <button class="btn2 ghost" data-i18n="wsExport" id="wsDetailExport" data-i18n-prefix="[ic:upload] ">[ic:upload] 导出文件</button>
+      <button class="btn2 ghost ws-detail-del" data-i18n="wsDel" id="wsDetailDelete" data-i18n-prefix="[ic:delete] ">[ic:delete] 删除</button>
+      <button class="btn2 ghost" data-i18n="wsUpload" id="wsDetailUpload" data-i18n-prefix="[ic:upload] ">[ic:upload] 上传本地</button>
+      <span class="ws-detail-gap"></span>
+      <button class="btn2 ghost" data-i18n="wsClose" id="wsDetailClose">关闭</button>
+    </div>
+  </div>
+</div>

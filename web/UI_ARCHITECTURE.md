@@ -242,6 +242,8 @@ DICK.router.register('xx', { fragment: 'screens/xx.html', module: window.XxScree
 | gal | gal | `web/js/screens/gal-scene.js` | 场景步骤行（一个「点」一行控件）+ 界面入口 + 新建包 | 400 |
 | gal | gal | `web/js/screens/gal-player.js` | 预览（交棒给 codex 播放器）+ 导出原生播放器 | 400 |
 | gal | gal | `web/js/screens/gal-lines.js` | 线内渲染 + 连线 + 保存/JSON/体检 + 按钮绑定 | 400 |
+| ws | ws | `web/js/screens/ws-detail.js` | 卡片详情弹窗：抬头 + 各分区全文（不折叠）+ 世界书/机制/文件三块 + 底部动作（**只发事件**，动作回本屏已有按钮） | 400 |
+| ws | ws | `web/styles/screens/ws-detail.css` | 详情弹窗专属样式（`.ws-detail-*`，只吃令牌；`<link>` 排在 `ws.css` 之后） | — |
 
 ### 表 2：跨屏 id 引用例外（上限 5 条；每条必须写清为什么值得留）
 
