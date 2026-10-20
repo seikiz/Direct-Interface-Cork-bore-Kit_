@@ -1,0 +1,30 @@
+{
+  "schema": 1,
+  "note": "门面模块与转发函数数量，只许减少（tools/audit_facades.py）",
+  "files": {
+    "codex_core.py": {
+      "count": 23,
+      "total": 23,
+      "getattr_proxy": true,
+      "reason": "拆块时保留的转发门面，调用点零改动；清理顺序见 ARCHITECTURE 十"
+    },
+    "crypto_core.py": {
+      "count": 3,
+      "total": 10,
+      "getattr_proxy": false,
+      "reason": "拆块时保留的转发门面，调用点零改动；清理顺序见 ARCHITECTURE 十"
+    },
+    "image_gen.py": {
+      "count": 10,
+      "total": 10,
+      "getattr_proxy": true,
+      "reason": "拆块时保留的转发门面，调用点零改动；清理顺序见 ARCHITECTURE 十"
+    },
+    "voice_engine.py": {
+      "count": 1,
+      "total": 3,
+      "getattr_proxy": true,
+      "reason": "拆块时保留的转发门面，调用点零改动；清理顺序见 ARCHITECTURE 十"
+    }
+  }
+}
