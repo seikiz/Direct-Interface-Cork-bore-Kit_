@@ -167,13 +167,13 @@ def fake_repo(label, module_extra="", selftest_extra=""):
 
 
 # ================================================================ A. 真实块
-BLOCK_IDS = ("backup", "codex", "image_gen", "kernel", "voice", "workshop")
+BLOCK_IDS = ("backup", "codex", "couple", "image_gen", "kernel", "voice", "workshop")
 
 
 def test_real_blocks():
     print(u"\n== A. 真实块：搬走之后还能装上、自检通过、没有宿主模块 ==")
     res = pc.check_all()
-    check(u"搬家测试覆盖六块（kernel / backup / workshop / image_gen / voice / codex）",
+    check(u"搬家测试覆盖全部块（kernel / backup / workshop / image_gen / voice / codex / couple）",
           res["total"] == len(BLOCK_IDS), str(sorted(res["blocks"])))
     passed = 0
     for bid in BLOCK_IDS:
