@@ -1,0 +1,17 @@
+{
+  "id": "couple",
+  "version": "1.0.0.0",
+  "provides": {
+    "services": [
+      "couple"
+    ],
+    "routes": [],
+    "ui_screens": [],
+    "commands": []
+  },
+  "requires": {
+    "services": [],
+    "modules": []
+  },
+  "lazy": true
+}

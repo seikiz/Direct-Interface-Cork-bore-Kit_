@@ -1,0 +1,46 @@
+{
+  "block": "couple",
+  "layer": "module",
+  "id": "couple",
+  "owner": "seiki",
+  "files": [
+    "__init__.py",
+    "__main__.py",
+    "block.json",
+    "manifest.json",
+    "module.py",
+    "README.md",
+    "selector.py"
+  ],
+  "selftest": {
+    "cmd": [
+      "python",
+      "-m",
+      "modules.couple",
+      "--selftest"
+    ],
+    "max_ms": 2000
+  },
+  "interface": {
+    "service": "couple",
+    "impls": [
+      {
+        "file": "module.py",
+        "class": "CoupleService"
+      }
+    ],
+    "methods": [
+      "build",
+      "can_enable",
+      "switch_to",
+      "validate"
+    ]
+  },
+  "requires": {
+    "pip": []
+  },
+  "budget": {
+    "soft_lines": 400,
+    "hard_lines": 800
+  }
+}
