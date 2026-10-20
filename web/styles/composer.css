@@ -1,0 +1,36 @@
+/* 输入栏上方的状态行：生成中 / 忙。贴着输入框，不进对话。
+   只认令牌，不写字面色；等宽数字避免计秒时抖动。 */
+#composerStatus {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 14px 2px;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--text-sub);
+  font-variant-numeric: tabular-nums;
+  min-height: 18px;
+}
+
+#composerStatus[hidden] {
+  display: none;
+}
+
+#composerStatus::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+  animation: composerPulse 1.2s ease-in-out infinite;
+}
+
+@keyframes composerPulse {
+  0%, 100% { opacity: .35; }
+  50% { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #composerStatus::before { animation: none; opacity: .8; }
+}
+/* <seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌

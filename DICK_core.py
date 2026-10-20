@@ -141,8 +141,7 @@ def eval_battle_formula(expr, vars_dict):
         raise
     except Exception as e:
         raise ValueError(f"公式求值失败: {e}")
-
-
+from notices import BUSY_TEXT, notify_busy  # noqa: E402,F401
 class MessageNode:
     """对话节点，构成树状历史"""
     __slots__ = ('id', 'role', 'content', 'parent_id', 'children_ids', 'timestamp', 'metadata')
@@ -2370,7 +2369,7 @@ class ChatCore:
             "—— 场景如下 ——\n%s" % (who, cue)
         )
 
-    def generate_opening(self, cue, on_response=None, on_error=None, on_stream=None):
+    def generate_opening(self, cue, on_response=None, on_error=None, on_stream=None, on_busy=None):
         """开局：不插入任何用户消息，让模型以「开场白场景」为起点演出第一幕。
 
         返回 True 表示请求已发出；False 表示发不出去（没配 Key / 场景为空 / 正在忙），
@@ -2385,8 +2384,7 @@ class ChatCore:
             return False
         with self._proc_lock:
             if self.is_processing:
-                if on_error:
-                    on_error("正在处理中，请稍候")
+                notify_busy(on_busy, on_error)
                 return False
             self.is_processing = True
         self.opening_cue = cue
@@ -2396,11 +2394,12 @@ class ChatCore:
         threading.Thread(
             target=self._fetch_response,
             args=(cue, None, on_response, on_error, parent, on_stream, True),
+            kwargs={"on_busy": on_busy},
             daemon=True
         ).start()
         return True
 
-    def send_message(self, user_input: str, on_response=None, on_error=None, on_stream=None):
+    def send_message(self, user_input: str, on_response=None, on_error=None, on_stream=None, on_busy=None):
         if not self.client:
             if on_error: on_error("请先设置 API Key")
             return
@@ -2408,13 +2407,14 @@ class ChatCore:
             return
         with self._proc_lock:
             if self.is_processing:
-                if on_error: on_error("正在处理中，请稍候")
+                notify_busy(on_busy, on_error)
                 return
             self.is_processing = True
         self.add_user_message(user_input)
         threading.Thread(
             target=self._fetch_response,
             args=(user_input, None, on_response, on_error, self.tree.current_leaf_id, on_stream, True),
+            kwargs={"on_busy": on_busy},
             daemon=True
         ).start()
 
@@ -2637,14 +2637,14 @@ class ChatCore:
         "以上是本次创作的既定前提，后续所有要求都建立在此前提之上。"
     )
 
-    def _fetch_response(self, user_input: str, speaker: Optional[str], on_response, on_error, parent_node_id: str, on_stream=None, _locked=False):
+    def _fetch_response(self, user_input: str, speaker: Optional[str], on_response, on_error, parent_node_id: str, on_stream=None, _locked=False, on_busy=None):
         if not self.client:
             if on_error: on_error("请先设置 API Key")
             return
         if not _locked:
             with self._proc_lock:
                 if self.is_processing:
-                    if on_error: on_error("正在处理中，请稍候")
+                    notify_busy(on_busy, on_error)
                     return
                 self.is_processing = True
         try:
@@ -2875,7 +2875,7 @@ class ChatCore:
             self.is_processing = False
 
     # ---------- 群聊自动接话 ----------
-    def send_auto_turn(self, speaker_name: str, on_response=None, on_error=None, on_stream=None):
+    def send_auto_turn(self, speaker_name: str, on_response=None, on_error=None, on_stream=None, on_busy=None):
         """群聊自动接话：让指定角色基于当前上下文继续发言。
         合成指令不写入历史树，只有该角色的发言会作为 assistant 节点保存。
         """
@@ -2884,7 +2884,7 @@ class ChatCore:
             return
         with self._proc_lock:
             if self.is_processing:
-                if on_error: on_error("正在处理中，请稍候")
+                notify_busy(on_busy, on_error)
                 return
             self.is_processing = True
         threading.Thread(target=self._fetch_auto_turn,
@@ -2895,7 +2895,7 @@ class ChatCore:
         if not _locked:
             with self._proc_lock:
                 if self.is_processing:
-                    if on_error: on_error("正在处理中，请稍候")
+                    notify_busy(on_busy, on_error)
                     return
                 self.is_processing = True
         try:

@@ -1,0 +1,29 @@
+/* 轻提示（toast）：忙碌、已保存<seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌这类瞬时状态。只看令牌，不写字面色。 */
+#dickToast {
+  position: fixed;
+  right: 20px;
+  bottom: 24px;
+  z-index: 9000;
+  max-width: 44ch;
+  padding: 9px 14px;
+  border-radius: 10px;
+  background: var(--surface-2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  font-size: 13px;
+  line-height: 1.5;
+  cursor: pointer;
+  opacity: 0;
+  transform: translateY(6px);
+  transition: opacity .22s ease, transform .22s ease;
+}
+
+#dickToast[hidden] {
+  display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #dickToast {
+    transition: none;
+  }
+}

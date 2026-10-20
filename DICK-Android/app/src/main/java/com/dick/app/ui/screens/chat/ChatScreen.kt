@@ -125,6 +125,43 @@ import kotlin.random.Random
  *
  * 再下一步（拆分建议，按耦合从低到高）：顶栏 → 机制三栏 → 输入栏 → 消息列表 → 引擎动作。
  */
+/**
+ * 输入栏上方的状态行：忙时显示「生成中 · N 秒」，空闲时整行不占位。
+ *
+ * 为什么不做成聊天气泡：用户明确要求"不要出现在对话框里"，
+ * 这行贴着输入框，像 Grok 的配额提示那样只给一行轻量信息；
+ * 也不进历史树 —— 忙是可重试的瞬时状态，不是剧情。
+ *
+ * 只认主题令牌（muted / accent），无 emoji，无字面色字面量。
+ */
+@Composable
+private fun BusyStatusLine(busy: Boolean, theme: ThemeSpec, accent: Color) {
+    if (!busy) return
+    var secs by remember(busy) { mutableStateOf(0) }
+    LaunchedEffect(busy) {
+        while (busy) {
+            kotlinx.coroutines.delay(1000L)
+            secs += 1
+        }
+    }
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 2.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(
+            Modifier
+                .size(6.dp)
+                .background(accent, CircleShape)
+        )
+        Spacer(Modifier.width(6.dp))
+        Text(
+            text = if (secs > 0) "生成中 · ${secs}s" else "生成中",
+            fontSize = 12.sp,
+            color = theme.muted,
+        )
+    }
+}
+
 @Composable
 fun ChatScreen(vm: ChatViewModel, theme: ThemeSpec, accent: Color) {
     val context = LocalContext.current
@@ -2616,6 +2653,8 @@ fun wsRefreshLocal() {
                     }
                 }
                 Spacer(Modifier.height(6.dp))
+                // 输入栏上方的一行状态：忙/生成中。贴着输入框，不进对话（与桌面同一套语义）。
+                BusyStatusLine(busy = busy, theme = theme, accent = accent)
                 Row(Modifier.fillMaxWidth()) {
                     TextButton(onClick = { showQuickPanel = !showQuickPanel }) {
                         // 快捷面板开/关：图标名跟着状态走（原来是  /  两个 emoji）

@@ -14,6 +14,8 @@ import base64
 import json
 import os
 import sys
+import time
+import notices
 import threading
 import re
 import random
@@ -617,7 +619,6 @@ def ws_header_name(name):
     from urllib.parse import quote
     return quote(s, safe="")
 
-
 class WsXferSlot(object):
     """工坊传输闸门（上下文管理器）：**串行 + 最小间隔**。
 
@@ -656,7 +657,6 @@ class WsXferSlot(object):
         if self.lock is not None:
             self.lock.release()
         return False
-
 
 class HtmlApp:
     # 已并入核心（底层）的 UI 插件：不再作为可开关插件出现，也不可被禁用
@@ -938,6 +938,8 @@ class HtmlApp:
         except Exception:
             pass
         self.selected_worlds = []
+    def _on_busy(self, msg=""):
+        notices.busy_toast(self, msg)      # 忙=轻提示；去重与弹法都在 notices
 
     def _append_sys(self, content, kind="sys", speaker="系统"):
         """树外横幅（系统提示/命令回显），随重建一直显示"""
@@ -1969,8 +1971,7 @@ class HtmlApp:
             on_stream=lambda full: setattr(self, "streaming",
                                            self.core.strip_mechanism_tags(full, apply=False)),
             on_response=self._on_response,
-            on_error=self._on_error,
-        )
+            on_error=self._on_error, on_busy=self._on_busy)
 
     def _split_hidden(self, processed):
         """翻译隐藏标记解析 → (显示文本, 发送文本)。无标记则两者相同。
@@ -2021,6 +2022,7 @@ class HtmlApp:
     def _on_response(self, ai_reply, usage):
         # 回复到了 → 开场加载态结束（无论这轮是不是开局，清掉都安全）
         self.opening_loading = False
+        notices.set_status(self, "")      # 收起输入栏上方那行状态
         # 模型也可能吐零宽字符（尤其被用户诱导时）→ 同样清掉再入树，
         # 否则它会一直躺在聊天记录里，每次请求都白烧 token
         try:
@@ -2193,8 +2195,7 @@ class HtmlApp:
                         self, "streaming",
                         self.core.strip_mechanism_tags(full, apply=False)),
                     on_response=self._on_response,
-                    on_error=self._on_error,
-                )
+                    on_error=self._on_error, on_busy=self._on_busy)
             except Exception:
                 fired = False
                 self.opening_loading = False
@@ -5962,7 +5963,6 @@ class HtmlApp:
                        "counts": counts})
         except Exception as e:
             set_state("error", str(e)[:300])
-
 
 
     def api_codex_asset(self, name, kind, file):

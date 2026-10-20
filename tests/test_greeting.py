@@ -57,7 +57,7 @@ class CoreStub:
         self.opening_cue = None
         self.client = object() if fire else None
 
-    def generate_opening(self, cue, on_response=None, on_error=None, on_stream=None):
+    def generate_opening(self, cue, on_response=None, on_error=None, on_stream=None, on_busy=None):
         self.calls.append(cue)
         if not self._fire:
             return False
@@ -76,6 +76,11 @@ class CoreStub:
 
 
 class AppStub:
+    def _on_busy(self, msg=""):
+        """壳层的'忙'轻提示回调（真身是 notices.busy_toast；替身只需存在）"""
+        return None
+
+
     def __init__(self, roles, selected, core):
         self.roles = roles
         self.selected_roles = selected

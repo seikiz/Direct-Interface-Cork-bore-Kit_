@@ -11,6 +11,8 @@
  别按语义重排：`.modal-box .btn2` 与 `.ws-card .btn2` 特异性相同，靠顺序覆盖。
  目录职责与「新增一屏要动的文件」见 web/UI_ARCHITECTURE.md。 -->
 <link rel="stylesheet" href="styles/tokens.css">
+    <link rel="stylesheet" href="styles/toast.css">
+    <link rel="stylesheet" href="styles/composer.css">
 <link rel="stylesheet" href="styles/screens.css">
 <link rel="stylesheet" href="styles/screens/gal.css">
 <link rel="stylesheet" href="styles/screens/codex.css">
@@ -114,6 +116,8 @@
     </div>
     <!-- ROLL 卡 / GAL 选项：与手机版一致，快捷面板之后、输入框正上方 -->
     <div id="choices"></div>
+    <!-- 输入栏上方的状态行：生成中/还有几轮，贴着输入框，不进对话 -->
+    <div id="composerStatus" role="status" aria-live="polite" hidden></div>
     <div id="inputbar">
       <button class="plus" id="plusBtn">[ic:add]</button>
       <textarea data-i18n-placeholder="placeholder" id="input" placeholder="输入消息... (使用 @角色名 指定说话者)"></textarea>
@@ -3770,5 +3774,67 @@ document.addEventListener('keydown', function (e) {
     <iframe id="cardFaceFrame" style="flex:1;border:0;background:#fff" sandbox="allow-same-origin"></iframe>
   </div>
 </div>
+<!-- 轻提示：忙碌/已保存这类瞬时状态放这里，不写进对话 -->
+<div id="dickToast" role="status" aria-live="polite" hidden></div>
+<script>
+/* DICK_TOAST：轻提示的唯一出口。
+   为什么单独做：以前"正在处理中"走错误通道被画成 红叉气泡并写进历史，
+   连点几次就刷屏。忙是可重试的瞬时状态，只该在这里闪一下。
+   颜色全部走令牌，不写字面色；无 emoji；3 秒自动消失，点一下也关。 */
+(function () {
+  var box = null, timer = 0;
+  function ensure() {
+    if (!box) box = document.getElementById('dickToast');
+    return box;
+  }
+  window.DICK_TOAST = function (msg, ms) {
+    var el = ensure();
+    if (!el || !msg) return;
+    el.textContent = String(msg);
+    el.hidden = false;
+    el.style.opacity = '1';
+    el.style.transform = 'translateY(0)';
+    if (timer) clearTimeout(timer);
+    timer = setTimeout(function () {
+      el.style.opacity = '0';
+      el.style.transform = 'translateY(6px)';
+      timer = setTimeout(function () { el.hidden = true; }, 220);
+    }, ms || 3000);
+  };
+  var el = ensure();
+  if (el) { el.onclick = function () { el.hidden = true; }; }
+})();
+</script>
+<script>
+/* DICK_STATUS：输入栏上方那行小状态（生成中 · 3s / 忙）。
+   为什么不做成对话气泡：用户明确要求"不要出现在对话框里"——
+   它贴着输入框，像 Grok 的"你还有几次"那样只给一行提示。
+   传空串即收起；计时用本地定时器，不打扰后端。 */
+(function () {
+  var el = null, timer = 0, started = 0, base = '';
+  function box() {
+    if (!el) el = document.getElementById('composerStatus');
+    return el;
+  }
+  function paint() {
+    var e = box(); if (!e) return;
+    var secs = Math.max(0, Math.round((Date.now() - started) / 1000));
+    e.textContent = base + (secs > 0 ? ' · ' + secs + 's' : '');
+  }
+  window.DICK_STATUS = function (text) {
+    var e = box(); if (!e) return;
+    base = String(text || '');
+    if (!base) {
+      if (timer) { clearInterval(timer); timer = 0; }
+      e.hidden = true; e.textContent = '';
+      return;
+    }
+    started = Date.now();
+    e.hidden = false;
+    paint();
+    if (!timer) timer = setInterval(paint, 1000);
+  };
+})();
+</script>
 </body>
 </html>
