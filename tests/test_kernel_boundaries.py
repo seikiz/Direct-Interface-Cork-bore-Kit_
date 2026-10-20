@@ -37,8 +37,8 @@ _TEMP_BASE = None
 
 # 块清单（唯一真相是各目录里的 block.json；这里只是"不许悄悄少一块"的钉子）。
 # 2026-10 第二批：image_gen / voice / codex 三个块迁完，从 3 个变成 6 个。
-BLOCK_IDS = ("backup", "codex", "image_gen", "kernel", "voice", "workshop")
-MODULE_IDS = ("backup", "codex", "image_gen", "voice", "workshop")
+BLOCK_IDS = ("backup", "codex", "couple", "image_gen", "kernel", "voice", "workshop")
+MODULE_IDS = ("backup", "codex", "couple", "image_gen", "voice", "workshop")
 
 
 def check(name, cond, detail=""):
@@ -556,7 +556,7 @@ def test_block_protocol():
     print(u"\n== F. 积木协议：block.json + 块自检 + 一条命令验收 ==")
     import blocks_graph as bg
     blocks = bg.blocks()
-    check(u"六个块都有 block.json（kernel + 五个业务块）",
+    check(u"每个块都有 block.json（kernel + 全部业务块）",
           set(blocks) == set(BLOCK_IDS), str(sorted(blocks)))
     for bid, info in sorted(blocks.items()):
         bj = info.get("block") or {}
@@ -566,7 +566,7 @@ def test_block_protocol():
 
     graph = bg.check()
     check(u"依赖图无环、无坏边、无接口漂移", not graph["problems"], str(graph["problems"]))
-    check(u"接口签名哈希算得出来（6 个块）", len(graph["hashes"]) == len(BLOCK_IDS),
+    check(u"接口签名哈希算得出来（全部块）", len(graph["hashes"]) == len(BLOCK_IDS),
           str(graph["hashes"]))
 
     env = dict(os.environ, PYTHONIOENCODING="utf-8", PYTHONPATH=ROOT)
