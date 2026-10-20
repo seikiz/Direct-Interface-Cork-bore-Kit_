@@ -69,7 +69,7 @@ fun WorkshopScreen(vm: ChatViewModel, acts: WorkshopActions) {
     val wsLocalWorlds = vm.wsLocalWorlds
     var wsLocalType by vm.wsLocalType
     var wsLocalIdx by vm.wsLocalIdx
-    var wsPreview by vm.wsPreview
+    var wsDetail by vm.wsDetail
     var wsServerInput by vm.wsServerInput
     var wsKeyInput by vm.wsKeyInput
     var wsStatus by vm.wsStatus
@@ -127,7 +127,8 @@ fun WorkshopScreen(vm: ChatViewModel, acts: WorkshopActions) {
                                     outlineWidth = if (sel) 2.dp else 1.dp,
                                     modifier = Modifier.fillMaxWidth().padding(vertical = 1.dp).clickable {
                                         wsLocalType = "角色卡"; wsLocalIdx = i
-                                        wsPreview = Workshop.preview("角色卡", f)
+                                        // 单击 = 选中并打开详情（选中高亮不变；详情在 CardDetail.kt）
+                                        wsDetail = WsCardDetail("角色卡", f, Workshop.preview("角色卡", f))
                                     },
                                 ) {
                                     Text(f.removeSuffix(".json"), fontSize = 12.sp, color = theme.text, modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp), maxLines = 1)
@@ -145,7 +146,7 @@ fun WorkshopScreen(vm: ChatViewModel, acts: WorkshopActions) {
                                     outlineWidth = if (sel) 2.dp else 1.dp,
                                     modifier = Modifier.fillMaxWidth().padding(vertical = 1.dp).clickable {
                                         wsLocalType = "世界卡"; wsLocalIdx = i
-                                        wsPreview = Workshop.preview("世界卡", f)
+                                        wsDetail = WsCardDetail("世界卡", f, Workshop.preview("世界卡", f))
                                     },
                                 ) {
                                     Text(f.removeSuffix(".json"), fontSize = 12.sp, color = theme.text, modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp), maxLines = 1)
@@ -153,23 +154,10 @@ fun WorkshopScreen(vm: ChatViewModel, acts: WorkshopActions) {
                             }
                         }
                     }
-                    if (wsPreview.isNotBlank()) {
-                        // 结构化卡片（CardPreview.kt）：字段清单来自 CardFields（唯一真相
-                        // design/card_fields.json），这里**不再**把整份 JSON 原样画出来。
-                        DickCard(
-                            radius = 10.dp,
-                            tone = DickSurfaceTone.Surface,
-                            outline = theme.line,
-                            modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
-                        ) {
-                            WsCardPreview(
-                                text = wsPreview,
-                                fileName = WorkshopState.selectedLocalFile(
-                                    wsLocalType, wsLocalIdx, wsLocalRoles, wsLocalWorlds) ?: "",
-                                modifier = Modifier.padding(10.dp),
-                            )
-                        }
-                    }
+                    // 这里原来嵌着一块"结构化预览"（空间小、正文还要点展开）。
+                    // 2026-12 用户：「给创意工坊加一个详细功能吧，点角色卡会有详细的东西。」
+                    // → 预览升级成**独立的详情弹窗**（ui/screens/workshop/CardDetail.kt），
+                    //   点列表项直接打开；列表本身只留名字（单击选中 + 高亮都没变）。
                     Row {
                         DickTextButton(
                             label = I18n.t("btn_import_card", "导入"),
@@ -192,7 +180,7 @@ fun WorkshopScreen(vm: ChatViewModel, acts: WorkshopActions) {
                                 val fname = WorkshopState.selectedLocalFile(wsLocalType, wsLocalIdx, wsLocalRoles, wsLocalWorlds)
                                 if (fname != null) {
                                     if (Workshop.deleteLocal(wsLocalType, fname)) {
-                                        wsPreview = ""
+                                        wsDetail = null
                                         wsLocalIdx = -1
                                         wsRefreshLocal()
                                         reloadRolesFromDisk()
@@ -367,5 +355,9 @@ fun WorkshopScreen(vm: ChatViewModel, acts: WorkshopActions) {
         confirmButton = {},
         dismissButton = { DickTextButton(label = I18n.t("btn_cancel", "取消"), onClick = { showWorkshop = false }) },
     )
+    // 详情弹窗叠在工坊弹窗之上（同一屏的两个开关都只读 vm）：关掉 = wsDetail 置空，
+    // 工坊列表还在，选中高亮由 wsLocalType / wsLocalIdx 决定，没有第二份状态。
+    wsDetail?.let { d -> CardDetailDialog(d, vm, acts) }
     }
 }
+// <seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌

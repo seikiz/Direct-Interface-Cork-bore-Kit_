@@ -101,7 +101,10 @@ class ChatViewModel : ViewModel() {
     val wsLocalWorlds = mutableStateListOf<String>()
     var wsLocalType = mutableStateOf("角色卡")
     var wsLocalIdx = mutableStateOf(-1)
-    var wsPreview = mutableStateOf("")
+    /** 工坊「打开的详情」：null = 没开。以前这里是 `wsPreview`（预览原文串），
+     *  2026-12 预览升级成独立详情弹窗（ui/screens/workshop/CardDetail.kt），
+     *  状态只留"哪一张卡开着"，原文跟着 [WsCardDetail] 一起进去。 */
+    var wsDetail = mutableStateOf<WsCardDetail?>(null)
     var wsServerInput = mutableStateOf("")
     var wsKeyInput = mutableStateOf("")
     var wsStatus = mutableStateOf("")
@@ -143,3 +146,4 @@ class ChatViewModel : ViewModel() {
     var cropDy = mutableStateOf(0f)
     var cropStagePx = mutableStateOf(0f)
 }
+// <seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌

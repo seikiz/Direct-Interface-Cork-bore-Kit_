@@ -253,7 +253,7 @@ fun ChatScreen(vm: ChatViewModel, theme: ThemeSpec, accent: Color) {
     val wsLocalWorlds = vm.wsLocalWorlds
     var wsLocalType by vm.wsLocalType
     var wsLocalIdx by vm.wsLocalIdx
-    var wsPreview by vm.wsPreview
+    var wsDetail by vm.wsDetail
     var wsServerInput by vm.wsServerInput
     var wsKeyInput by vm.wsKeyInput
     var wsStatus by vm.wsStatus
@@ -2721,3 +2721,4 @@ fun wsRefreshLocal() {
         )
     }
 }
+// <seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌

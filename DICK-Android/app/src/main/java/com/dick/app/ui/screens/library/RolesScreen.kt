@@ -1,6 +1,7 @@
 package com.dick.app
 
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -12,7 +13,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -36,6 +36,15 @@ import kotlinx.coroutines.launch
  *
  * 纯结构搬家（2026-11 UI 解耦第二批）：正文从 Dialogs.kt 的 `RolesDialog` 逐字搬过来，
  * 只换「代码住在哪个文件」。布局数值/文案/交互顺序一个都没动（观感守恒）。
+ *
+ * 2026-12 用户反馈（截图）：行首那个勾选方框是早期留下的多余件 —— 整张卡片点一下就该选中/取消。
+ * 改法（替换优先，整段重写，不就地贴补丁）：
+ *   · 那 20 行状态重载逻辑从 `onCheckedChange` 里搬成局部函数 [toggleRole]（**行为逐字不变**：
+ *     同样的调用顺序、同样的 `scope.launch(Dispatchers.Main)`、同样的异常吞法）；
+ *   · 删掉 Material 的 `Checkbox`，整张卡片 `clickable { toggleRole(n) }`；
+ *   · 选中态靠 `2.dp` + `palette.accent` 描边 + 行首 `check_circle` 图标（未选中 `1.dp` + `line`）。
+ * [DickCheckRow]（ui/components/Cards.kt）保留 —— 设置页还有 6 处在用；只是这一屏彻底不再引用
+ * `Checkbox(`（`tests/test_android_role_picker.py` 盯着这条）。
  *
  * 硬边界：
  *   · 状态只从 ChatViewModel 读；不读别的屏的内部字段（跨屏走 vm 的开关/回调）；
@@ -72,6 +81,36 @@ fun RolesScreen(vm: ChatViewModel, deps: DialogDeps) {
     var roleEditName by vm.roleEditName
     var pendingDelete by vm.pendingDelete
     var saveRole by remember { mutableStateOf<String?>(null) }
+
+    /**
+     * 选中 / 取消一个角色。
+     *
+     * 这 20 行原来直接写在 `Checkbox(onCheckedChange = { ck -> ... })` 里 —— "UI 事件里混业务"是
+     * 典型的屎山形状（换一种选中方式就得把这段抄一遍）。现在只搬不改：调用顺序、所在线程、
+     * 异常吞法（`TreeStore.load` 的 try/catch）与搬家前**逐字一致**，
+     * `tests/test_android_role_picker.py` 把关键调用一个个钉住。
+     */
+    fun toggleRole(n: String) {
+        saveTree()
+        selectedRoles = if (n in selectedRoles) selectedRoles - n else selectedRoles + n
+        saveConfig()
+        gal.clearChoices()
+        scope.launch(Dispatchers.Main) {
+            val tf = treeFileFor()
+            tree.loadData(if (tf.exists()) {
+                try { TreeStore.load(tf).historyTree } catch (_: Exception) { ChatTree().toData() }
+            } else ChatTree().toData())
+            tree.fixLeaf()
+            mech.stateFile = stateFileFor()
+            mech.resetConfigTracking()
+            mech.reload(mechConfig(), tree, reset = true)
+            mech.battleCfg = mechBattleConfig()
+            mech.playerCfg = playerBattleConfig()
+            mech.initBattle()
+            refreshChain()
+        }
+    }
+
     if (vm.showRoles.value) {
     DickDialog(
         onDismissRequest = { vm.showRoles.value = false },
@@ -79,34 +118,26 @@ fun RolesScreen(vm: ChatViewModel, deps: DialogDeps) {
         text = {
             Column(Modifier.verticalScroll(rememberScrollState())) {
                 for ((n, _) in roles) {
+                    // 选中态只由这一处算：描边粗细 / 颜色 / 行首勾都跟着它（没有第二份布尔副本）
+                    val on = n in selectedRoles
                     Column(
                         Modifier
                             .fillMaxWidth()
                             .padding(vertical = 10.dp)
-                            .border(1.dp, theme.line, RoundedCornerShape(10.dp))
+                            // 整张卡片可点：选中与取消都走同一个函数（方框已经删了）
+                            .clickable { toggleRole(n) }
+                            .border(
+                                if (on) 2.dp else 1.dp,
+                                if (on) theme.palette.accent else theme.line,
+                                RoundedCornerShape(10.dp),
+                            )
                             .padding(horizontal = 8.dp, vertical = 4.dp)
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Checkbox(checked = n in selectedRoles, onCheckedChange = { ck ->
-                                saveTree()
-                                selectedRoles = if (ck) selectedRoles + n else selectedRoles - n
-                                saveConfig()
-                                gal.clearChoices()
-                                scope.launch(Dispatchers.Main) {
-                                    val tf = treeFileFor()
-                                    tree.loadData(if (tf.exists()) {
-                                        try { TreeStore.load(tf).historyTree } catch (_: Exception) { ChatTree().toData() }
-                                    } else ChatTree().toData())
-                                    tree.fixLeaf()
-                                    mech.stateFile = stateFileFor()
-                                    mech.resetConfigTracking()
-                                    mech.reload(mechConfig(), tree, reset = true)
-                                    mech.battleCfg = mechBattleConfig()
-                                    mech.playerCfg = playerBattleConfig()
-                                    mech.initBattle()
-                                    refreshChain()
-                                }
-                            })
+                            // 选中指示：只在选中时出现（未选中不占位，避免行首忽宽忽窄）
+                            if (on) {
+                                IconText("", fontSize = 14.sp, color = theme.palette.accent, icon = "check_circle")
+                            }
                             Avatar(n, avatarCache)
                             Text(n, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
                             Spacer(Modifier.weight(1f))

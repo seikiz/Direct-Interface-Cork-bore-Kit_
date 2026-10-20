@@ -228,8 +228,7 @@
       "en": "Collapse",
       "ja": "折りたたむ",
       "used_by": [
-        "desktop_web",
-        "android"
+        "desktop_web"
       ]
     },
     "card_count_list": {
@@ -255,8 +254,7 @@
       "en": "Expand",
       "ja": "展開",
       "used_by": [
-        "desktop_web",
-        "android"
+        "desktop_web"
       ]
     },
     "card_export_fail": {

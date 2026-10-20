@@ -73,6 +73,12 @@ FORBIDDEN = [
      r"JsonS\s*\.\s*stringify\s*\(", "卡片渲染器里不许把对象序列化回 JSON 文本"),
     ("DICK-Android/app/src/main/java/com/dick/app/ui/screens/workshop/CardPreview.kt",
      r"Text\s*\([^)\n]*\bjson\b", "卡片渲染器里不许出现 Text(…json…) 这种直出"),
+    # 2026-12：工坊的紧凑预览升级成独立详情弹窗，渲染器搬到 CardDetail.kt —— 禁止模式跟着搬，
+    # 否则"换了个文件名"就等于把这道闸门绕开了。
+    ("DICK-Android/app/src/main/java/com/dick/app/ui/screens/workshop/CardDetail.kt",
+     r"JsonS\s*\.\s*stringify\s*\(", "详情渲染器里不许把对象序列化回 JSON 文本"),
+    ("DICK-Android/app/src/main/java/com/dick/app/ui/screens/workshop/CardDetail.kt",
+     r"Text\s*\([^)\n]*\bjson\b", "详情渲染器里不许出现 Text(…json…) 这种直出"),
 ]
 
 # 白名单：命中上面某条但**确实该那么写**的地方，必须在这里点名 + 写理由（总数有上限）。
@@ -257,12 +263,17 @@ def main():
     check(u"ws.html 的预览容器还是 #wsPreview（JS 还在找它）但换了标签",
           'id="wsPreview"' in read(WS_HTML) and "<pre" not in read(WS_HTML))
     and_ws = read(os.path.join(AND_WS, "WorkshopScreen.kt"))
-    check(u"安卓预览改成调结构化组件 WsCardPreview",
-          "WsCardPreview(" in and_ws and "Text(wsPreview" not in and_ws)
+    # 2026-12：列表里那块"嵌着的小预览"换成独立详情弹窗（点卡片打开）。
+    # 断言改成"工坊屏确实挂了 CardDetailDialog、且没有把原文丢给 Text"：
+    # 意图不变（预览必须是结构化渲染器），只是渲染器搬去了 CardDetail.kt。
+    check(u"安卓点卡片打开独立详情弹窗（CardDetailDialog，不再把原文丢给 Text）",
+          "CardDetailDialog(" in and_ws and "Text(wsPreview" not in and_ws)
     check(u"安卓渲染器在用生成的 CardFields（分区/标签都不硬编码）",
           "CardFields.SECTIONS" in read(os.path.join(AND_WS, "CardPreview.kt")))
     check(u"安卓标题走 CardFields.TITLE_KEYS",
           "CardFields.TITLE_KEYS" in read(os.path.join(AND_WS, "CardPreview.kt")))
+    check(u"详情页的分区标题也走 CardFields.sectionLabel",
+          "CardFields.sectionLabel(" in read(os.path.join(AND_WS, "CardDetail.kt")))
 
     # ------------------------------------------------------------------
     print(u"\n== ④ 白底卡片：两端都用令牌，不再是「一块灰」==")
@@ -374,3 +385,4 @@ def main():
 
 if __name__ == "__main__":
     sys.exit(main())
+# <seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌
