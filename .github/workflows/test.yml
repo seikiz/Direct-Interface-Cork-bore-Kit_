@@ -41,21 +41,19 @@ jobs:
       - name: 安装测试依赖
         run: |
           set -o pipefail
-          echo "::notice::python=$(command -v python) $(python -VV 2>&1 | head -1)"
-          LOG="${RUNNER_TEMP:-/tmp}/pip.log"
+                    LOG="${RUNNER_TEMP:-/tmp}/pip.log"
           if ! python -m pip install --upgrade pip > "$LOG" 2>&1; then
             echo "::error::pip 自升级失败%0A$(tail -n 8 "$LOG" | sed 's/%/%25/g; s/\r//g' | awk '{printf "%s%%0A", $0}')"
             exit 1
           fi
-          echo "::notice::pip 升级完成：$(python -m pip --version)"
-          if ! python -m pip install -r requirements-test.txt > "$LOG" 2>&1; then
+                    if ! python -m pip install -r requirements-test.txt > "$LOG" 2>&1; then
             echo "::error::依赖安装失败（requirements-test.txt）%0A$(grep -iE 'error|no matching|could not find|failed' "$LOG" | tail -n 12 | sed 's/%/%25/g; s/\r//g' | awk '{printf "%s%%0A", $0}')"
             exit 1
           fi
           echo "::notice::requirements-test.txt 装完"
           # 自检放进脚本（tools/ci_dep_check.py）：内联 python -c 一旦自己抛异常，
           # 就既没有 notice 也没有 error，注解区只剩"exit code 1" —— 白红一次。
-          python tools/ci_dep_check.py --github
+          python tools/ci_dep_check.py --github || exit 1
 
       - name: 环境报告（贴日志里，省得以后猜"CI 上是什么环境"）
         run: python tools/env_report.py
@@ -139,8 +137,7 @@ jobs:
         shell: bash
         run: |
           set -o pipefail
-          echo "::notice::python=$(command -v python) $(python -VV 2>&1 | head -1) RUNNER_TEMP=${RUNNER_TEMP:-<未设置>}"
-          LOG="${RUNNER_TEMP:-/tmp}/pip.log"
+                    LOG="${RUNNER_TEMP:-/tmp}/pip.log"
           # 每个里程碑都发一条 ::notice::，失败时把 pip 的错误行发成 ::error::
           # 为什么要这样：job 日志要仓库 admin 权限（API 403），注解不用登录就能读。
           # 2026-10 windows 作业在这步红过两次，而看日志没权限 —— 只能靠注解自己说清
@@ -149,13 +146,11 @@ jobs:
             echo "::error::pip 自升级失败%0A$(tail -n 8 "$LOG" | sed 's/%/%25/g; s/\r//g' | awk '{printf "%s%%0A", $0}')"
             exit 1
           fi
-          echo "::notice::pip 升级完成：$(python -m pip --version)"
-          if ! python -m pip install -r requirements-test.txt > "$LOG" 2>&1; then
+                    if ! python -m pip install -r requirements-test.txt > "$LOG" 2>&1; then
             echo "::error::依赖安装失败（requirements-test.txt）%0A$(grep -iE 'error|no matching|could not find|failed' "$LOG" | tail -n 12 | sed 's/%/%25/g; s/\r//g' | awk '{printf "%s%%0A", $0}')"
             exit 1
           fi
-          echo "::notice::requirements-test.txt 装完：$(grep -c . "$LOG") 行输出"
-          # 自检放进脚本（tools/ci_dep_check.py）：内联 python -c 自己抛异常时
+                    # 自检放进脚本（tools/ci_dep_check.py）：内联 python -c 自己抛异常时
           # 既没有 notice 也没有 error，注解区只剩"exit code 1" —— 2026-10 就这么白红过。
           python tools/ci_dep_check.py --github
 
