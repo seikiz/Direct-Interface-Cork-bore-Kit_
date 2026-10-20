@@ -94,7 +94,7 @@ jobs:
               # 末尾几行给上下文（异常栈/统计）。都做转义（% → %25，换行 → %0A）。
               FAILS="$(grep -m 6 '\[FAIL\]' "$LOG" | sed 's/%/%25/g; s/\r//g' | awk '{printf "%s%%0A", $0}')"
               TAIL="$(tail -n 6 "$LOG" | sed 's/%/%25/g; s/\r//g' | awk '{printf "%s%%0A", $0}')"
-              echo "::error file=$t::$(basename "$t") 失败：%0A$FAILS%0A--- 末尾 ---%0A$TAIL"
+              echo "::error::[$(basename "$t")] 失败：%0A$FAILS%0A--- 末尾 ---%0A$TAIL"
             fi
             rm -f "$LOG"
           done
@@ -191,7 +191,7 @@ jobs:
               FAILED="$FAILED $t"
               FAILS="$(grep -m 6 '\[FAIL\]' "$LOG" | sed 's/%/%25/g; s/\r//g' | awk '{printf "%s%%0A", $0}')"
               TAIL="$(tail -n 6 "$LOG" | sed 's/%/%25/g; s/\r//g' | awk '{printf "%s%%0A", $0}')"
-              echo "::error file=$t::$(basename "$t") 失败：%0A$FAILS%0A--- 末尾 ---%0A$TAIL"
+              echo "::error::[$(basename "$t")] 失败：%0A$FAILS%0A--- 末尾 ---%0A$TAIL"
             fi
             rm -f "$LOG"
           done
