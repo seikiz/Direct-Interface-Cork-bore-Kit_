@@ -4,9 +4,10 @@
 包含方法：_choices_plugin、_choices_state、_go_game、_go_settings、_go_style、_go_note、_go_ai_first、_go_maybe_ai_first、_go_prompt_block、_go_ai_turn、_go_parse_move、_go_after_reply
 
 为什么是 mixin：`HtmlApp` 是 god-object，150+ 个 `api_*` 门面互相 `self.xxx()`；
-mixin 只搬代码位置、不动调用点（MRO 里照样能查到）。
-"""
+mixin 只搬代码位置、不动调用点（MRO 里照样能查到）。"""
 from __future__ import annotations
+
+import plugin_manager
 
 class GoMixin:
     """shell_go"""

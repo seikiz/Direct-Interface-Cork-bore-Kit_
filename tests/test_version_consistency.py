@@ -118,7 +118,8 @@ def main():
           "s.version_full" in front or "s.version" in front)
     check(u"前端没有写死带 v 的四段号", not re.search(r"\bv\d+\.\d+\.\d+\.\d+\b", front))
 
-    desk = read(os.path.join(ROOT, "Direct-Interface Cork-bore Kit.py"))
+    import _shellsrc
+    desk = _shellsrc.read()   # 壳层已拆分：读 Kit.py + shell_*.py
     check(u"桌面端 import 了 app_version", "import app_version" in desk)
     check(u"窗口标题来自 app_version", "app_version.display()" in desk)
     check(u"欢迎语来自 app_version", "app_version.full()" in desk)

@@ -21,6 +21,10 @@ JS 搬到 `web/js/screens/<名字>.js`。所以本测试的"语料"必须跟着�
 **index.html + 所有屏片段 + 所有屏模块**，否则"元素存在/函数已定义"会成片误报。
 """
 import io
+
+import _shellsrc
+
+_SHELL = _shellsrc.read()   # 壳层已拆分：读 Kit.py + shell_*.py
 import os
 import re
 import sys
@@ -156,10 +160,8 @@ def main():
         check("%s：JS 调了 %s" % (label, py_api.replace("api_", "")),
               ("pywebview.api." + py_api.replace("api_", "")) in html)
         # 后端方法（pywebview 约定：前端去掉前缀，后端带前缀）
-        py = os.path.join(ROOT, "Direct-Interface Cork-bore Kit.py")
-        with io.open(py, encoding="utf-8") as f:
-            kit = f.read()
-        check("%s：后端有 %s" % (label, py_api), ("def %s(" % py_api) in kit)
+        check("%s：后端有 %s" % (label, py_api), ("def %s(" % py_api) in _SHELL)
+        check("%s：后端有 %s" % (label, py_api), ("def %s(" % py_api) in _SHELL)
 
     print("\n== ⑤ 时间表盘：对数换算必须和 Python 侧一致 ==")
     sys.path.insert(0, ROOT)

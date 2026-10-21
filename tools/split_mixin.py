@@ -142,7 +142,7 @@ def main(argv=None):
     # 静态分析：哪些名字没有定义
     undefined = sorted(used_names(text))
     imports = []
-    proj = project_modules() | shell_util_names()
+    proj = project_modules()   # 只认项目里的模块文件；shell_util 的名字单独走 from 导入
     for n in undefined:
         if n in proj:
             imports.append("import %s" % n)

@@ -4,13 +4,13 @@
 包含方法：_codex_pkg_path、_codex_exe_worker、_player_size_mb、_codex_player_worker、_codex_release_worker
 
 为什么是 mixin：`HtmlApp` 是 god-object，150+ 个 `api_*` 门面互相 `self.xxx()`；
-mixin 只搬代码位置、不动调用点（MRO 里照样能查到）。
-"""
+mixin 只搬代码位置、不动调用点（MRO 里照样能查到）。"""
 from __future__ import annotations
 
 import codex_core
 import os
 import save_guard
+import shutil
 
 class CodexMixin:
     """shell_codex"""

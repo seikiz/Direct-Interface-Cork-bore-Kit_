@@ -583,7 +583,8 @@ def _front_end():
 
 def test_web_bridge():
     print(u"\n== ⑨ 前端调用与后端签名对得上（位置参数错了 pywebview 不会报错）==")
-    app = io.open(os.path.join(ROOT, "Direct-Interface Cork-bore Kit.py"), encoding="utf-8").read()
+    import _shellsrc
+    app = _shellsrc.read()   # 壳层已拆分：读 Kit.py + shell_*.py
     html = _front_end()
 
     def py_params(name):

@@ -4,13 +4,13 @@
 包含方法：_vision_describe、_anchor_block、_vision_then_send、_vision_direct_done、_backup_service、_backup_dirs、_host_window、_host_ask_file、_host_ask_save、_host_notify
 
 为什么是 mixin：`HtmlApp` 是 god-object，150+ 个 `api_*` 门面互相 `self.xxx()`；
-mixin 只搬代码位置、不动调用点（MRO 里照样能查到）。
-"""
+mixin 只搬代码位置、不动调用点（MRO 里照样能查到）。"""
 from __future__ import annotations
 
 import i18n
 import json
 import os
+import plugin_manager
 import re
 
 class HostMixin:

@@ -7,26 +7,17 @@
 为什么是 mixin：`HtmlApp` 是 god-object，150+ 个 `api_*` 门面互相 `self.xxx()`。
 mixin 只搬代码位置、不动调用点 —— `self._ws_pull()` 照旧能用（MRO 里能查到）。
 想要真正的解耦是下一步（把这些方法改成只吃 `(self.host, self.core)`），
-但那要动调用点，先保证"搬家不换锁"。
-"""
+但那要动调用点，先保证"搬家不换锁"。"""
 from __future__ import annotations
 
-import base64
-import json
-import os
-import random
-import re
-import threading
-import time
-import uuid
+from shell_util import BASE_DIR, DEFAULT_WS_SERVER, XFER_MIN_INTERVAL_MS, tree_ts_of
 
-import app_version
+import json
+import net
+import os
 import save_guard
 import secret_store
-
-from shell_util import (BASE_DIR, DEFAULT_WS_SERVER, XFER_MIN_INTERVAL_MS,
-                        tree_ts_of)
-
+import threading
 
 class WsXferSlot(object):
     """工坊传输闸门（上下文管理器）：**串行 + 最小间隔**。

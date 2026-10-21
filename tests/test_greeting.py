@@ -266,8 +266,8 @@ def test_opening_loading_state():
 
     # 回复/出错路径要收掉 —— 读源码断言。
     # 这两条路径依赖大量应用状态，硬造桩反而容易测出假的通过/失败。
-    src = io.open(os.path.join(ROOT, "Direct-Interface Cork-bore Kit.py"),
-                  encoding="utf-8").read()
+    import _shellsrc
+    src = _shellsrc.read()   # 壳层已拆分：读 Kit.py + shell_*.py
     i_resp = src.find("def _on_response(self")
     i_err = src.find("def _on_error(self")
     check("_on_response 里会收掉加载态",
