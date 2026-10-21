@@ -279,6 +279,15 @@ def main():
     check(u"内容比视口高时贴顶（不再按居中算出框外）",
           "if (contentH > viewH) 0f else" in code, "缺贴顶分支")
 
+    # ---- 宽树别变成"一条单线"：装不下时初始视野要对准当前节点 ----
+    check(u"宽树：panX 对准当前节点（isCurrent）而不是树左边缘",
+          "it.isCurrent" in code and "viewW / 2f - leafCxPx * fitScale" in code,
+          "缺对准当前节点的分支")
+    check(u"对准后仍夹在可视范围内（不露空白边）",
+          "coerceIn(viewW - contentW, 0f)" in code, "缺夹取")
+    check(u"装得下时仍然居中（不退化）",
+          "if (contentW <= viewW)" in code, "缺居中分支")
+
     # ------------------------------------------------------------------
     # ③ 纯函数复算：旧算法在真机上必然重叠，新算法与密度无关
     # ------------------------------------------------------------------

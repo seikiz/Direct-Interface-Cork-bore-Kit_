@@ -217,8 +217,15 @@ fun TreeGraph(vm: ChatViewModel, tree: ChatTree, mech: MechanicsEngine, accent: 
         scale = fitScale
         val contentW = worldW * fitScale
         val contentH = worldH * fitScale
-        // 横向居中；纵向放不下时贴顶（否则按居中算会有一半在框外，看起来像"被切了"）
-        panX = (viewW - contentW) / 2f
+        // 横向：装得下就居中；装不下就**对准当前节点**（否则初始视野落在最左一列，
+        // 看起来只有一条单线，分支全在视野外）。夹取保证不会露出空白边。
+        panX = if (contentW <= viewW) {
+            (viewW - contentW) / 2f
+        } else {
+            val leafCxPx = nodes.firstOrNull { it.isCurrent }?.let { cxOf(it.x) } ?: (worldW / 2f)
+            (viewW / 2f - leafCxPx * fitScale).coerceIn(viewW - contentW, 0f)
+        }
+        // 纵向放不下时贴顶（按居中算会把上半截推到框外，看起来像被切了）
         panY = if (contentH > viewH) 0f else (viewH - contentH) / 2f
     }
     val ctx = LocalContext.current
