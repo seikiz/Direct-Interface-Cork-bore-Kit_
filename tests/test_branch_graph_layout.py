@@ -267,6 +267,18 @@ def main():
                                       + GAP_OPTION_MIN))
     check(u"三个不等式一起过（spacing_problems 为空）", not probs, u"；".join(probs))
 
+    # ---- 升级后"树被压扁"：fit 缩放必须有下限，否则宽树会被宽度压成一条扁带 ----
+    check(u"有 FIT_MIN_SCALE 常量（自动铺满的最小缩放）",
+          "FIT_MIN_SCALE" in code, "缺常量")
+    check(u"fit 缩放夹到 FIT_MIN_SCALE（不是 MIN_SCALE）",
+          "coerceIn(FIT_MIN_SCALE, FIT_MAX_SCALE)" in code, "夹取区间不对")
+    check(u"合上之后卡片高度仍 >= 30dp（52dp × 0.7 = 36dp，别缩到看不见字）",
+          v.get("CHIP_H_DP", 0) * 0.7 >= 30, str(v.get("CHIP_H_DP")))
+    check(u"手动缩放仍可到 MIN_SCALE（用户主动缩放不受限）",
+          "coerceIn(MIN_SCALE, MAX_SCALE)" in code, "手动缩放区间被改坏")
+    check(u"内容比视口高时贴顶（不再按居中算出框外）",
+          "if (contentH > viewH) 0f else" in code, "缺贴顶分支")
+
     # ------------------------------------------------------------------
     # ③ 纯函数复算：旧算法在真机上必然重叠，新算法与密度无关
     # ------------------------------------------------------------------
@@ -340,9 +352,9 @@ def main():
           re.search(r"maxLines\s*=\s*2", graph) is not None and "TextOverflow.Ellipsis" in graph)
     check(u"文字列拿到剩余宽度（weight(1f)），不被图标框挤掉",
           re.search(r"Column\(Modifier\.weight\(1f\)\)", graph) is not None)
-    check(u"首帧居中：panX/panY 由 (view - world × fitScale) / 2 算，初始 scale 仍是 0.8",
-          re.search(r"\(viewW - worldW \* fitScale\)\s*/\s*2f", graph) is not None and
-          re.search(r"\(viewH - worldH \* fitScale\)\s*/\s*2f", graph) is not None and
+    check(u"首帧：横向居中 + 纵向放不下就贴顶（contentW/contentH 同一次算出）",
+          re.search(r"\(viewW - contentW\)\s*/\s*2f", graph) is not None and
+          re.search(r"if \(contentH > viewH\) 0f else \(viewH - contentH\) / 2f", graph) is not None and
           "mutableStateOf(0.8f)" in graph)
 
     # ------------------------------------------------------------------

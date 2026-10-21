@@ -87,6 +87,15 @@ private const val GRAPH_H_DP = 470f
 private const val MIN_SCALE = 0.25f
 private const val MAX_SCALE = 3f
 private const val FIT_MAX_SCALE = 2.2f
+/**
+ * 首帧自动铺满时的**最小**缩放。
+ *
+ * 为什么要有它：升级上来的旧存档分支很多，树很宽，`min(宽比, 高比)` 会被宽度压到
+ * MIN_SCALE=0.25 —— 52dp 的卡片只剩 13dp，整棵树缩成一条扁带（用户报"树被压扁扁"）。
+ * 这里保证卡片在屏幕上至少 0.7×52 ≈ 36dp 高，仍然认得出字；宽度放不下就让用户拖动，
+ * 反正双指缩放/拖动本来就是这个对话框的主要交互。
+ */
+private const val FIT_MIN_SCALE = 0.7f
 
 /** 回档（树状回溯：主线平铺 + 分支收纳 + 点击跳回） */
 @Composable
@@ -203,10 +212,14 @@ fun TreeGraph(vm: ChatViewModel, tree: ChatTree, mech: MechanicsEngine, accent: 
     var viewH by remember { mutableStateOf(1) }
     // 首帧把整棵树铺满并居中：worldW/worldH 已是 px，fitScale 同样是"屏幕像素 / 世界像素"。
     LaunchedEffect(viewW, viewH, worldW, worldH) {
-        val fitScale = minOf(viewW / worldW, viewH / worldH).coerceIn(MIN_SCALE, FIT_MAX_SCALE)
+        val fitScale = minOf(viewW / worldW, viewH / worldH)
+            .coerceIn(FIT_MIN_SCALE, FIT_MAX_SCALE)
         scale = fitScale
-        panX = (viewW - worldW * fitScale) / 2f
-        panY = (viewH - worldH * fitScale) / 2f
+        val contentW = worldW * fitScale
+        val contentH = worldH * fitScale
+        // 横向居中；纵向放不下时贴顶（否则按居中算会有一半在框外，看起来像"被切了"）
+        panX = (viewW - contentW) / 2f
+        panY = if (contentH > viewH) 0f else (viewH - contentH) / 2f
     }
     val ctx = LocalContext.current
     // 分支树原来是一块写死的「灰白 MC 成就风」浅色面板（30 多个 hex），压在深色画布上像贴纸。
