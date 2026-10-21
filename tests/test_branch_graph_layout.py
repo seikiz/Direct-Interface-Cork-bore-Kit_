@@ -288,6 +288,21 @@ def main():
     check(u"装得下时仍然居中（不退化）",
           "if (contentW <= viewW)" in code, "缺居中分支")
 
+    # ---- 兼容性：老存档只有 parent_id → 分支图只画得出一个节点 ----
+    core_dir = os.path.join("DICK-Android", "app", "src", "main", "java", "com", "dick", "core")
+    mdl = read(os.path.join(core_dir, "Model.kt"))
+    cht = read(os.path.join(core_dir, "ChatTree.kt"))
+    check(u"TreeData 有 repairLinks（按 parent_id 重建 children_ids）",
+          "fun repairLinks()" in mdl, "缺修复函数")
+    check(u"fromJson 之后会调 repairLinks",
+          "t.repairLinks()" in mdl, "没在解析后修")
+    check(u"loadData 复制前先修（双保险）",
+          "data.repairLinks()" in cht, "loadData 没修")
+    compat = read(os.path.join("tests", "test_tree_compat.py"))
+    check(u"Python 侧有同一套自愈回归（老格式/脏引用/悬空 root/环）",
+          "TREE_COMPAT_OK" in compat, "缺 python 侧回归")
+
+
     # ------------------------------------------------------------------
     # ③ 纯函数复算：旧算法在真机上必然重叠，新算法与密度无关
     # ------------------------------------------------------------------

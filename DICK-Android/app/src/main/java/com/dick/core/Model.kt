@@ -67,8 +67,61 @@ class TreeData(
             }
             t.rootId = (o.fields["root_id"] as? J.Str)?.v
             t.currentLeafId = (o.fields["current_leaf_id"] as? J.Str)?.v
+            t.repairLinks()
             return t
         }
+    }
+
+    /**
+     * 按 parent_id 重建 children_ids，并修 root / leaf。
+     *
+     * 为什么要它：树有两份关系 —— `parent_id`（权威）和父节点的 `children_ids`（缓存）。
+     * 老版本 / 另一台机器写出来的存档可能**只写了 parent_id**；回档的二维分支图读的是
+     * children_ids，于是一进来只画得出一个节点（用户报的"只有一个点 / 只有一条线，
+     * 像是兼容性问题，更新后出现"）。这里无条件重建，parent_id 说了算。
+     */
+    fun repairLinks() {
+        if (nodes.isEmpty()) return
+        for (n in nodes.values) n.childrenIds.clear()
+        val orphans = ArrayList<String>()
+        for ((id, n) in nodes) {
+            val pid = n.parentId
+            if (pid != null && pid != id && nodes.containsKey(pid)) {
+                nodes[pid]!!.childrenIds.add(id)
+            } else {
+                orphans.add(id)
+            }
+        }
+        val root = rootId
+        if (root == null || !nodes.containsKey(root)) {
+            rootId = orphans.firstOrNull() ?: nodes.keys.first()
+        }
+        val leaf = currentLeafId
+        if (leaf == null || !nodes.containsKey(leaf)) {
+            currentLeafId = deepestLeaf() ?: rootId
+        }
+    }
+
+    /** 沿 children 找最深的叶子（带环保护）；找不到返回 null */
+    private fun deepestLeaf(): String? {
+        val root = rootId ?: return null
+        if (!nodes.containsKey(root)) return null
+        val seen = HashSet<String>()
+        var best: String? = null
+        var bestDepth = -1
+        val stack = ArrayDeque<Pair<String, Int>>()
+        stack.addLast(root to 0)
+        while (stack.isNotEmpty()) {
+            val (id, depth) = stack.removeLast()
+            if (!seen.add(id)) continue
+            val n = nodes[id] ?: continue
+            if (n.childrenIds.isEmpty()) {
+                if (depth > bestDepth) { best = id; bestDepth = depth }
+            } else {
+                for (c in n.childrenIds) stack.addLast(c to depth + 1)
+            }
+        }
+        return best
     }
 }
 

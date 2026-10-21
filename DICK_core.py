@@ -29,11 +29,9 @@ class _OpenAIUnavailable(Exception):
     """openai 尚未导入时的占位异常类型（导真库后这两个名字会被替换成真类）"""
     pass
 
-
 OpenAI = None
 APIConnectionError = _OpenAIUnavailable
 APITimeoutError = _OpenAIUnavailable
-
 
 def _ensure_openai():
     """第一次真要发请求时才导入 openai，返回 OpenAI 类"""
@@ -142,6 +140,7 @@ def eval_battle_formula(expr, vars_dict):
     except Exception as e:
         raise ValueError(f"公式求值失败: {e}")
 from notices import BUSY_TEXT, notify_busy  # noqa: E402,F401
+from tree_repair import repair_links  # noqa: E402
 class MessageNode:
     """对话节点，构成树状历史"""
     __slots__ = ('id', 'role', 'content', 'parent_id', 'children_ids', 'timestamp', 'metadata')
@@ -226,8 +225,9 @@ class TreeManager:
             return []
         chain = []
         node = self.nodes.get(self.current_leaf_id)
-        ancestors = []
-        while node:
+        ancestors, _seen = [], set()
+        while node and node.id not in _seen:   # 环保护：父子互指的坏存档会死循环
+            _seen.add(node.id)
             ancestors.append(node)
             if node.parent_id and node.parent_id in self.nodes:
                 node = self.nodes[node.parent_id]
@@ -268,20 +268,20 @@ class TreeManager:
             except Exception:
                 # 单个节点损坏不影响整棵树（存档守护会兜底修复文件本身）
                 continue
-        self.root_id = data.get('root_id')
-        self.current_leaf_id = data.get('current_leaf_id')
+        self.root_id, self.current_leaf_id = data.get('root_id'), data.get('current_leaf_id')
+        repair_links(self)     # 老存档可能没 children_ids：按 parent_id 重建，否则回档只剩一个节点
         self.fix_leaf()
-        chain_len = len(self.get_current_chain())
-        print(f"[TreeManager] 加载后链长度: {chain_len}")
+        print(f"[TreeManager] 加载后链长度: {len(self.get_current_chain())}")
 
     # ---------- 叶子修正 ----------
     def fix_leaf(self):
-        """确保 current_leaf_id 指向最深的叶子节点"""
+        """只在 leaf 失效时兜底（有效就不能改：读档不许把进度挪到别的分支）"""
+        if self.current_leaf_id and self.current_leaf_id in self.nodes:
+            return
         if not self.nodes or self.root_id is None:
             return
         node = self.nodes.get(self.root_id)
-        if not node:
-            return
+        if not node: return
         visited = set()
         while node.children_ids and node.id not in visited:
             visited.add(node.id)

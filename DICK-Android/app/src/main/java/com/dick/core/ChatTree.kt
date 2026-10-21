@@ -102,6 +102,7 @@ class ChatTree {
     fun toData(): TreeData = TreeData(nodes, rootId, currentLeafId)
 
     fun loadData(data: TreeData) {
+        data.repairLinks()      // 老存档可能只有 parent_id：先把关系补全，否则分支图只剩一个节点
         nodes.clear()
         nodes.putAll(data.nodes)
         rootId = data.rootId
