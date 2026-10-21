@@ -324,6 +324,7 @@ def role_prompt_from_card(name, data):
     legacy = data.get("legacy") or ""
     rendered = assemble_role_prompt(name, fields, legacy)
 
+    @staticmethod
     def _has(v):
         if isinstance(v, (list, tuple)):
             return any(str(x).strip() for x in v)
