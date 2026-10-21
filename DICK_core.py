@@ -141,6 +141,7 @@ def eval_battle_formula(expr, vars_dict):
         raise ValueError(f"公式求值失败: {e}")
 from notices import BUSY_TEXT, notify_busy  # noqa: E402,F401
 from tree_repair import repair_links  # noqa: E402
+from player_persona import persona_block  # noqa: E402
 class MessageNode:
     """对话节点，构成树状历史"""
     __slots__ = ('id', 'role', 'content', 'parent_id', 'children_ids', 'timestamp', 'metadata')
@@ -2172,22 +2173,10 @@ class ChatCore:
                          "当前所在世界以 ★ 标注，回复时以当前世界的设定为准，"
                          "玩家穿越后请自然衔接跨世界剧情。\n")
 
-        # 玩家角色卡（用户自己扮演的角色，跑团里的 PC）
-        if self.player_persona:
-            pname = self.player_persona.get('name', '玩家')
-            combined += f"\n当前与你对话的玩家（用户本人扮演的角色）：\n===== {pname} =====\n"
-            for key, label in [("background", "背景"), ("appearance", "外貌"),
-                               ("speech_style", "说话风格"), ("notes", "备注")]:
-                val = self.player_persona.get(key, "")
-                if isinstance(val, str) and val.strip():
-                    combined += f"{label}：{val.strip()}\n"
-            personality = self.player_persona.get("personality") or []
-            if isinstance(personality, str):
-                personality = [personality]
-            if personality:
-                combined += f"性格：{'、'.join(str(p) for p in personality if str(p).strip())}\n"
-            combined += (f"注意：{pname} 是用户本人扮演的角色，不是你的角色。"
-                         f"请以「{pname}」称呼用户，不要替 {pname} 发言或决定其行动。\n")
+        # 玩家角色卡（乙女/梦女向：称呼、代词、视角、关系、禁忌都写进去）
+        _pb = persona_block(self.player_persona)
+        if _pb:
+            combined += _pb
 
         # 提示词预设：额外规则与结尾补充
         if self.prompt_preset:

@@ -2704,6 +2704,46 @@
         "desktop_web",
         "android"
       ]
+    },
+    "pp_call_me": {
+      "zh": "称呼（角色怎么叫你）",
+      "en": "What they call you",
+      "ja": "呼ばれ方",
+      "used_by": [
+        "desktop_web"
+      ]
+    },
+    "pp_pronoun": {
+      "zh": "代词",
+      "en": "Pronoun",
+      "ja": "代名詞",
+      "used_by": [
+        "desktop_web"
+      ]
+    },
+    "pp_perspective": {
+      "zh": "叙述视角",
+      "en": "Narration",
+      "ja": "視点",
+      "used_by": [
+        "desktop_web"
+      ]
+    },
+    "pp_relation": {
+      "zh": "与角色的关系",
+      "en": "Relationship",
+      "ja": "関係",
+      "used_by": [
+        "desktop_web"
+      ]
+    },
+    "pp_taboo": {
+      "zh": "禁忌（不要写的方向）",
+      "en": "Hard limits",
+      "ja": "禁止事項",
+      "used_by": [
+        "desktop_web"
+      ]
     }
   },
   "_legacy": {

@@ -313,6 +313,28 @@
   <div class="modal-box">
     <h3 id="ppTitle">[ic:person] 玩家角色卡</h3>
     <div class="field"><label id="ppName">名字</label><input id="ppNameInput"></div>
+    <!-- 乙女 / 梦向：怎么称呼我、用哪个代词、什么视角、什么关系、什么不能写 -->
+    <div class="field"><label data-i18n="pp_call_me">称呼（角色怎么叫你）</label>
+      <input id="ppAddressInput" placeholder="夏夏 / 学长 / 直接叫名字"></div>
+    <div class="row">
+      <div class="field"><label data-i18n="pp_pronoun">代词</label>
+        <select id="ppPronounInput">
+          <option value="">不指定（用"你"）</option>
+          <option value="她">她</option>
+          <option value="他">他</option>
+          <option value="ta">ta</option>
+        </select></div>
+      <div class="field"><label data-i18n="pp_perspective">叙述视角</label>
+        <select id="ppPerspectiveInput">
+          <option value="second">第二人称（你）· 乙女/梦向常用</option>
+          <option value="first">第一人称（我）</option>
+          <option value="third">第三人称</option>
+        </select></div>
+    </div>
+    <div class="field"><label data-i18n="pp_relation">与角色的关系</label>
+      <input id="ppRelationInput" placeholder="恋人 / 青梅竹马 / 主从 / 还不熟"></div>
+    <div class="field"><label data-i18n="pp_taboo">禁忌（不要写的方向）</label>
+      <textarea id="ppTabooInput" rows="2" placeholder="不要写我出轨；不要叫我小姐"></textarea></div>
     <div class="field"><label id="ppLegacy">完整设定（可选）</label><textarea id="ppLegacyInput" rows="2"></textarea></div>
     <div class="field"><label id="ppAppearance">外貌</label><textarea id="ppAppearanceInput" rows="2"></textarea></div>
     <div class="field"><label id="ppPersonality">性格</label><textarea id="ppPersonalityInput" rows="3"></textarea></div>
@@ -3401,6 +3423,11 @@ function openPersonaModal() {
   pywebview.api.get_persona().then(function (f) {
     f = f || {};
     document.getElementById('ppNameInput').value = f.name || '';
+    document.getElementById('ppAddressInput').value = f.address || '';
+    document.getElementById('ppPronounInput').value = f.pronoun || '';
+    document.getElementById('ppPerspectiveInput').value = f.perspective || 'second';
+    document.getElementById('ppRelationInput').value = f.relationship || '';
+    document.getElementById('ppTabooInput').value = Array.isArray(f.taboo) ? f.taboo.join('，') : (f.taboo || '');
     document.getElementById('ppLegacyInput').value = f.legacy || '';
     document.getElementById('ppAppearanceInput').value = f.appearance || '';
     document.getElementById('ppPersonalityInput').value = f.personality || '';
@@ -3437,6 +3464,11 @@ document.getElementById('ppCancel').onclick = function () { document.getElementB
 document.getElementById('ppSave').onclick = function () {
   var p = {
     name: document.getElementById('ppNameInput').value.trim(),
+    address: document.getElementById('ppAddressInput').value.trim(),
+    pronoun: document.getElementById('ppPronounInput').value,
+    perspective: document.getElementById('ppPerspectiveInput').value || 'second',
+    relationship: document.getElementById('ppRelationInput').value.trim(),
+    taboo: document.getElementById('ppTabooInput').value.trim(),
     legacy: document.getElementById('ppLegacyInput').value.trim(),
     appearance: document.getElementById('ppAppearanceInput').value.trim(),
     personality: document.getElementById('ppPersonalityInput').value.trim(),
