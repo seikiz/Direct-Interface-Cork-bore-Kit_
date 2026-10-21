@@ -1,0 +1,50 @@
+name: win-bisect2
+
+# 第二轮：片 3 红了，把它里面的 11 个脚本**每个一个 job**，名字里带脚本名。
+# job 成败是公开可读的 → 一眼就能看到是哪一个（或哪几个）。
+# 定位完删掉本文件。
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - '.github/workflows/win-bisect2.yml'
+  workflow_dispatch:
+
+jobs:
+  one:
+    name: win-${{ matrix.t }}
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        t:
+          - test_android_icons.py
+          - test_block_portability.py
+          - test_codex.py
+          - test_features.py
+          - test_kernel.py
+          - test_no_tk.py
+          - test_quick_reply.py
+          - test_save_sync.py
+          - test_sync_api_pc.py
+          - test_trpg_lock.py
+          - test_worldline.py
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - name: 装依赖
+        shell: bash
+        run: |
+          python -m pip install -q --upgrade pip
+          python -m pip install -q -r requirements-test.txt
+      - name: 跑一个
+        shell: bash
+        env:
+          PYTHONIOENCODING: utf-8
+          PYTHONPATH: ${{ github.workspace }}
+        run: |
+          set -o pipefail
+          python "tests/${{ matrix.t }}" 2>&1 | tail -n 40
