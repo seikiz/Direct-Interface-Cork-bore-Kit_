@@ -15,6 +15,10 @@
 #   · 图标回归（Node）那步 if: always()：Python 挂了它也照跑，"Node 有没有事"一眼可辨
 name: test
 
+permissions:
+  contents: read
+  statuses: write
+
 on:
   push:
     branches: [ main, master ]
@@ -100,15 +104,27 @@ jobs:
           done
           if [ -n "$FAILED" ]; then
             echo "::error::失败的脚本：$FAILED"
-            # 失败上报：commit status 是公开可读的（注解会被 GitHub 丢弃、日志要 admin）
-            BODY="{\"state\":\"failure\",\"context\":\"dick/failing-tests\",\"description\":\"$(echo $FAILED | tr ' ' ',' | cut -c1-130)\"}"
-            curl -sS -X POST -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
-              -H "Accept: application/vnd.github+json" \
-              -H "Content-Type: application/json" \
-              "${{ github.api_url }}/repos/${{ github.repository }}/statuses/${{ github.sha }}" \
-              -d "$BODY" >/dev/null 2>&1 || true
+            echo "$FAILED" > "${RUNNER_TEMP:-/tmp}/dick_failed.txt" 2>/dev/null || true
           fi
           exit $FAIL
+
+      - name: 失败上报（commit status，公开可读）
+        if: always()
+        shell: bash
+        run: |
+          F="${RUNNER_TEMP:-/tmp}/dick_failed.txt"
+          if [ ! -s "$F" ]; then echo "没有失败脚本，跳过上报"; exit 0; fi
+          NAME="$(tr ' ' ',' < "$F" | sed 's/,,*/,/g; s/^,//' | cut -c1-130)"
+          echo "失败脚本：$NAME"
+          BODY="{\"state\":\"failure\",\"context\":\"dick/failing-tests\",\"description\":\"$NAME\"}"
+          CODE=$(curl -sS -o /tmp/dick_status_resp.json -w "%{http_code}" -X POST \
+            -H "Authorization: Bearer ${{ github.token }}" \
+            -H "Accept: application/vnd.github+json" \
+            -H "Content-Type: application/json" \
+            "${{ github.api_url }}/repos/${{ github.repository }}/statuses/${{ github.sha }}" \
+            -d "$BODY" || echo "000")
+          echo "HTTP $CODE"
+          head -c 400 /tmp/dick_status_resp.json || true
 
       - name: 汇总
         if: always()
@@ -204,15 +220,27 @@ jobs:
           done
           if [ -n "$FAILED" ]; then
             echo "::error::失败的脚本：$FAILED"
-            # 失败上报：commit status 是公开可读的（注解会被 GitHub 丢弃、日志要 admin）
-            BODY="{\"state\":\"failure\",\"context\":\"dick/failing-tests\",\"description\":\"$(echo $FAILED | tr ' ' ',' | cut -c1-130)\"}"
-            curl -sS -X POST -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
-              -H "Accept: application/vnd.github+json" \
-              -H "Content-Type: application/json" \
-              "${{ github.api_url }}/repos/${{ github.repository }}/statuses/${{ github.sha }}" \
-              -d "$BODY" >/dev/null 2>&1 || true
+            echo "$FAILED" > "${RUNNER_TEMP:-/tmp}/dick_failed.txt" 2>/dev/null || true
           fi
           exit $FAIL
+
+      - name: 失败上报（commit status，公开可读）
+        if: always()
+        shell: bash
+        run: |
+          F="${RUNNER_TEMP:-/tmp}/dick_failed.txt"
+          if [ ! -s "$F" ]; then echo "没有失败脚本，跳过上报"; exit 0; fi
+          NAME="$(tr ' ' ',' < "$F" | sed 's/,,*/,/g; s/^,//' | cut -c1-130)"
+          echo "失败脚本：$NAME"
+          BODY="{\"state\":\"failure\",\"context\":\"dick/failing-tests\",\"description\":\"$NAME\"}"
+          CODE=$(curl -sS -o /tmp/dick_status_resp.json -w "%{http_code}" -X POST \
+            -H "Authorization: Bearer ${{ github.token }}" \
+            -H "Accept: application/vnd.github+json" \
+            -H "Content-Type: application/json" \
+            "${{ github.api_url }}/repos/${{ github.repository }}/statuses/${{ github.sha }}" \
+            -d "$BODY" || echo "000")
+          echo "HTTP $CODE"
+          head -c 400 /tmp/dick_status_resp.json || true
 
       - name: 汇总
         if: always()
