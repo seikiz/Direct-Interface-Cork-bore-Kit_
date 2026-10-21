@@ -143,8 +143,13 @@ def test_real_repo():
     check(u"低耦：块里没有模块级可变全局（shared-state = 0）",
           "shared-state" not in by_rule, str(by_rule))
 
+    # 壳层已拆成 Kit.py + shell_*.py：规则读整个壳层，否则"经内核取服务"会被拆散而误红。
     shell_path = os.path.join(ROOT, "Direct-Interface Cork-bore Kit.py")
     shell = io.open(shell_path, encoding="utf-8", errors="replace").read()
+    for _f in sorted(os.listdir(ROOT)):
+        if _f.startswith("shell_") and _f.endswith(".py"):
+            shell += "\n" + io.open(os.path.join(ROOT, _f), encoding="utf-8",
+                                    errors="replace").read()
     check(u"装配方向正确：壳层 import 内核，并且经内核取两个试点服务",
           "import kernel" in shell
           and '_kernel_service("workshop")' in shell

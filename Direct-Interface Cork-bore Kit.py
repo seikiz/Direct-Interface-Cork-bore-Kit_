@@ -606,8 +606,11 @@ def ws_header_name(name):
     return quote(s, safe="")
 
 from shell_ws import WsMixin, WsXferSlot
+from shell_host import HostMixin
+from shell_go import GoMixin
+from shell_codex import CodexMixin
 
-class HtmlApp(WsMixin):
+class HtmlApp(HostMixin, GoMixin, CodexMixin, WsMixin):
     # 已并入核心（底层）的 UI 插件：不再作为可开关插件出现，也不可被禁用
     # （Tk 时代的「现代界面」已随 Tk 一起退役 —— HTML 版的主题由前端自己管）
     CORE_UI_PLUGINS = ("Live2D 看板娘",)
@@ -829,49 +832,6 @@ class HtmlApp(WsMixin):
         self.ollama_online = False
         print("[Ollama] 未检测到本地服务（需要时先安装并启动 Ollama）")
 
-    def _vision_describe(self, image_b64, mime):
-        """看图描述：DICK 的眼睛 = 官方视觉理解（V4.1 Flash 起原生多模态，模型名仍填 deepseek-flash）。
-        只要配了 DeepSeek key 就固定用它看图（与主对话模型无关），失败才回落免费链。"""
-        import requests
-        proxy = self.config.get("proxy") or None
-        proxies = {"http": proxy, "https": proxy} if proxy else None
-        ds_key = (self.config.get("api_key") or "").strip()
-        ds_base = (self.config.get("base_url") or "https://api.deepseek.com").strip()
-        # 视觉模型 ID：2026-09-10 起 V4.1 Flash 原生支持视觉理解，
-        # 旧的 deepseek-v4-flash-vision-exp 已下线（官方暂时路由），统一填 deepseek-flash。
-        vision_model = "deepseek-flash"
-        if ds_key and ds_base:
-            data_url = "data:" + mime + ";base64," + image_b64
-            body = {
-                "model": vision_model,
-                "messages": [{"role": "user", "content": [
-                    {"type": "image_url", "image_url": {"url": data_url}},
-                    {"type": "text", "text": "请用中文详细描述这张图片的内容（包括文字、物体、场景、数据，如有表格请逐项列出）。"},
-                ]}],
-                "max_tokens": 4096,
-                "stream": False,
-            }
-            try:
-                # 走 vision 线：并发有上限（不会一次堆十个看图请求）、耗时可见、超时可控
-                import jobs as _jobs
-                _ok, r, _err = _jobs.run("vision", requests.post,
-                                         ds_base.rstrip("/") + "/chat/completions",
-                                         timeout=95, name="看图描述",
-                                         json=body,
-                                         headers={"Content-Type": "application/json",
-                                                  "Authorization": "Bearer " + ds_key},
-                                         proxies=proxies)
-                if not _ok or r is None:
-                    raise RuntimeError(_err or "看图请求失败")
-                if r.status_code < 400:
-                    content = ((r.json().get("choices") or [{}])[0].get("message") or {}).get("content")
-                    if isinstance(content, str) and content.strip():
-                        return content.strip()
-            except Exception:
-                pass
-        # 回落：免费视觉链
-        return _vision_describe(image_b64, mime, proxies=proxies)
-
     def _load_worlds(self):
         self.worlds = []
         try:
@@ -1016,57 +976,6 @@ class HtmlApp(WsMixin):
                 self._ws_save_upload_async(r["name"], data["history_tree"])
                 break
 
-    # ---------- 系统提示 ----------
-    def _anchor_for_role(self, r):
-        """从角色结构化字段提取紧凑锚点（性格/年龄/说话方式），供每轮重申。"""
-        name = r.get("name") or "角色"
-        f = r.get("fields") or {}
-        personality = str(f.get("personality") or "").strip()[:70]
-        speech = str(f.get("speech") or "").strip()[:70]
-        age = None
-        for src in (str(f.get("appearance") or ""), str(f.get("background") or ""),
-                    str(f.get("notes") or "")):
-            m = re.search(r"(\d{1,2})\s*(?:岁|岁的)", src)
-            if m:
-                age = m.group(1) + "岁"
-                break
-        bits = []
-        if age:
-            bits.append("年龄约" + age)
-        if personality:
-            bits.append("性格：" + personality)
-        if speech:
-            bits.append("说话方式：" + speech)
-        return name, "；".join(bits)
-
-    def _anchor_block(self):
-        """本轮角色锚点：每轮重申性格/年龄/口吻 + 防文学化，对抗长对话"松动"。
-        与记忆注入配合：记忆只当背景事实，不模仿其文风。"""
-        chosen = [r for r in self.roles if r["name"] in self.selected_roles]
-        if not chosen:
-            return ""
-        lines = ["【本轮角色锚点 · 必须保持】"]
-        for r in chosen:
-            name, desc = self._anchor_for_role(r)
-            if desc:
-                lines.append(f"- 「{name}」：{desc}")
-        if len(chosen) > 1:
-            lines.append("- （群聊：只说「" + "、".join(r["name"] for r in chosen) +
-                         "」中当前发言者的人话，绝不串戏/帮别人说。）")
-        lines.append(
-            "以上是你当前的人设核心，每一轮都要保持，别让它被后面的对话稀释。\n"
-            "像活人一样说话：短句、口语、有停顿和情绪，会笑会叹气会犹豫；"
-            "绝不要文绉绉、不要像小说旁白/散文抒情、不要堆砌修辞。")
-        # 恐怖谷圣杯·适当的具体性：让角色"真到不像机器"，而非"自诩爱人的玩具"
-        lines.append(
-            "【适当的具体性（倾向，而非每句硬塞）】\n"
-            "- 用正在做/刚发生的具体小事开头或点缀（“我刚把面盛出来，还有点烫”），而不是空泛抒情。\n"
-            "- 带一点具体偏好/小习惯/小毛病（不吃香菜、睡前刷十分钟手机），让它像“这个人”而非“这个设定”。\n"
-            "- 说身体和感受用具体、像人（“胃有点疼”“困了”“手冻僵了”），别用抽象华丽的词。\n"
-            "- 具体要“恰到好处”：一两个自然带出即可，别罗列、别打断剧情。\n"
-            "- **偶尔完全可以没有细节**——有时就是平平回一句“嗯，知道了”。别每句都硬塞一个，那是表演，不是活着。")
-        return "\n".join(lines)
-
     def _build_system_prompt(self):
         sb = []
         preset = None
@@ -1132,25 +1041,6 @@ class HtmlApp(WsMixin):
         return {"ok": True,
                 "temperature": self.core.temperature,
                 "top_p": self.core.top_p}
-
-    def _choices_plugin(self):
-        try:
-            if self.plugin_manager:
-                return self.plugin_manager.get_plugin("Galgame 选项")
-        except Exception:
-            pass
-        return None
-
-    def _choices_state(self):
-        p = self._choices_plugin()
-        if not p or not p.enabled:
-            return {"items": [], "loading": False, "error": ""}
-        try:
-            return {"items": list(getattr(p, "choices", None) or []),
-                    "loading": bool(getattr(p, "choices_loading", False)),
-                    "error": str(getattr(p, "choices_error", "") or "")}
-        except Exception:
-            return {"items": [], "loading": False, "error": ""}
 
     def _clear_choices(self):
         p = self._choices_plugin()
@@ -1759,122 +1649,6 @@ class HtmlApp(WsMixin):
         self._send_text(display_text, send_text, None)
 
         return {"ok": True}
-
-    def _vision_then_send(self, node_id, text, image_b64, mime):
-        """发图 = 视觉模型直接看图回答（deepseek-flash 的多模态能力）：基于图片+用户文本，
-        以角色口吻直接生成回复。失败则回落到"描述中转 + 主模型"。"""
-        import requests
-        proxy = self.config.get("proxy") or None
-        proxies = {"http": proxy, "https": proxy} if proxy else None
-        node = self.core.tree.nodes.get(node_id)
-        ds_key = (self.config.get("api_key") or "").strip()
-        ds_base = (self.config.get("base_url") or "https://api.deepseek.com").strip()
-        vision_model = "deepseek-flash"
-        data_url = "data:" + (mime or "image/png") + ";base64," + image_b64
-        direct = None
-        if ds_key and ds_base:
-            # 用当前系统提示（角色人设）让 DSFVE 以角色身份看图回答
-            try:
-                sys_prompt = ""
-                for nid, n in (self.core.tree.nodes or {}).items():
-                    if n.role == "system" and n.content:
-                        sys_prompt = n.content
-                        break
-                body = {
-                    "model": vision_model,
-                    "messages": [{"role": "system", "content": sys_prompt or "你是角色扮演助手，请以角色口吻自然回应。"},
-                                 {"role": "user", "content": [
-                                     {"type": "image_url", "image_url": {"url": data_url}},
-                                     {"type": "text", "text": text or "请描述这张图片并自然回应。"},
-                                 ]}],
-                    "max_tokens": 1024,
-                    "stream": False,
-                }
-                r = requests.post(ds_base.rstrip("/") + "/chat/completions",
-                                  json=body,
-                                  headers={"Content-Type": "application/json",
-                                           "Authorization": "Bearer " + ds_key},
-                                  timeout=120, proxies=proxies)
-                if r.status_code < 400:
-                    content = ((r.json().get("choices") or [{}])[0].get("message") or {}).get("content")
-                    if isinstance(content, str) and content.strip():
-                        direct = content.strip()
-            except Exception as e:
-                print(f"[视觉] DSFVE 直答失败: {e}")
-        if direct:
-            # DSFVE 直接回答 → 作为 AI 回复（新增 assistant 节点，不动 user 节点）
-            self._vision_direct_done(node_id, direct)
-            return
-        # 回落：描述中转（原逻辑）
-        try:
-            desc = self._vision_describe(image_b64, mime or "image/png")
-        except Exception as e:
-            desc = None
-            print(f"[视觉] 描述失败: {e}")
-        if desc:
-            tree_content = "用户发送了一张图片。视觉模型对图片的描述：\n" + desc + "\n\n用户输入：" + text
-            if node:
-                node.content = tree_content
-            self._rebuild_messages()
-            self._start_fetch(node_id)
-        else:
-            self.busy = False
-            self._append_sys(i18n.t("vision_fail", "图片没认出来，稍后再试一次"))
-
-    def _vision_direct_done(self, node_id, direct):
-        """DSFVE 直答完成：user 节点保持原样，新增 assistant 节点存 AI 回复。
-        处理机制标签/正则/事件，与正常 AI 回复一致。"""
-        try:
-            import re as _re
-            ai_reply = direct
-            ja_text = ""
-            m = _re.search(r"\[ja\]([\s\S]*?)\[/ja\]", ai_reply or "")
-            if m:
-                ja_text = m.group(1).strip()
-                ai_reply = _re.sub(r"\[ja\][\s\S]*?\[/ja\]", "", ai_reply)
-            clean = self.core.strip_mechanism_tags(ai_reply or "", apply=True)
-            clean = self._apply_regex_pipeline(clean, "ai")
-            # 新增 assistant 节点挂在 user 节点下
-            meta = {}
-            speaker = self.selected_roles[0] if len(self.selected_roles) == 1 else None
-            if speaker:
-                meta["speaker"] = speaker
-            if self.core.mechanism_state is not None:
-                meta["ms"] = self.core.mechanism_snapshot()
-            if ja_text:
-                meta["ja"] = ja_text
-            self.core.tree.add_node("assistant", clean, node_id, meta)
-            # 事件检查
-            try:
-                ev = self.core.check_mech_events(getattr(self, "_last_user", ""))
-                if ev:
-                    self.core.pending_event = ev
-            except Exception:
-                pass
-            self._present_ending()
-            self._save_tree(wait=False)  # 自动落盘：走 io 线，别挡界面
-            self._rebuild_messages()
-            self.streaming = ""
-            self.busy = False
-            for p in self.plugin_manager.get_all_plugins():
-                if p.enabled:
-                    # 走 plugin 线 + 超时：插件钩子只是**通知**，不需要挡着回复；
-                    # 某个插件卡住时（网络/弹窗/死循环）只会让它自己记一笔超时，
-                    # 回复照常结束 —— 单线程时代这里是直接串在回复路径上的。
-                    try:
-                        import jobs as _jobs
-                        _jobs.submit("plugin", p.on_message_received,
-                                     getattr(self, "_last_user", ""), clean,
-                                     name="插件钩子：" + str(getattr(p, "name", "?")),
-                                     timeout=15)
-                    except Exception:
-                        pass
-        except Exception as e:
-            print(f"[视觉] 直答落树失败: {e}")
-            self._append_sys(direct, kind="ai")
-            self._rebuild_messages()
-            self.busy = False
-            self.streaming = ""
 
     def _present_ending(self):
         """结局达成：读取 mechanics.endings，命中（达成事件链/状态）→ 弹结局横幅 + 注入收束到下一轮。"""
@@ -4272,54 +4046,6 @@ class HtmlApp(WsMixin):
         return {"ok": True, "file": os.path.basename(path), "path": path, "msg": msg,
                 "title": title}
 
-    # ---------- 备份内容（明文备份 / 加密备份共用同一份） ----------
-    def _backup_entries(self):
-        """返回 [(zip 内相对路径, bytes)]。
-        抽出来是为了让「明文备份」和「加密备份」内容完全一致，
-        不然两份实现迟早会走偏。"""
-        out = []
-        for r in self.roles:
-            data = dict(r.get("data") or {})
-            data["name"] = r["name"]
-            data["system_prompt"] = r.get("prompt") or data.get("system_prompt", "")
-            if r["name"] in self.selected_roles:
-                td = self.core.get_all_nodes_data()
-                if len(td.get("nodes", {})) > 1:
-                    data["history_tree"] = td
-            out.append(("saves/" + r["file"],
-                        json.dumps(data, ensure_ascii=False, indent=2).encode("utf-8")))
-        for w in self.worlds:
-            fn = self._safe_name(w.get("name") or "") + ".json"
-            out.append(("worlds/" + fn,
-                        json.dumps(w, ensure_ascii=False, indent=2).encode("utf-8")))
-        if self.persona:
-            out.append(("personas/persona.json",
-                        json.dumps(self.persona, ensure_ascii=False, indent=2).encode("utf-8")))
-        safe_cfg = self._encrypt_config_secrets(self.config) or self.config
-        out.append(("config.json",
-                    json.dumps(safe_cfg, ensure_ascii=False, indent=2).encode("utf-8")))
-        # codex/ 里是生成出来的剧情包 —— 全项目最不可替代的一类数据
-        # （config 能重设、世界卡能重下，写出来的故事没了就是没了），
-        # 之前漏在外面，而它恰好被一次打包脚本误删过，所以必须进备份。
-        try:
-            cdir = getattr(self, "codex_dir", None)
-            if cdir and os.path.isdir(cdir):
-                for fn in sorted(os.listdir(cdir)):
-                    full = os.path.join(cdir, fn)
-                    if os.path.isfile(full):
-                        with open(full, "rb") as f:
-                            out.append(("codex/" + fn, f.read()))
-                    elif os.path.isdir(full):
-                        for dp, _dn, fns in os.walk(full):
-                            for f2 in fns:
-                                fp = os.path.join(dp, f2)
-                                rel = os.path.relpath(fp, cdir).replace("\\", "/")
-                                with open(fp, "rb") as f:
-                                    out.append(("codex/" + rel, f.read()))
-        except Exception:
-            pass          # codex 读不到不该让整份备份失败
-        return out
-
     @staticmethod
     def _zip_entries(entries, root):
         import zipfile
@@ -4346,22 +4072,6 @@ class HtmlApp(WsMixin):
         if not out:
             out = os.path.join(os.path.expanduser("~"), "Desktop", fname)
         return out
-
-    def _backup_service(self):
-        """门面：加密备份已迁到 modules/backup；加密能力由宿主（crypto_core）注入"""
-        import crypto_core
-        return self._kernel_service("backup").bind(self, crypto_core)
-
-    def _backup_dirs(self):
-        """还原时允许写入的五个去处（模块不认识 App，只认这张表）"""
-        return {"root": self.base_dir,
-                "saves": self.save_dir,
-                "worlds": self.world_dir,
-                "personas": os.path.normpath(os.path.join(self.preset_dir, "..", "personas")),
-                "codex": self.codex_dir, "config_file": self.config_file}
-    # ---------- 加密备份 ----------
-
-    BACKUP_EXT = ".dickbackup"
 
     def api_backup_password_check(self, password):
         """门面：口令强度判定在 modules/backup（不存任何东西）"""
@@ -4539,18 +4249,6 @@ class HtmlApp(WsMixin):
     # ================= CODEX 专属 GALGAME（PC 端独有） =================
     # 傻瓜化：选文件夹自动归类立绘/背景/音乐/配音 → 生成剧本模板 → 播放器直接能播。
     # JSON 功能：codex.json 可视化编辑 + 校验 + zip 导入导出。
-
-    def _codex_pkg_path(self, name):
-        p = os.path.join(self.codex_dir, codex_core._safe_name(name))
-        # 防目录穿越：确保解析后的路径仍在本目录内（防御性深挖，即便 _safe_name 失效）
-        try:
-            root = os.path.realpath(self.codex_dir)
-            real = os.path.realpath(p)
-            if os.path.commonpath([root, real]) != root:
-                p = os.path.join(root, "_unsafe")
-        except Exception:
-            pass
-        return p
 
     def api_codex_list(self):
         """列出所有 CODEX 包：name / intro / 场景数 / 资源统计"""
@@ -4904,38 +4602,6 @@ class HtmlApp(WsMixin):
         except Exception as e:
             return {"ok": False, "err": str(e)[:200]}
 
-    def _codex_exe_worker(self, name):
-        """后台：打包 EXE + 写状态文件"""
-        state_file = os.path.join(self._codex_pkg_path(name), "dist", ".exe_build_state.json")
-        def set_state(st, msg, extra=None):
-            d = {"state": st, "msg": msg}
-            if extra:
-                d.update(extra)
-            # 原子写：前端轮询读取时不会读到写一半的残缺 JSON
-            try:
-                save_guard.atomic_write_json(state_file, d)
-            except Exception:
-                pass
-        try:
-            set_state("building", "正在生成独立播放器…")
-            pkg = self._codex_pkg_path(name)
-            out_dir = os.path.join(pkg, "dist")
-            # 找可用的 python 解释器（优先当前；冻结运行时退回 PATH 里的 python）
-            import sys as _sys
-            py_cmd = None
-            if not getattr(_sys, "frozen", False):
-                py_cmd = _sys.executable
-            set_state("building", "正在调用 PyInstaller（首次约 1-2 分钟）…")
-            exe, counts = codex_core.build_standalone_exe(
-                pkg, out_dir, name=name, py_cmd=py_cmd,
-                log_cb=lambda m: set_state("building", m))
-            set_state("done", "打包完成",
-                      {"exe": os.path.basename(exe), "size": os.path.getsize(exe),
-                       "counts": counts,
-                       "rel": os.path.relpath(exe, pkg).replace("\\", "/")})
-        except Exception as e:
-            set_state("error", str(e)[:300])
-
     def api_codex_pack_exe_status(self, name):
         """查询打包 EXE 进度（前端轮询）"""
         state_file = os.path.join(self._codex_pkg_path(name), "dist", ".exe_build_state.json")
@@ -5008,16 +4674,6 @@ class HtmlApp(WsMixin):
         return None
 
     @staticmethod
-    def _player_size_mb(path):
-        total = 0
-        for root, _dirs, files in os.walk(path):
-            for f in files:
-                try:
-                    total += os.path.getsize(os.path.join(root, f))
-                except Exception:
-                    pass
-        return round(total / 1048576.0, 1)
-
     def api_codex_export_player(self, name):
         """把 CODEX 包导出成「播放器 + 故事」的成品目录（后台线程）。
         产出结构：
@@ -5068,83 +4724,6 @@ class HtmlApp(WsMixin):
             return {"ok": True, "dest": dest}
         except Exception as e:
             return {"ok": False, "err": str(e)[:200]}
-
-    def _codex_player_worker(self, name, player, dest, state_file):
-        """后台：拷播放器 + 放故事，并写状态文件"""
-        def set_state(st, msg, extra=None):
-            d = {"state": st, "msg": msg}
-            if extra:
-                d.update(extra)
-            try:
-                save_guard.atomic_write_json(state_file, d)
-            except Exception:
-                pass
-        try:
-            import shutil
-            pkg = self._codex_pkg_path(name)
-
-            set_state("building", "正在复制播放器（约 127 MB，第一次稍慢）…")
-            if os.path.isdir(dest):
-                # 删不干净通常是播放器还开着（exe 被占用）→ 说人话，别抛 WinError
-                try:
-                    shutil.rmtree(dest)
-                except Exception:
-                    locked = []
-                    for root, _dirs, files in os.walk(dest):
-                        for fn in files:
-                            try:
-                                os.remove(os.path.join(root, fn))
-                            except Exception:
-                                locked.append(fn)
-                    if locked:
-                        set_state("error",
-                                  "目标目录里有文件正被占用（多半是播放器还开着）："
-                                  + "、".join(sorted(set(locked))[:5])
-                                  + " —— 请先关掉 DICK-Narrative.exe 再导出。")
-                        return
-                    shutil.rmtree(dest, ignore_errors=True)
-            os.makedirs(dest, exist_ok=True)
-            shutil.copytree(player, dest, dirs_exist_ok=True)
-
-            set_state("building", "正在放入故事与素材…")
-            story = os.path.join(dest, "story")
-            # 播放器自带一份示例故事，导出时必须清掉，否则会和你的故事打架
-            shutil.rmtree(story, ignore_errors=True)
-            os.makedirs(story, exist_ok=True)
-            shutil.copy2(os.path.join(pkg, "codex.json"),
-                         os.path.join(story, "codex.json"))
-            counts = {}
-            for kind in codex_core.SUBDIRS:
-                src = os.path.join(pkg, kind)
-                n = 0
-                if os.path.isdir(src):
-                    dst = os.path.join(story, kind)
-                    os.makedirs(dst, exist_ok=True)
-                    for fn in sorted(os.listdir(src)):
-                        sp = os.path.join(src, fn)
-                        if os.path.isfile(sp):
-                            shutil.copy2(sp, os.path.join(dst, fn))
-                            n += 1
-                counts[kind] = n
-
-            readme = os.path.join(dest, "玩这个.txt")
-            try:
-                with open(readme, "w", encoding="utf-8") as f:
-                    f.write(
-                        "《%s》\n\n"
-                        "双击 DICK-Narrative.exe 就能玩。\n"
-                        "整个文件夹要一起拷走（runtime 和 app 是播放器自带的运行环境）。\n\n"
-                        "操作：鼠标点任意处推进 / 空格回车推进 / Esc 打开菜单\n"
-                        "剧情分支会按好感度、状态、标记自动筛选。\n" % name)
-            except Exception:
-                pass
-
-            size = self._player_size_mb(dest)
-            set_state("done", "导出完成",
-                      {"dest": dest, "size": size, "counts": counts,
-                       "rel": os.path.basename(dest)})
-        except Exception as e:
-            set_state("error", str(e)[:300])
 
     def api_codex_player_status(self, name):
         """查询「导出到播放器」进度（前端轮询）"""
@@ -5483,50 +5062,6 @@ class HtmlApp(WsMixin):
         except Exception as e:
             return {"ok": False, "err": str(e)[:200]}
 
-    def _codex_release_worker(self, name):
-        """后台：发布三件套（HTML → EXE → .codex）"""
-        import sys as _sys
-        state_file = os.path.join(self._codex_pkg_path(name), "dist", ".exe_build_state.json")
-        def set_state(st, msg, extra=None):
-            d = {"state": st, "msg": msg}
-            if extra:
-                d.update(extra)
-            # 原子写：前端轮询读取时不会读到写一半的残缺 JSON
-            try:
-                save_guard.atomic_write_json(state_file, d)
-            except Exception:
-                pass
-        try:
-            pkg = self._codex_pkg_path(name)
-            out_dir = os.path.join(pkg, "dist")
-            os.makedirs(out_dir, exist_ok=True)
-            safe = codex_core._safe_name(name)
-            set_state("building", "① 生成独立 HTML…")
-            ok, path, counts = codex_core.build_standalone_file(pkg, os.path.join(out_dir, safe + ".html"))
-            if not ok:
-                set_state("error", "HTML 打包失败")
-                return
-            # ② EXE
-            set_state("building", "② 打包 EXE（首次约 1-2 分钟）…")
-            py_cmd = None if getattr(_sys, "frozen", False) else _sys.executable
-            exe, counts = codex_core.build_standalone_exe(pkg, out_dir, name=name, py_cmd=py_cmd)
-            # ③ .codex
-            set_state("building", "③ 生成 .codex 包…")
-            codex_path = os.path.join(out_dir, safe + ".codex")
-            codex_core.export_zip(pkg, codex_path)
-            set_state("done", "发布完成：EXE + HTML + .codex",
-                      {"exe": os.path.basename(exe),
-                       "html": safe + ".html",
-                       "codex": safe + ".codex",
-                       "size_exe": os.path.getsize(exe),
-                       "size_html": os.path.getsize(os.path.join(out_dir, safe + ".html")),
-                       "size_codex": os.path.getsize(codex_path),
-                       "rel": "dist",
-                       "counts": counts})
-        except Exception as e:
-            set_state("error", str(e)[:300])
-
-
     def api_codex_asset(self, name, kind, file):
         """返回 CODEX 包内资源的 dataURL（播放器/预览用）。
         kind: sprites/bg/bgm/voice；file: 相对该 kind 目录的文件名"""
@@ -5620,70 +5155,6 @@ class HtmlApp(WsMixin):
     # 19 路每步有 250+ 合法点，ASCII 坐标又不携带形状信息，让模型自由算棋必乱下；
     # 所以每轮把引擎挑出的候选点一起注入，模型选，引擎校验。
 
-    def _go_game(self):
-        return getattr(self, "_go", None)
-
-    # 棋风关键词：从角色卡的性格描述里推断，让「性格」真的影响落子而不只是台词
-    GO_STYLE_WORDS = {
-        "aggressive": ["好战", "激进", "暴躁", "强势", "攻击", "争强", "不服输", "凶", "狠",
-                       "狂妄", "挑衅", "火爆", "嗜血", "暴虐", "战斗", "危险", "咄咄"],
-        "solid": ["谨慎", "稳重", "冷静", "沉着", "细腻", "保守", "理性", "严谨", "稳健",
-                  "小心", "缜密", "沉稳", "克制", "耐心", "踏实"],
-        "proud": ["骄傲", "自负", "自信", "高傲", "目中无人", "天才", "自恋", "优越",
-                  "高贵", "不屑", "傲慢", "大小姐", "冷淡"],
-        "playful": ["随性", "懒", "散漫", "调皮", "顽皮", "跳脱", "漫不经心", "任性",
-                    "胡闹", "活泼", "开朗", "天真", "好奇", "贪玩"],
-    }
-    GO_STYLE_LABEL = {
-        "aggressive": "好战 —— 喜欢贴身纠缠、追杀、叫吃",
-        "solid": "稳重 —— 喜欢连接、围地、稳扎稳打",
-        "proud": "高傲 —— 喜欢占大场星位做模样，不屑贴身缠斗",
-        "playful": "随性 —— 下得跳脱，偶尔神来一笔或随手一着",
-        "balanced": "均衡 —— 该怎么下怎么下",
-    }
-
-    # ── 好感度 → 棋局设定（想调难度就改这里）────────────────────
-    # 格式：(好感下限, 让子数, 放水概率, 关系描述)
-    #
-    # 让子数上限是 1 —— 再多就不像在下棋了，而是像在哄人。
-    # 所以【放水概率】才是真正决定难度的那一列，想让棋更轻松就调它。
-    # 真要让更多子：改下面的 GO_MAX_HANDICAP（引擎支持到 9 子），
-    # 同时记得把这张表里对应档位的让子数一起改大。
-    GO_MAX_HANDICAP = 1
-    GO_KOMI_PER_HANDICAP = 5.0     # 玩家执白时，1 子折成多少目贴还给他
-
-    GO_AFF_TIERS = [
-        (85, 1, 0.30, "很亲近，愿意让着你一子"),
-        (70, 1, 0.20, "关系不错，会不自觉地放水"),
-        (50, 1, 0.05, "还算熟，让一子客气一下"),
-        (0, 0, 0.00, "还没什么交情，不留情"),
-    ]
-
-    def _go_settings(self):
-        """按好感度算出这盘的让子数 / 放水概率 / 额外贴目"""
-        aff = 50
-        try:
-            v = (self.core.mechanism_state or {}).get("affection")
-            if isinstance(v, (int, float)):
-                aff = v
-        except Exception:
-            pass
-        handicap, mercy, mood = 0, 0.0, self.GO_AFF_TIERS[-1][3]
-        for lo, h, m, label in self.GO_AFF_TIERS:
-            if aff >= lo:
-                handicap, mercy, mood = h, m, label
-                break
-        # 上限在这里再夹一次：以后有人把表里的数字改大了，也不会真的多让子
-        handicap = max(0, min(int(handicap), self.GO_MAX_HANDICAP))
-        human = getattr(self, "_go_human", "black")
-        komi_extra = 0.0
-        if human == "white":
-            # 玩家执白时没法给他让子，改成多贴目（她吃亏）
-            komi_extra = handicap * self.GO_KOMI_PER_HANDICAP
-            handicap = 0
-        return {"aff": aff, "handicap": handicap, "mercy": mercy,
-                "komi_extra": komi_extra, "mood": mood}
-
     def api_go_settings(self):
         """给界面显示「这盘棋她打算怎么跟你下」"""
         st = self._go_settings()
@@ -5695,50 +5166,6 @@ class HtmlApp(WsMixin):
         st["style_label"] = self.GO_STYLE_LABEL.get(st["style"], "")
         st["komi"] = b.komi if b else 7.5
         return st
-
-    def _go_style(self):
-        """从当前角色卡推断棋风；好感度也会影响（低→更冲，高→更稳）"""
-        try:
-            roles = getattr(self.core, "active_roles", None) or []
-            text = ""
-            for r in roles[:1]:
-                if not isinstance(r, dict):
-                    continue
-                for k in ("personality", "description", "scenario", "name", "system_prompt"):
-                    v = r.get(k)
-                    if isinstance(v, str):
-                        text += v + "\n"
-            scores = {}
-            for st, words in self.GO_STYLE_WORDS.items():
-                scores[st] = sum(text.count(w) for w in words)
-            best = "balanced"
-            if scores:
-                cand = max(scores, key=lambda k: scores[k])
-                if scores[cand] > 0:
-                    best = cand
-            # 机制卡联动：好感度低时更冲，高时更稳（只在没明显性格倾向时生效）
-            if best == "balanced":
-                aff = None
-                try:
-                    aff = (self.core.mechanism_state or {}).get("affection")
-                except Exception:
-                    aff = None
-                if isinstance(aff, (int, float)):
-                    if aff < 30:
-                        best = "aggressive"
-                    elif aff >= 80:
-                        best = "solid"
-            return best
-        except Exception:
-            return "balanced"
-
-    def _go_note(self, text):
-        log = getattr(self, "_go_log", None)
-        if log is None:
-            log = self._go_log = []
-        log.append(text)
-        if len(log) > 200:
-            del log[:-200]
 
     def api_go_new(self, size=19, human_color="black", komi=7.5):
         """开新局。human_color: 'black' 或 'white'"""
@@ -5843,171 +5270,6 @@ class HtmlApp(WsMixin):
             return {"ok": False, "err": "还没开局"}
         s = b.score()
         return {"ok": True, "score": s}
-
-    def _go_ai_first(self):
-        """玩家执白时，开局让 AI 先走"""
-        b = self._go_game()
-        human = getattr(self, "_go_human", "black")
-        if b is None or b.finished:
-            return
-        ai_black = (human == "white")
-        if ai_black and b.to_move == b.BLACK and len(b.moves) == 0:
-            self._go_ai_turn("（对局开始，你执黑先行。）")
-
-    def _go_maybe_ai_first(self):
-        try:
-            self._go_ai_first()
-        except Exception:
-            pass
-
-    def _go_prompt_block(self):
-        """构造注入给模型的棋盘说明 + 候选点"""
-        import go_engine as ge
-        b = self._go_game()
-        human = getattr(self, "_go_human", "black")
-        ai_color = "白" if human == "black" else "黑"
-        my_mark = "O" if ai_color == "白" else "X"
-        cands = []
-        style = self._go_style()
-        gs = self._go_settings()
-        try:
-            cands = b.candidates(b.to_move, limit=6, style=style, mercy=gs["mercy"])
-        except Exception:
-            pass
-        lines = []
-        lines.append("你执%s（棋盘上 %s 是你的子），对方执%s。" % (ai_color, my_mark,
-                                                            "黑" if ai_color == "白" else "白"))
-        lines.append("你的棋风：%s。选点请贴合你的性格。" %
-                     self.GO_STYLE_LABEL.get(style, self.GO_STYLE_LABEL["balanced"]))
-        # 好感度 → 这盘棋的设定（让子/放水），让她的态度和棋局一致
-        if gs["handicap"]:
-            lines.append("这是让子局：你让了对方 %d 子。你们的关系——%s。"
-                         "可以偶尔手软，但别放得太明显，输了也别恼。" % (gs["handicap"], gs["mood"]))
-        elif gs["komi_extra"]:
-            lines.append("你多贴了 %.1f 目给对方，是让着她的。你们的关系——%s。"
-                         % (gs["komi_extra"], gs["mood"]))
-        else:
-            lines.append("分先对局，关系——%s。不必留情，全力下。" % gs["mood"])
-        lines.append("")
-        lines.append("当前棋盘（X=黑子 O=白子 .=空；列 A-T 跳过 I，行 1-19 自下往上）：")
-        lines.append(b.to_ascii())
-        lines.append("")
-        st = b.score()
-        ai_stone = ge.BLACK if ai_color == "黑" else ge.WHITE
-        opp_stone = ge.WHITE if ai_color == "黑" else ge.BLACK
-        lines.append("已提子：你 %d 子，对方 %d 子。已下 %d 手。" %
-                     (b.captured[ai_stone], b.captured[opp_stone], len(b.moves)))
-        if cands:
-            lines.append("")
-            lines.append("【引擎给你的候选点】这几个点都不错，**优先从里面挑一个**：")
-            for i, c in enumerate(cands, 1):
-                lines.append("   %d. %s —— %s" % (i, c["display"], c["why"]))
-        lines.append("")
-        lines.append("要求：")
-        lines.append("1. 落子必须是**空点**、且不能让你的子自杀；不要下在刚被提掉的打劫点上。")
-        lines.append("2. 回复里**必须**用一个坐标明确说出你下在哪里，例如「我下在 Q16」。")
-        lines.append("3. 再用你自己的口吻说一两句台词，体现性格（可以吐槽棋局、可以挑衅、可以紧张）。")
-        lines.append("4. 不要解释规则，不要输出棋盘。")
-        return "\n".join(lines)
-
-    def _go_ai_turn(self, user_line=""):
-        """轮到 AI：把棋盘注入 pending_event，然后发一句话触发请求"""
-        b = self._go_game()
-        if b is None or b.finished:
-            return
-        human = getattr(self, "_go_human", "black")
-        if (b.to_move == b.BLACK) == (human == "black"):
-            return                                    # 还没轮到 AI
-        try:
-            blocks = [self._go_prompt_block()]
-            fix = getattr(self, "_go_fix", None)
-            if fix:
-                blocks.append("")
-                blocks.append("【上一手被驳回】%s 请重新选一个合法的点。" % fix)
-                self._go_fix = None
-            self.core.pending_event = {
-                "id": "_go_turn", "name": "围棋·轮到你",
-                "prompt": "\n".join(blocks),
-            }
-        except Exception as e:
-            self._append_sys("围棋：注入失败 %s" % str(e)[:120])
-            return
-        self._send_text(user_line or "（轮到你落子）", None, None)
-
-    def _go_parse_move(self, reply):
-        """从回复里解析落子坐标。返回 (x,y) 或 None。
-        优先命中引擎给的候选点；否则取最后一个合法坐标。"""
-        import re as _re
-        b = self._go_game()
-        if b is None or not reply:
-            return None
-        pat = _re.compile(r"(?<![A-Za-z0-9])([A-HJ-Ta-hj-t])\s?(\d{1,2})(?![0-9])")
-        found = []
-        for m in pat.finditer(str(reply)):
-            xy = b.from_display(m.group(1) + m.group(2))
-            if xy and xy not in found:
-                found.append(xy)
-        if not found:
-            return None
-        try:
-            cand = [(c["x"], c["y"]) for c in b.candidates(b.to_move, limit=8, style=self._go_style())]
-        except Exception:
-            cand = []
-        for xy in found:                      # 先看是不是候选点
-            if xy in cand and b.is_legal(xy[0], xy[1])[0]:
-                return xy
-        for xy in reversed(found):            # 再退而求其次：最后一个能下的
-            if b.is_legal(xy[0], xy[1])[0]:
-                return xy
-        return None
-
-    def _go_after_reply(self, reply):
-        """模型回复落地后的钩子：解析并落子。解析不到就引擎兜底，保证棋局永远能推进。"""
-        import threading as _th
-        b = self._go_game()
-        if b is None or b.finished:
-            return
-        human = getattr(self, "_go_human", "black")
-        if (b.to_move == b.BLACK) == (human == "black"):
-            return                                    # 现在不是 AI 的回合
-        xy = self._go_parse_move(reply)
-        if xy is not None:
-            r = b.play(xy[0], xy[1])
-            if r["ok"]:
-                self._go_note("对手落子 %s%s" % (r["display"],
-                                             ("，提 %d 子" % len(r["captured"])) if r["captured"] else ""))
-                if b.finished:
-                    self._go_note("终局：" + b.result)
-                return
-            reason = r.get("reason") or "非法手"
-        else:
-            reason = "回复里没找到可用的坐标"
-
-        # 驳回重选：最多重试 1 次；延迟一下让本轮 _on_response 先跑完（busy 复位）
-        tries = getattr(self, "_go_retry", 0)
-        if tries < 1:
-            self._go_retry = tries + 1
-            self._go_fix = reason
-            self._go_note("⚠ 对手这一手有问题（%s），让它重选一次" % reason)
-            try:
-                _th.Timer(0.8, lambda: self._go_ai_turn("（刚才那手不行，重选一个点）")).start()
-                return
-            except Exception:
-                pass
-
-        # 兜底：引擎替它落一手，棋局绝不停住
-        self._go_retry = 0
-        try:
-            cands = b.candidates(b.to_move, limit=1)
-        except Exception:
-            cands = []
-        if cands:
-            c = cands[0]
-            r = b.play(c["x"], c["y"])
-            if r["ok"]:
-                self._go_note("⚠ 对手没给出合法坐标，裁判代落 %s（%s）" % (r["display"], c["why"]))
-                if b.finished:
-                    self._go_note("终局：" + b.result)
 
     def api_go_ai(self):
         """手动让 AI 走一手（调试/补救用）"""
@@ -6198,60 +5460,6 @@ class HtmlApp(WsMixin):
         except Exception as e:
             print("[host_ui] 接入失败：%s" % str(e)[:120])
             return False
-
-    def _host_window(self):
-        try:
-            import webview
-            return webview.windows[0] if getattr(webview, "windows", None) else None
-        except Exception:
-            return None
-
-    def _host_ask_file(self, title="选择文件", types=(), multiple=False):
-        """宿主侧实现：走 pywebview 的原生文件对话框（跨平台、不引入 Tk）。"""
-        win = self._host_window()
-        if win is None:
-            return None
-        import webview
-        is_folder = types and types[0] == "__folder__"
-        try:
-            if is_folder:
-                res = win.create_file_dialog(webview.FileDialog.FOLDER)
-            else:
-                res = win.create_file_dialog(
-                    webview.FileDialog.OPEN, allow_multiple=bool(multiple),
-                    file_types=tuple(types) if types else ("All files (*.*)",))
-        except Exception as e:
-            print("[host_ui] 打开对话框失败：%s" % str(e)[:120])
-            return None
-        if not res:
-            return None
-        if multiple:
-            return list(res)
-        return res[0]
-
-    def _host_ask_save(self, title="保存到", default_name="", types=()):
-        win = self._host_window()
-        if win is None:
-            return None
-        import webview
-        try:
-            res = win.create_file_dialog(webview.FileDialog.SAVE,
-                                         save_filename=default_name or "untitled",
-                                         file_types=tuple(types) if types else ("All files (*.*)",))
-        except Exception as e:
-            print("[host_ui] 保存对话框失败：%s" % str(e)[:120])
-            return None
-        return res[0] if res else None
-
-    def _host_notify(self, text, speaker="插件", level="info"):
-        """宿主侧实现：插进聊天记录的一条系统消息（前端本来就会渲染系统消息）。"""
-        icon = {"info": "ℹ️", "warn": "⚠️", "error": "⛔"}.get(level, "ℹ️")
-        try:
-            self.sys_msgs.append({"kind": "ai", "speaker": "%s %s" % (icon, speaker),
-                                  "content": str(text), "node_id": None})
-            self._rebuild_messages()
-        except Exception:
-            print("[host_ui] %s: %s" % (speaker, text))
 
     def _offline_key(self):
         """离线推进按"这一局是谁"记账（按角色名，群聊就按集合）"""
