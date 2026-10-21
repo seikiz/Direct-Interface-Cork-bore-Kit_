@@ -100,6 +100,13 @@ jobs:
           done
           if [ -n "$FAILED" ]; then
             echo "::error::失败的脚本：$FAILED"
+            # 失败上报：commit status 是公开可读的（注解会被 GitHub 丢弃、日志要 admin）
+            BODY="{\"state\":\"failure\",\"context\":\"dick/failing-tests\",\"description\":\"$(echo $FAILED | tr ' ' ',' | cut -c1-130)\"}"
+            curl -sS -X POST -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+              -H "Accept: application/vnd.github+json" \
+              -H "Content-Type: application/json" \
+              "${{ github.api_url }}/repos/${{ github.repository }}/statuses/${{ github.sha }}" \
+              -d "$BODY" >/dev/null 2>&1 || true
           fi
           exit $FAIL
 
@@ -197,6 +204,13 @@ jobs:
           done
           if [ -n "$FAILED" ]; then
             echo "::error::失败的脚本：$FAILED"
+            # 失败上报：commit status 是公开可读的（注解会被 GitHub 丢弃、日志要 admin）
+            BODY="{\"state\":\"failure\",\"context\":\"dick/failing-tests\",\"description\":\"$(echo $FAILED | tr ' ' ',' | cut -c1-130)\"}"
+            curl -sS -X POST -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+              -H "Accept: application/vnd.github+json" \
+              -H "Content-Type: application/json" \
+              "${{ github.api_url }}/repos/${{ github.repository }}/statuses/${{ github.sha }}" \
+              -d "$BODY" >/dev/null 2>&1 || true
           fi
           exit $FAIL
 
