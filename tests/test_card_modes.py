@@ -29,6 +29,10 @@ PASS = 0
 FAIL = 0
 
 
+def read(rel):
+    return io.open(os.path.join(ROOT, rel), encoding="utf-8").read()
+
+
 def check(name, cond, detail=""):
     global PASS, FAIL
     if cond:
@@ -96,6 +100,38 @@ def main():
     check(u"核心调 mode_block", "mode_block(" in core)
     check(u"模式从玩家卡的 mode 字段读，不需要备注",
           ("get('mode')" in core) or ('get("mode")' in core), "没读 mode")
+
+    print(u"\n== \u2466 \u89c2\u6d4b vs \u4ee3\u5165\uff08\u4e59\u5973\u4e0d\u662f\u770b\u620f\uff09==")
+    check(u"\u4e59\u5973 measure=immerse", cm.MODES["otome"]["measure"] == "immerse")
+    check(u"GAL measure=observe", cm.MODES["gal"]["measure"] == "observe")
+    check(u"\u4e59\u5973\u91cc\u89d2\u8272\u66f4\u4e3b\u52a8\uff08initiative=character\uff09",
+          cm.MODES["otome"]["initiative"] == "character")
+    check(u"GAL \u91cc\u73a9\u5bb6\u63a8\u8fdb\uff08initiative=player\uff09",
+          cm.MODES["gal"]["initiative"] == "player")
+    check(u"\u4e59\u5973\u5141\u8bb8\u5199\u300c\u4f60\u300d\u7684\u611f\u53d7",
+          cm.MODES["otome"]["narrate_player_feelings"] is True)
+    check(u"GAL \u4e0d\u5199\u73a9\u5bb6\u5185\u5fc3\uff08\u955c\u5934\u5bf9\u7740\u5979\uff09",
+          cm.MODES["gal"]["narrate_player_feelings"] is False)
+    oto = cm.mode_block("otome")
+    check(u"\u4e59\u5973\u63d0\u793a\u91cc\u6709\u300c\u53ef\u4ee5\u5199\u4f60\u7684\u611f\u53d7\u300d",
+          u"\u53ef\u4ee5\u5199\u300c\u4f60\u300d\u7684\u611f\u53d7" in oto, oto[:200])
+    check(u"\u4f46\u4e0d\u8bb8\u66ff\u73a9\u5bb6\u8bf4\u8bdd\u505a\u51b3\u5b9a",
+          (u"\u4e0d\u8981\u66ff\u300c\u4f60\u300d\u8bf4\u8bdd" in oto) and (u"\u505a\u51b3\u5b9a" in oto))
+    gal = cm.mode_block("gal")
+    check(u"GAL \u63d0\u793a\u91cc\u7684\u955c\u5934\u5bf9\u7740\u5979", u"\u955c\u5934\u5bf9\u7740\u5979" in gal)
+    d = cm.mode_defaults("otome")
+    check(u"mode_defaults \u5e26\u51fa measure/initiative/feeling",
+          d.get("measure") == "immerse" and d.get("initiative") == "character"
+          and d.get("narrate_player_feelings") is True, str(d))
+
+    print(u"\n== \u2467 \u5b89\u5353\u4eba\u8bbe\u5361\u4e5f\u80fd\u586b\uff08\u548c\u684c\u9762\u5bf9\u9f50\uff09==")
+    kt = read(os.path.join("DICK-Android", "app", "src", "main", "java", "com", "dick", "app",
+                           "ui", "screens", "cardEdit", "PersonaScreen.kt"))
+    for key in ("mode", "address", "pronoun", "perspective", "relationship", "taboo"):
+        check(u"\u5b89\u5353\u4fdd\u5b58 %s \u5b57\u6bb5" % key,
+              ('fields["%s"]' % key) in kt, u"\u7f3a %s" % key)
+    check(u"\u5b89\u5353\u6709\u6f14\u6cd5\u4e09\u6309\u94ae\uff08\u653b\u7565/\u4e59\u5973/\u8dd1\u56e2\uff09",
+          u"\u4e59\u5973/\u68a6\u5411" in kt and u"\u8dd1\u56e2" in kt and u"\u653b\u7565" in kt)
 
     print("\n" + "=" * 62)
     print(u"通过 %d / 失败 %d" % (PASS, FAIL))

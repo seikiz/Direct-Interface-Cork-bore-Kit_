@@ -64,6 +64,13 @@ fun PersonaScreen(vm: ChatViewModel, deps: DialogDeps) {
     var pFirstMes by remember { mutableStateOf(pf["first_mes"] ?: "") }
     var pMesExample by remember { mutableStateOf(pf["mes_example"] ?: "") }
     var pNotes by remember { mutableStateOf(pf["notes"] ?: "") }
+    // 乙女 / 梦向：演法 + 称呼 + 代词 + 视角 + 关系 + 禁忌（与桌面 Web 对齐）
+    var pMode by remember { mutableStateOf(pf["mode"] ?: "") }
+    var pAddress by remember { mutableStateOf(pf["address"] ?: "") }
+    var pPronoun by remember { mutableStateOf(pf["pronoun"] ?: "") }
+    var pPerspective by remember { mutableStateOf(pf["perspective"] ?: "second") }
+    var pRelation by remember { mutableStateOf(pf["relationship"] ?: "") }
+    var pTaboo by remember { mutableStateOf(pf["taboo"] ?: "") }
     val pAdvInit = try {
         (JsonS.parse(persona) as? J.Obj)?.fields?.get("advanced") as? J.Obj
     } catch (_: Exception) {
@@ -101,31 +108,61 @@ fun PersonaScreen(vm: ChatViewModel, deps: DialogDeps) {
         title = { Text(I18n.t("btn_persona_card", "玩家角色卡")) },
         text = {
             Column(Modifier.verticalScroll(rememberScrollState())) {
-                OutlinedTextField(value = pName, onValueChange = { pName = it }, label = { Text("名字") }, singleLine = true)
+                OutlinedTextField(value = pName, onValueChange = { pName = it }, label = { Text("名字", color = theme.text) }, singleLine = true)
                 IconText("整段设定（可选）", fontSize = 11.sp, color = theme.muted, modifier = Modifier.padding(top = 6.dp), icon = "history_edu")
-                OutlinedTextField(value = pLegacy, onValueChange = { pLegacy = it }, label = { Text("原文") }, minLines = 2)
+                OutlinedTextField(value = pLegacy, onValueChange = { pLegacy = it }, label = { Text("原文", color = theme.text) }, minLines = 2)
                 IconText("结构化字段（与角色卡同标准）", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 10.dp), icon = "palette")
-                OutlinedTextField(value = pAppearance, onValueChange = { pAppearance = it }, label = { Text("外貌") }, minLines = 2)
-                OutlinedTextField(value = pPersonality, onValueChange = { pPersonality = it }, label = { Text("性格") }, minLines = 2)
-                OutlinedTextField(value = pBackground, onValueChange = { pBackground = it }, label = { Text("过去经历") }, minLines = 2)
-                OutlinedTextField(value = pSpeech, onValueChange = { pSpeech = it }, label = { Text("说话方式（语气/口癖/句式）") }, minLines = 2)
-                OutlinedTextField(value = pFirstMes, onValueChange = { pFirstMes = it }, label = { Text("开场白") }, minLines = 2)
-                OutlinedTextField(value = pMesExample, onValueChange = { pMesExample = it }, label = { Text("对话示例") }, minLines = 2)
-                OutlinedTextField(value = pNotes, onValueChange = { pNotes = it }, label = { Text("备注") }, minLines = 2)
+                IconText("演法（决定她怎么演：攻略 / 代入）", fontSize = 12.sp,
+                    fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 6.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    val modes = listOf("" to "跟随", "gal" to "攻略", "otome" to "乙女/梦向", "trpg" to "跑团")
+                    modes.forEach { (k, label) ->
+                        TextButton(onClick = { pMode = k }) {
+                            Text(if (pMode == k) "· $label" else label, fontSize = 12.sp, color = theme.text)
+                        }
+                    }
+                }
+                OutlinedTextField(value = pAddress, onValueChange = { pAddress = it },
+                    label = { Text("称呼（她怎么叫你：夏夏 / 学长）", color = theme.text) }, singleLine = true)
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    listOf("" to "不指定", "她" to "她", "他" to "他", "ta" to "ta").forEach { (k, label) ->
+                        TextButton(onClick = { pPronoun = k }) {
+                            Text(if (pPronoun == k) "· $label" else label, fontSize = 12.sp, color = theme.text)
+                        }
+                    }
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    listOf("second" to "第二人称", "first" to "第一人称", "third" to "第三人称").forEach { (k, label) ->
+                        TextButton(onClick = { pPerspective = k }) {
+                            Text(if (pPerspective == k) "· $label" else label, fontSize = 12.sp, color = theme.text)
+                        }
+                    }
+                }
+                OutlinedTextField(value = pRelation, onValueChange = { pRelation = it },
+                    label = { Text("与角色的关系（恋人 / 青梅 / 主从）", color = theme.text) }, singleLine = true)
+                OutlinedTextField(value = pTaboo, onValueChange = { pTaboo = it },
+                    label = { Text("禁忌（不要写的方向，逗号分隔）", color = theme.text) }, minLines = 2)
+                OutlinedTextField(value = pAppearance, onValueChange = { pAppearance = it }, label = { Text("外貌", color = theme.text) }, minLines = 2)
+                OutlinedTextField(value = pPersonality, onValueChange = { pPersonality = it }, label = { Text("性格", color = theme.text) }, minLines = 2)
+                OutlinedTextField(value = pBackground, onValueChange = { pBackground = it }, label = { Text("过去经历", color = theme.text) }, minLines = 2)
+                OutlinedTextField(value = pSpeech, onValueChange = { pSpeech = it }, label = { Text("说话方式（语气/口癖/句式）", color = theme.text) }, minLines = 2)
+                OutlinedTextField(value = pFirstMes, onValueChange = { pFirstMes = it }, label = { Text("开场白", color = theme.text) }, minLines = 2)
+                OutlinedTextField(value = pMesExample, onValueChange = { pMesExample = it }, label = { Text("对话示例", color = theme.text) }, minLines = 2)
+                OutlinedTextField(value = pNotes, onValueChange = { pNotes = it }, label = { Text("备注", color = theme.text) }, minLines = 2)
                 FoldHead("玩家战斗属性（可选）", foldPBattle, onToggle = { foldPBattle = !foldPBattle }, icon = "swords")
                 if (foldPBattle) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Checkbox(checked = pBattleEnabled, onCheckedChange = { pBattleEnabled = it })
-                        Text("启用玩家战斗属性（结算用玩家属性；AI 用 [ph:-N] 打你）", fontSize = 12.sp)
+                        Text("启用玩家战斗属性（结算用玩家属性；AI 用 [ph:-N] 打你）", fontSize = 12.sp, color = theme.text)
                     }
                     Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        OutlinedTextField(value = pBattleAttrs, onValueChange = { pBattleAttrs = it }, label = { Text("基础属性（每行 键|名|初值|上限）\n例：hp|生命|100|100") }, minLines = 4, modifier = Modifier.weight(1f))
-                        OutlinedTextField(value = pBattleMech, onValueChange = { pBattleMech = it }, label = { Text("机制属性（每行 键|名|初值|上限）\n例：spd|速度|8|100") }, minLines = 4, modifier = Modifier.weight(1f))
+                        OutlinedTextField(value = pBattleAttrs, onValueChange = { pBattleAttrs = it }, label = { Text("基础属性（每行 键|名|初值|上限）\n例：hp|生命|100|100", color = theme.text) }, minLines = 4, modifier = Modifier.weight(1f))
+                        OutlinedTextField(value = pBattleMech, onValueChange = { pBattleMech = it }, label = { Text("机制属性（每行 键|名|初值|上限）\n例：spd|速度|8|100", color = theme.text) }, minLines = 4, modifier = Modifier.weight(1f))
                     }
                 }
                 FoldHead("玩家专属正则（可选）", foldPRegex, onToggle = { foldPRegex = !foldPRegex }, icon = "text_fields")
                 if (foldPRegex) {
-                    OutlinedTextField(value = pRegex, onValueChange = { pRegex = it }, label = { Text("正则（每行 id|名称|正则|替换|作用域，对玩家输入生效）") }, minLines = 3)
+                    OutlinedTextField(value = pRegex, onValueChange = { pRegex = it }, label = { Text("正则（每行 id|名称|正则|替换|作用域，对玩家输入生效）", color = theme.text) }, minLines = 3)
                 }
                 TextButton(onClick = { avatarTarget = userDisplayName(); avatarPicker.launch("image/*") }) {
                     IconText(I18n.t("btn_avatar_persona", "玩家头像"), fontSize = 12.sp, icon = "person")
@@ -146,6 +183,12 @@ fun PersonaScreen(vm: ChatViewModel, deps: DialogDeps) {
                 o.fields["first_mes"] = J.Str(pFirstMes.trim())
                 o.fields["mes_example"] = J.Str(pMesExample.trim())
                 o.fields["notes"] = J.Str(pNotes.trim())
+                o.fields["mode"] = J.Str(pMode.trim())
+                o.fields["address"] = J.Str(pAddress.trim())
+                o.fields["pronoun"] = J.Str(pPronoun.trim())
+                o.fields["perspective"] = J.Str(pPerspective.trim())
+                o.fields["relationship"] = J.Str(pRelation.trim())
+                o.fields["taboo"] = J.Str(pTaboo.trim())
                 val padv = J.Obj()
                 if (pBattleEnabled) {
                     val pb = J.Obj()
