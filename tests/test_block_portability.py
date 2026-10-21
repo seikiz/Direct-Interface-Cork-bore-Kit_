@@ -75,9 +75,14 @@ def check(name, cond, detail=""):
 def tmpdir(label):
     """临时目录：优先 %TEMP%，写不进去退到工作区（与仓库其它测试同一套路）"""
     base = None
+    # 必须先同盘：Windows 上 relpath(C:\temp, D:\repo) 会抛 ValueError，
+    # GitHub runner 正好是"仓库在 D:、%TEMP% 在 C:"。同盘优先，跨界直接跳过。
+    repo_drive = os.path.splitdrive(os.path.abspath(ROOT))[0].lower()
     for cand in (os.environ.get("TEMP"), os.environ.get("TMP"),
                  os.path.join(ROOT, "tmp_kernel_tests")):
         if not cand:
+            continue
+        if os.path.splitdrive(os.path.abspath(cand))[0].lower() != repo_drive:
             continue
         try:
             os.makedirs(cand, exist_ok=True)
