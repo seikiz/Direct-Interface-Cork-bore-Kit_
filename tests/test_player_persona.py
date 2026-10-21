@@ -11,6 +11,7 @@ GAL 默认是"玩家看戏、点选项"；乙女/梦向的核心是**"我在场�
 """
 import io
 import os
+import re
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -55,11 +56,11 @@ def main():
     b = persona_block(p)
     check(u"名字进提示", "林夏" in b)
     check(u"称呼进提示", "夏夏" in b, b[:80])
-    check(u"代词进提示", "她" in b and "代词" in b)
-    check(u"关系进提示（决定亲密度）", "恋人" in b and "亲密度" in b)
+    check(u"代词进提示（叙述口吻）", u"提到她的时候，用「她」" in b, b[:120])
+    check(u"关系进提示（你们现在是…）", u"你们现在是「恋人」" in b, b[:150])
     check(u"视角默认第二人称「你」", "「你」" in b, b[:120])
     check(u"禁忌进提示", "出轨" in b)
-    check(u"不替玩家发言的边界在", "不要替 林夏 发言" in b or "不要替林夏发言" in b, b[-120:])
+    check(u"边界写成请求（台词留给她自己说）", u"台词和心事，留给她自己说" in b, b[-140:])
     check(u"性格列表被拼成一行", "外冷内热" in b and "嘴硬" in b)
 
     print(u"\n== ③ 视角三档 ==")
@@ -94,6 +95,17 @@ def main():
                        ("ppRelationInput", u"关系"), ("ppPerspectiveInput", u"视角"),
                        ("ppTabooInput", u"禁忌")):
         check(u"表单有 %s" % fid, ('id="%s"' % fid) in web, u"缺 %s" % fid)
+
+    print(u"\n== \u2466 \u6e29\u5ea6\u5b88\u536b\uff08\u4e0d\u53d8\u6210\u5ff5\u89c4\u5219\u7684\u673a\u5668\uff09==")
+    light = persona_block({"name": "\u6797\u590f"})
+    check(u"\u8f7b\u5361\uff08\u53ea\u586b\u540d\u5b57\uff09\u63d0\u793a\u5f88\u77ed\uff08\u2264 5 \u884c\uff09",
+          len(light.strip().splitlines()) <= 5, str(len(light.strip().splitlines())))
+    check(u"\u4e0d\u51fa\u73b0\u5b57\u6bb5\u5f0f\u5192\u53f7\uff08\u6027\u522b\uff1a/\u5916\u8c8c\uff1a\uff09",
+          not re.search(u"\uff08\u6027\u522b|\u5916\u8c8c|\u6027\u683c|\u80cc\u666f|\u5c5e\u6027\uff09\uff1a", b))
+    check(u"\u5426\u5b9a\u53e5\u4e0d\u8d85\u8fc7 2 \u53e5\uff08\u7981\u4ee4\u5806\u53e0\u4f1a\u628a\u966a\u4f34\u611f\u538b\u6210\u673a\u68b0\uff09",
+          len([ln for ln in b.splitlines() if (u"\u4e0d\u8981" in ln or u"\u522b" in ln)]) <= 2, b)
+    check(u"\u6ca1\u6709\u7f16\u53f7\u5217\u8868\uff08\u4e0d\u662f\u6e05\u5355\uff09",
+          not re.search(r"^\s*\d+[\.\u3001]", b, re.M))
 
     print("\n" + "=" * 62)
     print(u"通过 %d / 失败 %d" % (PASS, FAIL))

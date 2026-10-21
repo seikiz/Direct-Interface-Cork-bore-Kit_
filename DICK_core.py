@@ -142,6 +142,7 @@ def eval_battle_formula(expr, vars_dict):
 from notices import BUSY_TEXT, notify_busy  # noqa: E402,F401
 from tree_repair import repair_links  # noqa: E402
 from player_persona import persona_block  # noqa: E402
+from card_modes import mode_block  # noqa: E402
 class MessageNode:
     """对话节点，构成树状历史"""
     __slots__ = ('id', 'role', 'content', 'parent_id', 'children_ids', 'timestamp', 'metadata')
@@ -2173,10 +2174,15 @@ class ChatCore:
                          "当前所在世界以 ★ 标注，回复时以当前世界的设定为准，"
                          "玩家穿越后请自然衔接跨世界剧情。\n")
 
-        # 玩家角色卡（乙女/梦女向：称呼、代词、视角、关系、禁忌都写进去）
+        # 玩家角色卡（乙女/梦女向：称呼、代词、视角、关系都写进去）
         _pb = persona_block(self.player_persona)
         if _pb:
             combined += _pb
+        # 人物卡模式（GAL / 乙女·梦向 / 跑团 分开，各自带情感反馈强度）
+        if isinstance(self.player_persona, dict):
+            _mb = mode_block(self.player_persona.get('mode'), self.player_persona.get('emotional'))
+            if _mb:
+                combined += _mb
 
         # 提示词预设：额外规则与结尾补充
         if self.prompt_preset:

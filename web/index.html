@@ -313,6 +313,14 @@
   <div class="modal-box">
     <h3 id="ppTitle">[ic:person] 玩家角色卡</h3>
     <div class="field"><label id="ppName">名字</label><input id="ppNameInput"></div>
+    <!-- 人物卡模式：GAL / 乙女·梦向 / 跑团 分开，一个字段就够，不需要写备注 -->
+    <div class="field"><label data-i18n="pp_mode">演法</label>
+      <select id="ppModeInput">
+        <option value="">跟随提示词（不额外加）</option>
+        <option value="gal">GAL 攻略 · 我推进度</option>
+        <option value="otome">乙女 / 梦向 · 我们两个人的故事</option>
+        <option value="trpg">跑团 · 机制优先</option>
+      </select></div>
     <!-- 乙女 / 梦向：怎么称呼我、用哪个代词、什么视角、什么关系、什么不能写 -->
     <div class="field"><label data-i18n="pp_call_me">称呼（角色怎么叫你）</label>
       <input id="ppAddressInput" placeholder="夏夏 / 学长 / 直接叫名字"></div>
@@ -3424,6 +3432,7 @@ function openPersonaModal() {
     f = f || {};
     document.getElementById('ppNameInput').value = f.name || '';
     document.getElementById('ppAddressInput').value = f.address || '';
+    document.getElementById('ppModeInput').value = f.mode || '';
     document.getElementById('ppPronounInput').value = f.pronoun || '';
     document.getElementById('ppPerspectiveInput').value = f.perspective || 'second';
     document.getElementById('ppRelationInput').value = f.relationship || '';
@@ -3460,10 +3469,20 @@ function openPersonaModal() {
   });
 }
 document.getElementById('btnPersona').onclick = function () { openPersonaModal(); };
+// 切模式顺手预填视角：乙女/梦向 = 第二人称，跑团 = 第三人称（她手动选过就不动）
+document.getElementById('ppModeInput').onchange = function () {
+  var def = { gal: 'second', otome: 'second', trpg: 'third' }[this.value];
+  var pv = document.getElementById('ppPerspectiveInput');
+  if (def && !pv.dataset.touched) pv.value = def;
+};
+document.getElementById('ppPerspectiveInput').onchange = function () {
+  this.dataset.touched = '1';
+};
 document.getElementById('ppCancel').onclick = function () { document.getElementById('personaModal').classList.remove('open'); };
 document.getElementById('ppSave').onclick = function () {
   var p = {
     name: document.getElementById('ppNameInput').value.trim(),
+    mode: document.getElementById('ppModeInput').value,
     address: document.getElementById('ppAddressInput').value.trim(),
     pronoun: document.getElementById('ppPronounInput').value,
     perspective: document.getElementById('ppPerspectiveInput').value || 'second',

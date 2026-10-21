@@ -2744,6 +2744,14 @@
       "used_by": [
         "desktop_web"
       ]
+    },
+    "pp_mode": {
+      "zh": "演法",
+      "en": "Play style",
+      "ja": "演じ方",
+      "used_by": [
+        "desktop_web"
+      ]
     }
   },
   "_legacy": {

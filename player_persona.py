@@ -1,30 +1,28 @@
 # -*- coding: utf-8 -*-
-"""玩家角色卡 → 系统提示里的人设块（乙女 / 梦女梦男向优化的核心）。
+"""玩家角色卡 → 系统提示里的人设块（乙女 / 梦女梦男向优化）。
 
-为什么单独成文件：
-  ① DICK_core.py 有行数棘轮（2991，只许降），提示词拼装从里面搬出来正好减行；
-  ② 这段逻辑要能被单测直接调用（tests/test_player_persona.py），不必起整个 Core。
+两条反馈一起满足：
+    ① "现在多少有点侧重于 GAL 玩家了" → 称呼/代词/视角/关系要在提示里；
+    ② "原有的陪伴感很强" → **这份提示不能把模型变成念规则的机器**。
 
-**这次到底改了什么**（用户反馈「太 GAL 了，乙女/梦女向不够」）：
-  · 以前只写 name/background/appearance/speech/personality/notes，
-    然后一句"请以「X」称呼用户" —— 模型很容易把玩家写成第三人称、或者写成"她"。
-  · 现在把"**怎么称呼、用什么代词、什么视角、和角色什么关系、哪些不能写**"都显式写进提示：
-      - 视角：second（"你"）/ first（"我"）/ third（ta 的代词）——乙女与梦向默认第二人称；
-      - 称呼：角色该叫你什么（宝贝/学长/名字…）；
-      - 代词：她/他/ta，缺省用"你"，**绝不擅自按角色性别反推**；
-      - 关系：你们现在是什么关系（恋人/青梅/主从…），决定尺度与亲密度；
-      - 禁忌：明确"不要写"的东西（雷点）。
-  · 这些都是**可选字段**：老存档没有就照旧，不改变既有行为。
+所以这里写成**一段温热的介绍**，不是规则清单：
+    · 不出现"性别：""外貌："这种字段标签，也不带编号；
+    · 没填的字段整行不出现（轻卡保持轻，陪伴感不被稀释）；
+    · 代词/称呼用"她会…""她喜欢被叫作…"这种叙述口吻；
+    · 唯一那句边界写成请求（"台词留给她自己说"），不写禁令；
+    · 禁忌写成"她不太想被写到的：…"，是她的偏好，不是审核清单。
+
+验：tests/test_player_persona.py（含"温度守卫"：否定句 ≤2、不许出现字段式冒号）
 """
 from __future__ import annotations
 
 from typing import Any, Dict, List
 
-# 视角 → 给模型的写法要求。seco<seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌nd 是乙女/梦向的默认（"你"）。
-PERSPECTIVE_RULES = {
-    "second": "用第二人称「你」指代玩家角色（像对着本人说话），不要改用第三人称。",
-    "first": "玩家角色以第一人称「我」行动；你（AI）仍是角色本人，不要替玩家写「我」的台词。",
-    "third": "叙述里可以用第三人称指代玩家角色，但代词必须用指定的那个，不要自行改成别的。",
+# 视角 → 一句轻提示（不写成规则条款）。s<seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌econd 是乙女/梦向的默认（"你"）。
+PERSPECTIVE_HINT = {
+    "second": "（你写她的时候，用「你」称呼她。）",
+    "first": "（她以「我」自称；她的台词仍由她自己说。）",
+    "third": "（叙述里可以用第三人称写她。）",
 }
 
 
@@ -50,12 +48,12 @@ def _list(persona: Dict[str, Any], *keys: str) -> List[str]:
 
 
 def persona_block(persona: Dict[str, Any] | None) -> str:
-    """把玩家角色卡拼成系统提示里的一段；没有卡就返回空串（不影响旧行为）。"""
+    """把玩家角色卡拼成系统提示里的一小段；没有卡就返回空串（旧行为不变）。"""
     if not isinstance(persona, dict) or not persona:
         return ""
 
     name = _text(persona, "name", "char_name") or "玩家"
-    pronoun = _text(persona, "pronoun", "pron") or ""
+    pronoun = _text(persona, "pronoun", "pron")
     address = _text(persona, "address", "call_me")
     relationship = _text(persona, "relationship", "relation")
     perspective = _text(persona, "perspective", "pov") or "second"
@@ -67,31 +65,37 @@ def persona_block(persona: Dict[str, Any] | None) -> str:
     personality = _list(persona, "personality")
     taboo = _list(persona, "taboo", "boundaries", "禁忌")
 
-    out = ["", "【玩家角色（由用户本人扮演，不是你的角色）】", "名字：%s" % name]
-    if gender:
-        out.append("性别：%s" % gender)
-    if identity:
-        out.append("身份：%s" % identity)
+    # 第一句像"介绍一个人"，不是"填表"：名字后面自然接性别/身份
+    intro = name
+    if gender and identity:
+        intro += "，%s，%s" % (gender, identity)
+    elif gender:
+        intro += "，%s" % gender
+    elif identity:
+        intro += "，%s" % identity
+
+    lines = ["", "【正在和你说话的人】", intro + "。"]
     if appearance:
-        out.append("外貌：%s" % appearance)
-    if personality:
-        out.append("性格：%s" % "、".join(personality))
-    if speech:
-        out.append("说话风格：%s" % speech)
+        lines.append("%s。" % appearance.rstrip("。"))
+    traits = "、".join(personality)
+    if traits and speech:
+        lines.append("%s，%s。" % (traits, speech.rstrip("。")))
+    elif traits:
+        lines.append("%s。" % traits)
+    elif speech:
+        lines.append("%s。" % speech.rstrip("。"))
     if background:
-        out.append("背景：%s" % background)
+        lines.append("%s。" % background.rstrip("。"))
     if relationship:
-        out.append("与你的关系：%s（亲密度与尺度以此为准）" % relationship)
-
-    # 称呼与代词：乙女/梦女最在意的两件事
+        lines.append("你们现在是「%s」。" % relationship)
     if address:
-        out.append("称呼：请直接称呼 TA 为「%s」。" % address)
+        lines.append("她喜欢被叫作「%s」。" % address)
     if pronoun:
-        out.append("代词：提到 TA 时用「%s」，不要擅自换成别的性别代词。" % pronoun)
+        lines.append("提到她的时候，用「%s」。" % pronoun)
 
-    rule = PERSPECTIVE_RULES.get(perspective, PERSPECTIVE_RULES["second"])
-    out.append("视角：%s" % rule)
-    out.append("边界：不要替 %s 发言、不要替他做决定；他的台词与动作留给用户自己写。" % name)
+    lines.append(PERSPECTIVE_HINT.get(perspective, PERSPECTIVE_HINT["second"]))
+    # 边界只有一句，写成请求：把台词的份量还给用户
+    lines.append("她的台词和心事，留给她自己说。")
     if taboo:
-        out.append("禁忌（不要写的方向）：%s" % "、".join(taboo))
-    return "\n".join(out) + "\n"
+        lines.append("她不太想被写到的：%s。" % "、".join(taboo))
+    return "\n".join(lines) + "\n"
