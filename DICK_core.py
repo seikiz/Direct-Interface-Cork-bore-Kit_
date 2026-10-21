@@ -143,6 +143,7 @@ from notices import BUSY_TEXT, notify_busy  # noqa: E402,F401
 from tree_repair import repair_links  # noqa: E402
 from player_persona import persona_block  # noqa: E402
 from card_modes import mode_block  # noqa: E402
+from sycophancy import guard_text as sycophancy_guard_text  # noqa: E402
 class MessageNode:
     """对话节点，构成树状历史"""
     __slots__ = ('id', 'role', 'content', 'parent_id', 'children_ids', 'timestamp', 'metadata')
@@ -2178,6 +2179,10 @@ class ChatCore:
         _pb = persona_block(self.player_persona)
         if _pb:
             combined += _pb
+        # 反讨好守卫：最近几轮如果一直在顺着说，这一轮就让她有点自己的立场
+        _guard = sycophancy_guard_text(self.tree.get_current_chain()[-6:])
+        if _guard:
+            combined += _guard
         # 人物卡模式（GAL / 乙女·梦向 / 跑团 分开，各自带情感反馈强度）
         if isinstance(self.player_persona, dict):
             _mb = mode_block(self.player_persona.get('mode'), self.player_persona.get('emotional'))

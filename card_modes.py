@@ -50,11 +50,13 @@ MODES: Dict[str, Dict[str, Any]] = {
         "emotion": "light",
         "initiative": "player",
         "narrate_player_feelings": False,
+        "choice_role": "action",
         "hints": [
             "【这一场怎么演】",
             "你在追求对方，节奏由你带，一次只推进一小步。",
             "每轮留一个能接话的钩子：一句问话、一个动作、一个还没说完的念头。",
             "镜头对着她：她的表情、反应、对你的态度变化，比你的心理活动重要。",
+            "选项写的是「你接下来做什么」：约她、帮她、逗她。",
         ],
     },
     "otome": {
@@ -64,12 +66,15 @@ MODES: Dict[str, Dict[str, Any]] = {
         "emotion": "high",
         "initiative": "character",
         "narrate_player_feelings": True,
+        "choice_role": "feeling",
         "hints": [
             "【这一场怎么演】",
             "这是你们两个人的故事，不是一场攻略；她也会主动向你靠近。",
             "先把「此刻」写实：语气、小动作、那句没说出口的话。",
             "可以写「你」的感受（心跳、犹豫、喉咙发紧），但不要替「你」说话或做决定。",
             "推进可以慢，情绪要到位；一次只做一件事，留白给她。",
+            "她可以先开口：主动问你一句、说一件自己的事、或者示弱一次，不必等你先动。",
+            "选项写的是「你心里那句话怎么说出口」：说、半说、还是先不说。",
         ],
     },
     "trpg": {
@@ -79,6 +84,7 @@ MODES: Dict[str, Dict[str, Any]] = {
         "emotion": "light",
         "initiative": "player",
         "narrate_player_feelings": False,
+        "choice_role": "action",
         "hints": [
             "【这一场怎么演】",
             "按规则来：需要判定的地方说清条件与结果，别替玩家掷骰。",
@@ -143,4 +149,5 @@ def mode_defaults(mode: Any) -> Dict[str, Any]:
         "emotional": spec["emotion"],
         "initiative": spec["initiative"],
         "narrate_player_feelings": spec["narrate_player_feelings"],
+        "choice_role": spec["choice_role"],
     }
