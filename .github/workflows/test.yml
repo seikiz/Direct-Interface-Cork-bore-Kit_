@@ -18,6 +18,7 @@ name: test
 permissions:
   contents: read
   statuses: write
+  issues: write
 
 on:
   push:
@@ -108,23 +109,14 @@ jobs:
           fi
           exit $FAIL
 
-      - name: 失败上报（commit status，公开可读）
+      - name: 失败上报（Issue，公开可读）
         if: always()
         shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           F="${RUNNER_TEMP:-/tmp}/dick_failed.txt"
-          if [ ! -s "$F" ]; then echo "没有失败脚本，跳过上报"; exit 0; fi
-          NAME="$(tr ' ' ',' < "$F" | sed 's/,,*/,/g; s/^,//' | cut -c1-130)"
-          echo "失败脚本：$NAME"
-          BODY="{\"state\":\"failure\",\"context\":\"dick/failing-tests\",\"description\":\"$NAME\"}"
-          CODE=$(curl -sS -o /tmp/dick_status_resp.json -w "%{http_code}" -X POST \
-            -H "Authorization: Bearer ${{ github.token }}" \
-            -H "Accept: application/vnd.github+json" \
-            -H "Content-Type: application/json" \
-            "${{ github.api_url }}/repos/${{ github.repository }}/statuses/${{ github.sha }}" \
-            -d "$BODY" || echo "000")
-          echo "HTTP $CODE"
-          head -c 400 /tmp/dick_status_resp.json || true
+          python tools/ci_report.py --file "$F" --sha "${{ github.sha }}" || true
 
       - name: 汇总
         if: always()
@@ -224,23 +216,14 @@ jobs:
           fi
           exit $FAIL
 
-      - name: 失败上报（commit status，公开可读）
+      - name: 失败上报（Issue，公开可读）
         if: always()
         shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           F="${RUNNER_TEMP:-/tmp}/dick_failed.txt"
-          if [ ! -s "$F" ]; then echo "没有失败脚本，跳过上报"; exit 0; fi
-          NAME="$(tr ' ' ',' < "$F" | sed 's/,,*/,/g; s/^,//' | cut -c1-130)"
-          echo "失败脚本：$NAME"
-          BODY="{\"state\":\"failure\",\"context\":\"dick/failing-tests\",\"description\":\"$NAME\"}"
-          CODE=$(curl -sS -o /tmp/dick_status_resp.json -w "%{http_code}" -X POST \
-            -H "Authorization: Bearer ${{ github.token }}" \
-            -H "Accept: application/vnd.github+json" \
-            -H "Content-Type: application/json" \
-            "${{ github.api_url }}/repos/${{ github.repository }}/statuses/${{ github.sha }}" \
-            -d "$BODY" || echo "000")
-          echo "HTTP $CODE"
-          head -c 400 /tmp/dick_status_resp.json || true
+          python tools/ci_report.py --file "$F" --sha "${{ github.sha }}" || true
 
       - name: 汇总
         if: always()
