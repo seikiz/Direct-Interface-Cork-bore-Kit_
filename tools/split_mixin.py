@@ -101,6 +101,8 @@ def shell_util_names():
 def main(argv=None):
     ap = argparse.ArgumentParser()
     ap.add_argument("--src", default=SRC_DEFAULT)
+    ap.add_argument("--from-class", dest="from_cls", default="HtmlApp",
+                    help="要拆的类名（默认 HtmlApp；拆 mixin 时传那个 mixin 的类名）")
     ap.add_argument("--out", required=True, help="新文件（相对仓库根）")
     ap.add_argument("--class", dest="cls", required=True, help="mixin 类名")
     ap.add_argument("--match", required=True, help="方法名正则（如 _codex_|_player_）")
@@ -108,7 +110,7 @@ def main(argv=None):
 
     src = args.src
     lines = io.open(src, encoding="utf-8").read().split("\n")
-    cls_i = next(i for i, l in enumerate(lines) if re.match(r"^class HtmlApp\b", l))
+    cls_i = next(i for i, l in enumerate(lines) if re.match(r"^class %s\b" % args.from_cls, l))
 
     before = top_level_defs("\n".join(lines))
     before_methods = set(re.findall(r"^    def (\w+)", "\n".join(lines), re.M))
@@ -165,14 +167,16 @@ def main(argv=None):
         del lines[a:b]
 
     # 改 class 定义 + 加 import
-    out_cls = next(i for i, l in enumerate(lines) if re.match(r"^class HtmlApp\b", l))
+    out_cls = next(i for i, l in enumerate(lines) if re.match(r"^class %s\b" % args.from_cls, l))
     old_cls = lines[out_cls]
-    if old_cls.startswith("class HtmlApp("):
-        lines[out_cls] = old_cls.replace("class HtmlApp(", "class HtmlApp(%s, " % args.cls, 1)
+    base = args.from_cls
+    if old_cls.startswith("class %s(" % base):
+        lines[out_cls] = old_cls.replace("class %s(" % base, "class %s(%s, " % (base, args.cls), 1)
     else:
-        lines[out_cls] = "class HtmlApp(%s):" % args.cls
-    ins = next(i for i, l in enumerate(lines) if l.startswith("from shell_ws import"))
-    lines.insert(ins + 1, "from %s import %s" % (modname, args.cls))
+        lines[out_cls] = "class %s(%s):" % (base, args.cls)
+    if args.from_cls == "HtmlApp":
+        ins = next(i for i, l in enumerate(lines) if l.startswith("from shell_ws import"))
+        lines.insert(ins + 1, "from %s import %s" % (modname, args.cls))
 
     io.open(src, "w", encoding="utf-8", newline="\n").write("\n".join(lines))
 
