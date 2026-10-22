@@ -10,6 +10,8 @@
 """
 from __future__ import annotations
 
+import json
+
 import app_paths
 
 BASE_DIR = app_paths.get_base_dir()
@@ -168,3 +170,307 @@ ROLE_FIELDS = [
     ("mes_example", "对话示例"),
     ("notes", "备注"),
 ]
+
+
+WORLD_PARAMS = [
+    ("tech_level", "科技水平"),
+    ("supernatural", "超自然体系"),
+    ("physics", "物理法则"),
+    ("time_flow", "时间流速"),
+    ("climate", "气候环境"),
+    ("geography", "地理格局"),
+    ("politics", "政治格局"),
+    ("economy", "经济体系"),
+]
+
+
+def html_app_clean_battle(battle):
+    """规整战斗配置（类型安全）：attrs / mech_attrs / formulas / moves / buffs"""
+    if not isinstance(battle, dict):
+        return None
+    out = {}
+    attrs = battle.get("attrs")
+    if isinstance(attrs, dict):
+        cleaned = {}
+        for key, a in attrs.items():
+            if not isinstance(a, dict):
+                continue
+            key = str(key).strip()[:20]
+            if not key:
+                continue
+            entry = {"label": str(a.get("label") or key).strip()[:20]}
+            try:
+                entry["initial"] = int(a.get("initial", 10) or 10)
+            except (TypeError, ValueError):
+                entry["initial"] = 10
+            if key == "hp":
+                try:
+                    entry["max"] = int(a.get("max", 100) or 100)
+                except (TypeError, ValueError):
+                    entry["max"] = 100
+                entry["initial"] = min(entry.get("initial", 100), entry["max"])
+            cleaned[key] = entry
+        if cleaned:
+            out["attrs"] = cleaned
+    mech_attrs = battle.get("mech_attrs")
+    if isinstance(mech_attrs, list):
+        cleaned = []
+        for a in mech_attrs:
+            if not isinstance(a, dict) or not str(a.get("key") or "").strip():
+                continue
+            key = str(a["key"]).strip()[:20]
+            entry = {"key": key, "label": str(a.get("label") or key).strip()[:20]}
+            try:
+                entry["initial"] = int(a.get("initial", 10) or 10)
+            except (TypeError, ValueError):
+                entry["initial"] = 10
+            try:
+                entry["max"] = int(a.get("max", 999999) or 999999)
+            except (TypeError, ValueError):
+                entry["max"] = 999999
+            cleaned.append(entry)
+        if cleaned:
+            out["mech_attrs"] = cleaned
+    formulas = battle.get("formulas")
+    if isinstance(formulas, dict):
+        cleaned = {}
+        for k, v in formulas.items():
+            k = str(k).strip()[:30]
+            if k and isinstance(v, str) and v.strip():
+                cleaned[k] = v.strip()[:200]
+        if cleaned:
+            out["formulas"] = cleaned
+    moves = battle.get("moves")
+    if isinstance(moves, list):
+        cleaned = []
+        for m in moves:
+            if not isinstance(m, dict) or not str(m.get("id") or "").strip():
+                continue
+            entry = {"id": str(m["id"]).strip()[:30],
+                     "name": str(m.get("name") or m["id"]).strip()[:30],
+                     "desc": str(m.get("desc") or "").strip()[:60]}
+            if isinstance(m.get("formula"), str) and m["formula"].strip():
+                entry["formula"] = m["formula"].strip()[:200]
+            if isinstance(m.get("cost"), dict):
+                cost = {}
+                for k, v in m["cost"].items():
+                    try:
+                        cost[str(k).strip()[:20]] = int(v)
+                    except (TypeError, ValueError):
+                        pass
+                if cost:
+                    entry["cost"] = cost
+            if isinstance(m.get("buffs"), list):
+                bl = []
+                for b in m["buffs"]:
+                    if isinstance(b, dict) and b.get("id"):
+                        try:
+                            turns = int(b.get("turns", 3) or 3)
+                        except (TypeError, ValueError):
+                            turns = 3
+                        bl.append({"id": str(b["id"]).strip()[:30], "turns": max(1, turns)})
+                if bl:
+                    entry["buffs"] = bl
+            cleaned.append(entry)
+        if cleaned:
+            out["moves"] = cleaned
+    buffs = battle.get("buffs")
+    if isinstance(buffs, list):
+        cleaned = []
+        for b in buffs:
+            if not isinstance(b, dict) or not str(b.get("id") or "").strip():
+                continue
+            entry = {"id": str(b["id"]).strip()[:30],
+                     "name": str(b.get("name") or b["id"]).strip()[:30],
+                     "desc": str(b.get("desc") or "").strip()[:60]}
+            try:
+                entry["turns"] = int(b.get("turns", 3) or 3)
+            except (TypeError, ValueError):
+                entry["turns"] = 3
+            if isinstance(b.get("attrs"), dict):
+                at = {}
+                for k, v in b["attrs"].items():
+                    try:
+                        at[str(k).strip()[:20]] = int(v)
+                    except (TypeError, ValueError):
+                        pass
+                if at:
+                    entry["attrs"] = at
+            cleaned.append(entry)
+        if cleaned:
+            out["buffs"] = cleaned
+    return out or None
+
+
+def _parse_fields(fields_json):
+    """fields_json 可能是 dict、JSON 字符串或旧版纯文本设定；返回 dict"""
+    if fields_json is None:
+        return {}
+    if isinstance(fields_json, dict):
+        return fields_json
+    s = str(fields_json)
+    try:
+        d = json.loads(s)
+        if isinstance(d, dict):
+            return d
+    except Exception:
+        pass
+    return {}
+
+
+def html_app_clean_mechanics(mech):
+    """规整机制卡字段（类型安全）：affection / status.fields / events"""
+    if not isinstance(mech, dict):
+        return None
+    out = {}
+    aff = mech.get("affection")
+    if isinstance(aff, dict) and aff.get("enabled"):
+        try:
+            mn = int(aff.get("min", 0) or 0)
+        except (TypeError, ValueError):
+            mn = 0
+        try:
+            mx = int(aff.get("max", 100) or 100)
+        except (TypeError, ValueError):
+            mx = 100
+        if mn >= mx:
+            mn, mx = 0, 100
+        try:
+            initial = int(aff.get("initial", 50) or 50)
+        except (TypeError, ValueError):
+            initial = 50
+        initial = max(mn, min(mx, initial))
+        try:
+            crit = float(aff.get("crit", 0.001) or 0.001)
+        except (TypeError, ValueError):
+            crit = 0.001
+        out["affection"] = {"enabled": True, "initial": initial, "min": mn, "max": mx,
+                            "crit": max(0.0, min(1.0, crit))}
+    status = mech.get("status")
+    if isinstance(status, dict) and status.get("enabled"):
+        fields = []
+        for f in (status.get("fields") or []):
+            if not isinstance(f, dict) or not str(f.get("key") or "").strip():
+                continue
+            key = str(f["key"]).strip()[:20]
+            ftype = "int" if f.get("type") == "int" else "enum"
+            field = {"key": key, "name": str(f.get("name") or key).strip()[:20], "type": ftype}
+            if ftype == "int":
+                try:
+                    mn = int(f.get("min", 0) or 0)
+                except (TypeError, ValueError):
+                    mn = 0
+                try:
+                    mx = int(f.get("max", 100) or 100)
+                except (TypeError, ValueError):
+                    mx = 100
+                if mn >= mx:
+                    mn, mx = 0, 100
+                try:
+                    initial = int(f.get("initial", 0) or 0)
+                except (TypeError, ValueError):
+                    initial = 0
+                field.update({"min": mn, "max": mx, "initial": max(mn, min(mx, initial))})
+            else:
+                opts = f.get("options")
+                if isinstance(opts, str):
+                    opts = [o.strip() for o in opts.replace("，", ",").split(",") if o.strip()]
+                if isinstance(opts, list):
+                    opts = [str(o).strip()[:20] for o in opts if str(o).strip()]
+                field["options"] = opts if opts else []
+                field["initial"] = str(f.get("initial") or (opts[0] if opts else "")).strip()[:20]
+            fields.append(field)
+        if fields:
+            out["status"] = {"enabled": True, "fields": fields}
+    events = mech.get("events")
+    if isinstance(events, list):
+        evs = []
+        for ev in events:
+            if not isinstance(ev, dict) or not str(ev.get("id") or "").strip():
+                continue
+            e = {"id": str(ev["id"]).strip()[:30],
+                 "name": str(ev.get("name") or ev["id"]).strip()[:30],
+                 "prompt": str(ev.get("prompt") or "").strip()}
+            try:
+                if ev.get("aff_ge") is not None:
+                    e["aff_ge"] = int(ev["aff_ge"])
+            except (TypeError, ValueError):
+                pass
+            try:
+                if ev.get("aff_le") is not None:
+                    e["aff_le"] = int(ev["aff_le"])
+            except (TypeError, ValueError):
+                pass
+            kws = ev.get("keywords")
+            if isinstance(kws, str):
+                kws = [x.strip() for x in kws.replace("，", ",").split(",") if x.strip()]
+            if isinstance(kws, list):
+                kws = [str(k).strip()[:20] for k in kws if str(k).strip()]
+            if kws:
+                e["keywords"] = kws
+            if ev.get("once", True):
+                e["once"] = True
+            evs.append(e)
+        if evs:
+            out["events"] = evs
+    roll = mech.get("roll")
+    if isinstance(roll, dict):
+        cleaned_roll = {}
+        _DEF = {"crit": 10, "rare": 4, "fail": 2, "chosen": 0.1, "collapse": 0.001}
+        for k in _DEF:
+            try:
+                v = float(roll.get(k, _DEF[k]))
+            except (TypeError, ValueError):
+                v = _DEF[k]
+            cleaned_roll[k] = max(0.0, min(100.0, v))
+        out["roll"] = cleaned_roll
+    return out or None
+
+
+def role_prompt_from_card(name, data):
+    """由角色卡数据算出真正要用的系统提示，返回 (prompt, fields, legacy)。
+
+    这里有个踩过的坑：
+        assemble_role_prompt 恒定追加「角色卡面·角色塑造」小节，所以它的返回值
+        【永远非空】。原来两处载入都写成
+            assemble_role_prompt(...) or data.get("system_prompt", "")
+        那个 or 回退是死代码，永远轮不到。
+        后果：把设定只写在 system_prompt 里、一个结构化字段都没用的卡
+        （实测两张，其中一张 2230 字），载入时整份设定被替换成 247 字样板文字，
+        角色等于完全没有设定，而且界面上看不出任何异常。
+    现在的规则：
+        有结构化字段 → 按字段渲染（保持可编辑）；
+        一个字段都没有 → 存档正文就是角色的全部设定，直接用，不能丢。
+    """
+    fields = {k: (data.get(k) or "") for k, _ in ROLE_FIELDS}
+    legacy = data.get("legacy") or ""
+    rendered = assemble_role_prompt(name, fields, legacy)
+
+    @staticmethod
+    def _has(v):
+        if isinstance(v, (list, tuple)):
+            return any(str(x).strip() for x in v)
+        return bool(str(v or "").strip())
+
+    own = any(_has(fields.get(k)) for k, _ in ROLE_FIELDS) or _has(legacy)
+    stored = data.get("system_prompt") or ""
+    if own or not stored.strip():
+        return rendered, fields, legacy
+    return stored, fields, legacy
+
+
+def _render_world_desc(w):
+    """把世界卡渲染给 core：背景 + 世界参数（人类可读标签）"""
+    desc = str(w.get("description") or "").strip()
+    params = w.get("params") or {}
+    plines = []
+    for key, label in WORLD_PARAMS:
+        v = str(params.get(key) or "").strip()
+        if v:
+            plines.append(label + "：" + v)
+    if plines:
+        if desc:
+            desc += chr(10) + "【世界参数】" + "；".join(plines)
+        else:
+            desc = "【世界参数】" + "；".join(plines)
+    return desc
