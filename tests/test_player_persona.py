@@ -84,7 +84,8 @@ def main():
     check(u"boundaries 兼容（数组）", "不要写死" in b_old and "不要虐" in b_old)
 
     print(u"\n== ⑥ 接入：核心确实调它 ==")
-    core = io.open(os.path.join(ROOT, "DICK_core.py"), encoding="utf-8").read()
+    import _coresrc
+    core = _coresrc.read()   # 核心已拆分：DICK_core.py + core_*.py
     check(u"DICK_core 调用 persona_block", "persona_block(self.player_persona)" in core)
     check(u"旧的 inline 玩家块已移除（不再各自为政）",
           u"当前与你对话的玩家（用户本人扮演的角色）" not in core or True)

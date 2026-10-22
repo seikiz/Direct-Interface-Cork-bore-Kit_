@@ -65,7 +65,9 @@ def main():
     check(u"坏输入 → 放行（不吞提示）", notices.should_show(None, 1.0) is True)
 
     print(u"\n== ④ 文案唯一来源 ==")
-    core = read("DICK_core.py")
+    _core_files = ["DICK_core.py", "core_fetch.py", "core_prompt.py", "core_mech.py",
+                   "core_tree.py", "core_context.py", "core_llm.py"]
+    core = "\n".join(read(f) for f in _core_files if os.path.isfile(os.path.join(ROOT, f)))
     noti = read("notices.py")
     check(u"文案只出现在 notices.py", noti.count(u"正在处理中，请稍候") == 1,
           str(noti.count(u"正在处理中，请稍候")))
@@ -77,7 +79,8 @@ def main():
           str(len(re.findall(r"notify_busy\(on_busy, on_error\)", core))))
 
     print(u"\n== ⑤ 壳层：不写进对话 ==")
-    shell = read("Direct-Interface Cork-bore Kit.py")
+    import _shellsrc
+    shell = _shellsrc.read()   # 壳层已拆分：Kit.py + shell_*.py
     m = re.search(r"def _on_busy\(self[^)]*\):\n(.*?)\n    def ", shell, re.S)
     check(u"壳层有 _on_busy", bool(m))
     body = m.group(1) if m else ""

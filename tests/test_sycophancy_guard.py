@@ -85,7 +85,8 @@ def main():
     check(u"正常链 streak 为 0", st2["agree_streak"] == 0, str(st2))
 
     print(u"\n== ⑥ 接入核心 ==")
-    core = io.open(os.path.join(ROOT, "DICK_core.py"), encoding="utf-8").read()
+    import _coresrc
+    core = _coresrc.read()   # 核心已拆分：DICK_core.py + core_*.py
     check(u"核心调用守卫", "sycophancy_guard_text(" in core)
     check(u"只取最近 6 轮", "[-6:]" in core)
 

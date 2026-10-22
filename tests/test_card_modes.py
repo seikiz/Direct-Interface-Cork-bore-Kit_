@@ -96,7 +96,8 @@ def main():
           bool(d.get("label") and d.get("perspective") and d.get("emotional")), str(d))
 
     print(u"\n== ⑥ 接入：核心按 persona.mode 注入 ==")
-    core = io.open(os.path.join(ROOT, "DICK_core.py"), encoding="utf-8").read()
+    import _coresrc
+    core = _coresrc.read()   # 核心已拆分：DICK_core.py + core_*.py
     check(u"核心调 mode_block", "mode_block(" in core)
     check(u"模式从玩家卡的 mode 字段读，不需要备注",
           ("get('mode')" in core) or ('get("mode")' in core), "没读 mode")

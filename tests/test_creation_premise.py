@@ -99,7 +99,9 @@ def main():
         check(u"两端都没有旧痕迹 %r" % b, b not in py and b not in kt)
 
     print(u"\n== ④ 注入条件：只有 unlocked 角色才挂 ==")
-    core = read(os.path.join(ROOT, "DICK_core.py"))
+    _core_files = ["DICK_core.py", "core_fetch.py", "core_prompt.py", "core_mech.py",
+                   "core_tree.py", "core_context.py", "core_llm.py"]
+    core = "\n".join(read(f) for f in _core_files if os.path.isfile(os.path.join(ROOT, f)))
     line = [i for i, t in enumerate(core.splitlines())
             if "CREATION_PREMISE" in t and "append" in t]
     check(u"桌面端有注入点（messages.append）", bool(line), str(line[:2]))
