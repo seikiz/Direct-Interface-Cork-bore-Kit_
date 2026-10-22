@@ -149,3 +149,8 @@ space_config.json
 
 # 测试用的仓库内临时目录（本机 %TEMP% 会卡死，见 tests/test_android_colors.py）
 .tmp_test/
+
+# 发布产物：zip 有 134MB，超过 GitHub 单文件 100MB 上限，push 会被 pre-receive 拒掉。
+# 发布包只放本地 DICK-发布/，不进仓库。
+DICK-发布/DICK-电脑版.zip
+DICK-发布/*.zip
