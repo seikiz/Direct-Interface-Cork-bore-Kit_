@@ -10,6 +10,7 @@ mixin 只搬代码位置、不动调用点 —— `self._ws_pull()` 照旧能用
 但那要动调用点，先保证"搬家不换锁"。"""
 from __future__ import annotations
 
+import twin as twin_mod
 from shell_util import BASE_DIR, DEFAULT_WS_SERVER, XFER_MIN_INTERVAL_MS, tree_ts_of
 
 import json
@@ -294,11 +295,30 @@ class WsMixin:
         return data
 
 
+    def _ws_servers(self):
+        """配置里的两台工坊服务器（没配第二台就只有一台）。"""
+        cfg = self._ws_load_config()
+        return twin_mod.parse_list([cfg.get("server_url") or "", cfg.get("server_url2") or ""])
+
+    def _ws_twin(self):
+        """双子池（懒建）。状态落盘，重启后记得上次走的哪台。"""
+        servers = self._ws_servers()
+        pool = getattr(self, "_ws_twin_pool", None)
+        if pool is None or pool.servers != servers:
+            base = getattr(self, "base_dir", None) or BASE_DIR
+            pool = twin_mod.TwinPool(servers, state_file=os.path.join(base, "workshop_twin.json"))
+            self._ws_twin_pool = pool
+        return pool
+
     def _ws_active_server(self):
         """自动部署：返回当前可用的工坊服务器地址。
         优先使用配置的 server_url；未配置或不可用时自动探测
         ① 本机服务器 ② 默认隧道地址。结果缓存 30 秒避免每次请求都探测。"""
         import time as _t
+        _servers = self._ws_servers()
+        if len(_servers) > 1:
+            # 配置了两台：轮流跑，坏一台自动换（候鸟）
+            return self._ws_twin().pick()
         cfg_url = (self._ws_load_config().get("server_url") or "").strip().rstrip("/")
         now = _t.time()
         # 缓存有效期内直接返回

@@ -41,7 +41,6 @@ for _stream in (sys.stdout, sys.stderr):
 
 app = Flask(__name__)
 
-
 def _app_root() -> str:
     """应用根目录：源码运行用 __file__；冻结为 EXE 后用 sys.executable，
     保证 net_server.exe 能定位旁边的 config.json / workshop_data。"""
@@ -49,9 +48,9 @@ def _app_root() -> str:
         return os.path.dirname(os.path.abspath(sys.executable))
     return os.path.dirname(os.path.abspath(__file__))
 
-
 # 数据存储目录
-DATA_DIR = os.path.join(_app_root(), "workshop_data")
+# 双子里每台要存自己的盘：允许用 WORKSHOP_DATA_DIR 指到不同目录
+DATA_DIR = os.environ.get("WORKSHOP_DATA_DIR") or os.path.join(_app_root(), "workshop_data")
 CARDS_DIR = os.path.join(DATA_DIR, "cards")
 WORLDS_DIR = os.path.join(DATA_DIR, "worlds")
 PLUGINS_DIR = os.path.join(DATA_DIR, "plugins")
@@ -142,12 +141,9 @@ _index_lock = threading.Lock()
 for d in [DATA_DIR, CARDS_DIR, WORLDS_DIR, PLUGINS_DIR, PACKS_DIR, SAVES_DIR]:
     os.makedirs(d, exist_ok=True)
 
-
 def type_of(rtype):
     """把 URL 里的类型名解析成注册表条目；不认得的返回 None（调用方回 400）。"""
     return TYPES.get(str(rtype or "").strip().lower())
-
-
 
 def load_index():
     """读取索引，容错处理损坏文件；缺哪个段就补哪个（类型注册表驱动）"""
@@ -165,14 +161,12 @@ def load_index():
     data.setdefault("schema", INDEX_SCHEMA)
     return data
 
-
 def save_index(index):
     """原子写入索引（先写临时文件再替换，避免写一半损坏）"""
     tmp = INDEX_FILE + ".tmp"
     with open(tmp, "w", encoding="utf-8") as f:
         json.dump(index, f, ensure_ascii=False, indent=2)
     os.replace(tmp, INDEX_FILE)
-
 
 def _load_sync_settings() -> dict:
     """读取跨设备共享的同步设置（API 码等），容错 + 解密敏感字段"""
@@ -191,7 +185,6 @@ def _load_sync_settings() -> dict:
     except Exception:
         return {}
 
-
 def _save_sync_settings(data: dict):
     """原子写入 + 加密敏感字段（共享的 api_key 不落明文）"""
     out = dict(data)
@@ -204,11 +197,9 @@ def _save_sync_settings(data: dict):
         json.dump(out, f, ensure_ascii=False, indent=2)
     os.replace(tmp, SYNC_SETTINGS_FILE)
 
-
 if not os.path.exists(INDEX_FILE):
     save_index({"schema": INDEX_SCHEMA, "cards": [], "worlds": [], "plugins": [], "packs": [],
                 "users": {}})
-
 
 # ============ 工具函数 ============
 
@@ -220,17 +211,14 @@ def clean_tags(raw):
         tags = str(raw or "").split(",")
     return [str(t).strip() for t in tags if str(t).strip()]
 
-
 def find_entry(index, section, item_id):
     for item in index.get(section, []):
         if item.get("id") == item_id:
             return item
     return None
 
-
 def remove_entry(index, section, item_id):
     index[section] = [i for i in index.get(section, []) if i.get("id") != item_id]
-
 
 def require_auth(f):
     """写操作认证（可选）：
@@ -250,7 +238,6 @@ def require_auth(f):
         return f(*args, **kwargs)
     return decorated
 
-
 def require_auth_strict(f):
     """含敏感数据的接口（返回/写入共享 API 码）：设置了 KEY 时，GET 也要认证。
     客户端（手机/PC）同步时始终带 X-API-Key 头，因此不会破坏合法同步；
@@ -265,18 +252,15 @@ def require_auth_strict(f):
         return f(*args, **kwargs)
     return decorated
 
-
 def _key_ok():
     """请求有没有带对 Key（服务器没设 Key 时一律算对）"""
     return (not API_KEY) or (request.headers.get("X-API-Key", "") == API_KEY)
-
 
 # 上传限流：开放上传之后，唯一需要担心的就是"有人刷屏"。
 # 按 IP 记**两档**滑动窗口（1 分钟 / 1 小时），超了回 429 并带 Retry-After（秒），
 # 客户端据此退避重试（见两端客户端的 _ws_call / request）。
 _RATE_LOCK = threading.Lock()
 _RATE_HITS = {}
-
 
 def _rate_check():
     """滑动窗口限流（两档）。返回 (放行?, 建议等待秒数, 是哪一档超了)。
@@ -301,11 +285,9 @@ def _rate_check():
                 _RATE_HITS.pop(k, None)
     return True, 0.0, ""
 
-
 def _rate_ok(limit=None):
     """老接口：只问"能传吗"（limit 参数已废弃，保留是为了不打断老调用点）"""
     return _rate_check()[0]
-
 
 def _rate_gate():
     """限流闸门：放行返回 None，超限返回**带 Retry-After 的 429**。
@@ -324,7 +306,6 @@ def _rate_gate():
     resp.headers["X-RateLimit-Limit"] = str(RATE_PER_MIN)
     return resp
 
-
 def write_auth(f):
     """**上传/点赞/进度**这类"用户只是想传个东西"的写操作：
     - OPEN_UPLOAD=1（默认）：谁都能传，客户端不用填 Key；
@@ -338,7 +319,6 @@ def write_auth(f):
             return f(*args, **kwargs)
         return jsonify({"error": "API Key 无效或缺失"}), 401
     return decorated
-
 
 def search_index(index, query):
     """在索引中按 名称/作者/标签/描述 匹配，返回条目列表"""
@@ -357,7 +337,6 @@ def search_index(index, query):
         return lambda entry: True
     return match
 
-
 # ============ 基础接口 ============
 
 def _limits():
@@ -374,7 +353,6 @@ def _limits():
         "rate_per_min": RATE_PER_MIN,            # 超出会得到 429 + Retry-After
         "rate_per_hour": RATE_PER_HOUR,
     }
-
 
 @app.get("/api/health")
 def health():
@@ -396,7 +374,6 @@ def health():
         "limits": _limits(),
         "timestamp": datetime.now().isoformat(),
     })
-
 
 @app.get("/api/capabilities")
 def capabilities():
@@ -420,7 +397,6 @@ def capabilities():
                  "min_bytes": COMPRESS_MIN_BYTES},
         "limits": _limits(),
     })
-
 
 # ============ 全局响应压缩（下载方向省带宽） ============
 
@@ -468,7 +444,6 @@ def _gzip_json_response(resp):
         pass                             # 压缩是优化，出错就当没压（绝不因为省带宽把请求搞挂）
     return resp
 
-
 @app.before_request
 def _read_key_gate():
     """WORKSHOP_READ_KEY=1 时，读接口也要 Key（默认关，保持老行为：只读公开）。
@@ -486,7 +461,6 @@ def _read_key_gate():
     if request.headers.get("X-API-Key", "") != API_KEY:
         return jsonify({"error": "需要 API Key（服务端开了 WORKSHOP_READ_KEY）"}), 401
     return None
-
 
 # ============ 内置代理通道（中转转发） ============
 @app.route("/relay/<b64target>/<path:subpath>", methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"])
@@ -526,7 +500,6 @@ def relay_proxy(b64target, subpath=""):
     except Exception as e:
         return jsonify({"error": "relay fail: " + str(e)[:200]}), 502
 
-
 @app.get("/api/stats")
 def stats():
     """工坊统计：**按类型注册表聚合**（以前手写 cards+worlds，漏了 plugins；现在加类型也不会漏）"""
@@ -540,7 +513,6 @@ def stats():
         out["likes"] += sum(int(it.get("likes", 0) or 0) for it in items)
     return jsonify(out)
 
-
 # ============ 树存档同步（聊天进度互通） ============
 
 def _save_path(card_id: str) -> str:
@@ -549,7 +521,6 @@ def _save_path(card_id: str) -> str:
     safe = safe.replace("/", "_").replace("\\", "_").replace("..", "_")
     safe = safe[:80] or "unknown"
     return os.path.join(SAVES_DIR, safe + ".json")
-
 
 @app.post("/api/save/<card_id>")
 @write_auth
@@ -573,7 +544,6 @@ def save_upload(card_id):
             return jsonify({"error": "save fail: " + str(e)[:200]}), 500
     return jsonify({"ok": True, "ts": ts})
 
-
 @app.get("/api/save/<card_id>")
 def save_download(card_id):
     """下载某个角色最新的聊天树存档；不存在返回 404。"""
@@ -586,7 +556,6 @@ def save_download(card_id):
     except Exception:
         return jsonify({"error": "bad save"}), 500
     return jsonify({"kind": data.get("kind"), "ts": data.get("ts", ""), "tree": data.get("tree", {})})
-
 
 @app.delete("/api/save/<card_id>")
 @require_auth
@@ -607,7 +576,6 @@ def save_delete(card_id):
         except Exception as e:
             return jsonify({"error": "删除失败：" + str(e)[:200]}), 500
 
-
 # ============ 同步设置（API 码等跨设备共享） ============
 
 @app.get("/api/sync/api")
@@ -616,7 +584,6 @@ def sync_api_get():
     """获取共享的模型连接配置（API 码等）；无则返回空对象。
     设置了 WORKSHOP_API_KEY 时该接口也需要认证，避免共享的 API 码被公开读取。"""
     return jsonify(_load_sync_settings().get("api") or {})
-
 
 @app.post("/api/sync/api")
 @require_auth_strict
@@ -637,7 +604,6 @@ def sync_api_post():
             return jsonify({"error": "save fail: " + str(e)[:200]}), 500
     return jsonify({"ok": True})
 
-
 # ============ 列表与搜索 ============
 
 @app.get("/api/cards/list")
@@ -647,14 +613,12 @@ def list_cards():
     cards = sorted(index.get("cards", []), key=lambda x: x.get("updated_at", ""), reverse=True)
     return jsonify(cards)
 
-
 @app.get("/api/worlds/list")
 def list_worlds():
     """获取所有世界卡列表"""
     index = load_index()
     worlds = sorted(index.get("worlds", []), key=lambda x: x.get("updated_at", ""), reverse=True)
     return jsonify(worlds)
-
 
 @app.get("/api/search")
 def search_all():
@@ -677,7 +641,6 @@ def search_all():
     results.sort(key=lambda x: x.get("updated_at", ""), reverse=True)
     return jsonify(results[:100])
 
-
 @app.get("/api/cards/search")
 def search_cards():
     """搜索角色卡（兼容旧接口），结果带 type 字段"""
@@ -686,7 +649,6 @@ def search_cards():
     matcher = search_index(index, query)
     results = [dict(c, type="角色卡") for c in index.get("cards", []) if matcher(c)]
     return jsonify(results[:50])
-
 
 # ============ 下载 / 点赞 / 删除 ============
 
@@ -706,18 +668,15 @@ def download_entry(section, target_dir, item_id, label):
     download_name = info.get("original_name") or filename
     return send_file(filepath, as_attachment=True, download_name=download_name)
 
-
 @app.get("/api/cards/<card_id>")
 def download_card(card_id):
     """下载指定角色卡"""
     return download_entry("cards", CARDS_DIR, card_id, "角色卡")
 
-
 @app.get("/api/worlds/<world_id>")
 def download_world(world_id):
     """下载指定世界卡"""
     return download_entry("worlds", WORLDS_DIR, world_id, "世界卡")
-
 
 def like_entry(section, item_id, label):
     with _index_lock:
@@ -729,18 +688,15 @@ def like_entry(section, item_id, label):
         save_index(index)
         return jsonify({"success": True, "likes": info["likes"]})
 
-
 @app.post("/api/cards/<card_id>/like")
 def like_card(card_id):
     """点赞角色卡"""
     return like_entry("cards", card_id, "角色卡")
 
-
 @app.post("/api/worlds/<world_id>/like")
 def like_world(world_id):
     """点赞世界卡"""
     return like_entry("worlds", world_id, "世界卡")
-
 
 def delete_entry(section, target_dir, item_id, label):
     with _index_lock:
@@ -770,20 +726,17 @@ def delete_entry(section, target_dir, item_id, label):
             msg += "（文件当时被占用，已挪到 %s，稍后可清理）" % os.path.basename(trashed)
         return jsonify({"success": True, "message": msg})
 
-
 @app.delete("/api/cards/<card_id>")
 @require_auth
 def delete_card(card_id):
     """删除角色卡"""
     return delete_entry("cards", CARDS_DIR, card_id, "角色卡")
 
-
 @app.delete("/api/worlds/<world_id>")
 @require_auth
 def delete_world(world_id):
     """删除世界卡"""
     return delete_entry("worlds", WORLDS_DIR, world_id, "世界卡")
-
 
 # ============ 上传 ============
 
@@ -803,7 +756,6 @@ LOCAL_STATE_KEYS = (
     "last_leaf_id", "current_leaf_id", "session", "state",
 )
 
-
 def strip_local_state(content):
     """剔除本地历史/状态键。返回 (清洗后的内容, 剔掉的键名列表)。
 
@@ -817,7 +769,6 @@ def strip_local_state(content):
     for k in gone:
         out.pop(k, None)
     return out, gone
-
 
 def _store_upload(section, target_dir, original_name, content, form, ext_whitelist=None,
                   report=None):
@@ -872,7 +823,6 @@ def _store_upload(section, target_dir, original_name, content, form, ext_whiteli
         save_index(index)
     return entry
 
-
 def handle_upload(section, target_dir, default_name):
     limited = _rate_gate()
     if limited is not None:
@@ -901,13 +851,11 @@ def handle_upload(section, target_dir, default_name):
         "message": f"上传成功：{entry['name']}"
     }), 201
 
-
 @app.post("/api/cards/upload")
 @write_auth
 def upload_card():
     """上传角色卡"""
     return handle_upload("cards", CARDS_DIR, "未命名角色")
-
 
 @app.post("/api/worlds/upload")
 @write_auth
@@ -915,18 +863,15 @@ def upload_world():
     """上传世界卡"""
     return handle_upload("worlds", WORLDS_DIR, "未命名世界")
 
-
 # ============ 泛型资源路由（类型注册表驱动） ============
 #  加一种资源 = 在 TYPES 里加一行 + 目录建出来；下面这几个视图对所有类型都生效。
 #  老路径（/api/cards/list 等）与泛型路径**形状相同**，Werkzeug 里静态段优先，
 #  所以老客户端照旧能用，新类型不用再抄一遍路由。
 app.config["MAX_CONTENT_LENGTH"] = UPLOAD_MAX_MB * 1024 * 1024
 
-
 def _bad_type(rtype):
     return jsonify({"error": "未知的资源类型：%s" % rtype,
                     "types": sorted(TYPES.keys())}), 400
-
 
 @app.get("/api/<rtype>/list")
 def list_any(rtype):
@@ -936,7 +881,6 @@ def list_any(rtype):
         return _bad_type(rtype)
     return jsonify(load_index().get(spec["index"], []) or [])
 
-
 @app.get("/api/<rtype>/<item_id>")
 def download_any(rtype, item_id):
     spec = type_of(rtype)
@@ -944,14 +888,12 @@ def download_any(rtype, item_id):
         return _bad_type(rtype)
     return download_entry(spec["index"], spec["dir"], item_id, spec["label"])
 
-
 @app.post("/api/<rtype>/<item_id>/like")
 def like_any(rtype, item_id):
     spec = type_of(rtype)
     if not spec:
         return _bad_type(rtype)
     return like_entry(spec["index"], item_id, spec["label"])
-
 
 @app.delete("/api/<rtype>/<item_id>")
 @require_auth
@@ -961,7 +903,6 @@ def delete_any(rtype, item_id):
         return _bad_type(rtype)
     return delete_entry(spec["index"], spec["dir"], item_id, spec["label"])
 
-
 @app.post("/api/<rtype>/upload")
 @write_auth
 def upload_any(rtype):
@@ -970,7 +911,6 @@ def upload_any(rtype):
     if not spec:
         return _bad_type(rtype)
     return handle_upload(spec["index"], spec["dir"], spec["label"])
-
 
 # ============ gzip 传输通道（压缩 → 传输 → 解压 → 放置） ============
 #  为什么单独一条路而不是给 multipart 加 Content-Encoding：
@@ -987,7 +927,6 @@ class _GzError(Exception):
         self.msg = msg
         self.code = code
 
-
 def _repair_utf8_header(s):
     """把「UTF-8 字节被当成 latin-1 解出来」的头值修回中文。
 
@@ -1003,7 +942,6 @@ def _repair_utf8_header(s):
         return s.encode("latin-1").decode("utf-8")
     except Exception:
         return s
-
 
 def _url_unquote(raw):
     """把百分号编码的文件名还原（安卓端只能发 ASCII 头，中文名是编码后传的）。
@@ -1023,7 +961,6 @@ def _url_unquote(raw):
         return s
     return out if out and not any(ord(c) < 32 for c in out) else s
 
-
 def _header_arg(name, default=""):
     """从**请求头或 query string** 取一个字符串参数（头优先）。
 
@@ -1036,7 +973,6 @@ def _header_arg(name, default=""):
     if v is None:
         v = request.args.get(name)
     return _repair_utf8_header((default if v is None else str(v)).strip())
-
 
 def _decompress_gzip(raw, limit_mb=None):
     """gzip 体 → bytes，带体积上限。超限抛 _GzError(413)，坏包抛 _GzError(400)。
@@ -1061,7 +997,6 @@ def _decompress_gzip(raw, limit_mb=None):
     if len(data) > limit:
         raise _GzError("解压后超过上限 %d MB" % UPLOAD_MAX_MB, 413)
     return data
-
 
 @app.post("/api/<rtype>/upload/gz")
 @write_auth
@@ -1132,7 +1067,6 @@ def upload_any_gz(rtype):
         "message": "压缩上传成功：%s" % entry["name"],
     }), 201
 
-
 @app.get("/api/<rtype>/<item_id>/gz")
 def download_any_gz(rtype, item_id):
     """gzip 下载：把这个作品的 JSON 内容压一遍发出去。
@@ -1179,10 +1113,8 @@ def download_any_gz(rtype, item_id):
         pass
     return resp
 
-
 # ---- 分片上传：大文件（声库 / Live2D / 卡包）不再顶 body 上限 ----
 CHUNK_DIR = os.path.join(DATA_DIR, ".uploads")
-
 
 @app.post("/api/<rtype>/upload/init")
 @write_auth
@@ -1195,7 +1127,6 @@ def upload_init(rtype):
     os.makedirs(os.path.join(CHUNK_DIR, uid), exist_ok=True)
     return jsonify({"success": True, "upload_id": uid, "max_mb": UPLOAD_MAX_MB}), 201
 
-
 def _arg(name, default=""):
     """分片上传的参数读法：**优先 query string**（因为 body 是裸分片字节，塞不进表单）。
 
@@ -1205,7 +1136,6 @@ def _arg(name, default=""):
     if v is None:
         v = request.form.get(name)
     return default if v is None else str(v).strip()
-
 
 @app.post("/api/<rtype>/upload/chunk")
 @write_auth
@@ -1227,7 +1157,6 @@ def upload_chunk(rtype):
     with open(os.path.join(d, "%08d.part" % int(idx)), "wb") as f:
         f.write(data)
     return jsonify({"success": True, "index": int(idx), "bytes": len(data)})
-
 
 @app.post("/api/<rtype>/upload/finish")
 @write_auth
@@ -1276,7 +1205,6 @@ def upload_finish(rtype):
                     "stripped": report.get("stripped") or [],
                     "message": "分片上传完成：%s" % entry["name"]}), 201
 
-
 # ============ 插件市场（创意工坊插件 Tab） ============
 
 @app.get("/api/plugins/list")
@@ -1285,7 +1213,6 @@ def list_plugins():
     index = load_index()
     plugins = sorted(index.get("plugins", []), key=lambda x: x.get("updated_at", ""), reverse=True)
     return jsonify(plugins)
-
 
 @app.get("/api/plugins/<plugin_id>")
 def download_plugin(plugin_id):
@@ -1303,7 +1230,6 @@ def download_plugin(plugin_id):
         save_index(index)
     download_name = info.get("original_name") or filename
     return send_file(filepath, as_attachment=True, download_name=download_name)
-
 
 @app.post("/api/plugins/upload")
 @require_auth
@@ -1342,12 +1268,10 @@ def upload_plugin():
         save_index(index)
     return jsonify({"success": True, "id": entry["id"], "message": f"上传成功：{name}"}), 201
 
-
 @app.post("/api/plugins/<plugin_id>/like")
 def like_plugin(plugin_id):
     """点赞插件"""
     return like_entry("plugins", plugin_id, "插件")
-
 
 @app.delete("/api/plugins/<plugin_id>")
 @require_auth
@@ -1362,7 +1286,6 @@ def delete_plugin(plugin_id):
         save_index(index)
     return jsonify({"success": True})
 
-
 def _lan_ip() -> str:
     """获取本机局域网 IP（连接外网探测到的本地地址；失败回退回环）"""
     try:
@@ -1374,7 +1297,6 @@ def _lan_ip() -> str:
         return ip or "127.0.0.1"
     except Exception:
         return "127.0.0.1"
-
 
 def _udp_discover_loop():
     """局域网自动发现：手机发 DISCOVER_MAGIC 到本端口，服务器回自己 IP + HTTP 端口。
@@ -1402,7 +1324,6 @@ def _udp_discover_loop():
             except Exception:
                 pass
 
-
 if __name__ == "__main__":
     import threading as _th
     _th.Thread(target=_udp_discover_loop, daemon=True).start()
@@ -1427,6 +1348,8 @@ if __name__ == "__main__":
             from waitress import serve as _serve
         except Exception:
             _serve = None
+    from twin_http import register_twin_routes
+    register_twin_routes(app, DATA_DIR)
     if _serve is not None and not DEBUG and _which != "flask":
         _threads = int(os.environ.get("WORKSHOP_THREADS", "0")) or max(8, (os.cpu_count() or 4) * 4)
         print("[net.py] waitress 启动 %s:%d（threads=%d）" % (HOST, PORT, _threads))
