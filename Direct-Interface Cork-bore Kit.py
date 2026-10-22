@@ -20,6 +20,7 @@ import threading
 import re
 import random
 import uuid
+import text_shield
 
 # PyInstaller windowed 模式（无控制台）下 stdout/stderr 为 None，print 会崩溃。
 # 启动即重定向到 exe 旁的 debug.log。
@@ -1076,6 +1077,12 @@ class HtmlApp(ApiMiscMixin, ApiGoMixin, ApiSettingsMixin, ApiWsMixin, ApiCodexMi
             try:
                 pattern = str(rule.get("pattern") or "")
                 repl = str(rule.get("replace") or "")
+                if scope == "user":
+                    # 用户输入里的括号是动作描写，不是噪声：规则若会吃掉它，宁可跳过（见 text_shield.py）
+                    text, _blocked = text_shield.keeps_user_text(
+                        lambda t=text, p=pattern, r=repl: re.sub(p, r, t),
+                        text, rule.get("id") or rule.get("name") or "")
+                    continue
                 text = re.sub(pattern, repl, text)
             except Exception:
                 continue
@@ -1149,6 +1156,15 @@ class HtmlApp(ApiMiscMixin, ApiGoMixin, ApiSettingsMixin, ApiWsMixin, ApiCodexMi
                 self._append_sys(text_guard.summary(_grep), kind="warn", speaker="安全")
             if hidden_send:
                 hidden_send, _ = text_guard.sanitize(hidden_send)
+        except Exception:
+            pass
+        # 括号诊断：玩家的「（动作）」是内容不是噪声。真被谁吃掉时，这里会留下原文与结果。
+        try:
+            _lost, _chars = text_shield.lost_brackets(send_text if hidden_send else display_text,
+                                                     display_text)
+            if _lost:
+                print("[括号诊断] 显示文本丢了 %d 个括号（%s）：%r → %r"
+                      % (_lost, "".join(_chars), send_text if hidden_send else display_text, display_text))
         except Exception:
             pass
         # 显示/存储用原文；若翻译隐藏（hidden_send 非空且不同），译文存 metadata["ja_input"]，

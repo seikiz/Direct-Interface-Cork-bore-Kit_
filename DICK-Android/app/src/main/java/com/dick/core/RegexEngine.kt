@@ -35,10 +35,22 @@ object RegexEngine {
                 // Python 风格 \1 <seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌→ Kotlin $1
                 var repl = r
                 for (i in 1..9) repl = repl.replace("\\$i", "$$i")
-                t = Regex(p).replace(t, repl)
+                val out = Regex(p).replace(t, repl)
+                // 玩家输入里的「（动作）」是内容不是噪声：规则若会吃掉括号就跳过它（同桌面 text_shield）
+                if (scope == "user" && lostBrackets(t, out)) continue
+                t = out
             } catch (_: Exception) {
             }
         }
         return t
+    }
+
+    /** 括号数量是不是变少了（吃掉括号 = 破坏玩家输入，规则要跳过） */
+    private fun lostBrackets(before: String, after: String): Boolean {
+        fun count(s: String, ch: Char) = s.count { it == ch }
+        return count(after, '\uFF08') < count(before, '\uFF08') ||
+            count(after, '\uFF09') < count(before, '\uFF09') ||
+            count(after, '(') < count(before, '(') ||
+            count(after, ')') < count(before, ')')
     }
 }
