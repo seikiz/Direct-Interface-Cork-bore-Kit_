@@ -2580,73 +2580,38 @@ fun wsRefreshLocal() {
                 Spacer(Modifier.height(6.dp))
                 // 输入栏上方的一行状态：忙/生成中。贴着输入框，不进对话（与桌面同一套语义）。
                 BusyStatusLine(busy = busy, theme = theme, accent = accent)
-                Row(Modifier.fillMaxWidth()) {
-                    TextButton(onClick = { showQuickPanel = !showQuickPanel }) {
-                        // 快捷面板开/关：图标名跟着状态走（原来是  /  两个 emoji）
-                        IconText("", fontSize = 20.sp, icon = if (showQuickPanel) "close" else "add")
-                    }
-                    OutlinedTextField(
-                        value = input,
-                        onValueChange = { input = it },
-                        label = { Text(I18n.t("input_label", "输入消息（/ 开头为命令）")) },
-                        modifier = Modifier.weight(1f),
-                        maxLines = 4,
-                    )
-                    Spacer(Modifier.width(6.dp))
-                    Button(onClick = ::send, enabled = !busy) { Text(I18n.t("btn_send", "发送")) }
-                }
+                ChatComposer(
+                    input = input,
+                    onInput = { input = it },
+                    busy = busy,
+                    showQuickPanel = showQuickPanel,
+                    onToggleQuick = { showQuickPanel = !showQuickPanel },
+                    onSend = { send() },
+                )
             }
         }
     }
 
     // 首次启动引导框
-    if (showGuide) {
-        // 幕布走令牌（theme.palette.scrim = 80% 近黑石板）：原来这里是字面量 0xCC0A0C10。
-        // 令牌值就是那个字面量（换算回去逐位相同），所以观感不变；
-        // 但从此改幕布只需改 design/tokens.json，屏里再也拼不出野生 hex。
-        Box(Modifier.fillMaxSize().background(theme.palette.scrim).clickable { }, contentAlignment = Alignment.Center) {
-            Surface(
-                modifier = Modifier.fillMaxWidth().padding(22.dp),
-                shape = RoundedCornerShape(16.dp),
-                color = theme.bubble,
-                shadowElevation = 12.dp,
-            ) {
-                // 三步引导：每条 = (图标名, 标题, 说明)。图标名走 IconText 的 icon 参数，
-                // 标题只留纯文本（文案里不再有 emoji 字符）。
-                val guide = listOf(
-                    Triple("waving_hand", "欢迎使用 DICK", "装好即聊的角色扮演聊天室：手机 / 电脑进度互通，支持角色卡、世界书、回档、内置游戏。"),
-                    Triple("settings", "配置模型", "设置 → 填 API Key、选模型商（DeepSeek 官方 / 免费链 / Ollama 本地）。免 Key 的免费链直接就能聊。"),
-                    Triple("theater_comedy", "选择角色", "角色列表勾选即可开聊（多选 = 群聊，@角色名 指定发言）；可新建或导入酒馆卡 v1/v2/v3/PNG。"),
-                    Triple("chat", "开聊", "输入消息发送；↻ 重生成、◀▶ 滑条、编辑。面板有骰子 / 记忆 / GAL 选项 / 快捷回复。"),
-                    Triple("account_tree", "进阶玩法", "回档：主线平铺、分支收纳；GAL 选项点选即演；世界书平行世界；存档自动守护。"),
-                )
-                Column(Modifier.padding(20.dp)) {
-                    IconText(guide[guideStep].second, fontSize = 18.sp, fontWeight = FontWeight.Bold, iconSize = 20.dp,
-                        icon = guide[guideStep].first)
-                    Spacer(Modifier.height(10.dp))
-                    Text(guide[guideStep].third, fontSize = 13.sp, lineHeight = 22.sp)
-                    Spacer(Modifier.height(16.dp))
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        TextButton(onClick = { showGuide = false; saveConfig() }) { Text("跳过", fontSize = 13.sp) }
-                        Spacer(Modifier.weight(1f))
-                        if (guideStep > 0) {
-                            TextButton(onClick = { guideStep-- }) { Text("上一步", fontSize = 13.sp) }
-                        }
-                        Button(onClick = {
-                            if (guideStep >= guide.size - 1) { showGuide = false; saveConfig() }
-                            else guideStep++
-                        }) { IconText(if (guideStep >= guide.size - 1) "开始使用" else "下一步", fontSize = 13.sp, iconSize = 14.dp) }
-                    }
-                }
-            }
-        }
-    }
 
 
     // ---------- 所有 overlay 屏（导航壳） ----------
     // App() 从这里之后**不认识任何一个具体屏**：谁在屏幕上、什么顺序，全在 nav/Routes.kt。
     // 搬家前这里是 14 行平铺的 `XxxDialog(vm, deps)` —— 那种写法谁都能顺手插一行，
     // 结果就是"屏与屏互相点名"。加一屏请去 Routes 里加。
+
+    ChatGuideDialog(
+        showGuide = showGuide, guideStep = guideStep, theme = theme,
+        onStep = { guideStep = it }, onClose = { showGuide = false; saveConfig() },
+    )
+
+
+    ChatClearHistoryDialog(
+        show = showClearHistory, theme = theme, cardLabel = currentCardLabel(),
+        onDismiss = { showClearHistory = false },
+        onConfirm = { also -> clearHistory(also); showClearHistory = false },
+    )
+
     OverlayHost(
         vm = vm,
         deps = deps,
@@ -2657,32 +2622,5 @@ fun wsRefreshLocal() {
     )
 
     // ---------- 彻底清空历史（红色 · 二次确认） ----------
-    if (showClearHistory) {
-        var alsoClearMemory by remember { mutableStateOf(false) }
-        DickDialog(
-            onDismissRequest = { showClearHistory = false },
-            title = { IconText("彻底清空历史", color = theme.danger, icon = "warning") },
-            text = {
-                Column {
-                    Text("将删除当前角色「" + currentCardLabel() + "」的全部聊天记录。")
-                    Spacer(Modifier.height(6.dp))
-                    Text("此操作不可恢复。确定要清空吗？", fontSize = 12.sp, color = theme.muted)
-                    Text("（机制卡的状态/好感度也会一起重置。）", fontSize = 11.sp, color = theme.muted)
-                    Spacer(Modifier.height(8.dp))
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Checkbox(checked = alsoClearMemory, onCheckedChange = { alsoClearMemory = it })
-                        Text("同时清空记忆链（memory）", fontSize = 12.sp, modifier = Modifier.padding(top = 14.dp))
-                    }
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = {
-                    clearHistory(alsoClearMemory)
-                    showClearHistory = false
-                }) { IconText("彻底清空", color = theme.danger, icon = "delete") }
-            },
-            dismissButton = { TextButton(onClick = { showClearHistory = false }) { Text("取消") } },
-        )
-    }
 }
 // <seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌

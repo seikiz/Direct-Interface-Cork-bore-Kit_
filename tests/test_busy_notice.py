@@ -121,6 +121,8 @@ def main():
     kt = read(os.path.join(_chat_dir, "ChatScreen.kt"))
     # BusyStatusLine 已拆到 ChatScreenParts.kt —— 同一组断言，把两份拼起来看
     kt += "\n" + read(os.path.join(_chat_dir, "ChatScreenParts.kt"))
+    # 输入栏拆到 ChatComposer.kt —— "状态行在输入框之前"是跨文件的顺序断言
+    kt += "\n" + read(os.path.join(_chat_dir, "ChatComposer.kt"))
     check(u"\u6709 BusyStatusLine \u7ec4\u5408\u51fd\u6570", "fun BusyStatusLine(" in kt)
     call_at = kt.find("BusyStatusLine(busy = busy")
     field_at = kt.find("OutlinedTextField(")
