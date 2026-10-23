@@ -118,7 +118,8 @@ def main():
     print(u"\n== ⑦ 服务端 / 客户端接线（源码闸门）==")
     net_src = read("net.py")
     check(u"net.py 注册了双子接口", "register_twin_routes(app, DATA_DIR)" in net_src)
-    check(u"net.py 支持独立数据目录（本机跑两台）", "WORKSHOP_DATA_DIR" in net_src)
+    check(u"服务端支持独立数据目录（本机跑两台）",
+          "WORKSHOP_DATA_DIR" in (net_src + read("net_paths.py")))
     http_src = read("twin_http.py")
     check(u"有 /api/node", '"/api/node"' in http_src)
     check(u"有 /api/twin", '"/api/twin"' in http_src)
