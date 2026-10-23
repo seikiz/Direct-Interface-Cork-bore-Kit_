@@ -132,7 +132,26 @@ internal class ChatState(
     jp: JpPlugin,
     uiPlugin: UiPlugin,
     speakCounts: SnapshotStateMap<String, Int>,
+    _mechTick: MutableState<Int>,
+    _lastSpeaker: MutableState<String?>,
+    _pendingImage: MutableState<PendingImg?>,
+    _finFolded: MutableState<Boolean>,
+    context: android.content.Context,
+    tts: android.speech.tts.TextToSpeech,
+    doSend: (String, androidx.compose.ui.graphics.ImageBitmap?, String?) -> Unit,
+    ensureOpeningLine: () -> Unit,
+    _wsRefresh: () -> Unit,
 ) {
+
+    var mechTick by _mechTick
+    var lastSpeaker by _lastSpeaker
+    var pendingImage by _pendingImage
+    var finFolded by _finFolded
+    internal val context = context
+    internal val tts = tts
+    internal val doSendCb = doSend
+    internal val ensureOpening = ensureOpeningLine
+    internal val wsRefresh = _wsRefresh
     internal val scope = scope
     internal val engine = engine
     internal val registry = registry

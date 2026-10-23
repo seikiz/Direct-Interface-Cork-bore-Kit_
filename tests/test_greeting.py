@@ -301,6 +301,12 @@ def test_android_has_same_loading_state():
     app = io.open(os.path.join(a, "App.kt"), encoding="utf-8").read()
     app += io.open(os.path.join(a, "ui", "screens", "chat", "ChatScreen.kt"),
                    encoding="utf-8").read()
+    app += io.open(os.path.join(a, "ui", "screens", "chat", "ChatState.kt"),
+                    encoding="utf-8").read()
+    app += io.open(os.path.join(a, "ui", "screens", "chat", "ChatStateOps.kt"),
+                    encoding="utf-8").read()
+    app += io.open(os.path.join(a, "ui", "screens", "chat", "ChatStateOps2.kt"),
+                    encoding="utf-8").read()
     check("ViewModel 里有 openingLoading 状态",
           "var openingLoading = mutableStateOf(false)" in vm)
     check("App 里接了 openingLoading", "var openingLoading by vm.openingLoading" in app)
@@ -318,6 +324,12 @@ def test_clear_history_restarts_opening():
     app = io.open(os.path.join(a, "App.kt"), encoding="utf-8").read()
     app += io.open(os.path.join(a, "ui", "screens", "chat", "ChatScreen.kt"),
                    encoding="utf-8").read()
+    app += io.open(os.path.join(a, "ui", "screens", "chat", "ChatState.kt"),
+                    encoding="utf-8").read()
+    app += io.open(os.path.join(a, "ui", "screens", "chat", "ChatStateOps.kt"),
+                    encoding="utf-8").read()
+    app += io.open(os.path.join(a, "ui", "screens", "chat", "ChatStateOps2.kt"),
+                    encoding="utf-8").read()
     i = app.find("fun clearHistory(")
     check("找得到 App.kt 的 clearHistory", i > 0)
     if i < 0:

@@ -122,25 +122,25 @@ def ligs(path):
 # 唯一留白的是**内容**（不是界面文案）—— 逐条写清理由，并且要求「白名单里每一条都还必须存在」
 # （防白名单长成免死金牌）：删掉对应代码后不清理白名单，测试会反过来变红。
 CONTENT_EMOJI_OK = {
-    ("ChatScreen.kt", u"⚠️ 导入失败："): u"聊天系统消息正文（ChatMsg 的 content，由模型/引擎填）",
-    ("ChatScreen.kt", u"⚠️ 无法识别的角色卡格式（需 v1/v2/v3 JSON 或 PNG 嵌卡）"): u"聊天系统消息正文",
-    ("ChatScreen.kt", u"✅ "): u"聊天系统消息正文（导出成功的行首装饰）",
-    ("ChatScreen.kt", u"⚠️ 导出失败："): u"聊天系统消息正文",
-    ("ChatScreen.kt", u"✅ 已导出"): u"聊天系统消息正文",
-    ("ChatScreen.kt", u"❌ "): u"聊天系统消息正文（失败行首装饰）",
-    ("ChatScreen.kt", u"🏁 结局达成：「$nm」"): u"聊天系统消息正文",
-    ("ChatScreen.kt", u"⚠️ 当前角色未启用好感度（机制卡 → 好感度）"): u"聊天系统消息正文",
-    ("ChatScreen.kt", u"✨ METTERTOOLS！好感度已填至 $pct% → $res。"): u"聊天系统消息正文",
-    ("ChatScreen.kt", u"📤 已调起分享（导出聊天记录）"): u"聊天系统消息正文",
+    ("ChatStateOps.kt", u"⚠️ 导入失败："): u"聊天系统消息正文（ChatMsg 的 content，由模型/引擎填）",
+    ("ChatStateOps.kt", u"⚠️ 无法识别的角色卡格式（需 v1/v2/v3 JSON 或 PNG 嵌卡）"): u"聊天系统消息正文",
+    ("ChatStateOps.kt", u"✅ "): u"聊天系统消息正文（导出成功的行首装饰）",
+    ("ChatStateOps.kt", u"⚠️ 导出失败："): u"聊天系统消息正文",
+    ("ChatStateOps.kt", u"✅ 已导出"): u"聊天系统消息正文",
+    ("ChatStateOps.kt", u"❌ "): u"聊天系统消息正文（失败行首装饰）",
+    ("ChatStateOps.kt", u"🏁 结局达成：「$nm」"): u"聊天系统消息正文",
+    ("ChatStateOps.kt", u"⚠️ 当前角色未启用好感度（机制卡 → 好感度）"): u"聊天系统消息正文",
+    ("ChatStateOps.kt", u"✨ METTERTOOLS！好感度已填至 $pct% → $res。"): u"聊天系统消息正文",
+    ("ChatStateOps.kt", u"📤 已调起分享（导出聊天记录）"): u"聊天系统消息正文",
     # 2026-12 文案清理：这一条原来的 emoji 前缀 + "免费视觉链被限流" 说明已经从源码里删掉
     # （用户口径：界面不要技术说明），所以白名单条目跟着撤 —— 留着它会触发"过期条目"断言。
-    ("ChatScreen.kt", u"🌌 坍缩：十万分之一的奇迹坍缩成现实！"): u"聊天系统消息正文",
-    ("ChatScreen.kt", u"🌟 天选：千分之一的天命眷顾被触发了！"): u"聊天系统消息正文",
-    ("ChatScreen.kt", u"💥 结果出了岔子！"): u"聊天系统消息正文",
-    ("ChatScreen.kt", u"✨ 命运的眷顾：触发了稀有事件！"): u"聊天系统消息正文",
-    ("ChatScreen.kt", u"✨ 效果暴击！"): u"聊天系统消息正文",
-    ("ChatScreen.kt", u"🌟 天选之人：十万分之一的战斗奇迹被触发了！"): u"聊天系统消息正文",
-    ("ChatScreen.kt", u"⚠️"): u"引擎返回文本的失败前缀判据（跨端协议，不是界面文案；改它要同时动 DICK_core.py）",
+    ("ChatStateOps.kt", u"🌌 坍缩：十万分之一的奇迹坍缩成现实！"): u"聊天系统消息正文",
+    ("ChatStateOps.kt", u"🌟 天选：千分之一的天命眷顾被触发了！"): u"聊天系统消息正文",
+    ("ChatStateOps.kt", u"💥 结果出了岔子！"): u"聊天系统消息正文",
+    ("ChatStateOps.kt", u"✨ 命运的眷顾：触发了稀有事件！"): u"聊天系统消息正文",
+    ("ChatStateOps.kt", u"✨ 效果暴击！"): u"聊天系统消息正文",
+    ("ChatStateOps.kt", u"🌟 天选之人：十万分之一的战斗奇迹被触发了！"): u"聊天系统消息正文",
+    ("ChatStateOps.kt", u"⚠️"): u"引擎返回文本的失败前缀判据（跨端协议，不是界面文案；改它要同时动 DICK_core.py）",
     ("Models.kt", u"⚠️ 免责声明：以上分析仅供参考，不构成任何投资建议。"): u"预设正文（Preset 的内容，不是界面文案）",
 }
 

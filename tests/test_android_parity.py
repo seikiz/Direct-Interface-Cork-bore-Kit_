@@ -172,7 +172,13 @@ def main():
     #（纯搬运）。接线断言盯的是"界面有没有接上"，与住哪个文件无关 —— 两份拼起来看。
     app_kt = read(os.path.join(AND, "app", "src", "main", "java", "com", "dick", "app", "App.kt"))
     app_kt += u"\n" + read(os.path.join(AND, "app", "src", "main", "java", "com", "dick", "app",
-                                        "ui", "screens", "chat", "ChatScreen.kt"))
+                                        "ui", "screens", "chat", "ChatScreen.kt")) + "\n" + io.open(os.path.join(ROOT, "DICK-Android", "app", "src", "main",
+        "java", "com", "dick", "app", "ui", "screens", "chat",
+        "ChatState.kt"), encoding="utf-8").read() + "\n" + io.open(os.path.join(ROOT, "DICK-Android", "app", "src", "main",
+        "java", "com", "dick", "app", "ui", "screens", "chat",
+        "ChatStateOps.kt"), encoding="utf-8").read() + "\n" + io.open(os.path.join(ROOT, "DICK-Android", "app", "src", "main",
+        "java", "com", "dick", "app", "ui", "screens", "chat",
+        "ChatStateOps2.kt"), encoding="utf-8").read()
     engine_kt = read(os.path.join(CORE, "ChatEngine.kt"))
     bridge_kt = read(os.path.join(CORE, "ChatBridge.kt"))
     check(u"ChatEngine 有 contextProvider 钩子", u"var contextProvider" in engine_kt)

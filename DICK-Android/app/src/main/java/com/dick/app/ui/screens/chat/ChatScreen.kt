@@ -136,6 +136,7 @@ import kotlin.random.Random
  */
 @Composable
 fun ChatScreen(vm: ChatViewModel, theme: ThemeSpec, accent: Color) {
+    lateinit var st: ChatState
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val engine = remember { ChatEngine() }
@@ -149,7 +150,8 @@ fun ChatScreen(vm: ChatViewModel, theme: ThemeSpec, accent: Color) {
     val swipe = remember { SwipePlugin() }
     val gal = remember { GalgamePlugin() }
     val mech = remember { MechanicsEngine() }
-    var mechTick by remember { mutableStateOf(0) }   // 机制状态栏刷新信号
+    val mechTickState = remember { mutableStateOf(0) }
+    var mechTick by mechTickState   // 机制状态栏刷新信号
     val search = remember { SearchPlugin() }
     val financial = remember { FinancialPlugin() }
     val jp = remember { JpPlugin() }
@@ -208,7 +210,8 @@ fun ChatScreen(vm: ChatViewModel, theme: ThemeSpec, accent: Color) {
     var selectedRoles by vm.selectedRoles
     var selectedWorlds by vm.selectedWorlds
     var currentWorld by vm.currentWorld
-    var lastSpeaker by remember { mutableStateOf<String?>(null) }
+    val lastSpeakerState = remember { mutableStateOf<String?>(null) }
+    var lastSpeaker by lastSpeakerState
     // 公平计数：谁发言越少越可能被选中（防双人死循环/饿死后排，与 PC 端一致）
     val speakCounts = remember { mutableStateMapOf<String, Int>() }
     val roleUnlocked = vm.roleUnlocked
@@ -237,7 +240,8 @@ fun ChatScreen(vm: ChatViewModel, theme: ThemeSpec, accent: Color) {
     var showWorlds by vm.showWorlds
     var roleEditName by vm.roleEditName
     var pendingDelete by vm.pendingDelete // (名称, "role"/"world") 待确认删除
-    var pendingImage by remember { mutableStateOf<PendingImg?>(null) }
+    val pendingImageState = remember { mutableStateOf<PendingImg?>(null) }
+    var pendingImage by pendingImageState
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     var language by vm.language
 
@@ -269,10 +273,6 @@ fun ChatScreen(vm: ChatViewModel, theme: ThemeSpec, accent: Color) {
     var wsStatusIcon by vm.wsStatusIcon
     // 工坊状态行 = 纯文本 + 图标名（→check_circle、→error…）。渲染点在 WorkshopScreen
     // 的 DickTag，这里只负责把两样一起设好 —— 文案里不再出现 emoji 字符。
-    fun wsSetStatus(text: String, icon: String? = null) {
-        wsStatus = text
-        wsStatusIcon = icon
-    }
     val wsOnlineList = vm.wsOnlineList
     var wsOnlineIdx by vm.wsOnlineIdx
     var wsSearchInput by vm.wsSearchInput
@@ -349,7 +349,7 @@ val importCardLauncher = rememberLauncherForActivityResult(ActivityResultContrac
                 } catch (e: Exception) {
                     "❌ " + (e.message ?: "")
                 }
-                withContext(Dispatchers.Main) { wsSetStatus(msg) }
+                withContext(Dispatchers.Main) { st.wsSetStatus(msg) }
             }
         }
     }
@@ -416,10 +416,6 @@ val importCardLauncher = rememberLauncherForActivityResult(ActivityResultContrac
             }
         }
     }
-    fun clearWallpaper() {
-        wallpaper = null
-        try { File(AppEnv.dataRoot, "wallpaper.png").delete() } catch (_: Exception) {}
-    }
 
     val imagePicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         uri?.let { u ->
@@ -443,130 +439,21 @@ val importCardLauncher = rememberLauncherForActivityResult(ActivityResultContrac
     /** 指定角色的机制状态文件：mech_state/_mech_<角色>.json */
 
     /** 每个角色分开的聊天树文件：单角色用 _tree_<角色>.json，群聊用 _tree_group.json */
-    fun treeFileFor(): File = treeFileForRole(if (selectedRoles.size == 1) selectedRoles.first()
-            else if (selectedRoles.size > 1) "group" else "default")
 
     /** 第三个文件夹：机制状态实时 JSON（mech_state/），与聊天树同角色命名，互不依赖 */
-    fun stateFileFor(): File = stateFileForRole(if (selectedRoles.size == 1) selectedRoles.first()
-            else if (selectedRoles.size > 1) "group" else "default")
 
     // ---------- 玩家角色卡（结构化） ----------
-    fun personaFields(): Map<String, String> {
-        // persona 存 JSON：与角色卡同标准（legacy/appearance/personality/background/speech/first_mes/mes_example/notes）
-        return try {
-            val o = JsonS.parse(persona) as? J.Obj
-            if (o == null) emptyMap()
-            else mapOf(
-                "name" to (o.fields["name"]?.str() ?: ""),
-                "legacy" to (o.fields["legacy"]?.str() ?: ""),
-                "appearance" to (o.fields["appearance"]?.str() ?: ""),
-                "personality" to (o.fields["personality"]?.str() ?: ""),
-                "background" to (o.fields["background"]?.str() ?: ""),
-                "speech" to (o.fields["speech"]?.str() ?: ""),
-                "first_mes" to (o.fields["first_mes"]?.str() ?: ""),
-                "mes_example" to (o.fields["mes_example"]?.str() ?: ""),
-                "notes" to (o.fields["notes"]?.str() ?: ""),
-            )
-        } catch (_: Exception) {
-            // 兼容旧版纯文本 persona
-            if (persona.isBlank()) emptyMap()
-            else mapOf("background" to persona)
-        }
-    }
 
-    fun personaDisplayName(): String {
-        val f = personaFields()
-        val n = f["name"]?.trim()
-        return if (!n.isNullOrBlank()) n else if (persona.isBlank()) "" else "玩家"
-    }
 
     /** 用户在聊天里显示的名字（= 玩家卡名字，无则「你」）；头像文件名必须与之完全一致 */
-    fun userDisplayName(): String = personaFields()["name"]?.trim()?.takeIf { it.isNotBlank() } ?: "你"
-
-    fun personaPrompt(): String {
-        // 渲染成详细文本注入系统提示（与角色卡同标准）
-        val f = personaFields()
-        if (f.values.none { it.isNotBlank() }) return ""
-        val sb = StringBuilder()
-        sb.append("【玩家角色卡】").append(10.toChar())
-        f["name"]?.trim()?.takeIf { it.isNotBlank() }?.let { sb.append("名字：").append(it).append(10.toChar()) }
-        f["legacy"]?.trim()?.takeIf { it.isNotBlank() }?.let { sb.append("完整设定：").append(it).append(10.toChar()) }
-        f["appearance"]?.trim()?.takeIf { it.isNotBlank() }?.let { sb.append("外貌：").append(it).append(10.toChar()) }
-        f["personality"]?.trim()?.takeIf { it.isNotBlank() }?.let { sb.append("性格：").append(it).append(10.toChar()) }
-        f["background"]?.trim()?.takeIf { it.isNotBlank() }?.let { sb.append("过去经历：").append(it).append(10.toChar()) }
-        f["speech"]?.trim()?.takeIf { it.isNotBlank() }?.let { sb.append("说话方式：").append(it).append(10.toChar()) }
-        f["first_mes"]?.trim()?.takeIf { it.isNotBlank() }?.let { sb.append("开场白：").append(it).append(10.toChar()) }
-        f["mes_example"]?.trim()?.takeIf { it.isNotBlank() }?.let { sb.append("对话示例：").append(it).append(10.toChar()) }
-        f["notes"]?.trim()?.takeIf { it.isNotBlank() }?.let { sb.append("备注：").append(it).append(10.toChar()) }
-        sb.append("玩家即你，你以玩家角色卡中的身份发言；玩家卡未描述的事项按常理推断。")
-        return sb.toString()
-    }
 
     /** 进度同步用的会话标识：与电脑端「第一个选中角色」一致（单/群聊都取首位角色名） */
 
 
-    fun saveTree() {
-        // 关键：整棵树的序列化 + 写盘是重活，不该占着主线程（调用点大多在主线程上：
-        // landAssistantReply / clearHistory / 导入卡片…）。
-        // 做法：**在主线程取快照**（避免 IO 线程序列化时树正被改），再交给 io 线写盘。
-        val snapshot = try {
-            SaveFile("_tree", "", tree.toData(), treeTs = utcNowIso())
-        } catch (_: Exception) {
-            return
-        }
-        val path = treeFileFor()
-        Lanes.on(Lanes.io, "存档落盘") {
-            try {
-                TreeStore.save(path, snapshot)
-            } catch (_: Exception) {
-            }
-        }
-        // 进度同步：走 net 线（原来是 new 一个裸 Thread —— 同样的事，但至少归线管、看得见）
-        if (Workshop.syncEnabled()) {
-            try {
-                val cardId = syncCardId(selectedRoles)
-                val treeJson = snapshot.historyTree.toJson()
-                Lanes.on(Lanes.net, "推工坊同步") {
-                    try {
-                        Workshop.pushSave(cardId, treeJson)
-                    } catch (_: Exception) {
-                    }
-                }
-            } catch (_: Exception) {
-            }
-        }
-    }
 
     /** 机制状态落盘：**在主线程取快照**（这一刻的 state），写盘丢给 io 线。
-     *  和 saveTree() 同一个道理 —— 序列化要趁数据没被改完，写盘可以慢慢来。 */
-    fun persistMechAsync() {
-        val pending = try { mech.pendingStateWrite() } catch (_: Exception) { null } ?: return
-        Lanes.on(Lanes.io, "机制状态落盘") {
-            try { mech.flushState(pending.first, pending.second) } catch (_: Exception) {}
-        }
-    }
+     *  和 st.saveTree() 同一个道理 —— 序列化要趁数据没被改完，写盘可以慢慢来。 */
 
-    fun refreshChain() {
-        val nodes = tree.getCurrentChainNodes().filter { it.role != "system" }
-        messages.clear()
-        messages.addAll(sysMsgs)
-        for (n in nodes) {
-            val meta = n.metadata as? J.Obj
-            val speaker = meta?.fields?.get("speaker")?.str()
-            // 单角色：AI 消息气泡显示当前角色名（与端游同步）；群聊/无角色显示 AI
-            val fallback = if (selectedRoles.size == 1) selectedRoles.first() else "AI"
-            // 用户消息：显示玩家卡名字（与头像文件名一致），无名字时显示「你」
-            val role = if (n.role == "user") (speaker ?: "你") else (speaker ?: fallback)
-            var swIdx = 0
-            var swTot = 0
-            if (n.role == "assistant") {
-                val sibs = tree.siblingsOf(n.id).filter { it.role == "assistant" }
-                swTot = sibs.size
-                swIdx = sibs.indexOfFirst { it.id == n.id }.coerceAtLeast(0)
-            }
-            messages.add(ChatMsg(role, n.content, nodeImages[n.id], n.id, swIdx, swTot, n.role == "user"))
-        }
-    }
 
     /** 角色首入空树时启动开场（只单角色、只空树时）。
      *
@@ -580,360 +467,38 @@ val importCardLauncher = rememberLauncherForActivityResult(ActivityResultContrac
      */
     var ensureOpeningLine: () -> Unit = {}
 
-    fun mechConfig(): J.Obj? {
-        val first = selectedRoles.firstOrNull() ?: return null
-        return advancedByRole[first]?.fields?.get("mechanics") as? J.Obj
-    }
 
     /** 结局达成检测：每次 AI 回复落地后调用；命中（达成既定事件链/状态条件）→ 弹结局横幅 + 注入收束提示 */
-    fun checkEnding() {
-        try {
-            val st = mech.state ?: return
-            val endings = mechConfig()?.fields?.get("endings") as? J.Arr ?: return
-            val ending = EndingJudge.judge(endings, st) ?: return
-            val nm = ending.fields["name"]?.str() ?: "结局"
-            val desc = ending.fields["desc"]?.str() ?: ""
-            sysMsgs.add(ChatMsg("系统", "🏁 结局达成：「$nm」" + (if (desc.isNotBlank()) " · $desc" else "") + "（可回档到之前重走别的结局）"))
-            mech.pendingEvent = J.Obj().apply {
-                fields["id"] = J.Str("_ending")
-                fields["name"] = J.Str("结局达成")
-                fields["prompt"] = J.Str("剧情已自然抵达结局「$nm」。请以这一段收束剧情：$desc。就写到这里，不要再展开新的支线。")
-            }
-            mechTick++
-        } catch (_: Exception) {
-        }
-    }
 
-    fun mechBattleConfig(): J.Obj? {
-        val first = selectedRoles.firstOrNull() ?: return null
-        return advancedByRole[first]?.fields?.get("battle") as? J.Obj
-    }
 
     /** 正则管道：玩家卡级 + 角色卡级（优先）+ 全局规则；作用域 ai/user */
 
     /** 玩家卡战斗配置（同规格待遇） */
-    fun playerBattleConfig(): J.Obj? {
-        return try {
-            ((JsonS.parse(persona) as? J.Obj)?.fields?.get("advanced") as? J.Obj)?.fields?.get("battle") as? J.Obj
-        } catch (_: Exception) {
-            null
-        }
-    }
 
     /** 保存全局正则规则（文本行 → regex_rules.json） */
-    fun saveGlobalRegex(lines: String) {
-        val arr = J.Arr()
-        lines.split("\n").forEach { line ->
-            val t = line.trim()
-            if (t.isEmpty()) return@forEach
-            val p = t.split("|")
-            if (p.size < 4) return@forEach
-            val scope = p.getOrNull(4)?.trim()?.takeIf { it in setOf("ai", "user", "both") } ?: "both"
-            val o = J.Obj()
-            o.fields["id"] = J.Str(p[0].trim())
-            o.fields["name"] = J.Str(p[1].trim().ifEmpty { p[0].trim() })
-            o.fields["pattern"] = J.Str(p[2])
-            o.fields["replace"] = J.Str(p.drop(3).joinToString("|"))
-            o.fields["scope"] = J.Str(scope)
-            o.fields["enabled"] = J.Bool(true)
-            arr.items.add(o)
-        }
-        try {
-            File(AppEnv.dataRoot, "regex_rules.json").writeText(JsonS.stringify(arr, pretty = true), Charsets.UTF_8)
-        } catch (_: Exception) {
-        }
-    }
 
     // ---------- 角色卡·多存档（新存档功能，与电脑端语义一致） ----------
     /** 该角色的当前对话树：活动角色取内存，其它角色取磁盘存档 */
-    fun roleSaveTree(role: String): TreeData {
-        if (role == syncCardId(selectedRoles) && selectedRoles.size == 1) return tree.toData()
-        val tf = treeFileForRole(role)
-        return if (tf.exists()) try { TreeStore.load(tf).historyTree } catch (_: Exception) { ChatTree().toData() }
-        else ChatTree().toData()
-    }
 
     /** 该角色的当前机制状态：活动角色取内存，其它角色取磁盘 JSON */
-    fun roleSaveMech(role: String): J.Obj? {
-        if (role == syncCardId(selectedRoles) && selectedRoles.size == 1) return mech.snapshot()
-        val f = stateFileForRole(role)
-        return try { if (f.exists()) JsonS.parse(f.readText(Charsets.UTF_8)) as? J.Obj else null } catch (_: Exception) { null }
-    }
 
-    fun listRoleSaves(role: String): List<J.Obj> = RoleSaves.load(role).map { RoleSaves.summary(it) }
 
-    fun createRoleSave(role: String, label: String) {
-        val slots = RoleSaves.load(role)
-        val now = utcNowIso()
-        slots.add(SaveSlot(label = label.ifBlank { "存档 " + (slots.size + 1) },
-            createdAt = now, updatedAt = now, tree = roleSaveTree(role), mechState = roleSaveMech(role)))
-        RoleSaves.save(role, slots)
-    }
 
-    fun saveToRoleSlot(role: String, slotId: String) {
-        val slots = RoleSaves.load(role)
-        val slot = slots.firstOrNull { it.id == slotId } ?: return
-        slot.tree = roleSaveTree(role)
-        slot.mechState = roleSaveMech(role)
-        slot.updatedAt = utcNowIso()
-        RoleSaves.save(role, slots)
-    }
 
-    fun loadRoleSlot(role: String, slotId: String) {
-        val slots = RoleSaves.load(role)
-        val slot = slots.firstOrNull { it.id == slotId } ?: return
-        // 写回该角色的磁盘树/机制文件；若该角色当前正被加载，则载入内存并刷新界面
-        try { TreeStore.save(treeFileForRole(role), SaveFile(role, "", slot.tree, treeTs = slot.updatedAt)) } catch (_: Exception) {}
-        val ms = slot.mechState
-        if (ms != null) {
-            try { stateFileForRole(role).parentFile?.mkdirs(); stateFileForRole(role).writeText(JsonS.stringify(ms, pretty = true), Charsets.UTF_8) } catch (_: Exception) {}
-        }
-        if (role == syncCardId(selectedRoles) && selectedRoles.size == 1) {
-            tree.loadData(slot.tree)
-            tree.fixLeaf()
-            mech.stateFile = stateFileForRole(role)
-            mech.resetConfigTracking()
-            mech.reload(mechConfig(), tree, reset = true)
-            refreshChain()
-        }
-    }
 
-    fun deleteRoleSlot(role: String, slotId: String) {
-        RoleSaves.save(role, RoleSaves.load(role).filter { it.id != slotId })
-    }
 
-    fun renameRoleSlot(role: String, slotId: String, label: String) {
-        val slots = RoleSaves.load(role)
-        slots.firstOrNull { it.id == slotId }?.label = label.ifBlank { "未命名存档" }
-        RoleSaves.save(role, slots)
-    }
 
-    fun reloadMech() {
-        // 角色配置保存后重新加载：泛用化 —— 引擎检测配置签名变化，自动字段级对齐
-        // （新增字段补 initial、定义变了的字段重置、删掉的字段移除、没变的保留累加）
-        mech.stateFile = stateFileFor()  // 确保第三个文件夹状态文件就位
-        mech.reload(mechConfig(), tree, reset = true)
-        mech.battleCfg = mechBattleConfig()
-        mech.playerCfg = playerBattleConfig()
-        mech.playerCfg = playerBattleConfig()
-        mech.initBattle()
-        // 改配置 = 新基准：把对齐后的状态写回当前叶子快照（并落盘），
-        // 否则下次启动/回溯会从旧快照恢复出旧值（如新增字段 initial=3 却显示旧快照的 2）
-        try {
-            val leaf = tree.getNode(tree.currentLeafId)
-            if (leaf != null && mech.state != null) {
-                val meta = leaf.metadata as? J.Obj
-                val metaRef = if (meta != null) meta else J.Obj().also { leaf.metadata = it }
-                metaRef.fields["ms"] = mech.snapshot() ?: J.Null
-            }
-            saveTree()
-        } catch (_: Exception) {
-        }
-        persistMechAsync()  // 同时落第三个文件夹 JSON（与树双写，双保险）
-        mechTick++
-    }
-
-    fun activeCardFace(): String {
-        val n = selectedRoles.firstOrNull() ?: return ""
-        return advancedByRole[n]?.fields?.get("card_face")?.str() ?: ""
-    }
 
     /** 群聊选角：与 PC 端 `_pick_group_speaker` 行为对齐 —— 公平 + 相关性 + 意外。
      *  - 公平：发言越少权重越高（speakCounts），防双人死循环/饿死后排；
      *  - 相关：用角色提示词与用户最后一句的中文 2~3 字 shingle 重叠；
      *  - 意外：小概率随机挑（真人会冷场/抢话）。
      *  @角色名 显式指定在 sysPrompt 里已解析进 targetRole，走不到这里。 */
-    fun pickGroupSpeaker(roster: List<String>, userText: String): String {
-        if (roster.isEmpty()) return ""
-        val last = lastSpeaker
-        val cands = (roster.filter { it != last }.ifEmpty { roster })
-        fun fair(name: String): Double = 1.0 / (1.0 + (speakCounts[name] ?: 0))
-        fun ngrams(s: String, n: Int): Set<String> {
-            val t = s.replace(Regex("\\s+"), "")
-            if (t.length < n) return emptySet()
-            return (0..(t.length - n)).map { t.substring(it, it + n) }.toSet()
-        }
-        fun relevance(name: String): Double {
-            val p = roles.find { it.first == name }?.second ?: return 0.0
-            val prof = ngrams(p, 2) + ngrams(p, 3)
-            val msg = ngrams(userText, 2) + ngrams(userText, 3)
-            val info = msg.filter { g -> g.any { it in '\u4e00'..'\u9fff' } && !Regex("""[\s，。！？、的了是在我你他她这那]""").containsMatchIn(g) }
-            return (info.size.coerceAtMost(4)) / 4.0
-        }
-        val scorer = cands.map { nm -> (2.0 * fair(nm) + 1.6 * relevance(nm)) to nm }
-            .sortedByDescending { it.first }
-        val total = scorer.sumOf { it.first }.also { if (it <= 0.0) return cands.random() }
-        var r = kotlin.random.Random.nextDouble() * total
-        var chosen = scorer.first().second
-        var acc = 0.0
-        for ((sc, nm) in scorer) { acc += sc; if (r <= acc) { chosen = nm; break } }
-        if (cands.size > 1 && kotlin.random.Random.nextDouble() < 0.12)
-            chosen = cands.random()
-        return chosen
-    }
 
     /** 群聊说话人兜底（修复「回复显示成 AI」）：模型没输出 [角色名]: 前缀时，
      *  用本轮选中的发言角色 lastSpeaker 归属（对齐 PC 端 _group_speaker 兜底）。 */
-    fun resolveSpeaker(parsed: String?): String? {
-        val p = parsed?.trim()
-        if (!p.isNullOrBlank()) return p
-        return if (selectedRoles.size > 1) lastSpeaker?.takeIf { it.isNotBlank() } else null
-    }
 
-    fun buildSystemPrompt(targetRole: String? = null, userText: String = ""): String {
-        val preset = PRESETS[presetIdx]
-        val sb = StringBuilder()
-        if (preset.prefix.isNotBlank()) sb.append(preset.prefix).append(10.toChar()).append(10.toChar())
-        val chosen = roles.filter { it.first in selectedRoles }
-        if (chosen.size > 1) {
-            // 真·多角色群聊（物理隔离）：只注入目标角色提示词；未指定则用【公平+相关性+意外】选角
-            var target = targetRole
-            val roster = chosen.map { it.first }
-            if (target == null || target !in roster) {
-                target = pickGroupSpeaker(roster, userText)
-            }
-            lastSpeaker = target
-            speakCounts[target] = (speakCounts[target] ?: 0) + 1
-            chosen.firstOrNull { it.first == target }?.let { (_, p) ->
-                // assembleRolePrompt 在「没有 legacy」时自己就会以身份行开头。
-                // 这里原来无条件再加一遍 → 群聊里身份声明出现两次，模型会跟着复述。
-                // （单角色分支不重复，只有群聊有这个毛病。）
-                if (!p.trimStart().startsWith("你现在的身份是")) {
-                    sb.append("你现在的身份是：").append(target).append("。").append(10.toChar())
-                }
-                sb.append(p).append(10.toChar()).append(10.toChar())
-            }
-            // 角色高级设置（内置游戏/额外提示）只注入目标角色
-            advancedByRole[target]?.let { adv ->
-                val game = adv.fields["game"] as? J.Obj
-                if (game != null) {
-                    val gRules = game.fields["rules"]?.str() ?: ""
-                    if (gRules.isNotBlank()) {
-                        val gName = game.fields["name"]?.str()?.takeIf { it.isNotBlank() } ?: target
-                        sb.append("【内置游戏：").append(gName).append("】").append(10.toChar())
-                        sb.append(gRules).append(10.toChar())
-                        game.fields["state"]?.str()?.takeIf { it.isNotBlank() }?.let {
-                            sb.append("初始状态：").append(it).append(10.toChar())
-                        }
-                        sb.append("你和玩家按上述规则进行游戏：你负责推进游戏、判定行动、维护并汇报状态；玩家输入即为游戏中的行动。")
-                            .append(10.toChar()).append(10.toChar())
-                    }
-                }
-                adv.fields["extra_prompt"]?.str()?.takeIf { it.isNotBlank() }?.let {
-                    sb.append(it).append(10.toChar()).append(10.toChar())
-                }
-            }
-        } else {
-            for ((n, p) in chosen) {
-                sb.append(p).append(10.toChar()).append(10.toChar())
-            }
-            // 角色卡高级设置（开发者模式）：内置游戏 / 额外提示 → 注入系统提示
-            selectedRoles.firstOrNull()?.let { firstRole ->
-                val adv = advancedByRole[firstRole] ?: return@let
-                val game = adv.fields["game"] as? J.Obj
-                if (game != null) {
-                    val gRules = game.fields["rules"]?.str() ?: ""
-                    if (gRules.isNotBlank()) {
-                        val gName = game.fields["name"]?.str()?.takeIf { it.isNotBlank() } ?: firstRole
-                        sb.append("【内置游戏：").append(gName).append("】").append(10.toChar())
-                        sb.append(gRules).append(10.toChar())
-                        game.fields["state"]?.str()?.takeIf { it.isNotBlank() }?.let {
-                            sb.append("初始状态：").append(it).append(10.toChar())
-                        }
-                        sb.append("你和玩家按上述规则进行游戏：你负责推进游戏、判定行动、维护并汇报状态；玩家输入即为游戏中的行动。")
-                            .append(10.toChar()).append(10.toChar())
-                    }
-                }
-                adv.fields["extra_prompt"]?.str()?.takeIf { it.isNotBlank() }?.let {
-                    sb.append(it).append(10.toChar()).append(10.toChar())
-                }
-            }
-        }
-        // 机制卡（好感度/状态/事件）→ 注入系统提示
-        val mechBlock = mech.promptBlock()
-        if (mechBlock.isNotBlank()) sb.append(mechBlock).append(10.toChar()).append(10.toChar())
-        // 战斗系统（招式/公式/buff）→ 注入系统提示
-        val battleBlock = mech.battlePromptBlock()
-        if (battleBlock.isNotBlank()) sb.append(battleBlock).append(10.toChar()).append(10.toChar())
-        // 去 AI 味：人性化对话规则（设置可关）
-        if (humanize) {
-            sb.append("【对话人性化（必守）】").append(10.toChar())
-                .append("1. 具体不抽象：说细节（颜色/气味/味道/感受），说「我煮了番茄鸡蛋面，有点咸但很满足」而不是「我吃过了」。").append(10.toChar())
-                .append("2. 日常生活每次都有变化：食物、天气、活动、心情不固定——不要每次都吃同样的东西、说同样的话。").append(10.toChar())
-                .append("3. 允许口语与不完美：停顿（……）、语气词（嗯/啊/唉）、抱怨、小失误。").append(10.toChar())
-                .append("4. 不要模板化：不用固定开场/结尾/句式，不要列表式回复，不用「作为AI」「抱歉我无法」这类词。").append(10.toChar())
-                .append("5. 聊过的事自然提起，像真的记得（吃过的饭、去过的地方、说过的话）。").append(10.toChar())
-                .append(10.toChar())
-        }
-        // 语言锚：没有这条，角色名/世界观带外文（例如假名角色名）时正文会整段漂成外语
-        if (humanize) {
-            sb.append(LANGUAGE_ANCHOR).append(10.toChar()).append(10.toChar())
-        }
-        if (chosen.size > 1) {
-            sb.append("这是一场多人角色扮演群聊，群成员名单：").append(chosen.joinToString("、") { it.first }).append("。")
-            sb.append(10.toChar())
-            sb.append("群聊规则（必守）：").append(10.toChar())
-            sb.append("1. 你现在扮演【").append(lastSpeaker ?: chosen.first().first).append("】，只以该角色的人设和口吻发言，绝不模仿其他角色。").append(10.toChar())
-            sb.append("2. 回复格式必须为：[角色名]: 内容（角色名与群成员名单完全一致）。").append(10.toChar())
-            sb.append("3. 用户消息以「@角色名 内容」指定发言对象；未指定时由与内容最相关的角色回应。").append(10.toChar())
-            sb.append("4. 严禁替用户（玩家）发言，严禁让多个角色在同一轮同时说话。").append(10.toChar())
-            sb.append("5. 若此刻没有想说的，只回复：[角色名]: 沉默。").append(10.toChar()).append(10.toChar())
-        }
-        val chosenWorlds = worlds.filter { it.first in selectedWorlds }
-        if (chosenWorlds.isNotEmpty()) {
-            sb.append("【世界设定】").append(10.toChar())
-            for ((n, d) in chosenWorlds) sb.append(n).append("：").append(d).append(10.toChar())
-            sb.append(10.toChar())
-        }
-        val pp = personaPrompt()
-        if (pp.isNotBlank()) {
-            sb.append(pp).append(10.toChar()).append(10.toChar())
-        }
-        if (preset.rules.isNotBlank()) sb.append(preset.rules).append(10.toChar()).append(10.toChar())
-        val injection = registry.contextInjection()
-        if (injection.isNotBlank()) sb.append(injection).append(10.toChar()).append(10.toChar())
-        if (preset.suffix.isNotBlank()) sb.append(preset.suffix)
-        return sb.toString().trim()
-    }
 
-    fun sysPrompt(userText: String): String {
-        // 群聊：解析 @角色 → 目标角色（物理隔离）；未指定时 buildSystemPrompt 内部轮换
-        var target: String? = null
-        if (selectedRoles.size > 1) {
-            val m = Regex("""@([^\s@]{1,30})""").find(userText)
-            if (m != null) {
-                val name = m.groupValues[1]
-                if (name in selectedRoles) target = name
-            }
-        }
-        var base = buildSystemPrompt(target, userText)
-        // 卡面·角色塑造：让 AI 更有"活人味"（生活细节 + 自然说话方式）
-        base = base + 10.toChar() + 10.toChar() +
-            "【角色卡面·角色塑造】" + 10.toChar() +
-            "你是一个有血有肉的活人，不是一个只会推进剧情的AI。每句话都要像真人说出来：" + 10.toChar() +
-            "1. 生活细节：自然带出你的日常（刚刚在做什么、周围环境、习惯的小动作），让对话有生活气息，不要干巴巴。" + 10.toChar() +
-            "2. 说话方式：严格贴合人设口吻（语速、语气、口头禅、句式），说人话、有口语感，绝不要书面腔、官方腔。" + 10.toChar() +
-            "3. 情绪与反应：有真实的情感起伏，会笑、会叹气、会停顿、会犹豫；对玩家的每个反应都合乎你的人格。" + 10.toChar() +
-            "4. 不要急着推进剧情，先像个人一样自然地回应；故事由互动推动，不是由你念稿推动。"
-        // 本轮角色锚点：重申性格/年龄/口吻 + 防文学化（对抗长对话漂移）
-        val anchor = roleAnchorBlock(roles, selectedRoles)
-        if (anchor.isNotBlank()) base = base + 10.toChar() + 10.toChar() + anchor
-        // 破甲模式：任一选中角色开启则启用【创作前提】。
-        // 注意：它不再拼在最前面（那里离当前轮最远、最没分量），
-        // 改为挂在系统提示末尾 —— 详见 Models.kt 里 CREATION_PREMISE 的说明。
-        val premise = if (selectedRoles.any { roleUnlocked[it] == true }) CREATION_PREMISE else ""
-        fun withPremise(s: String): String =
-            if (premise.isBlank()) s else s + 10.toChar() + 10.toChar() + premise
-
-        // 穿梭语义：只注入当前所在世界的条目；未穿越时注入全部已选世界
-        val selWorlds = if (currentWorld.isNotBlank()) worlds.filter { it.first == currentWorld }
-            else worlds.filter { it.first in selectedWorlds }
-        val sel = selWorlds.flatMap { w -> worldEntries[w.first] ?: emptyList<WorldEntry>() }
-        if (sel.isEmpty()) return withPremise(base)
-        val inj = WorldBook.inject(userText, sel)
-        if (inj.isBlank()) return withPremise(base)
-        return withPremise(base + 10.toChar() + 10.toChar() + "【当前场景相关信息】" + 10.toChar() + inj)
-    }
 
     LaunchedEffect(Unit) {
         // 配置
@@ -1133,7 +698,7 @@ val importCardLauncher = rememberLauncherForActivityResult(ActivityResultContrac
         } catch (_: Exception) {
         }
         // 聊天树恢复（按当前选中角色加载对应文件）
-        val treeFile = treeFileFor()
+        val treeFile = st.treeFileFor()
         var localTreeTs: String? = null
         if (treeFile.exists()) {
             try {
@@ -1161,12 +726,12 @@ val importCardLauncher = rememberLauncherForActivityResult(ActivityResultContrac
                         if (syncCardId(selectedRoles) != cardId) return@withContext
                         // 关键：用「当前」本地 ts 再比对（可能已被用户新回复推进），而不用启动时
                         // 定格的旧 localTreeTs —— 否则慢网络拉取会在回复之后落地，把整树回滚成旧版
-                        val curTs = try { TreeStore.load(treeFileFor()).treeTs } catch (_: Exception) { localTreeTs }
+                        val curTs = try { TreeStore.load(st.treeFileFor()).treeTs } catch (_: Exception) { localTreeTs }
                         if (curTs == null || serverTs > curTs) {
                             tree.loadData(TreeData.fromJson(serverTree))
                             tree.fixLeaf()
-                            saveTree()
-                            refreshChain()
+                            st.saveTree()
+                            st.refreshChain()
                         }
                     }
                 }
@@ -1193,10 +758,10 @@ val importCardLauncher = rememberLauncherForActivityResult(ActivityResultContrac
         }
         // 机制/战斗初始化（防御：任何数据异常不得阻断启动）
         try {
-            mech.stateFile = stateFileFor()  // 第三个文件夹：机制状态 JSON（与树解耦）
-            mech.reload(mechConfig(), tree, reset = true)
-            mech.battleCfg = mechBattleConfig()
-        mech.playerCfg = playerBattleConfig()
+            mech.stateFile = st.stateFileFor()  // 第三个文件夹：机制状态 JSON（与树解耦）
+            mech.reload(st.mechConfig(), tree, reset = true)
+            mech.battleCfg = st.mechBattleConfig()
+        mech.playerCfg = st.playerBattleConfig()
             mech.initBattle()
         } catch (e: Exception) {
             android.util.Log.w("DICK", "机制初始化失败: " + (e.message ?: ""))
@@ -1217,7 +782,7 @@ val importCardLauncher = rememberLauncherForActivityResult(ActivityResultContrac
         } catch (_: Exception) {
         }
         ensureOpeningLine()
-        refreshChain()
+        st.refreshChain()
         // 插件
         registry.register(uiPlugin)
         registry.register(dice)
@@ -1236,357 +801,63 @@ val importCardLauncher = rememberLauncherForActivityResult(ActivityResultContrac
         jp.engine = engine
         gal.engine = engine
         gal.tree = tree
-        gal.mechConfigProvider = { mechConfig() }
+        gal.mechConfigProvider = { st.mechConfig() }
         gal.mechStateProvider = { mech.state }
         gal.mechEventProvider = { mech.lastEvent }
-        gal.saveTreeHook = { saveTree() }  // 选项写进树后立即落盘（供回档复原）
+        gal.saveTreeHook = { st.saveTree() }  // 选项写进树后立即落盘（供回档复原）
         for ((name, en) in savedStates) {
             registry.plugins.firstOrNull { it.name == name }?.enabled = en
         }
     }
 
-    fun saveConfig() {
-        val o = J.Obj()
-        o.fields["api_key"] = J.Str(apiKey)
-        o.fields["provider"] = J.Str(providerId)
-        o.fields["model"] = J.Str(model)
-        o.fields["base_url"] = J.Str(baseUrl)
-        o.fields["proxy"] = J.Str(proxy)
-        o.fields["relay_url"] = J.Str(relayUrl)
-        val stops = J.Arr()
-        parseStops(stopInput).forEach { stops.items.add(J.Str(it)) }
-        o.fields["stop_sequences"] = stops
-        tempInput.toFloatOrNull()?.let { o.fields["temperature"] = J.Num(it.toDouble(), tempInput) }
-        topPInput.toFloatOrNull()?.let { o.fields["top_p"] = J.Num(it.toDouble(), topPInput) }
-        o.fields["dev_mode"] = J.Bool(devMode)
-        o.fields["humanize"] = J.Bool(humanize)
-        o.fields["style_guard"] = J.Bool(styleGuard)
-        o.fields["style_guard_long"] = J.Bool(styleGuardLong)
-        o.fields["welcome_shown"] = J.Bool(true)
-        o.fields["current_world"] = J.Str(currentWorld)
-        o.fields["persona"] = J.Str(persona)
-        val selArr = J.Arr()
-        for (s in selectedRoles) selArr.items.add(J.Str(s))
-        o.fields["selected_roles"] = selArr
-        val keys = J.Obj()
-        for ((k, v) in apiKeysMap) keys.fields[k] = J.Str(v)
-        o.fields["api_keys"] = keys
-        o.fields["prompt_preset"] = J.Str(PRESETS[presetIdx].name)
-        o.fields["language"] = J.Str(language)
-        o.fields["ui_theme"] = J.Num(themeIdx.toDouble(), themeIdx.toString())
-        o.fields["ui_accent"] = J.Num(accentIdx.toDouble(), accentIdx.toString())
-        val ps = J.Obj()
-        for (p in registry.plugins) ps.fields[p.name] = J.Bool(p.enabled)
-        o.fields["plugin_states"] = ps
-        o.fields["galgame_count"] = J.Num(gal.count.toDouble(), gal.count.toString())
-        o.fields["galgame_auto"] = J.Bool(gal.auto)
-        o.fields["budget_idx"] = J.Num(budgetIdx.toDouble(), budgetIdx.toString())
-        // 时间流速：saveConfig 是【整体重建】的，不加进来就会被下次保存覆盖掉
-        // （和 Android 卡片编辑器丢 ev_ext 是同一类 bug）
-        o.fields["time_scale"] = J.Num(timeScale, timeScale.toString())
-        AppEnv.configFile().writeText(JsonS.stringify(o, pretty = true), Charsets.UTF_8)
-    }
 
-    fun engineChain(): List<MessageNode> {
-        val nodes = tree.getCurrentChainNodes()
-        val budget = BUDGETS[budgetIdx].first
-        if (budget <= 0) return nodes
-        // 简单预算：按 1 token ≈ 2 字符 裁剪最旧消息（保留系统提示在 prompt 里，这里只裁链）
-        var chars = 0
-        for (n in nodes) chars += n.content.length
-        var keep = nodes.size
-        while (keep > 1 && chars > budget * 2) {
-            chars -= nodes[nodes.size - keep].content.length
-            keep--
-        }
-        return nodes.takeLast(keep).map { n ->
-            val speaker = (n.metadata as? J.Obj)?.fields?.get("speaker")?.str()
-            if (n.role == "assistant" && !speaker.isNullOrBlank() && speaker != "AI") {
-                MessageNode(n.id, n.role, "[" + speaker + "]: " + n.content, n.parentId, n.childrenIds, n.timestamp, n.metadata)
-            } else n
-        }
-    }
 
     // ============================================================
     //  生活层 / 空间层：把界面状态接到 core 的钩子上（ChatBridge）
     // ============================================================
     // 世界卡 JSON：空间层要从 params 里读年代与地图（世界卡默认**替换**年代地图，
     // 想叠加得在 space 里写 "merge": true —— 与电脑端同一条规矩）。
-    fun currentWorldJson(): String? {
-        val n = currentWorld.takeIf { it.isNotBlank() }
-            ?: selectedWorlds.firstOrNull() ?: return null
-        val o = worldCards[n] ?: return null
-        return JsonS.stringify(o)
-    }
 
     // 角色卡 JSON：生活层读 advanced.life（年代/口味/忌口），空间层读 advanced.space。
-    fun roleJsonOf(name: String?): String? {
-        val n = name?.takeIf { it.isNotBlank() }
-            ?: lastSpeaker?.takeIf { selectedRoles.size > 1 && it.isNotBlank() }
-            ?: selectedRoles.firstOrNull() ?: return null
-        val o = J.Obj()
-        o.fields["name"] = J.Str(n)
-        advancedByRole[n]?.let { o.fields["advanced"] = it }
-        return JsonS.stringify(o)
-    }
 
-    fun currentRoleJson(): String? = roleJsonOf(null)
 
-    fun currentSpeaker(): String = lastSpeaker?.takeIf { selectedRoles.size > 1 && it.isNotBlank() }
-        ?: selectedRoles.firstOrNull() ?: ""
 
     /** 剥掉 [loc:…]/[ploc:…] 并记账；返回可直接显示/入树的文本。记账交给 io 线（写盘）。 */
-    fun consumeSpaceMoves(text: String, who: String, note: Boolean = true): String {
-        val (clean, moves) = ChatBridge.takeMoves(text)
-        if (moves.isNotEmpty() && note) {
-            Lanes.on(Lanes.io, "空间位置记账") {
-                val lines = ChatBridge.applyMoves(moves, who)
-                if (lines.isNotEmpty()) {
-                    withContext(Dispatchers.Main) {
-                        lines.forEach { sysMsgs.add(ChatMsg("空间", it)) }
-                    }
-                }
-            }
-        }
-        return clean
-    }
 
-    ChatBridge.chainProvider = { engineChain() }
-    ChatBridge.roleNameProvider = { currentSpeaker() }
-    ChatBridge.roleJsonProvider = { currentRoleJson() }
-    ChatBridge.worldJsonProvider = { currentWorldJson() }
+    ChatBridge.chainProvider = { st.engineChain() }
+    ChatBridge.roleNameProvider = { st.currentSpeaker() }
+    ChatBridge.roleJsonProvider = { st.currentRoleJson() }
+    ChatBridge.worldJsonProvider = { st.currentWorldJson() }
     // 空间层的"没显式给倍率时用哪一档"：手机端没有 time_scale.json 的读取逻辑，
     // 这里接到界面上那份（与电脑端读 time_scale 等价）。
     SpaceCore.scaleProvider = { TimeScale.current }
 
     var doSend: (String, ImageBitmap?, String?) -> Unit = { _, _, _ -> }
     var showQuickPanel by vm.showQuickPanel
-    var finFolded by remember { mutableStateOf(true) }   // 加号面板「财报」折叠区块默认收起
+    val finFoldedState = remember { mutableStateOf(true) }
+    var finFolded by finFoldedState   // 加号面板「财报」折叠区块默认收起
+    st = androidx.compose.runtime.remember { ChatState(
+        vm, scope, engine, registry, tree, worldCards, dice, memory, swipe, gal, mech,
+        search, financial, jp, uiPlugin, speakCounts,
+        mechTickState, lastSpeakerState, pendingImageState, finFoldedState,
+        context, tts, { t, bmp, d -> doSend(t, bmp, d) }, { ensureOpeningLine() }, { },
+    ) }
     val insertCmd: (String) -> Unit = { cmd ->
         input = if (input.isBlank()) cmd else input + " " + cmd
     }
 
-    fun send() {
-        val text = input.trim()
-        if (text.isEmpty() || busy) return
-        // 命令分发
-        if (text.startsWith("/")) {
-            sysMsgs.add(ChatMsg("系统", text))
-            if (text.trim().startsWith("/mettertools", ignoreCase = true)) {
-                // METTERTOOLS：按上限百分比一键填好感（罪恶都市梗；/mettertools 90 = 90%）
-                val pct = text.split(" ").getOrNull(1)?.toIntOrNull() ?: 100
-                val res = mech.setAffectionPercent(pct)
-                sysMsgs.add(ChatMsg("系统",
-                    if (res == null) "⚠️ 当前角色未启用好感度（机制卡 → 好感度）"
-                    else "✨ METTERTOOLS！好感度已填至 $pct% → $res。"))
-                mechTick++
-                refreshChain()
-                input = ""
-                return
-            }
-            if (text.trim().equals("/doc", ignoreCase = true) || text.trim().startsWith("/doc ", ignoreCase = true)) {
-                // Word 导出（Android 版）：导出聊天记录为文本并走系统分享（对位 PC /doc）
-                val txt = messages.joinToString(10.toChar().toString() + 10.toChar().toString()) { m ->
-                    (m.role + "：" + m.content)
-                }.ifBlank { "（暂无聊天记录）" }
-                val intent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
-                    type = "text/plain"
-                    putExtra(android.content.Intent.EXTRA_TEXT, txt)
-                    putExtra(android.content.Intent.EXTRA_SUBJECT, "DICK 聊天记录")
-                }
-                try { context.startActivity(android.content.Intent.createChooser(intent, "导出聊天记录")) } catch (_: Exception) {}
-                sysMsgs.add(ChatMsg("系统", "📤 已调起分享（导出聊天记录）"))
-                refreshChain()
-                input = ""
-                return
-            }
-            input = ""
-            val cmd = text
-            // 命令处理可能触发阻塞网络（/swipe /jp 等走 complete）；必须在后台线程，否则卡死主线程
-            scope.launch(Dispatchers.IO) {
-                val result = registry.handleCommand(cmd)
-                scope.launch(Dispatchers.Main) {
-                    sysMsgs.add(ChatMsg("系统", result ?: I18n.t("unknown_cmd", "未知命令，输入 /dice 查看可用命令")))
-                    refreshChain()
-                }
-            }
-            return
-        }
-        // 传图补丁：图片先走免费视觉链转描述，再喂给 DeepSeek 思考
-        val img = pendingImage
-        if (img != null) {
-            busy = true
-            input = ""
-            streaming = ""
-            // 图片理解是网络 + 大字节的活（原来又是裸 Thread），走 vision 线：一次一张，看得见
-            Lanes.on(Lanes.vision, "图片描述") {
-                val desc = VisionHelper.describe(
-                    img.bytes, img.mime,
-                    "请用中文详细描述这张图片的内容（包括文字、物体、场景、数据，如有表格请逐项列出）。",
-                )
-                withContext(Dispatchers.Main) {
-                    if (desc == null) {
-                        busy = false
-                        sysMsgs.add(ChatMsg("系统", I18n.t("vision_fail", "图片没认出来，稍后再试一次")))
-                        refreshChain()
-                    } else {
-                        doSend(text, img.bmp, "【图片描述】" + desc)
-                    }
-                }
-            }
-            return
-        }
-        doSend(text, null, null)
-    }
 
     /** Galgame 选项：点选 = 隐藏 ROLL 出结果（概率不公布）+ 应用效果 + 以该行动发言 */
-    fun pickChoice(item: GalgamePlugin.ChoiceItem) {
-        if (busy || item.text.isBlank()) return
-        // 隐藏 ROLL：概率按配置百分比（机制卡 mechanics.roll，默认 暴击10/稀有4/大失败2/天选0.1/坍缩0.001）
-        val rollCfg = (mech.config?.fields?.get("roll") as? J.Obj)?.fields ?: emptyMap()
-        fun pct(key: String, def: Double): Double {
-            val v = (rollCfg[key] as? J.Num)?.v ?: def
-            return (v.coerceIn(0.0, 100.0)) / 100.0
-        }
-        // 天选 = 千分之一（兼容旧键 legend）
-        val pChosen = pct("chosen", pct("legend", 0.1))
-        val pCollapse = pct("collapse", 0.001)
-        val pFail = pct("fail", 2.0)
-        val pRare = pct("rare", 4.0)
-        val pCrit = pct("crit", 10.0)
-        val r = Random.nextDouble()
-        val kind: String
-        val note: String
-        when {
-            r < pCollapse -> { kind = "collapse"; note = "🌌 坍缩：十万分之一的奇迹坍缩成现实！" }
-            r < pCollapse + pChosen -> { kind = "chosen"; note = "🌟 天选：千分之一的天命眷顾被触发了！" }
-            r < pCollapse + pChosen + pFail -> { kind = "fail"; note = "💥 结果出了岔子！" }
-            r < pCollapse + pChosen + pFail + pRare -> { kind = "rare"; note = "✨ 命运的眷顾：触发了稀有事件！" }
-            r < pCollapse + pChosen + pFail + pRare + pCrit -> { kind = "crit"; note = "✨ 效果暴击！" }
-            else -> { kind = "normal"; note = "" }
-        }
-        var aff = item.aff
-        if (aff != null) {
-            when (kind) {
-                "crit" -> aff = aff * 2
-                "fail" -> aff = -aff
-            }
-        } else if (kind == "crit" || kind == "fail") {
-            // 无机制效果的选项：暴击/失败不空转提示
-        }
-        mech.applyEffect(aff, item.st, forceRelative = true)  // GAL 选项：int 强制累加（无符号也按 +N）
-        persistMechAsync()  // GAL 选项结算后实时落盘（否则重启从旧 JSON 恢复 → 看似"从0加"）
-        mechTick++
-        if (kind == "rare") {
-            mech.pendingEvent = J.Obj().apply {
-                fields["id"] = J.Str("_roll_rare")
-                fields["name"] = J.Str("命运的眷顾")
-                fields["prompt"] = J.Str("（稀有事件）这段剧情出现了意想不到的转折，请自然地演出一个令人惊喜的展开。")
-            }
-            sysMsgs.add(ChatMsg("系统", note))
-        } else if (kind == "chosen") {
-            mech.pendingEvent = J.Obj().apply {
-                fields["id"] = J.Str("_roll_chosen")
-                fields["name"] = J.Str("天选")
-                fields["prompt"] = J.Str("（天选事件）千分之一的天命眷顾发生了！请演出一个不可思议的、足以载入史册的剧情转折。")
-            }
-            sysMsgs.add(ChatMsg("系统", note))
-        } else if (kind == "collapse") {
-            mech.collapseBattleValues()
-            mech.pendingEvent = J.Obj().apply {
-                fields["id"] = J.Str("_roll_collapse")
-                fields["name"] = J.Str("坍缩")
-                fields["prompt"] = J.Str("（坍缩事件）十万分之一的奇迹坍缩成现实！战斗数值全部坍缩为 2000。请演出一个撼动世界观的、堪称神话的剧情展开。")
-            }
-            sysMsgs.add(ChatMsg("系统", note))
-        } else if ((kind == "crit" || kind == "fail") && item.aff != null) {
-            sysMsgs.add(ChatMsg("系统", note))
-        }
-        gal.clearChoices()
-        // 选项是按钮上的短标签；真正发言用 say（生成时补全好的玩家台词）。
-        // 没有 say（旧选项、模型没给）就退回标签 —— 行为与以前一致。
-        doSend(item.say?.takeIf { it.isNotBlank() } ?: item.text, null, null)
-    }
 
     /** 战斗：玩家出招 → 引擎结算 → 结算横幅 + 行动发出（AI 演出） */
-    fun battleMove(moveId: String, moveName: String) {
-        if (busy) return
-        val (txt, isLegend) = mech.resolveMove(moveId)
-        val t = txt ?: return
-        if (t.startsWith("⚠️")) {
-            sysMsgs.add(ChatMsg("系统", t))
-            return
-        }
-        if (isLegend) {
-            mech.pendingEvent = J.Obj().apply {
-                fields["id"] = J.Str("_battle_legend")
-                fields["name"] = J.Str("天选之人")
-                fields["prompt"] = J.Str("（传说事件）战斗中发生了十万分之一的奇迹！请演出一个足以载入史册的惊天转折。")
-            }
-            sysMsgs.add(ChatMsg("系统", "🌟 天选之人：十万分之一的战斗奇迹被触发了！"))
-        }
-        sysMsgs.add(ChatMsg("系统", t))
-        mech.pendingEvent = J.Obj().apply {
-            fields["id"] = J.Str("_battle_result")
-            fields["name"] = J.Str("战斗结算")
-            fields["prompt"] = J.Str("（战斗结算）$t 请以角色口吻演出受击反应与战况。")
-        }
-        mechTick++
-        doSend("使用 $moveName", null, null)
-    }
 
     /** 把模型回复落地成一条 assistant 节点。
      *  发消息和「开局演出」共用 —— 抽出来是因为两边要做的事完全一样
      *  （剥标签 → 正则管道 → 风格闸 → 建节点 → 存树 → 刷界面 → 结局检测），
      *  各写一份迟早会走偏。 */
-    fun landAssistantReply(raw: String, parentId: String?, userText: String) {
-        val parsed = parseSpeaker(raw, selectedRoles)
-        var finalReply = parsed.second
-        val stripped = mech.stripTags(parsed.second, apply = true)
-        // 位置标注先收掉（[loc:学校|骑车]）：显示与入树都不该带它，
-        // 同时把它记成"她此刻在哪"。剥离必须同步——文本马上要上屏；记账走 io 线。
-        val spaceWho = currentSpeaker().ifBlank { "她" }
-        val despaced = consumeSpaceMoves(stripped, spaceWho)
-        // 里层结算完成 → 外层泛用变量检测存储：实时落盘第三个文件夹 JSON
-        // （走 io 线：这是文件写，原来在主线程上做）
-        persistMechAsync()
-        // 正则管道（ai 作用域）：标签剥离后、写入树前应用
-        val regexed = applyRegex(despaced, "ai", selectedRoles, advancedByRole, persona)
-        // 顺序要紧：先"剥位置标签"（无论有没有机制卡都算），再叠上正则管道的结果
-        if (despaced != parsed.second) finalReply = despaced
-        if (mech.state != null) {
-            if (regexed != despaced) finalReply = regexed
-            val ev = mech.checkEvents(userText)
-            if (ev != null) mech.pendingEvent = ev
-        }
-        val meta2 = J.Obj()
-        meta2.fields["speaker"] = resolveSpeaker(parsed.first)?.let { J.Str(it) } ?: J.Null
-        mech.state?.let { meta2.fields["ms"] = mech.snapshot() ?: J.Null }
-        // 风格闸：写树前洗文学腔表达（生活词/比喻→事实/拆长句，不删内容）
-        finalReply = StyleGuard.guard(finalReply, styleGuard, styleGuardLong)
-        tree.addNode("assistant", finalReply, parentId, meta2)
-        mechTick++
-        saveTree()
-        refreshChain()
-        checkEnding()  // 结局达成检测：命中→弹结局横幅+注入收束（不打扰当前回复）
-        streaming = ""
-        busy = false
-        // 插件钩子在 plugin 线上跑：慢插件（联网/合成）不再挡着"回复已显示"这一步
-        Lanes.on(Lanes.plugin, "插件钩子") { try { registry.onMessageReceived(userText, finalReply) } catch (_: Exception) {} }
-        if (speakReplies) speak(tts, finalReply)
-    }
 
     /** 开局演出失败时的退路：把作者写的原文显示出来，界面不能空着。
      *  有原文总比一片空白强 —— 用户至少知道角色在说什么。 */
-    fun fallbackOpening(role: String, firstMes: String) {
-        if (!tree.nodes.isEmpty()) return   // 已经有内容了就别补刀
-        val meta = J.Obj()
-        meta.fields["speaker"] = J.Str(role)
-        meta.fields["greeting"] = J.Bool(true)
-        tree.addNode("assistant", firstMes, parentId = null, metadata = meta)
-        saveTree()
-        refreshChain()
-    }
 
     // 开场的真正实现：放在 sysPrompt / engineChain / landAssistantReply 之后。
     // 三步：
@@ -1611,10 +882,10 @@ val importCardLauncher = rememberLauncherForActivityResult(ActivityResultContrac
                 openingLoading = true                                       // ③
                 // chain 用空链：开局没有用户消息，模型直接对着场景演第一幕。
                 // 场景指令拼在 system 末尾 —— 越靠近这次要生成的内容，权重越高。
-                val sys = sysPrompt(firstMes) + 10.toChar() + 10.toChar() +
-                    openingInstruction(firstMes, userDisplayName())
+                val sys = st.sysPrompt(firstMes) + 10.toChar() + 10.toChar() +
+                    openingInstruction(firstMes, st.userDisplayName())
                 engine.send(
-                    chain = engineChain(),
+                    chain = st.engineChain(),
                     systemPrompt = sys,
                     onStream = { full ->
                         // 这块看着像"该丢到后台去"，但它不能搬：stripTags 会写 mech 的 state
@@ -1627,7 +898,7 @@ val importCardLauncher = rememberLauncherForActivityResult(ActivityResultContrac
                     onResponse = { reply, _ ->
                         scope.launch(Dispatchers.Main) {
                             openingLoading = false
-                            landAssistantReply(reply, null, firstMes)
+                            st.landAssistantReply(reply, null, firstMes)
                         }
                     },
                     onError = { msg ->
@@ -1638,7 +909,7 @@ val importCardLauncher = rememberLauncherForActivityResult(ActivityResultContrac
                             if (msg.isNotBlank()) {
                                 sysMsgs.add(ChatMsg("系统", "开场生成失败：$msg"))
                             }
-                            fallbackOpening(role, firstMes)
+                            st.fallbackOpening(role, firstMes)
                         }
                     },
                 )
@@ -1657,26 +928,26 @@ val importCardLauncher = rememberLauncherForActivityResult(ActivityResultContrac
             sysMsgs.add(ChatMsg("安全", TextGuard.summary(tgReport)))
         }
         // Quick Reply 宏展开：{player} {char} {world} {random:a|b|c}
-        val expanded = expandMacros(cleanText, userDisplayName(), selectedRoles.firstOrNull() ?: "AI", currentWorld)
+        val expanded = expandMacros(cleanText, st.userDisplayName(), selectedRoles.firstOrNull() ?: "AI", currentWorld)
         val processed = registry.onMessageSend(expanded) ?: return@doSend
         // 正则管道（user 作用域）：存储前应用 → 树里存转换后文本
         // 位置标注（[ploc:家/厨房]）在入树前收掉：它是"你到哪了"，不该显示给玩家，
         // 但要记进空间状态（玩家位置也一样会算路费）。
-        val sent = consumeSpaceMoves(applyRegex(processed, "user", selectedRoles, advancedByRole, persona), currentSpeaker().ifBlank { "她" })
+        val sent = st.consumeSpaceMoves(applyRegex(processed, "user", selectedRoles, advancedByRole, persona), st.currentSpeaker().ifBlank { "她" })
         input = ""
         busy = true
         streaming = ""
         val treeContent = if (visionNote == null) sent else "用户发送了一张图片。视觉模型对图片的描述：\n" + visionNote + "\n\n用户输入：" + sent
         val meta = J.Obj()
-        meta.fields["speaker"] = if (persona.isBlank()) J.Null else J.Str(userDisplayName())
+        meta.fields["speaker"] = if (persona.isBlank()) J.Null else J.Str(st.userDisplayName())
         mech.state?.let { meta.fields["ms"] = mech.snapshot() ?: J.Null }
         val parentId = tree.addNode("user", treeContent, parentId = tree.currentLeafId, metadata = meta)
         if (image != null) nodeImages[parentId] = image
         pendingImage = null
-        refreshChain()
+        st.refreshChain()
         financial.activePreset = PRESETS[presetIdx].name
-        swipe.chain = engineChain()
-        var sys = sysPrompt(sent)
+        swipe.chain = st.engineChain()
+        var sys = st.sysPrompt(sent)
         // 机制卡：待触发事件注入（只进请求，不入历史树）
         mech.pendingEvent?.let { ev ->
             sys += "\n\n【事件触发：" + (ev.fields["name"]?.str() ?: ev.fields["id"]?.str() ?: "") + "】\n" +
@@ -1685,21 +956,21 @@ val importCardLauncher = rememberLauncherForActivityResult(ActivityResultContrac
         }
         swipe.systemPrompt = sys
         engine.send(
-            chain = engineChain(),
+            chain = st.engineChain(),
             systemPrompt = sys,
             // 与开局处同一个取舍：stripTags 会写 mech state，只能主线程串行（见上面的长注释）
             onStream = { full -> scope.launch(Dispatchers.Main) { streaming = ChatBridge.takeMoves(mech.stripTags(full, apply = false)).first } },
             onResponse = { reply, _ ->
                 scope.launch(Dispatchers.Main) {
                     // 落地逻辑与「开局演出」共用同一个函数，避免两处走偏
-                    landAssistantReply(reply, parentId, sent)
+                    st.landAssistantReply(reply, parentId, sent)
                     if (autoTurn && selectedRoles.size > 1) {
                         val hint = listOf(com.dick.core.MessageNode(
                             role = "user",
                             content = "（请让另一位角色继续对话）",
                         ))
-                        val chain = engineChain() + hint
-                        val sp = sysPrompt(processed)
+                        val chain = st.engineChain() + hint
+                        val sp = st.sysPrompt(processed)
                         // 关键：complete 是阻塞 HTTP，必须在后台线程跑（否则卡死主线程 → 未响应/只有重启）
                         scope.launch(Dispatchers.IO) {
                             val extra = try { engine.complete(chain, sp) } catch (e: Exception) { null }
@@ -1707,13 +978,13 @@ val importCardLauncher = rememberLauncherForActivityResult(ActivityResultContrac
                                 if (!extra.isNullOrBlank()) {
                                     val p2 = parseSpeaker(extra, selectedRoles)
                                     // 群聊自动接话的第二条回复同样要收位置标注（否则标签会漏到界面上）
-                                    val p2clean = consumeSpaceMoves(p2.second, currentSpeaker().ifBlank { "她" })
+                                    val p2clean = st.consumeSpaceMoves(p2.second, st.currentSpeaker().ifBlank { "她" })
                                     val m3 = J.Obj()
-                                    m3.fields["speaker"] = resolveSpeaker(p2.first)?.let { J.Str(it) } ?: J.Null
+                                    m3.fields["speaker"] = st.resolveSpeaker(p2.first)?.let { J.Str(it) } ?: J.Null
                                     tree.addNode("assistant", StyleGuard.guard(p2clean, styleGuard, styleGuardLong), parentId, m3)
-                                    saveTree()
-                                    refreshChain()
-                                    checkEnding()  // autoTurn 第二条回复后也判结局
+                                    st.saveTree()
+                                    st.refreshChain()
+                                    st.checkEnding()  // autoTurn 第二条回复后也判结局
                                     if (speakReplies) speak(tts, p2clean)
                                 }
                             }
@@ -1724,7 +995,7 @@ val importCardLauncher = rememberLauncherForActivityResult(ActivityResultContrac
             onError = { err ->
                 scope.launch(Dispatchers.Main) {
                     sysMsgs.add(ChatMsg("系统", "❌ " + err))
-                    refreshChain()
+                    st.refreshChain()
                     streaming = ""
                     busy = false
                 }
@@ -1732,378 +1003,35 @@ val importCardLauncher = rememberLauncherForActivityResult(ActivityResultContrac
         )
     }
 
-    fun regenerate(msg: ChatMsg) {
-        if (busy || msg.nodeId == null) return
-        val node = tree.getNode(msg.nodeId) ?: return
-        val parentId = node.parentId ?: return
-        val userText = tree.getNode(parentId)?.content ?: ""
-        busy = true
-        streaming = ""
-        engine.send(
-            chain = tree.chainUpTo(parentId),
-            systemPrompt = sysPrompt(userText),
-            onStream = { full -> scope.launch(Dispatchers.Main) { streaming = full } },
-            onResponse = { reply, _ ->
-                scope.launch(Dispatchers.Main) {
-                    val parsed = parseSpeaker(reply, selectedRoles)
-                    val m2 = J.Obj()
-                    m2.fields["speaker"] = resolveSpeaker(parsed.first)?.let { J.Str(it) } ?: J.Null
-                    tree.addNode("assistant", StyleGuard.guard(parsed.second, styleGuard, styleGuardLong), parentId, m2)
-                    saveTree()
-                    refreshChain()
-                    streaming = ""
-                    busy = false
-                }
-            },
-            onError = { err ->
-                scope.launch(Dispatchers.Main) {
-                    sysMsgs.add(ChatMsg("系统", "❌ " + err))
-                    refreshChain()
-                    streaming = ""
-                    busy = false
-                }
-            },
-        )
-    }
 
-    fun switchSwipe(msg: ChatMsg, delta: Int) {
-        if (msg.nodeId == null) return
-        val sibs = tree.siblingsOf(msg.nodeId).filter { it.role == "assistant" }
-        if (sibs.size < 2) return
-        val ni = (msg.swipeIndex + delta).coerceIn(0, sibs.size - 1)
-        if (ni == msg.swipeIndex) return
-        tree.setCurrentLeaf(sibs[ni].id)
-        mech.restore(tree, sibs[ni].id)
-        mechTick++
-        saveTree()
-        refreshChain()
-    }
 
-    fun editMessage(msg: ChatMsg, newText: String) {
-        if (msg.nodeId == null || newText.isBlank()) return
-        val node = tree.getNode(msg.nodeId) ?: return
-        if (node.role == "assistant") {
-            tree.editContent(msg.nodeId, newText)
-            saveTree()
-            refreshChain()
-            return
-        }
-        if (busy) return
-        val newId = tree.copyNode(msg.nodeId, newText) ?: return
-        busy = true
-        streaming = ""
-        engine.send(
-            chain = tree.chainUpTo(newId),
-            systemPrompt = sysPrompt(newText),
-            onStream = { full -> scope.launch(Dispatchers.Main) { streaming = full } },
-            onResponse = { reply, _ ->
-                scope.launch(Dispatchers.Main) {
-                    val parsed = parseSpeaker(reply, selectedRoles)
-                    val m2 = J.Obj()
-                    m2.fields["speaker"] = resolveSpeaker(parsed.first)?.let { J.Str(it) } ?: J.Null
-                    tree.addNode("assistant", StyleGuard.guard(parsed.second, styleGuard, styleGuardLong), newId, m2)
-                    saveTree()
-                    refreshChain()
-                    streaming = ""
-                    busy = false
-                }
-            },
-            onError = { err ->
-                scope.launch(Dispatchers.Main) {
-                    sysMsgs.add(ChatMsg("系统", "❌ " + err))
-                    refreshChain()
-                    streaming = ""
-                    busy = false
-                }
-            },
-        )
-    }
 
 fun wsRefreshLocal() {
         wsLocalRoles.clear(); wsLocalRoles.addAll(Workshop.localRoles())
         wsLocalWorlds.clear(); wsLocalWorlds.addAll(Workshop.localWorlds())
     }
 
-    fun reloadRolesFromDisk() {
-        roles.clear()
-        AppEnv.savesDir().listFiles()?.filter { it.name.endsWith(".json") && !it.name.startsWith("_tree_") }?.forEach { f ->
-            try {
-                val o = JsonS.parse(f.readText(Charsets.UTF_8)) as? J.Obj ?: return@forEach
-                val n = o.fields["name"]?.str() ?: f.nameWithoutExtension
-                val p = o.fields["system_prompt"]?.str() ?: ""
-                if (roles.none { it.first == n }) roles.add(n to p)
-                roleUnlocked[n] = (o.fields["unlocked"] as? J.Bool)?.v ?: false
-                (o.fields["advanced"] as? J.Obj)?.let { advancedByRole[n] = it }
-            } catch (_: Exception) {
-            }
-        }
-        selectedRoles = selectedRoles.filter { n -> roles.any { it.first == n } }.toSet()
-    }
 
-    fun reloadWorldsFromDisk() {
-        worlds.clear()
-        worldEntries.clear()
-        AppEnv.worldsDir().listFiles()?.filter { it.name.endsWith(".json") }?.forEach { f ->
-            try {
-                val o = JsonS.parse(f.readText(Charsets.UTF_8)) as? J.Obj ?: return@forEach
-                val n = o.fields["name"]?.str() ?: f.nameWithoutExtension
-                worldCards[n] = o
-                val wd = WorldData.fromJson(o)
-                val d = renderWorldDesc(wd.description, wd.params)
-                if (worlds.none { it.first == n }) worlds.add(n to d)
-                worldEntries[n] = wd.entries.toMutableList()
-            } catch (_: Exception) {
-            }
-        }
-        selectedWorlds = selectedWorlds.filter { n -> worlds.any { it.first == n } }.toSet()
-        if (currentWorld !in selectedWorlds) currentWorld = selectedWorlds.firstOrNull() ?: ""
-    }
 
     // 装了世界卡包以后让界面重扫（插件在 io 线上跑命令，界面更新回主线程）
-    ChatBridge.worldsChanged = { scope.launch(Dispatchers.Main) { reloadWorldsFromDisk() } }
+    ChatBridge.worldsChanged = { scope.launch(Dispatchers.Main) { st.reloadWorldsFromDisk() } }
 
-    fun wsLoadOnline() {
-        wsSetStatus("加载中...")
-        scope.launch(Dispatchers.IO) {
-            try {
-                val (cards, worldsL) = Workshop.listResources()
-                scope.launch(Dispatchers.Main) {
-                    wsOnlineList.clear()
-                    cards.forEach { it.fields["_type"] = J.Str("角色卡"); wsOnlineList.add(it) }
-                    worldsL.forEach { it.fields["_type"] = J.Str("世界卡"); wsOnlineList.add(it) }
-                    wsOnlineIdx = -1
-                    wsSetStatus("共 " + wsOnlineList.size + " 个作品")
-                }
-            } catch (e: Exception) {
-                scope.launch(Dispatchers.Main) { wsSetStatus(e.message ?: "网络错误", "error") }
-            }
-        }
-    }
 
-    fun wsSearchOnline() {
-        val q = wsSearchInput.trim()
-        wsSetStatus("搜索中...")
-        scope.launch(Dispatchers.IO) {
-            try {
-                val rs = Workshop.search(q, "")
-                scope.launch(Dispatchers.Main) {
-                    wsOnlineList.clear()
-                    rs.forEach { r ->
-                        if (r.fields["_type"] == null) r.fields["_type"] = J.Str(r.fields["type"]?.str() ?: "角色卡")
-                        wsOnlineList.add(r)
-                    }
-                    wsOnlineIdx = -1
-                    wsSetStatus("找到 " + rs.size + " 个")
-                }
-            } catch (e: Exception) {
-                scope.launch(Dispatchers.Main) { wsSetStatus(e.message ?: "网络错误", "error") }
-            }
-        }
-    }
 
-    fun wsOnlineDisplay(r: J.Obj): String {
-        val t = r.fields["_type"]?.str() ?: "角色卡"
-        val name = r.fields["name"]?.str() ?: "?"
-        val author = r.fields["author"]?.str() ?: "?"
-        val dl = (r.fields["downloads"] as? J.Num)?.v?.toInt() ?: 0
-        val lk = (r.fields["likes"] as? J.Num)?.v?.toInt() ?: 0
-        val tags = (r.fields["tags"] as? J.Arr)?.items?.mapNotNull { it.str() }?.joinToString(",") ?: ""
-        // 纯文本（图标位已去掉）：类型改成写在串里，别再用 emoji 当类型前缀
-        return (if (t == "角色卡") "角色卡 " else "世界卡 ") + name + " | " + author +
-            " | ↓" + dl + " 赞" + lk + (if (tags.isBlank()) "" else " | " + tags)
-    }
 
-    fun wsLoadPlugins() {
-        wsSetStatus("加载中...")
-        scope.launch(Dispatchers.IO) {
-            try {
-                val (plugins, local) = Workshop.listPlugins()
-                scope.launch(Dispatchers.Main) {
-                    wsPlugins = plugins
-                    wsLocalPlugins = local
-                    wsSetStatus("共 " + plugins.size + " 个插件")
-                }
-            } catch (e: Exception) {
-                scope.launch(Dispatchers.Main) { wsSetStatus(e.message ?: "网络错误", "error") }
-            }
-        }
-    }
 
-    fun wsInstallPlugin(id: String) {
-        wsInstallingId = id
-        wsSetStatus("安装中...")
-        scope.launch(Dispatchers.IO) {
-            try {
-                val fname = Workshop.installPlugin(id)
-                val local = (AppEnv.dir("plugins").listFiles()
-                    ?.filter { it.name.endsWith(".py") && !it.name.startsWith("_") }
-                    ?.map { it.name.removeSuffix(".py") } ?: emptyList())
-                scope.launch(Dispatchers.Main) {
-                    wsLocalPlugins = local
-                    wsInstallingId = ""
-                    wsSetStatus("安装成功：" + fname, "check_circle")
-                }
-            } catch (e: Exception) {
-                scope.launch(Dispatchers.Main) {
-                    wsInstallingId = ""
-                    wsSetStatus(e.message ?: "安装失败", "error")
-                }
-            }
-        }
-    }
 
-    fun wsDownloadSelected() {
-        val r = wsOnlineList.getOrNull(wsOnlineIdx) ?: return
-        val id = r.fields["id"]?.str() ?: return
-        val type = r.fields["_type"]?.str() ?: "角色卡"
-        val fname = r.fields["original_name"]?.str() ?: ((r.fields["name"]?.str() ?: "card") + ".json")
-        wsSetStatus("下载中...")
-        scope.launch(Dispatchers.IO) {
-            try {
-                val f = Workshop.download(id, type, fname)
-                scope.launch(Dispatchers.Main) {
-                    wsSetStatus("已下载：" + f.name, "check_circle")
-                    wsRefreshLocal()
-                    reloadRolesFromDisk()
-                    reloadWorldsFromDisk()
-                }
-            } catch (e: Exception) {
-                scope.launch(Dispatchers.Main) { wsSetStatus(e.message ?: "下载失败", "error") }
-            }
-        }
-    }
 
-    fun wsLikeSelected() {
-        val r = wsOnlineList.getOrNull(wsOnlineIdx) ?: return
-        val id = r.fields["id"]?.str() ?: return
-        val type = r.fields["_type"]?.str() ?: "角色卡"
-        scope.launch(Dispatchers.IO) {
-            val ok = try { Workshop.like(id, type) } catch (e: Exception) { false }
-            scope.launch(Dispatchers.Main) { wsSetStatus(if (ok) "已点赞" else "点赞失败", if (ok) "check_circle" else "error") }
-        }
-    }
 
-    fun wsDeleteSelected() {
-        val r = wsOnlineList.getOrNull(wsOnlineIdx) ?: return
-        val id = r.fields["id"]?.str() ?: return
-        val type = r.fields["_type"]?.str() ?: "角色卡"
-        scope.launch(Dispatchers.IO) {
-            val ok = try { Workshop.deleteRemote(id, type) } catch (e: Exception) { false }
-            scope.launch(Dispatchers.Main) {
-                wsSetStatus(if (ok) "已删除" else "删除失败", if (ok) "check_circle" else "error")
-                if (ok) wsLoadOnline()
-            }
-        }
-    }
 
-    fun wsUploadLocal() {
-        if (wsLocalIdx < 0) return
-        val fname = if (wsLocalType == "角色卡") wsLocalRoles.getOrNull(wsLocalIdx) ?: return
-            else wsLocalWorlds.getOrNull(wsLocalIdx) ?: return
-        val name = fname.removeSuffix(".json")
-        wsSetStatus("上传中...")
-        scope.launch(Dispatchers.IO) {
-            // uploadEx 会把原因带回来（本地文件不存在 / 401 要 Key / 404 线上是旧版 / HTTP 码+响应）
-            val why = try { Workshop.uploadEx(wsLocalType, name) } catch (e: Exception) {
-                "异常：" + (e.message ?: e.javaClass.simpleName).take(80)
-            }
-            scope.launch(Dispatchers.Main) {
-                wsSetStatus(if (why == null) "上传成功" else "上传失败：" + why, if (why == null) "check_circle" else "error")
-                if (why == null) wsLoadOnline()
-            }
-        }
-    }
 
-    fun share() {
-        val text = messages.joinToString(10.toChar().toString() + 10.toChar().toString()) { m -> m.role + "：" + m.content }
-        val intent = Intent(Intent.ACTION_SEND).apply {
-            type = "text/plain"
-            putExtra(Intent.EXTRA_TEXT, text)
-        }
-        context.startActivity(Intent.createChooser(intent, "分享聊天记录"))
-    }
 
-    fun toggleRoleUnlock(name: String) {
-        val cur = roleUnlocked[name] != true
-        roleUnlocked[name] = cur
-        try {
-            val f = File(AppEnv.savesDir(), name + ".json")
-            val o = if (f.exists()) (JsonS.parse(f.readText(Charsets.UTF_8)) as? J.Obj) ?: J.Obj() else J.Obj()
-            o.fields["unlocked"] = J.Bool(cur)
-            f.writeText(JsonS.stringify(o, pretty = true), Charsets.UTF_8)
-        } catch (_: Exception) {
-        }
-    }
 
-    fun deleteRole(name: String) {
-        roles.removeAll { it.first == name }
-        selectedRoles = selectedRoles - name
-        try {
-            File(AppEnv.savesDir(), name + ".json").delete()
-            // 一并删除该角色的聊天记录文件
-            val safe = name.replace('\\', '_').replace('/', '_').replace(':', '_').replace('*', '_').replace('?', '_').replace('<', '_').replace('>', '_').replace('|', '_')
-            File(File(AppEnv.savesDir(), ".tree"), "_tree_" + safe + ".json").delete()
-        } catch (_: Exception) {
-        }
-    }
 
-    fun deleteWorld(name: String) {
-        worlds.removeAll { it.first == name }
-        selectedWorlds = selectedWorlds - name
-        try {
-            File(AppEnv.worldsDir(), name + ".json").delete()
-        } catch (_: Exception) {
-        }
-    }
 
     /** 彻底清空当前角色的聊天历史（树）—— 不可恢复，调用前必须先二次确认；alsoClearMemory 顺带清记忆链 */
-    fun clearHistory(alsoClearMemory: Boolean) {
-        try {
-            val tf = treeFileFor()
-            if (tf.exists()) tf.delete()
-            // 机制状态文件必须一起删掉：reload(reset=true) 照样会优先读它（只有 forceInitial 才跳过），
-            // 不删的话「清空历史」之后好感/状态/事件会原样复活
-            // （实测症状：好感 100/100、精力 90、淫乱度 84、告白「已触发」全都还在）。
-            val sf = stateFileFor()
-            if (sf.exists()) sf.delete()
-            tree.loadData(ChatTree().toData())
-            tree.fixLeaf()
-            mech.stateFile = sf
-            mech.reload(mechConfig(), tree, reset = true, forceInitial = true)
-            mech.battleCfg = mechBattleConfig()
-            mech.playerCfg = playerBattleConfig()
-            mech.initBattle()
-            refreshChain()
-            mechTick++   // 状态栏/事件面板靠这个信号重算：只重建消息列表刷新不到它们
-            // 写回空树（开启同步时 saveTree 会顺带推给工坊）：否则服务器上那份旧存档时间戳更新，
-            // 下次启动「后写胜」的拉取会把删掉的历史连同叶子里的状态快照一起捞回来。
-            saveTree()
-            // 清空后按「新会话」重演开场白 —— 复用启动时那条路径，不另写一套。
-            // 触发条件已在 ensureOpeningLine 里：单角色 + 树为空 + 卡片有非空开场白；
-            // 演不出来（没 Key / 报错）会自动退回显示卡片原文，界面不会空着；
-            // 群聊与未选角色不触发（与 PC 端契约一致）。
-            // 必须放在 tree.loadData 清空之后 —— 否则守卫里的「树为空」不成立，什么都不会发生。
-            // 正在生成时不抢跑：宁可这次留空，下次进会话时启动路径还会补上。
-            if (!busy) ensureOpeningLine()
-        } catch (_: Exception) {
-        }
-        if (alsoClearMemory) {
-            try { memory.clear() } catch (_: Exception) {}
-        }
-    }
 
     /** 当前聊天卡片名（动态）：取决于人物卡或世界卡；单角色用其名，多角色=群聊，否则用当前世界卡 */
-    fun currentCardLabel(): String {
-        val role = selectedRoles.firstOrNull()
-        val w = currentWorld
-        return when {
-            role != null && selectedRoles.size > 1 -> "群聊（" + selectedRoles.size + " 人" + (if (w.isNotBlank()) " · 世界：$w" else "") + "）"
-            role != null && w.isNotBlank() -> "$role（世界：$w）"
-            role != null -> role
-            w.isNotBlank() -> "世界「$w」"
-            else -> "默认"
-        }
-    }
 
     // 主题解析：「跟随系统」这一项在这里按系统深浅落到暗/浅（与 DickTheme 同一个口径，
     // 所以下面 deps.theme 拿到的就是实际生效的那套色，不必等 MaterialTheme 生效）
@@ -2140,44 +1068,44 @@ fun wsRefreshLocal() {
         avatarPicker = avatarPicker,
         appIconPicker = appIconPicker,
         wallpaperPicker = wallpaperPicker,
-        clearWallpaper = { clearWallpaper() },
+        clearWallpaper = { st.clearWallpaper() },
         exportCardLauncher = exportCardLauncher,
         wsExportLauncher = wsExportLauncher,
-        saveConfig = { saveConfig() },
-        saveTree = { saveTree() },
-        refreshChain = { ensureOpeningLine(); refreshChain() },
-        saveGlobalRegex = { saveGlobalRegex(it) },
-        reloadMech = { reloadMech() },
-        reloadRolesFromDisk = { reloadRolesFromDisk() },
-        reloadWorldsFromDisk = { reloadWorldsFromDisk() },
-        personaFields = { personaFields() },
-        personaDisplayName = { personaDisplayName() },
-        userDisplayName = { userDisplayName() },
-        roleJsonFor = { roleJsonOf(it) },
-        worldJsonFor = { currentWorldJson() },
-        treeFileFor = { treeFileFor() },
-        stateFileFor = { stateFileFor() },
-        listRoleSaves = { listRoleSaves(it) },
-        createRoleSave = { r, l -> createRoleSave(r, l) },
-        saveToRoleSlot = { r, s -> saveToRoleSlot(r, s) },
-        loadRoleSlot = { r, s -> loadRoleSlot(r, s) },
-        deleteRoleSlot = { r, s -> deleteRoleSlot(r, s) },
-        renameRoleSlot = { r, s, l -> renameRoleSlot(r, s, l) },
-        mechConfig = { mechConfig() },
-        mechBattleConfig = { mechBattleConfig() },
-        playerBattleConfig = { playerBattleConfig() },
-        activeCardFace = { activeCardFace() },
-        editMessage = { m, s -> editMessage(m, s) },
-        toggleRoleUnlock = { toggleRoleUnlock(it) },
-        wsRefreshLocal = { wsRefreshLocal() },
-        wsLoadOnline = { wsLoadOnline() },
-        wsSearchOnline = { wsSearchOnline() },
-        wsLoadPlugins = { wsLoadPlugins() },
-        wsInstallPlugin = { wsInstallPlugin(it) },
-        wsDownloadSelected = { wsDownloadSelected() },
-        wsLikeSelected = { wsLikeSelected() },
-        wsDeleteSelected = { wsDeleteSelected() },
-        wsUploadLocal = { wsUploadLocal() },
+        saveConfig = { st.saveConfig() },
+        saveTree = { st.saveTree() },
+        refreshChain = { ensureOpeningLine(); st.refreshChain() },
+        saveGlobalRegex = { st.saveGlobalRegex(it) },
+        reloadMech = { st.reloadMech() },
+        reloadRolesFromDisk = { st.reloadRolesFromDisk() },
+        reloadWorldsFromDisk = { st.reloadWorldsFromDisk() },
+        personaFields = { st.personaFields() },
+        personaDisplayName = { st.personaDisplayName() },
+        userDisplayName = { st.userDisplayName() },
+        roleJsonFor = { st.roleJsonOf(it) },
+        worldJsonFor = { st.currentWorldJson() },
+        treeFileFor = { st.treeFileFor() },
+        stateFileFor = { st.stateFileFor() },
+        listRoleSaves = { st.listRoleSaves(it) },
+        createRoleSave = { r, l -> st.createRoleSave(r, l) },
+        saveToRoleSlot = { r, s -> st.saveToRoleSlot(r, s) },
+        loadRoleSlot = { r, s -> st.loadRoleSlot(r, s) },
+        deleteRoleSlot = { r, s -> st.deleteRoleSlot(r, s) },
+        renameRoleSlot = { r, s, l -> st.renameRoleSlot(r, s, l) },
+        mechConfig = { st.mechConfig() },
+        mechBattleConfig = { st.mechBattleConfig() },
+        playerBattleConfig = { st.playerBattleConfig() },
+        activeCardFace = { st.activeCardFace() },
+        editMessage = { m, s -> st.editMessage(m, s) },
+        toggleRoleUnlock = { st.toggleRoleUnlock(it) },
+        wsRefreshLocal = { },
+        wsLoadOnline = { st.wsLoadOnline() },
+        wsSearchOnline = { st.wsSearchOnline() },
+        wsLoadPlugins = { st.wsLoadPlugins() },
+        wsInstallPlugin = { st.wsInstallPlugin(it) },
+        wsDownloadSelected = { st.wsDownloadSelected() },
+        wsLikeSelected = { st.wsLikeSelected() },
+        wsDeleteSelected = { st.wsDeleteSelected() },
+        wsUploadLocal = { st.wsUploadLocal() },
     )
     // 统一入口：套 MaterialTheme（只映射 primary/背景/表面/错误/描边，不整套替换语义色），
     // 同时把当前配色放进 LocalDickPalette，组件里不必层层传色。
@@ -2198,7 +1126,7 @@ fun wsRefreshLocal() {
                     DrawerItem(I18n.t("item_settings", "设置")) { showSettings = true; scope.launch { drawerState.close() } }
                     DrawerItem(I18n.t("item_api", "API 配置"), icon = "key") { showApiSetup = true; scope.launch { drawerState.close() } }
                     DrawerItem("跑团（局域网）", icon = "theater_comedy") { showTrpg = true; scope.launch { drawerState.close() } }
-                    DrawerItem(I18n.t("item_share", "分享聊天记录")) { share(); scope.launch { drawerState.close() } }
+                    DrawerItem(I18n.t("item_share", "分享聊天记录")) { st.share(); scope.launch { drawerState.close() } }
                     DrawerItem("彻底清空历史", color = theme.danger, icon = "delete") { showClearHistory = true; scope.launch { drawerState.close() } }
                     DrawerItem(I18n.t("btn_workshop", "创意工坊"), icon = "home_repair_service") { showWorkshop = true; scope.launch { drawerState.close() } }
                 }
@@ -2395,7 +1323,7 @@ fun wsRefreshLocal() {
                                     val name = mo.fields["name"]?.str()?.takeIf { it.isNotBlank() } ?: id
                                     val desc = mo.fields["desc"]?.str() ?: ""
                                     OutlinedButton(
-                                        onClick = { battleMove(id, name) },
+                                        onClick = { st.battleMove(id, name) },
                                         modifier = Modifier.border(1.dp, accent, RoundedCornerShape(14.dp)),
                                         contentPadding = PaddingValues(horizontal = 10.dp, vertical = 0.dp),
                                     ) {
@@ -2448,8 +1376,8 @@ fun wsRefreshLocal() {
                             Bubble(
                                 m, theme.bubble, theme.text, accent, avatarCache,
                                 onEdit = { editMsgTarget = it; editMsgText = it.content },
-                                onRegen = { regenerate(it) },
-                                onSwipe = { msg, delta -> switchSwipe(msg, delta) },
+                                onRegen = { st.regenerate(it) },
+                                onSwipe = { msg, delta -> st.switchSwipe(msg, delta) },
                             )
                         }
                         if (showLoadingBubble()) {
@@ -2519,7 +1447,7 @@ fun wsRefreshLocal() {
                             Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.padding(vertical = 1.dp)) {
                                 rowItems.forEach { c ->
                                     TextButton(
-                                        onClick = { pickChoice(c) },
+                                        onClick = { st.pickChoice(c) },
                                         modifier = Modifier
                                             .weight(1f)
                                             .border(1.dp, accent, RoundedCornerShape(16.dp)),
@@ -2558,7 +1486,7 @@ fun wsRefreshLocal() {
                     busy = busy,
                     showQuickPanel = showQuickPanel,
                     onToggleQuick = { showQuickPanel = !showQuickPanel },
-                    onSend = { send() },
+                    onSend = { st.send() },
                 )
             }
         }
@@ -2574,14 +1502,14 @@ fun wsRefreshLocal() {
 
     ChatGuideDialog(
         showGuide = showGuide, guideStep = guideStep, theme = theme,
-        onStep = { guideStep = it }, onClose = { showGuide = false; saveConfig() },
+        onStep = { guideStep = it }, onClose = { showGuide = false; st.saveConfig() },
     )
 
 
     ChatClearHistoryDialog(
-        show = showClearHistory, theme = theme, cardLabel = currentCardLabel(),
+        show = showClearHistory, theme = theme, cardLabel = st.currentCardLabel(),
         onDismiss = { showClearHistory = false },
-        onConfirm = { also -> clearHistory(also); showClearHistory = false },
+        onConfirm = { also -> st.clearHistory(also); showClearHistory = false },
     )
 
     OverlayHost(
@@ -2589,8 +1517,8 @@ fun wsRefreshLocal() {
         deps = deps,
         muted = theme.muted,
         danger = theme.danger,
-        onDeleteRole = ::deleteRole,
-        onDeleteWorld = ::deleteWorld,
+        onDeleteRole = { n -> st.deleteRole(n) },
+        onDeleteWorld = { n -> st.deleteWorld(n) },
     )
 
     // ---------- 彻底清空历史（红色 · 二次确认） ----------
