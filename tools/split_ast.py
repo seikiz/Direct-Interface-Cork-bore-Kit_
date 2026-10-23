@@ -142,8 +142,8 @@ def main(argv=None):
         "、".join(n for _, _, n in spans))
 
     # 试拼一次以满足 import 分析
-    tmp = header + "class %s:\n" % args.mixin + "\n".join(
-        "    " + ln if ln.strip() else ln for ln in moved_src_text.split("\n"))
+    # 方法源码本来就带 4 空格类缩进，直接放进来即可（再加一次会变成 8 空格）
+    tmp = header + "class %s:\n" % args.mixin + moved_src_text
     try:
         undefined = sorted(used_names(tmp))
     except SyntaxError as e:

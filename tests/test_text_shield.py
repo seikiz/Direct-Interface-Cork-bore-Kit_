@@ -80,7 +80,8 @@ def main():
     check(u"空串安全", TS.shield("") == "" and TS.unshield("") == "")
 
     print(u"\n== ④ 两端真的接了保护（源码闸门） ==")
-    kit = read("Direct-Interface Cork-bore Kit.py")
+    import _shellsrc
+    kit = _shellsrc.read()   # 壳层已拆分：Kit.py + shell_*.py
     check(u"桌面正则在用户作用域用 keeps_user_text", "text_shield.keeps_user_text" in kit)
     check(u"桌面发送前有括号诊断", u"[括号诊断]" in kit)
     kt = read(os.path.join("DICK-Android", "app", "src", "main", "java", "com", "dick", "core", "RegexEngine.kt"))
