@@ -37,9 +37,7 @@ SKIP_PARTS = (
 )
 
 # 生成文件：不算手写债，但它也有上限（别让生成器把 UI 撑爆）
-GENERATED = {
-    os.path.join("DICK-Android", "app", "src", "main", "java", "com", "dick", "app", "I18nStrings.kt"): 1100,
-}
+GENERATED = {}   # 生成物已拆成两个文件（都 <1000 行），不再需要单独上限
 
 # 豁免名单（历史遗留，只许降不许涨）。缩到 1000 以下就删条目。
 EXEMPT = {

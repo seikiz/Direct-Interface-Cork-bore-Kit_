@@ -367,7 +367,11 @@ def check(quiet=False):
     ok = write_or_check(JS_OUT, gen_js(doc), True) if quiet else True
     if not ok:
         problems.append("web/i18n.js 过期")
-    ok2 = write_or_check(KT_OUT, gen_kotlin(doc), True) if quiet else True
+    _kt_main, _kt_extra = gen_kotlin(doc)
+    ok2 = write_or_check(KT_OUT, _kt_main, True) if quiet else True
+    _kt_extra_out = os.path.join(os.path.dirname(KT_OUT), "I18nStringsExtra.kt")
+    ok3 = write_or_check(_kt_extra_out, _kt_extra, True) if quiet else True
+    ok2 = ok2 and ok3
     if not ok2:
         problems.append("DICK-Android/.../I18nStrings.kt 过期")
 
@@ -425,18 +429,36 @@ def _kstr(s):
 
 
 def gen_kotlin(doc):
+    """生成两个 Kotlin 文件的内容：主表（ZH）+ 附表（EN/JA）。
+
+    为什么拆：三张 map 放一个文件会 ~1000 行，顶到"单文件 1000 行"闸门；
+    数据本身没变，只是 EN/JA 搬到 I18nStringsExtra（对外仍是 I18nStrings.EN/.JA）。
+    """
     t = _tables(doc)
-    out = [HEADER_KT, u"package com.dick.app", u"",
-           u"/** 三语界面文案（来自 lang/strings.json；EN/JA 与 ZH 键集合完全一致）。 */",
-           u"internal object I18nStrings {"]
-    for lg in LANGS:
-        out.append(u"    val %s: Map<String, String> = mapOf(" % lg.upper())
+    main = [HEADER_KT, u"package com.dick.app", u"",
+            u"/** 三语界面文案（来自 lang/strings.json；EN/JA 与 ZH 键集合完全一致）。",
+            u" *  EN/JA 的数据在 I18nStringsExtra.kt（拆文件只为单文件长度闸门）。 */",
+            u"internal object I18nStrings {"]
+    main.append(u"    val ZH: Map<String, String> = mapOf(")
+    for k, v in t["zh"].items():
+        main.append(u"        %s to %s," % (_kstr(k), _kstr(v)))
+    main.append(u"    )")
+    for lg in LANGS[1:]:
+        main.append(u"    val %s: Map<String, String> get() = I18nStringsExtra.%s" % (lg.upper(), lg.upper()))
+    main.append(u"}")
+    main.append(u"")
+
+    extra = [HEADER_KT, u"package com.dick.app", u"",
+             u"/** EN/JA 文案（从 I18nStrings 拆出；生成物，勿手改）。 */",
+             u"internal object I18nStringsExtra {"]
+    for lg in LANGS[1:]:
+        extra.append(u"    val %s: Map<String, String> = mapOf(" % lg.upper())
         for k, v in t[lg].items():
-            out.append(u"        %s to %s," % (_kstr(k), _kstr(v)))
-        out.append(u"    )")
-    out.append(u"}")
-    out.append(u"")
-    return u"\n".join(out)
+            extra.append(u"        %s to %s," % (_kstr(k), _kstr(v)))
+        extra.append(u"    )")
+    extra.append(u"}")
+    extra.append(u"")
+    return u"\n".join(main), u"\n".join(extra)
 
 
 # ============================================================
@@ -476,7 +498,9 @@ def main(argv):
         return 0
 
     ok = write_or_check(JS_OUT, gen_js(doc), False)
-    ok2 = write_or_check(KT_OUT, gen_kotlin(doc), False)
+    _km, _ke = gen_kotlin(doc)
+    ok2 = write_or_check(KT_OUT, _km, False)
+    ok2 = write_or_check(os.path.join(os.path.dirname(KT_OUT), "I18nStringsExtra.kt"), _ke, False) and ok2
     return 0 if (ok and ok2) else 1
 
 

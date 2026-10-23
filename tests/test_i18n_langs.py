@@ -176,6 +176,9 @@ def main():
     check(u"web/i18n.js 是生成物（带「别手改」抬头）", u"生成物" in js and u"别手改" in js)
     check(u"web/i18n.js 暴露 window.DICK_I18N", "window.DICK_I18N" in js)
     kt = read(G.KT_OUT)
+    _kt_extra = os.path.join(os.path.dirname(G.KT_OUT), "I18nStringsExtra.kt")
+    if os.path.isfile(_kt_extra):
+        kt += "\n" + read(_kt_extra)   # EN/JA 已拆到 Extra（生成物，一起校验）
     check(u"I18nStrings.kt 是生成物（带「别手改」抬头）", u"生成物" in kt and u"别手改" in kt)
     for k in ("btn_send", "send", "lbl_model", "welcome"):
         if k not in keys:
