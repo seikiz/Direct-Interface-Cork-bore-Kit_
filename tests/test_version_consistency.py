@@ -113,7 +113,8 @@ def main():
     check(u"播放器 Gradle 读 version.json", "version.json" in narg)
     check(u"播放器没有写死 versionName", not re.search(r'versionName\s*=\s*"', narg))
 
-    front = read(os.path.join(ROOT, "web", "index.html"))
+    import _websrc
+    front = _websrc.read()   # 前端已拆分
     check(u"前端用 state 带回的版号（不读文件、不写死）",
           "s.version_full" in front or "s.version" in front)
     check(u"前端没有写死带 v 的四段号", not re.search(r"\bv\d+\.\d+\.\d+\.\d+\b", front))

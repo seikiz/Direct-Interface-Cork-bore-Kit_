@@ -55,6 +55,7 @@
 
 跑法：utau_env\\Scripts\\python.exe -X utf8 tests\\test_web_surfaces.py
 """
+import _websrc  # noqa: E402  读整个前端（index.html + chat-inline-*.js）
 import io
 import json
 import os
@@ -575,7 +576,7 @@ def main():
     # ⑪ 外壳边界：index.html 已经没有 <style>（容器样式全在 styles/**，被本测试覆盖）
     # ------------------------------------------------------------------
     print(u"\n== ⑪ 外壳边界（这条说明 index.html 为什么不在扫描范围里）==")
-    shell = read(os.path.join(ROOT, "web", "index.html"))
+    shell = _websrc.read()
     check(u"web/index.html 里没有 <style> 块", "<style" not in shell.lower())
     hrefs = re.findall(r'<link[^>]+href="([^"]+)"', shell)
     check(u"web/index.html 的 <link> 全指向 styles/** 或 theme.css",

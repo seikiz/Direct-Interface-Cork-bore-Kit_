@@ -13,6 +13,7 @@
 跑法：utau_env\\Scripts\\python.exe tests\\test_js_api_binding.py
 """
 
+import _websrc  # noqa: E402  读整个前端（index.html + chat-inline-*.js）
 import importlib.util
 import io
 import os
@@ -51,7 +52,7 @@ def front_end():
     只读 index.html 的话，"元素存在吗 / 接口接上了吗"会成片误报 —— 那是搬家的正常结果，
     不是回归。所以语料必须跟着扩到整棵前端。
     """
-    parts = [io.open(os.path.join(ROOT, "web", "index.html"), encoding="utf-8").read()]
+    parts = [_websrc.read()]
     for sub in ("screens", os.path.join("js")):
         d = os.path.join(ROOT, "web", sub)
         if not os.path.isdir(d):

@@ -10,6 +10,7 @@
     Kit.py       ← _on_busy 一行转调；**不许** _append_sys（不写进对话）
     web          ← DICK_TOAST 轻提示；样式在 styles/toast.css（index.html 不许内联 style）
 """
+import _websrc  # noqa: E402  读整个前端（index.html + chat-inline-*.js）
 import io
 import os
 import re
@@ -93,7 +94,7 @@ def main():
     check(u"忙提示不再弹右下角 toast", "DICK_TOAST" not in noti, "还在用 DICK_TOAST")
 
     print(u"\n== ⑥ 前端：轻提示出口 + 样式外置 ==")
-    web = read(os.path.join("web", "index.html"))
+    web = _websrc.read()
     css = read(os.path.join("web", "styles", "toast.css"))
     check(u"定义 window.DICK_TOAST", "window.DICK_TOAST" in web)
     check(u"有 dickToast 容器", 'id="dickToast"' in web)

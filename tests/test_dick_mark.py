@@ -56,7 +56,8 @@ check("dick_mark" in texts, "PNG 含 dick_mark tEXt 块")
 check("Direct-Interface" in texts.get("dick_mark", ""), "PNG 水印内容正确")
 
 print("== ④ 前端水印 ==")
-web = open(os.path.join(ROOT, "web", "index.html"), encoding="utf-8").read()
+import _websrc
+web = _websrc.read()   # 前端已拆分
 check("console.log" in web and "CODEX engine" in web, "控制台标识")
 check("data-dick" in web, "DOM 属性标记")
 check("position:fixed;right:2px" in web, "角落极淡水印")

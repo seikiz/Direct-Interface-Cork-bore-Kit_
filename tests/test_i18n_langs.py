@@ -205,7 +205,8 @@ def main():
                                           "java", "com", "dick", "app", "I18n.kt"))))
     check(u"i18n.py 不再内联 _EN/_JA 表",
           not re.search(r"^_(?:EN|JA|ZH) = \{", read(os.path.join(ROOT, "i18n.py")), re.M))
-    html = read(os.path.join(ROOT, "web", "index.html"))
+    import _websrc
+    html = _websrc.read()   # 前端已拆分：index.html + js/chat-inline-*.js
     check(u"index.html 不再内联三段 T = {...}", "window.DICK_I18N" in html)
     check(u"index.html 引了生成的 i18n.js", 'src="i18n.js"' in html)
     # 阶段4 起设置屏的 DOM 搬到了 web/screens/settings.html，语言选择器跟着走了 ——
@@ -350,7 +351,8 @@ def main():
           not [p for p in pages
                if RE_PREFIX.search(read(p)) and not RE_ATTR.search(read(p))])
     # 反向：setT() 不该偷偷回到逐 id 改名（阶段4 之前它是 68 处）
-    idx = read(os.path.join(web_dir, "index.html"))
+    import _websrc
+    idx = _websrc.read()   # 前端已拆分：index.html + js/chat-inline-*.js
     i_set = idx.find("function setT(l)")
     setT_body = idx[i_set:i_set + 4000] if i_set >= 0 else u""
     id_sets = len(re.findall(r"getElementById\('[^']+'\)\s*\.textContent", setT_body))

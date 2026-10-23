@@ -13,6 +13,7 @@ image_gen 的每一条路径都是「发 HTTP + 解析对方的格式」：
 
 跑法：python tests/test_image_gen.py
 """
+import _websrc  # noqa: E402  读整个前端（index.html + chat-inline-*.js）
 import base64
 import io
 import json
@@ -571,7 +572,7 @@ def _front_end():
     2026-11 阶段2 起，生图屏的调用点搬到了 web/js/screens/gen.js（DOM 在 web/screens/gen.html），
     只读 index.html 的话"前端实参"会扫成 None —— 那是搬家的正常结果，不是回归。
     """
-    parts = [io.open(os.path.join(ROOT, "web", "index.html"), encoding="utf-8").read()]
+    parts = [_websrc.read()]
     for sub in (("web", "screens"), ("web", "js")):
         d = os.path.join(ROOT, *sub)
         for base, _dirs, files in os.walk(d):

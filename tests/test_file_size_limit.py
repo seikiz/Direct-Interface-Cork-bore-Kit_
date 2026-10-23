@@ -43,7 +43,6 @@ GENERATED = {
 
 # 豁免名单（历史遗留，只许降不许涨）。缩到 1000 以下就删条目。
 EXEMPT = {
-    os.path.join("web", "index.html"): 3895,
     os.path.join("DICK-Android", "app", "src", "main", "java", "com", "dick", "app",
                  "ui", "screens", "chat", "ChatScreen.kt"): 2770,
 }

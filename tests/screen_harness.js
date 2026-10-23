@@ -212,7 +212,14 @@ function makeSandbox(dom) {
 
   /* 外壳里的工具函数（不在搬走的块里，但被它调用）：直接从 index.html 抠出来，保证是同一份实现。
    * escapeHtml 依赖 stripInvisible + ZW_RE，一起抠 —— 少抠一个就会在 smoke 里当场 ReferenceError。 */
-  const indexHtml = fs.readFileSync(path.join(WEB, 'index.html'), 'utf8');
+  // 前端已拆分：index.html + js/chat-inline-*.js（工具函数在同目录的分段脚本里）
+  let indexHtml = fs.readFileSync(path.join(WEB, 'index.html'), 'utf8');
+  const jsDir = path.join(WEB, 'js');
+  for (const f of fs.readdirSync(jsDir).sort()) {
+    if (f.startsWith('chat-inline') && f.endsWith('.js')) {
+      indexHtml += '\n' + fs.readFileSync(path.join(jsDir, f), 'utf8');
+    }
+  }
   const zw = /var ZW_RE = [\s\S]*?\n/.exec(indexHtml);
   const strip = /function stripInvisible\([\s\S]*?\n\}/.exec(indexHtml);
   const esc = /function escapeHtml\([\s\S]*?\n\}/.exec(indexHtml);

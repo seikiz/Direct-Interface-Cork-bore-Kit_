@@ -42,6 +42,7 @@ DETAIL_CSS = os.path.join(ROOT, "web", "styles", "screens", "ws-detail.css")
 WS_HTML = os.path.join(ROOT, "web", "screens", "ws.html")
 WS_JS = os.path.join(ROOT, "web", "js", "screens", "ws.js")
 INDEX = os.path.join(ROOT, "web", "index.html")
+import _websrc  # noqa: E402
 DOC = os.path.join(ROOT, "web", "UI_ARCHITECTURE.md")
 FIELDS = os.path.join(ROOT, "design", "card_fields.json")
 STRINGS = os.path.join(ROOT, "lang", "strings.json")
@@ -149,7 +150,7 @@ def main():
     for part in ("wsDetailAvatar", "wsDetailHead", "wsDetailBody", "wsDetailClose",
                  "wsDetailImport", "wsDetailExport", "wsDetailDelete", "wsDetailUpload"):
         check(u"容器里有 #%s" % part, ('id="%s"' % part) in html)
-    index = read(INDEX)
+    index = _websrc.read()   # 前端已拆分：index.html + js/chat-inline-*.js
     check(u"index.html 引了 js/screens/ws-detail.js",
           'src="js/screens/ws-detail.js"' in index)
     check(u"index.html 引了 styles/screens/ws-detail.css",

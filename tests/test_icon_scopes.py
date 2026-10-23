@@ -186,7 +186,8 @@ def main():
           u"缺：%s" % skips)
     # 产物里 scoped 的值是 { n: 名字, p: "" }（与全局表同形）；把它当名字用就是豆腐块
     check(u"icon_scope.js 认得产物里 { n: 名字 } 的形态", "nameOf(" in scope_src and "v.n" in scope_src)
-    idx = read(INDEX)
+    import _websrc
+    idx = _websrc.read()   # 前端已拆分：index.html + js/chat-inline-*.js
     check(u"index.html 的 _ICON_SKIP 让开了 [data-icon-scope]（否则全局先换掉、作用域失效）",
           "[data-noicon], [data-icon-scope]" in idx)
     check(u"index.html 引用了 icon_scope.js", 'src="icon_scope.js"' in idx)

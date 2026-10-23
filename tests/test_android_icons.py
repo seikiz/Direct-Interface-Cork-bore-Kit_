@@ -41,8 +41,17 @@ WEB_STYLES = os.path.join(ROOT, "web", "styles")
 
 
 def web_front():
-    """index.html + web/styles/*.css 拼起来的文本（检查前端特征串用）。"""
+    """index.html + web/js/chat-inline*.js + web/styles/*.css（前端特征串用）。
+
+    2026-10：index.html 的 3310 行内联脚本拆成了 js/chat-inline-*.js，
+    所以"网页端有没有这么做"要连那几段一起看（同一份实现，不是放宽）。
+    """
     parts = [read(INDEX)]
+    js_dir = os.path.join(ROOT, "web", "js")
+    if os.path.isdir(js_dir):
+        for fn in sorted(os.listdir(js_dir)):
+            if fn.startswith("chat-inline") and fn.endswith(".js"):
+                parts.append(read(os.path.join(js_dir, fn)))
     if os.path.isdir(WEB_STYLES):
         for fn in sorted(os.listdir(WEB_STYLES)):
             if fn.endswith(".css"):
@@ -367,8 +376,8 @@ def main():
     check(u"有 @font-face 指向随包字体",
           "@font-face" in front and "fonts/MaterialSymbolsOutlined.woff2" in front)
     check(u"有 .ms 图标样式（连字渲染）", ".ms{" in front and "liga" in front)
-    check(u"替换逻辑走图标名（<span class=\"ms\">）", 'class="ms"' in idx)
-    check(u"缺失名字时回退原 emoji（不显示空白）", "_iconEntry(emoji)" in idx or "return emoji" in idx)
+    check(u"替换逻辑走图标名（<span class=\"ms\">）", 'class="ms"' in front)
+    check(u"缺失名字时回退原 emoji（不显示空白）", "_iconEntry(emoji)" in front or "return emoji" in front)
 
     print(u"\n== ⑤ 安卓端已换成字体渲染 ==")
     ui = read(UI)

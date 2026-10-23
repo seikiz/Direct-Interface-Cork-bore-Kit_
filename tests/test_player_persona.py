@@ -9,6 +9,7 @@ GAL 默认是"玩家看戏、点选项"；乙女/梦向的核心是**"我在场�
 
 验：python tests\\test_player_persona.py
 """
+import _websrc  # noqa: E402  读整个前端（index.html + chat-inline-*.js）
 import io
 import os
 import re
@@ -91,7 +92,7 @@ def main():
           u"当前与你对话的玩家（用户本人扮演的角色）" not in core or True)
 
     print(u"\n== ⑦ 前端表单有这些字段（乙女向编辑得到） ==")
-    web = io.open(os.path.join(ROOT, "web", "index.html"), encoding="utf-8").read()
+    web = _websrc.read()
     for fid, label in (("ppAddressInput", u"称呼"), ("ppPronounInput", u"代词"),
                        ("ppRelationInput", u"关系"), ("ppPerspectiveInput", u"视角"),
                        ("ppTabooInput", u"禁忌")):

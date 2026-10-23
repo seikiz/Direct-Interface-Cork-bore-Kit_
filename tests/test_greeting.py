@@ -20,6 +20,7 @@
 跑法：utau_env\\Scripts\\python.exe tests\\test_greeting.py
 """
 
+import _websrc  # noqa: E402  读整个前端（index.html + chat-inline-*.js）
 import io
 import os
 import sys
@@ -281,7 +282,7 @@ def test_opening_loading_state():
           src.count('"opening_loading": self.opening_loading') >= 2,
           "只出现 %d 次" % src.count('"opening_loading": self.opening_loading'))
 
-    html = io.open(os.path.join(ROOT, "web", "index.html"), encoding="utf-8").read()
+    html = _websrc.read()
     i_ss = html.find("function setStreaming")
     seg = html[i_ss:i_ss + 600]
     check("setStreaming 接受 loading 参数", "loading" in seg.split("{")[0])
