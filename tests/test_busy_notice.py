@@ -116,8 +116,11 @@ def main():
           not re.search(u"[\U0001F300-\U0001FAFF\u2705\u274C]", block), block[:60])
 
     print(u"\n== \u2465 \u624b\u673a\u7aef\uff1a\u72b6\u6001\u884c\u8d34\u8f93\u5165\u6846\uff0c\u4e0d\u8fdb\u5bf9\u8bdd ==")
-    kt = read(os.path.join("DICK-Android", "app", "src", "main", "java", "com", "dick", "app",
-                           "ui", "screens", "chat", "ChatScreen.kt"))
+    _chat_dir = os.path.join("DICK-Android", "app", "src", "main", "java", "com", "dick", "app",
+                              "ui", "screens", "chat")
+    kt = read(os.path.join(_chat_dir, "ChatScreen.kt"))
+    # BusyStatusLine 已拆到 ChatScreenParts.kt —— 同一组断言，把两份拼起来看
+    kt += "\n" + read(os.path.join(_chat_dir, "ChatScreenParts.kt"))
     check(u"\u6709 BusyStatusLine \u7ec4\u5408\u51fd\u6570", "fun BusyStatusLine(" in kt)
     call_at = kt.find("BusyStatusLine(busy = busy")
     field_at = kt.find("OutlinedTextField(")

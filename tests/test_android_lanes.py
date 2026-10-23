@@ -53,7 +53,7 @@ def read_chat():
     这个测试盯的是"重活有没有被搬回主线程"，与代码住哪个文件无关 —— 所以两份一起看，
     而不是把断言删掉或者只盯着那个 30 行的入口文件。
     """
-    return read("app", "App.kt") + "\n" + read("app", "ui", "screens", "chat", "ChatScreen.kt")
+    return read("app", "App.kt") + "\n" + read("app", "ui", "screens", "chat", "ChatScreen.kt") + "\n" + read("app", "ui", "screens", "chat", "ChatScreenParts.kt")
 
 
 def seg_of(text, start, limit=6000):
@@ -62,7 +62,10 @@ def seg_of(text, start, limit=6000):
     if i < 0:
         return ""
     seg = text[i:i + limit]
-    j = seg.find("\n    fun ", len(start))
+    # 遇到下一个同级声明就停（fun 或 val）：拆分后段内可能混进别的 launcher
+    j1 = seg.find("\n    fun ", len(start))
+    j2 = seg.find("\n    val ", len(start))
+    j = min([x for x in (j1, j2) if x > 0] or [-1])
     return seg[:j] if j > 0 else seg
 
 

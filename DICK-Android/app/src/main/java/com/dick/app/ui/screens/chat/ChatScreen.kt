@@ -135,34 +135,6 @@ import kotlin.random.Random
  * 只认主题令牌（muted / accent），无 emoji，无字面色字面量。
  */
 @Composable
-private fun BusyStatusLine(busy: Boolean, theme: ThemeSpec, accent: Color) {
-    if (!busy) return
-    var secs by remember(busy) { mutableStateOf(0) }
-    LaunchedEffect(busy) {
-        while (busy) {
-            kotlinx.coroutines.delay(1000L)
-            secs += 1
-        }
-    }
-    Row(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 2.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Box(
-            Modifier
-                .size(6.dp)
-                .background(accent, CircleShape)
-        )
-        Spacer(Modifier.width(6.dp))
-        Text(
-            text = if (secs > 0) "生成中 · ${secs}s" else "生成中",
-            fontSize = 12.sp,
-            color = theme.muted,
-        )
-    }
-}
-
-@Composable
 fun ChatScreen(vm: ChatViewModel, theme: ThemeSpec, accent: Color) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -383,21 +355,6 @@ val importCardLauncher = rememberLauncherForActivityResult(ActivityResultContrac
     }
 
     /** 头像裁剪：解码 → 居中正方形 → 256x256 PNG */
-    fun cropSquare(bytes: ByteArray): ByteArray {
-        return try {
-            val bmp = android.graphics.BitmapFactory.decodeByteArray(bytes, 0, bytes.size) ?: return bytes
-            val side = minOf(bmp.width, bmp.height)
-            val x = (bmp.width - side) / 2
-            val y = (bmp.height - side) / 2
-            val sq = android.graphics.Bitmap.createBitmap(bmp, x, y, side, side)
-            val out = android.graphics.Bitmap.createScaledBitmap(sq, 256, 256, true)
-            val bos = java.io.ByteArrayOutputStream()
-            out.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, bos)
-            bos.toByteArray()
-        } catch (_: Exception) {
-            bytes
-        }
-    }
 
     val avatarPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         val target = avatarTarget
