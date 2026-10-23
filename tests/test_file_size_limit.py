@@ -47,8 +47,6 @@ EXEMPT = {
     os.path.join("DICK-Android", "app", "src", "main", "java", "com", "dick", "app",
                  "ui", "screens", "chat", "ChatScreen.kt"): 2770,
     "net.py": 1365,
-    os.path.join("DICK-Android", "app", "src", "main", "java", "com", "dick", "core",
-                 "MechanicsEngine.kt"): 1025,
 }
 
 # 统一成 / 分隔（扫描结果用 / 作键；Windows 下 os.path.join 给的是反斜杠）
