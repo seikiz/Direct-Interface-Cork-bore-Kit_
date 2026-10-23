@@ -22,8 +22,15 @@ const frontEnd = html + '\n' + css;
 // 图标引擎（_iconEntry/iconifyUI）在主脚本里，所以这里把所有**无 src 的内联块**按顺序拼起来，
 // 而不是只取第一段 —— 只取第一段会拿到引导脚本，_EMOJI_CLS 就找不到了。
 const inline = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map(x => x[1]);
-if (!inline.length) { console.log('NO_SCRIPT'); process.exit(1); }
-const src = inline.join('\n');
+// 2026-10 拆分：主脚本搬到了 web/js/chat-inline-*.js（index.html 里只剩 <script src>）。
+// 仍然按"页面加载顺序"看：先内联块，再接这些外部脚本。
+const jsDir = path.join(__dirname, '..', 'web', 'js');
+const externals = fs.existsSync(jsDir)
+  ? fs.readdirSync(jsDir).filter(f => f.startsWith('chat-inline') && f.endsWith('.js')).sort()
+      .map(f => fs.readFileSync(path.join(jsDir, f), 'utf8'))
+  : [];
+if (!inline.length && !externals.length) { console.log('NO_SCRIPT'); process.exit(1); }
+const src = inline.join('\n') + '\n' + externals.join('\n');
 // 屏片段里的 emoji 同样是"界面上的图标"，覆盖率必须一起看（DOM 搬到 web/screens/ 之后
 // 只看 index.html 就等于漏掉一半屏）。
 const screensDir = path.join(__dirname, '..', 'web', 'screens');
