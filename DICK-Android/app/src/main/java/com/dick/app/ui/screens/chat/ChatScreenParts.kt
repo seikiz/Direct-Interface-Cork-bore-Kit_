@@ -154,3 +154,25 @@ internal fun cropSquare(bytes: ByteArray): ByteArray {
         bytes
     }
 }
+
+// 文件/时间小工具（纯参数，不读界面状态）
+
+internal fun safeFileToken(name: String): String =
+    name.replace('\\', '_').replace('/', '_').replace(':', '_').replace('*', '_')
+        .replace('?', '_').replace('<', '_').replace('>', '_').replace('|', '_')
+
+internal fun treeFileForRole(role: String): File {
+    val safe = safeFileToken(role)
+    return File(File(AppEnv.savesDir(), ".tree").apply { mkdirs() }, "_tree_" + safe + ".json")
+}
+
+internal fun stateFileForRole(role: String): File {
+    val safe = safeFileToken(role)
+    return File(AppEnv.mechStateDir(), "_mech_" + safe + ".json")
+}
+
+internal fun utcNowIso(): String {
+    val fmt = java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSXXX", java.util.Locale.US)
+    fmt.timeZone = java.util.TimeZone.getTimeZone("UTC")
+    return fmt.format(java.util.Date())
+}

@@ -437,21 +437,10 @@ val importCardLauncher = rememberLauncherForActivityResult(ActivityResultContrac
         }
     }
 
-    fun safeFileToken(name: String): String =
-        name.replace('\\', '_').replace('/', '_').replace(':', '_').replace('*', '_')
-            .replace('?', '_').replace('<', '_').replace('>', '_').replace('|', '_')
 
     /** 指定角色的聊聊天树文件：saves/.tree/_tree_<角色>.json（隐藏，不混进角色卡列表） */
-    fun treeFileForRole(role: String): File {
-        val safe = safeFileToken(role)
-        return File(File(AppEnv.savesDir(), ".tree").apply { mkdirs() }, "_tree_" + safe + ".json")
-    }
 
     /** 指定角色的机制状态文件：mech_state/_mech_<角色>.json */
-    fun stateFileForRole(role: String): File {
-        val safe = safeFileToken(role)
-        return File(AppEnv.mechStateDir(), "_mech_" + safe + ".json")
-    }
 
     /** 每个角色分开的聊天树文件：单角色用 _tree_<角色>.json，群聊用 _tree_group.json */
     fun treeFileFor(): File = treeFileForRole(if (selectedRoles.size == 1) selectedRoles.first()
@@ -516,11 +505,6 @@ val importCardLauncher = rememberLauncherForActivityResult(ActivityResultContrac
     /** 进度同步用的会话标识：与电脑端「第一个选中角色」一致（单/群聊都取首位角色名） */
     fun syncCardId(): String = if (selectedRoles.isNotEmpty()) selectedRoles.first() else "default"
 
-    fun utcNowIso(): String {
-        val fmt = java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSXXX", java.util.Locale.US)
-        fmt.timeZone = java.util.TimeZone.getTimeZone("UTC")
-        return fmt.format(java.util.Date())
-    }
 
     fun saveTree() {
         // 关键：整棵树的序列化 + 写盘是重活，不该占着主线程（调用点大多在主线程上：
