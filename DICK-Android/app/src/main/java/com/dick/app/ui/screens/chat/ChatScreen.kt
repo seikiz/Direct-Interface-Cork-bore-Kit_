@@ -503,7 +503,6 @@ val importCardLauncher = rememberLauncherForActivityResult(ActivityResultContrac
     }
 
     /** 进度同步用的会话标识：与电脑端「第一个选中角色」一致（单/群聊都取首位角色名） */
-    fun syncCardId(): String = if (selectedRoles.isNotEmpty()) selectedRoles.first() else "default"
 
 
     fun saveTree() {
@@ -525,7 +524,7 @@ val importCardLauncher = rememberLauncherForActivityResult(ActivityResultContrac
         // 进度同步：走 net 线（原来是 new 一个裸 Thread —— 同样的事，但至少归线管、看得见）
         if (Workshop.syncEnabled()) {
             try {
-                val cardId = syncCardId()
+                val cardId = syncCardId(selectedRoles)
                 val treeJson = snapshot.historyTree.toJson()
                 Lanes.on(Lanes.net, "推工坊同步") {
                     try {
@@ -611,17 +610,6 @@ val importCardLauncher = rememberLauncherForActivityResult(ActivityResultContrac
     }
 
     /** 正则管道：玩家卡级 + 角色卡级（优先）+ 全局规则；作用域 ai/user */
-    fun applyRegex(text: String, scope: String): String {
-        val roleRules = advancedByRole[selectedRoles.firstOrNull()]?.fields?.get("regex_rules") as? J.Arr
-        val roleList = roleRules?.items?.mapNotNull { it as? J.Obj } ?: emptyList()
-        val playerRules = try {
-            ((JsonS.parse(persona) as? J.Obj)?.fields?.get("advanced") as? J.Obj)?.fields?.get("regex_rules") as? J.Arr
-        } catch (_: Exception) {
-            null
-        }
-        val playerList = playerRules?.items?.mapNotNull { it as? J.Obj } ?: emptyList()
-        return RegexEngine.apply(text, scope, playerList + roleList, RegexEngine.loadGlobal())
-    }
 
     /** 玩家卡战斗配置（同规格待遇） */
     fun playerBattleConfig(): J.Obj? {
@@ -659,7 +647,7 @@ val importCardLauncher = rememberLauncherForActivityResult(ActivityResultContrac
     // ---------- 角色卡·多存档（新存档功能，与电脑端语义一致） ----------
     /** 该角色的当前对话树：活动角色取内存，其它角色取磁盘存档 */
     fun roleSaveTree(role: String): TreeData {
-        if (role == syncCardId() && selectedRoles.size == 1) return tree.toData()
+        if (role == syncCardId(selectedRoles) && selectedRoles.size == 1) return tree.toData()
         val tf = treeFileForRole(role)
         return if (tf.exists()) try { TreeStore.load(tf).historyTree } catch (_: Exception) { ChatTree().toData() }
         else ChatTree().toData()
@@ -667,7 +655,7 @@ val importCardLauncher = rememberLauncherForActivityResult(ActivityResultContrac
 
     /** 该角色的当前机制状态：活动角色取内存，其它角色取磁盘 JSON */
     fun roleSaveMech(role: String): J.Obj? {
-        if (role == syncCardId() && selectedRoles.size == 1) return mech.snapshot()
+        if (role == syncCardId(selectedRoles) && selectedRoles.size == 1) return mech.snapshot()
         val f = stateFileForRole(role)
         return try { if (f.exists()) JsonS.parse(f.readText(Charsets.UTF_8)) as? J.Obj else null } catch (_: Exception) { null }
     }
@@ -700,7 +688,7 @@ val importCardLauncher = rememberLauncherForActivityResult(ActivityResultContrac
         if (ms != null) {
             try { stateFileForRole(role).parentFile?.mkdirs(); stateFileForRole(role).writeText(JsonS.stringify(ms, pretty = true), Charsets.UTF_8) } catch (_: Exception) {}
         }
-        if (role == syncCardId() && selectedRoles.size == 1) {
+        if (role == syncCardId(selectedRoles) && selectedRoles.size == 1) {
             tree.loadData(slot.tree)
             tree.fixLeaf()
             mech.stateFile = stateFileForRole(role)
@@ -1159,7 +1147,7 @@ val importCardLauncher = rememberLauncherForActivityResult(ActivityResultContrac
         // 进度同步：后台预热局域网发现（避免主线程阻塞/竞态）
         Workshop.primeDiscovery()
         // 进度同步：后台拉取服务器最新树，若比本地新则载入（内部探测配置/局域网/隧道；无则静默跳过）
-        val cardId = syncCardId()
+        val cardId = syncCardId(selectedRoles)
         Lanes.on(Lanes.net, "拉取服务器树") {
             try {
                 val fetched = Workshop.fetchSave(cardId) ?: return@on
@@ -1170,7 +1158,7 @@ val importCardLauncher = rememberLauncherForActivityResult(ActivityResultContrac
                         // 生成中：不覆盖，避免撤回刚生成的回复
                         if (busy) return@withContext
                         // 已切别的角色：这条 fetch 是对旧卡的，丢弃，避免把旧树套到新卡上
-                        if (syncCardId() != cardId) return@withContext
+                        if (syncCardId(selectedRoles) != cardId) return@withContext
                         // 关键：用「当前」本地 ts 再比对（可能已被用户新回复推进），而不用启动时
                         // 定格的旧 localTreeTs —— 否则慢网络拉取会在回复之后落地，把整树回滚成旧版
                         val curTs = try { TreeStore.load(treeFileFor()).treeTs } catch (_: Exception) { localTreeTs }
@@ -1563,7 +1551,7 @@ val importCardLauncher = rememberLauncherForActivityResult(ActivityResultContrac
         // （走 io 线：这是文件写，原来在主线程上做）
         persistMechAsync()
         // 正则管道（ai 作用域）：标签剥离后、写入树前应用
-        val regexed = applyRegex(despaced, "ai")
+        val regexed = applyRegex(despaced, "ai", selectedRoles, advancedByRole, persona)
         // 顺序要紧：先"剥位置标签"（无论有没有机制卡都算），再叠上正则管道的结果
         if (despaced != parsed.second) finalReply = despaced
         if (mech.state != null) {
@@ -1674,7 +1662,7 @@ val importCardLauncher = rememberLauncherForActivityResult(ActivityResultContrac
         // 正则管道（user 作用域）：存储前应用 → 树里存转换后文本
         // 位置标注（[ploc:家/厨房]）在入树前收掉：它是"你到哪了"，不该显示给玩家，
         // 但要记进空间状态（玩家位置也一样会算路费）。
-        val sent = consumeSpaceMoves(applyRegex(processed, "user"), currentSpeaker().ifBlank { "她" })
+        val sent = consumeSpaceMoves(applyRegex(processed, "user", selectedRoles, advancedByRole, persona), currentSpeaker().ifBlank { "她" })
         input = ""
         busy = true
         streaming = ""

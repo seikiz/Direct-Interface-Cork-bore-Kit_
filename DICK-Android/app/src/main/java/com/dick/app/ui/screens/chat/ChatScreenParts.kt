@@ -176,3 +176,19 @@ internal fun utcNowIso(): String {
     fmt.timeZone = java.util.TimeZone.getTimeZone("UTC")
     return fmt.format(java.util.Date())
 }
+
+// 解耦：界面状态当参数传进来的小函数
+
+internal fun syncCardId(selectedRoles: Set<String>): String = if (selectedRoles.isNotEmpty()) selectedRoles.first() else "default"
+
+internal fun applyRegex(text: String, scope: String, selectedRoles: Set<String>, advancedByRole: Map<String, J.Obj>, persona: String): String {
+    val roleRules = advancedByRole[selectedRoles.firstOrNull()]?.fields?.get("regex_rules") as? J.Arr
+    val roleList = roleRules?.items?.mapNotNull { it as? J.Obj } ?: emptyList()
+    val playerRules = try {
+        ((JsonS.parse(persona) as? J.Obj)?.fields?.get("advanced") as? J.Obj)?.fields?.get("regex_rules") as? J.Arr
+    } catch (_: Exception) {
+        null
+    }
+    val playerList = playerRules?.items?.mapNotNull { it as? J.Obj } ?: emptyList()
+    return RegexEngine.apply(text, scope, playerList + roleList, RegexEngine.loadGlobal())
+}

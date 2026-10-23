@@ -184,7 +184,7 @@ def main():
         u"ChatBridge.chainProvider", u"ChatBridge.roleJsonProvider", u"ChatBridge.worldJsonProvider")))
     check(u"边界世界卡是原始 JSON（params 没在界面上丢掉）", u"worldCards[n] = o" in app_kt)
     check(u"回复落地时收位置标签", u"consumeSpaceMoves(stripped, spaceWho)" in app_kt)
-    check(u"玩家消息也收（[ploc:…]）", u"consumeSpaceMoves(applyRegex(processed, \"user\")" in app_kt)
+    check(u"玩家消息也收（[ploc:…]）", u"consumeSpaceMoves(applyRegex(processed, \"user\"" in app_kt)
     check(u"流式显示也剥（不然标签会闪在屏幕上）",
           app_kt.count(u"ChatBridge.takeMoves(mech.stripTags(full, apply = false)).first") == 2)
     check(u"记账走 io 线（写盘不占主线程）", u'Lanes.on(Lanes.io, "空间位置记账")' in app_kt)
