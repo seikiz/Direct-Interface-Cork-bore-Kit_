@@ -43,14 +43,12 @@ GENERATED = {
 
 # 豁免名单（历史遗留，只许降不许涨）。缩到 1000 以下就删条目。
 EXEMPT = {
-    os.path.join("web", "index.html"): 3900,
+    os.path.join("web", "index.html"): 3895,
     os.path.join("DICK-Android", "app", "src", "main", "java", "com", "dick", "app",
                  "ui", "screens", "chat", "ChatScreen.kt"): 2770,
-    "Direct-Interface Cork-bore Kit.py": 2480,
-    "DICK_core.py": 1800,
-    "net.py": 1440,
+    "net.py": 1365,
     os.path.join("DICK-Android", "app", "src", "main", "java", "com", "dick", "core",
-                 "MechanicsEngine.kt"): 1030,
+                 "MechanicsEngine.kt"): 1025,
 }
 
 # 统一成 / 分隔（扫描结果用 / 作键；Windows 下 os.path.join 给的是反斜杠）
