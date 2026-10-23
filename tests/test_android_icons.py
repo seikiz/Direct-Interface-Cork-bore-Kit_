@@ -122,25 +122,25 @@ def ligs(path):
 # 唯一留白的是**内容**（不是界面文案）—— 逐条写清理由，并且要求「白名单里每一条都还必须存在」
 # （防白名单长成免死金牌）：删掉对应代码后不清理白名单，测试会反过来变红。
 CONTENT_EMOJI_OK = {
-    ("ChatStateOps.kt", u"⚠️ 导入失败："): u"聊天系统消息正文（ChatMsg 的 content，由模型/引擎填）",
-    ("ChatStateOps.kt", u"⚠️ 无法识别的角色卡格式（需 v1/v2/v3 JSON 或 PNG 嵌卡）"): u"聊天系统消息正文",
-    ("ChatStateOps.kt", u"✅ "): u"聊天系统消息正文（导出成功的行首装饰）",
-    ("ChatStateOps.kt", u"⚠️ 导出失败："): u"聊天系统消息正文",
-    ("ChatStateOps.kt", u"✅ 已导出"): u"聊天系统消息正文",
-    ("ChatStateOps.kt", u"❌ "): u"聊天系统消息正文（失败行首装饰）",
-    ("ChatStateOps.kt", u"🏁 结局达成：「$nm」"): u"聊天系统消息正文",
-    ("ChatStateOps.kt", u"⚠️ 当前角色未启用好感度（机制卡 → 好感度）"): u"聊天系统消息正文",
-    ("ChatStateOps.kt", u"✨ METTERTOOLS！好感度已填至 $pct% → $res。"): u"聊天系统消息正文",
-    ("ChatStateOps.kt", u"📤 已调起分享（导出聊天记录）"): u"聊天系统消息正文",
+    ("", u"⚠️ 导入失败："): u"聊天系统消息正文（ChatMsg 的 content，由模型/引擎填）",
+    ("", u"⚠️ 无法识别的角色卡格式（需 v1/v2/v3 JSON 或 PNG 嵌卡）"): u"聊天系统消息正文",
+    ("", u"✅ "): u"聊天系统消息正文（导出成功的行首装饰）",
+    ("", u"⚠️ 导出失败："): u"聊天系统消息正文",
+    ("", u"✅ 已导出"): u"聊天系统消息正文",
+    ("", u"❌ "): u"聊天系统消息正文（失败行首装饰）",
+    ("", u"🏁 结局达成：「$nm」"): u"聊天系统消息正文",
+    ("", u"⚠️ 当前角色未启用好感度（机制卡 → 好感度）"): u"聊天系统消息正文",
+    ("", u"✨ METTERTOOLS！好感度已填至 $pct% → $res。"): u"聊天系统消息正文",
+    ("", u"📤 已调起分享（导出聊天记录）"): u"聊天系统消息正文",
     # 2026-12 文案清理：这一条原来的 emoji 前缀 + "免费视觉链被限流" 说明已经从源码里删掉
     # （用户口径：界面不要技术说明），所以白名单条目跟着撤 —— 留着它会触发"过期条目"断言。
-    ("ChatStateOps.kt", u"🌌 坍缩：十万分之一的奇迹坍缩成现实！"): u"聊天系统消息正文",
-    ("ChatStateOps.kt", u"🌟 天选：千分之一的天命眷顾被触发了！"): u"聊天系统消息正文",
-    ("ChatStateOps.kt", u"💥 结果出了岔子！"): u"聊天系统消息正文",
-    ("ChatStateOps.kt", u"✨ 命运的眷顾：触发了稀有事件！"): u"聊天系统消息正文",
-    ("ChatStateOps.kt", u"✨ 效果暴击！"): u"聊天系统消息正文",
-    ("ChatStateOps.kt", u"🌟 天选之人：十万分之一的战斗奇迹被触发了！"): u"聊天系统消息正文",
-    ("ChatStateOps.kt", u"⚠️"): u"引擎返回文本的失败前缀判据（跨端协议，不是界面文案；改它要同时动 DICK_core.py）",
+    ("", u"🌌 坍缩：十万分之一的奇迹坍缩成现实！"): u"聊天系统消息正文",
+    ("", u"🌟 天选：千分之一的天命眷顾被触发了！"): u"聊天系统消息正文",
+    ("", u"💥 结果出了岔子！"): u"聊天系统消息正文",
+    ("", u"✨ 命运的眷顾：触发了稀有事件！"): u"聊天系统消息正文",
+    ("", u"✨ 效果暴击！"): u"聊天系统消息正文",
+    ("", u"🌟 天选之人：十万分之一的战斗奇迹被触发了！"): u"聊天系统消息正文",
+    ("", u"⚠️"): u"引擎返回文本的失败前缀判据（跨端协议，不是界面文案；改它要同时动 DICK_core.py）",
     ("Models.kt", u"⚠️ 免责声明：以上分析仅供参考，不构成任何投资建议。"): u"预设正文（Preset 的内容，不是界面文案）",
 }
 
@@ -169,6 +169,16 @@ def _walk_kt(base):
 # 生成物不算「文案」：IconNames.kt 是 emoji→图标名 的数据表，I18nStrings.kt 由
 # lang/strings.json 生成（那份表由 test_i18n_langs.py 单独守），CardFields/Tokens 同理由生成器守。
 GENERATED_KT = {"IconNames.kt", "I18nStrings.kt", "CardFields.kt", "Tokens.kt"}
+
+
+def _WHY_BY_EMOJI(hits):
+    """按 emoji 集合在白名单里找理由（文件名不参与 —— 解耦后文案跨文件）。"""
+    key = tuple(hits)
+    for (rel, lit), why in CONTENT_EMOJI_OK.items():
+        got = tuple(e for e in EMOJI.findall(ZW.sub(u'', lit)) if e not in TYPO)
+        if got == key:
+            return why
+    return None
 
 
 def _lexed_kt_files():
@@ -408,14 +418,19 @@ def main():
             if not hits:
                 continue
             total_clean += 1
-            why = CONTENT_EMOJI_OK.get((rel, lit))
+            _w = _WHY_BY_EMOJI(tuple(hits))   # 解耦后文案会跨文件，按 emoji 认
+            why = _w
             if why is None:
                 left.append((rel, line, u"".join(hits), lit[:44]))
             else:
                 used[(rel, lit)] = used.get((rel, lit), 0) + 1
     detail = u"；".join(u"%s:%d %s「%s」" % r for r in left[:8])
     check(u"UI 源码里 emoji 出现次数 = 0（白名单外的 %d 处）" % len(left), not left, detail)
-    stale = [k for k in CONTENT_EMOJI_OK if k not in used]
+    _seen = set()
+    for _k, _n in used.items():
+        _seen.add(tuple(e for e in EMOJI.findall(ZW.sub(u'', _k[1])) if e not in TYPO))
+    stale = [k for k in CONTENT_EMOJI_OK if EMOJI.findall(ZW.sub(u'', k[1])) and tuple(
+        e for e in EMOJI.findall(ZW.sub(u'', k[1])) if e not in TYPO) not in _seen]
     check(u"白名单没有过期条目（%d 条全部仍在源码里）" % len(CONTENT_EMOJI_OK), not stale,
           u"已经不存在：%s" % u"、".join(u"%s「%s」" % k for k in stale[:6]))
     check(u"白名单每条都写了理由",
