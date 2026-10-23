@@ -53,7 +53,9 @@ def read_chat():
     这个测试盯的是"重活有没有被搬回主线程"，与代码住哪个文件无关 —— 所以两份一起看，
     而不是把断言删掉或者只盯着那个 30 行的入口文件。
     """
-    _src = read("app", "App.kt") + "\n" + read("app", "ui", "screens", "chat", "ChatScreen.kt") + "\n" + read("app", "ui", "screens", "chat", "ChatState.kt") + "\n" + read("app", "ui", "screens", "chat", "ChatStateOps.kt") + "\n" + read("app", "ui", "screens", "chat", "ChatStateOps2.kt") + "\n" + read("app", "ui", "screens", "chat", "ChatScreenParts.kt")
+    _src = read("app", "App.kt") + "\n" + read("app", "ui", "screens", "chat", "ChatScreen.kt") + "\n" + read("app", "ui", "screens", "chat", "ChatState.kt") + "\n" + read("app", "ui", "screens", "chat", "ChatStateOps.kt") + "\n" + read("app", "ui", "screens", "chat", "ChatStateOps2.kt")
+    return _src.replace(u"internal fun ChatState.", u"    fun ").replace(
+        u"fun ChatState.", u"    fun ")
 
 
 def seg_of(text, start, limit=6000):

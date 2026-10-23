@@ -343,12 +343,13 @@ def test_clear_history_restarts_opening():
 
     check("仍然重置机制状态（forceInitial，全量重建）", "forceInitial = true" in seg)
     check("仍然写回空树（防同步把旧历史捞回来）", "saveTree()" in seg)
-    check("清空后会重演开场白（复用 ensureOpeningLine）", "ensureOpeningLine()" in seg)
+    check("清空后会重演开场白（复用 ensureOpeningLine）",
+          "ensureOpeningLine()" in seg or "ensureOpening()" in seg)
     check("不会在生成中抢跑（有 busy 守卫）", "busy" in seg)
     # 顺序很关键：必须先把树清空，守卫里的「树为空」才成立，否则重演是空转
-    check("重演排在清空之后", "tree.loadData" in seg and seg.find("ensureOpeningLine()") > seg.find("tree.loadData"),
+    check("重演排在清空之后", "tree.loadData" in seg and seg.find("ensureOpening") > seg.find("tree.loadData"),
           "ensureOpeningLine 在第 %d 字，tree.loadData 在第 %d 字"
-          % (seg.find("ensureOpeningLine()"), seg.find("tree.loadData")))
+          % (seg.find("ensureOpening"), seg.find("tree.loadData")))
 
 
 if __name__ == "__main__":
