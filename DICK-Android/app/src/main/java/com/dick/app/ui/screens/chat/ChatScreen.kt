@@ -836,11 +836,16 @@ val importCardLauncher = rememberLauncherForActivityResult(ActivityResultContrac
     var showQuickPanel by vm.showQuickPanel
     val finFoldedState = remember { mutableStateOf(true) }
     var finFolded by finFoldedState   // 加号面板「财报」折叠区块默认收起
+fun wsRefreshLocal() {
+        wsLocalRoles.clear(); wsLocalRoles.addAll(Workshop.localRoles())
+        wsLocalWorlds.clear(); wsLocalWorlds.addAll(Workshop.localWorlds())
+    }
+
     st = androidx.compose.runtime.remember { ChatState(
         vm, scope, engine, registry, tree, worldCards, dice, memory, swipe, gal, mech,
         search, financial, jp, uiPlugin, speakCounts,
         mechTickState, lastSpeakerState, pendingImageState, finFoldedState,
-        context, tts, { t, bmp, d -> doSend(t, bmp, d) }, { ensureOpeningLine() }, { },
+        context, tts, { t, bmp, d -> doSend(t, bmp, d) }, { ensureOpeningLine() }, { wsRefreshLocal() },
     ) }
     val insertCmd: (String) -> Unit = { cmd ->
         input = if (input.isBlank()) cmd else input + " " + cmd
@@ -1006,10 +1011,6 @@ val importCardLauncher = rememberLauncherForActivityResult(ActivityResultContrac
 
 
 
-fun wsRefreshLocal() {
-        wsLocalRoles.clear(); wsLocalRoles.addAll(Workshop.localRoles())
-        wsLocalWorlds.clear(); wsLocalWorlds.addAll(Workshop.localWorlds())
-    }
 
 
 
@@ -1097,7 +1098,7 @@ fun wsRefreshLocal() {
         activeCardFace = { st.activeCardFace() },
         editMessage = { m, s -> st.editMessage(m, s) },
         toggleRoleUnlock = { st.toggleRoleUnlock(it) },
-        wsRefreshLocal = { },
+        wsRefreshLocal = { wsRefreshLocal() },
         wsLoadOnline = { st.wsLoadOnline() },
         wsSearchOnline = { st.wsSearchOnline() },
         wsLoadPlugins = { st.wsLoadPlugins() },
