@@ -123,9 +123,12 @@ def main():
     kt += "\n" + read(os.path.join(_chat_dir, "ChatScreenParts.kt"))
     # 输入栏拆到 ChatComposer.kt —— "状态行在输入框之前"是跨文件的顺序断言
     kt += "\n" + read(os.path.join(_chat_dir, "ChatComposer.kt"))
+    kt += "\n" + read(os.path.join(_chat_dir, "ChatThemeBody.kt"))
     check(u"\u6709 BusyStatusLine \u7ec4\u5408\u51fd\u6570", "fun BusyStatusLine(" in kt)
-    call_at = kt.find("BusyStatusLine(busy = busy")
-    field_at = kt.find("OutlinedTextField(")
+    body_kt = read(os.path.join(_chat_dir, "ChatThemeBody.kt"))
+    # 重构后状态行与输入栏都在 ChatThemeBody 里（字段带 st. 前缀）
+    call_at = body_kt.find("BusyStatusLine(busy = st.busy")
+    field_at = body_kt.find("ChatComposer(")
     check(u"\u72b6\u6001\u884c\u5199\u5728\u8f93\u5165\u6846\u4e4b\u524d",
           0 < call_at < field_at, u"%d vs %d" % (call_at, field_at))
     check(u"\u8ba1\u79d2\u5b9e\u73b0\u5728\uff08delay 1000\uff09", "delay(1000L)" in kt)

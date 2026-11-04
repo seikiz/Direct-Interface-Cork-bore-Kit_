@@ -307,6 +307,8 @@ def test_android_has_same_loading_state():
                     encoding="utf-8").read()
     app += io.open(os.path.join(a, "ui", "screens", "chat", "ChatStateOps2.kt"),
                     encoding="utf-8").read()
+    app += io.open(os.path.join(a, "ui", "screens", "chat", "ChatThemeBody.kt"),
+                    encoding="utf-8").read()
     app = app.replace(u"fun ChatState.", u"fun ")
     check("ViewModel 里有 openingLoading 状态",
           "var openingLoading = mutableStateOf(false)" in vm)
@@ -315,8 +317,8 @@ def test_android_has_same_loading_state():
     check("出错/回复时收掉", app.count("openingLoading = false") >= 2,
           "只出现 %d 次" % app.count("openingLoading = false"))
     check("加载气泡条件含 openingLoading",
-          "streaming.isNotEmpty() || openingLoading" in app)
-    check("没有流式文本时显示占位符", 'if (streaming.isEmpty()) "…"' in app)
+          ("streaming.isNotEmpty() || openingLoading" in app or "st.streaming.isNotEmpty() || st.openingLoading" in app))
+    check("没有流式文本时显示占位符", ('if (streaming.isEmpty()) "…"' in app or 'if (st.streaming.isEmpty()) "…"' in app))
 
 
 def test_clear_history_restarts_opening():
@@ -330,6 +332,8 @@ def test_clear_history_restarts_opening():
     app += io.open(os.path.join(a, "ui", "screens", "chat", "ChatStateOps.kt"),
                     encoding="utf-8").read()
     app += io.open(os.path.join(a, "ui", "screens", "chat", "ChatStateOps2.kt"),
+                    encoding="utf-8").read()
+    app += io.open(os.path.join(a, "ui", "screens", "chat", "ChatThemeBody.kt"),
                     encoding="utf-8").read()
     app = app.replace(u"fun ChatState.", u"fun ")
     i = app.find("fun clearHistory(")
