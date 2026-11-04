@@ -141,7 +141,6 @@ fun ChatScreen(vm: ChatViewModel, theme: ThemeSpec, accent: Color) {
     val jp = remember { JpPlugin() }
     val uiPlugin = remember { UiPlugin() }
 
-    val messages = vm.messages
     val quickReplies = vm.quickReplies
     val avatarCache = vm.avatarCache
     var avatarTarget by vm.avatarTarget
@@ -190,9 +189,7 @@ fun ChatScreen(vm: ChatViewModel, theme: ThemeSpec, accent: Color) {
     var accentIdx by vm.accentIdx
     val savedStates = vm.savedStates
     var presetIdx by vm.presetIdx
-    var budgetIdx by vm.budgetIdx
     var selectedRoles by vm.selectedRoles
-    var selectedWorlds by vm.selectedWorlds
     var currentWorld by vm.currentWorld
     val lastSpeakerState = remember { mutableStateOf<String?>(null) }
     var lastSpeaker by lastSpeakerState
@@ -207,22 +204,17 @@ fun ChatScreen(vm: ChatViewModel, theme: ThemeSpec, accent: Color) {
     var showGuide by vm.showGuide
     var guideStep by vm.guideStep
     var persona by vm.persona
-    var showPersonaEdit by vm.showPersonaEdit
     var autoTurn by vm.autoTurn
     var speakReplies by vm.speakReplies
     var input by vm.input
     var busy by vm.busy
     var streaming by vm.streaming
     var openingLoading by vm.openingLoading
-    var showSettings by vm.showSettings
     // 时间流速：改成 vm 里的状态，设置弹窗直接读改，避免两处副本不同步
     var timeScale by vm.timeScale
     var showApiSetup by vm.showApiSetup  // 抽屉「API 配置」独立入口
     var showTrpg by vm.showTrpg          // 抽屉「跑团（局域网）」
     var showCardFace by vm.showCardFace  // 「卡面」查看弹窗
-    var showRoles by vm.showRoles
-    var showWorlds by vm.showWorlds
-    var roleEditName by vm.roleEditName
     var pendingDelete by vm.pendingDelete // (名称, "role"/"world") 待确认删除
     val pendingImageState = remember { mutableStateOf<PendingImg?>(null) }
     var pendingImage by pendingImageState
@@ -233,37 +225,17 @@ fun ChatScreen(vm: ChatViewModel, theme: ThemeSpec, accent: Color) {
     val sysMsgs = vm.sysMsgs
     val nodeImages = vm.nodeImages
     val worldEntries = vm.worldEntries
-    var showWorldEdit by vm.showWorldEdit
-    var editMsgTarget by vm.editMsgTarget
-    var editMsgText by vm.editMsgText
-    var showBranches by vm.showBranches
     var showClearHistory by vm.showClearHistory
     var exportTarget by vm.exportTarget
     // ---- 创意工坊状态 ----
-    var showWorkshop by vm.showWorkshop
-    var wsTabOnline by vm.wsTabOnline
-    var wsTabPlugin by vm.wsTabPlugin
-    var wsPlugins by vm.wsPlugins
-    var wsLocalPlugins by vm.wsLocalPlugins
-    var wsInstallingId by vm.wsInstallingId
     val wsLocalRoles = vm.wsLocalRoles
     val wsLocalWorlds = vm.wsLocalWorlds
     var wsLocalType by vm.wsLocalType
-    var wsLocalIdx by vm.wsLocalIdx
-    var wsDetail by vm.wsDetail
     var wsServerInput by vm.wsServerInput
     var wsKeyInput by vm.wsKeyInput
-    var wsStatus by vm.wsStatus
-    var wsStatusIcon by vm.wsStatusIcon
     // 工坊状态行 = 纯文本 + 图标名（→check_circle、→error…）。渲染点在 WorkshopScreen
     // 的 DickTag，这里只负责把两样一起设好 —— 文案里不再出现 emoji 字符。
-    val wsOnlineList = vm.wsOnlineList
-    var wsOnlineIdx by vm.wsOnlineIdx
-    var wsSearchInput by vm.wsSearchInput
     var wsExportTarget by vm.wsExportTarget
-    var providerMenu by vm.providerMenu
-    var modelMenu by vm.modelMenu
-    var customModelInput by vm.customModelInput
 
     val tts = remember { TextToSpeech(context) { } }
 
@@ -417,7 +389,6 @@ val importCardLauncher = rememberLauncherForActivityResult(ActivityResultContrac
         }
     }
 
-    // ---------- 玩家角色卡（结构化） ----------
 
     /** 角色首入空树时启动开场（只单角色、只空树时）。
      *
@@ -431,7 +402,6 @@ val importCardLauncher = rememberLauncherForActivityResult(ActivityResultContrac
      */
     var ensureOpeningLine: () -> Unit = {}
 
-    // ---------- 角色卡·多存档（新存档功能，与电脑端语义一致） ----------
 
     /** 群聊说话人兜底（修复「回复显示成 AI」）：模型没输出 [角色名]: 前缀时，
      *  用本轮选中的发言角色 lastSpeaker 归属（对齐 PC 端 _group_speaker 兜底）。 */
@@ -1017,33 +987,13 @@ fun wsRefreshLocal() {
         insertCmd = insertCmd,
     )
 
-    // 首次启动引导框
-
-    // ---------- 所有 overlay 屏（导航壳） ----------
-    // App() 从这里之后**不认识任何一个具体屏**：谁在屏幕上、什么顺序，全在 nav/Routes.kt。
-    // 搬家前这里是 14 行平铺的 `XxxDialog(vm, deps)` —— 那种写法谁都能顺手插一行，
-    // 结果就是"屏与屏互相点名"。加一屏请去 Routes 里加。
-
-    ChatGuideDialog(
-        showGuide = showGuide, guideStep = guideStep, theme = theme,
-        onStep = { guideStep = it }, onClose = { showGuide = false; st.saveConfig() },
+    ChatOverlays(
+        st = st, theme = theme, deps = deps,
+        showGuide = showGuide, guideStep = guideStep, showClearHistory = showClearHistory,
+        onStep = { guideStep = it },
+        onCloseGuide = { showGuide = false; st.saveConfig() },
+        onDismissClear = { showClearHistory = false },
+        onConfirmClear = { also -> st.clearHistory(also); showClearHistory = false },
     )
-
-    ChatClearHistoryDialog(
-        show = showClearHistory, theme = theme, cardLabel = st.currentCardLabel(),
-        onDismiss = { showClearHistory = false },
-        onConfirm = { also -> st.clearHistory(also); showClearHistory = false },
-    )
-
-    OverlayHost(
-        vm = vm,
-        deps = deps,
-        muted = theme.muted,
-        danger = theme.danger,
-        onDeleteRole = { n -> st.deleteRole(n) },
-        onDeleteWorld = { n -> st.deleteWorld(n) },
-    )
-
-    // ---------- 彻底清空历史（红色 · 二次确认） ----------
 }
 // <seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌

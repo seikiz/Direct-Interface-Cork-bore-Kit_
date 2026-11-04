@@ -42,10 +42,7 @@ SKIP_PARTS = (
 GENERATED = {}   # 生成物已拆成两个文件（都 <1000 行），不再需要单独上限
 
 # 豁免名单（历史遗留，只许降不许涨）。缩到 1000 以下就删条目。
-EXEMPT = {
-    os.path.join("DICK-Android", "app", "src", "main", "java", "com", "dick", "app",
-                 "ui", "screens", "chat", "ChatScreen.kt"): 2770,
-}
+EXEMPT = {}   # 豁免表已清空：ChatScreen 拆到 963 行，全项目单文件 ≤1000
 
 # 统一成 / 分隔（扫描结果用 / 作键；Windows 下 os.path.join 给的是反斜杠）
 GENERATED = {k.replace("\\", "/"): v for k, v in GENERATED.items()}
