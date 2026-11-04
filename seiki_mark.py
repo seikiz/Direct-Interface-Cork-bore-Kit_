@@ -114,6 +114,7 @@ SKIP_DIRS = {
     "vendor", "third_party", "thirdparty", "libs",
     # 非 DICK 项目（见 .gitignore「DSH 环境目录」一节）
     "dsh-companion", "dsh-vision-router", "dsh-whale-pet",
+    "DSH-purge", "xuexitongScript", "_patched",   # 外部克隆/安装/补丁产物
 }
 
 # 第三方常见命名，一并跳过（哪怕不在 vendor 目录里）

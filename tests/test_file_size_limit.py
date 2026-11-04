@@ -32,6 +32,8 @@ LIMIT = 1000
 SKIP_PARTS = (
     "utau_env", "node_modules", ".git", "dist", "build", "tavern-installer",
     "archive", "web/live2d", "web/vendor", "web/fonts", "__pycache__",
+    "DSH-purge",   # 第三方 npm 包（purge 工具产物），不算本项目源码
+    "xuexitongScript",   # 外部克隆进来的第三方仓库，不属于本项目
     "dick_rr_", "exports", "dsh-vision-router", "dsh-companion", "_phone",
     ".tmp_test", "pip-", "_rel_out",
 )

@@ -1,6 +1,5 @@
-# ============ DICK .gitignore ============
-# 隐私数据（角色卡/聊天记录/设置）
-saves/
+﻿# ============ DICK .gitignore ============
+# 闅愮鏁版嵁锛堣鑹插崱/鑱婂ぉ璁板綍/璁剧疆锛?saves/
 worlds/
 personas/
 config.json
@@ -8,17 +7,16 @@ workshop_config.json
 memory/
 quick_replies.json
 financial_history.json
-# 用户自定义生图预设（内置预设写死在 image_gen.py，这个是用户覆盖层）
+# 鐢ㄦ埛鑷畾涔夌敓鍥鹃璁撅紙鍐呯疆棰勮鍐欐鍦?image_gen.py锛岃繖涓槸鐢ㄦ埛瑕嗙洊灞傦級
 image_presets.json
-# 运行时设置：时间流速 / 生活层（跟 exe 或工程根走，属于本机状态，不进仓库）
-time_scale.json
+# 杩愯鏃惰缃細鏃堕棿娴侀€?/ 鐢熸椿灞傦紙璺?exe 鎴栧伐绋嬫牴璧帮紝灞炰簬鏈満鐘舵€侊紝涓嶈繘浠撳簱锛?time_scale.json
 life_config.json
 
-# API Key / 密钥（任何地方）
+# API Key / 瀵嗛挜锛堜换浣曞湴鏂癸級
 *.key
 .env
 
-# 构建产物
+# 鏋勫缓浜х墿
 build/
 dist/
 DICK-HTML/
@@ -29,16 +27,14 @@ installer_screenshot.png
 _install_test/
 _zh_test/
 
-# Python 环境/缓存
+# Python 鐜/缂撳瓨
 utau_env/
 __pycache__/
 *.pyc
 tts_cache/
-# CODEX 作品目录（用户数据，在数据根下）。只忽略**仓库根**那一级 ——
-# 少了开头的斜杠会把 modules/codex/ 这个源码块一起吞掉（2026-10-20 第二批迁移时踩到）。
-/codex/
+# CODEX 浣滃搧鐩綍锛堢敤鎴锋暟鎹紝鍦ㄦ暟鎹牴涓嬶級銆傚彧蹇界暐**浠撳簱鏍?*閭ｄ竴绾?鈥斺€?# 灏戜簡寮€澶寸殑鏂滄潬浼氭妸 modules/codex/ 杩欎釜婧愮爜鍧椾竴璧峰悶鎺夛紙2026-10-20 绗簩鎵硅縼绉绘椂韪╁埌锛夈€?/codex/
 
-# Android 构建
+# Android 鏋勫缓
 DICK-Android/build/
 DICK-Android/.gradle/
 DICK-Android/.kotlin/
@@ -47,40 +43,37 @@ DICK-Android/app/build/
 local.properties
 *.jks
 
-# Kotlin 叙事播放器（DICK-Narrative）
-DICK-Narrative/.gradle/
+# Kotlin 鍙欎簨鎾斁鍣紙DICK-Narrative锛?DICK-Narrative/.gradle/
 DICK-Narrative/.kotlin/
 DICK-Narrative/app/build/
 DICK-Narrative/build/
-# 播放器打包产物（127MB，绝不进仓库）
-DICK-Narrative-播放器/
+# 鎾斁鍣ㄦ墦鍖呬骇鐗╋紙127MB锛岀粷涓嶈繘浠撳簱锛?DICK-Narrative-鎾斁鍣?
 DICK-Narrative/app/build/compose/binaries/
 
-# 插件设置（含用户配置）
-plugin_settings/
+# 鎻掍欢璁剧疆锛堝惈鐢ㄦ埛閰嶇疆锛?plugin_settings/
 
-# 日志
+# 鏃ュ織
 *.log
 debug.log
 
-# 编辑器/系统
+# 缂栬緫鍣?绯荤粺
 .idea/
 .vscode/
 .DS_Store
 Thumbs.db
 
-# 安装器下载的临时产物
+# 瀹夎鍣ㄤ笅杞界殑涓存椂浜х墿
 tavern-installer/tavern/
 tavern-installer/tavern.zip
 tavern-installer/start.bat
 
-# 测试临时
+# 娴嬭瘯涓存椂
 _apk_inspect/
 _kt_test_data/
 _mock/
 _ui_evidence/
 
-# 开发临时脚本（下划线开头）
+# 寮€鍙戜复鏃惰剼鏈紙涓嬪垝绾垮紑澶达級
 /_*.py
 /_*.bat
 /_*.kt
@@ -90,67 +83,68 @@ _ui_evidence/
 /_*.html
 /_wf/.wrangler/
 
-# DSH 环境目录（不属于 DICK 项目）
-/dsh-vision-router/
+# DSH 鐜鐩綍锛堜笉灞炰簬 DICK 椤圭洰锛?/dsh-vision-router/
 /dsh-whale-pet/
 /dskin/
 /.dsh-vision-router/
 
-# Cloudflare Workers 本地开发目录
-/_wf/
+# Cloudflare Workers 鏈湴寮€鍙戠洰褰?/_wf/
 
 workshop_data/
 
-# 新增：机器/构建产物（绝不能进仓库）
+# 鏂板锛氭満鍣?鏋勫缓浜х墿锛堢粷涓嶈兘杩涗粨搴擄級
 tavern-installer/node/
 server_build/
 DICK-HTML.zip
 *.bak
-# 带时间戳的编辑器备份（X.kt.bak-20261016-212937 这种）：`*.bak` 匹配不到，必须单独一条，
-# 否则它们会跟着 git add -A 混进提交
+# 甯︽椂闂存埑鐨勭紪杈戝櫒澶囦唤锛圶.kt.bak-20261016-212937 杩欑锛夛細`*.bak` 鍖归厤涓嶅埌锛屽繀椤诲崟鐙竴鏉★紝
+# 鍚﹀垯瀹冧滑浼氳窡鐫€ git add -A 娣疯繘鎻愪氦
 *.bak-*
 aoqi_crawler.py
 
-# DSH 环境目录
+# DSH 鐜鐩綍
 /dsh-companion/
 
-# 手机工具链素材（Termux rootfs / debs，约 42MB / 2700+ 文件）—— 是移植素材，不是源码
+# 鎵嬫満宸ュ叿閾剧礌鏉愶紙Termux rootfs / debs锛岀害 42MB / 2700+ 鏂囦欢锛夆€斺€?鏄Щ妞嶇礌鏉愶紝涓嶆槸婧愮爜
 _phone/
 
-# 开发临时数据：下划线开头的老规则只覆盖了 py/bat/kt/ps1/txt/js/html，漏了 json
-# （_turns.json、_selfscore_data*.json 这类实验输出会漏进来）
-/_*.json
+# 寮€鍙戜复鏃舵暟鎹細涓嬪垝绾垮紑澶寸殑鑰佽鍒欏彧瑕嗙洊浜?py/bat/kt/ps1/txt/js/html锛屾紡浜?json
+# 锛坃turns.json銆乢selfscore_data*.json 杩欑被瀹為獙杈撳嚭浼氭紡杩涙潵锛?/_*.json
 
-# 跑测试/脚本留下的临时目录
-/_tmp*/
+# 璺戞祴璇?鑴氭湰鐣欎笅鐨勪复鏃剁洰褰?/_tmp*/
 
-# 测试用 tempfile.mkdtemp 的产物：本机 venv（utau_env）里 tempfile 会退化成工作目录，
-# 于是 mkdtemp 出来的目录全落在项目根 —— 是垃圾，不是源码（/dick_*/ 只匹配目录，不碰 .py）
-/tmp*/
+# 娴嬭瘯鐢?tempfile.mkdtemp 鐨勪骇鐗╋細鏈満 venv锛坲tau_env锛夐噷 tempfile 浼氶€€鍖栨垚宸ヤ綔鐩綍锛?# 浜庢槸 mkdtemp 鍑烘潵鐨勭洰褰曞叏钀藉湪椤圭洰鏍?鈥斺€?鏄瀮鍦撅紝涓嶆槸婧愮爜锛?dick_*/ 鍙尮閰嶇洰褰曪紝涓嶇 .py锛?/tmp*/
 /dick_*/
 /sg_*/
 
-# 临时截图/出图样本（验证生图、UI 截图这类）
-/_*.jpg
+# 涓存椂鎴浘/鍑哄浘鏍锋湰锛堥獙璇佺敓鍥俱€乁I 鎴浘杩欑被锛?/_*.jpg
 /_*.jpeg
 /_*.png
 /_*.webp
 /_*.gif
-# 临时导出的小说样本（验证 EPUB/Word 导出）
-/_*.epub
+# 涓存椂瀵煎嚭鐨勫皬璇存牱鏈紙楠岃瘉 EPUB/Word 瀵煎嚭锛?/_*.epub
 /_*.docx
 
-# pip 解析依赖时的临时报告（tools/lock_requirements.py 用；异常退出可能留下）
+# pip 瑙ｆ瀽渚濊禆鏃剁殑涓存椂鎶ュ憡锛坱ools/lock_requirements.py 鐢紱寮傚父閫€鍑哄彲鑳界暀涓嬶級
 dick_lock_*.json
 
-# 空间层：位置状态目录（一个角色一个 json）与它的运行时设置
-space/
+# 绌洪棿灞傦細浣嶇疆鐘舵€佺洰褰曪紙涓€涓鑹蹭竴涓?json锛変笌瀹冪殑杩愯鏃惰缃?space/
 space_config.json
 
-# 测试用的仓库内临时目录（本机 %TEMP% 会卡死，见 tests/test_android_colors.py）
-.tmp_test/
+# 娴嬭瘯鐢ㄧ殑浠撳簱鍐呬复鏃剁洰褰曪紙鏈満 %TEMP% 浼氬崱姝伙紝瑙?tests/test_android_colors.py锛?.tmp_test/
 
-# 发布产物：zip 有 134MB，超过 GitHub 单文件 100MB 上限，push 会被 pre-receive 拒掉。
-# 发布包只放本地 DICK-发布/，不进仓库。
-DICK-发布/DICK-电脑版.zip
-DICK-发布/*.zip
+# 鍙戝竷浜х墿锛歾ip 鏈?134MB锛岃秴杩?GitHub 鍗曟枃浠?100MB 涓婇檺锛宲ush 浼氳 pre-receive 鎷掓帀銆?# 鍙戝竷鍖呭彧鏀炬湰鍦?DICK-鍙戝竷/锛屼笉杩涗粨搴撱€?DICK-鍙戝竷/DICK-鐢佃剳鐗?zip
+DICK-鍙戝竷/*.zip
+
+# 澶栭儴鍏嬮殕鐨勭涓夋柟浠撳簱锛堜笉灞炰簬鏈」鐩級
+xuexitongScript/
+DSH-purge/
+
+# 补丁产物 / 测试临时目录 / pip 缓存
+_patched/
+mem_scene_*/
+pip-*/
+
+# 桌面交付物（音乐素材），不进仓库
+Project_2_additions*.mid
+Project_2_*.txt
