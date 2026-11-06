@@ -14,6 +14,8 @@
 import gzip
 import json
 import os
+
+import atomic_io
 import struct
 import sys
 import threading
@@ -390,8 +392,8 @@ def save_upload(card_id):
     ts = datetime.now(timezone.utc).isoformat()
     with _index_lock:
         try:
-            with open(_save_path(card_id), "w", encoding="utf-8") as f:
-                json.dump({"kind": "dick_tree", "ts": ts, "tree": tree}, f, ensure_ascii=False)
+            atomic_io.write_json(_save_path(card_id),
+                                  {"kind": "dick_tree", "ts": ts, "tree": tree}, indent=None)
         except Exception as e:
             return jsonify({"error": "save fail: " + str(e)[:200]}), 500
     return jsonify({"ok": True, "ts": ts})

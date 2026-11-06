@@ -1,5 +1,7 @@
 # plugin_m<seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌anager.py
 import os
+
+import atomic_io
 import shutil
 import sys
 import importlib.util
@@ -57,8 +59,7 @@ class PluginManager:
                 with open(self.config_file, 'r', encoding='utf-8') as f:
                     cfg = json.load(f)
             cfg["plugin_states"] = states
-            with open(self.config_file, 'w', encoding='utf-8') as f:
-                json.dump(cfg, f, ensure_ascii=False, indent=2)
+            atomic_io.write_json(self.config_file, cfg)
         except Exception as e:
             print(f"[PluginManager] 保存插件状态失败: {e}")
 

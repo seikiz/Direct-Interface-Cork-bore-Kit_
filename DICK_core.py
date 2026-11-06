@@ -13,6 +13,8 @@ import random
 import re
 import threading
 import os
+
+import atomic_io
 import ast
 import math
 import operator
@@ -668,7 +670,6 @@ class ChatCore(PromptMixin, MechMixin, FetchMixin):
                 with open(config_file, 'r', encoding='utf-8') as f:
                     cfg = json.load(f)
             cfg["welcome_shown"] = True
-            with open(config_file, 'w', encoding='utf-8') as f:
-                json.dump(cfg, f, ensure_ascii=False, indent=2)
+            atomic_io.write_json(config_file, cfg)
         except Exception as e:
             print(f"[引导] 写入标记失败: {e}")

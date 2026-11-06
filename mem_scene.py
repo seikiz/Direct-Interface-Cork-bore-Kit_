@@ -28,6 +28,8 @@ from __future__ import annotations
 
 import io
 import json
+
+import atomic_io
 import os
 import re
 import time
@@ -151,8 +153,7 @@ def write_summary(memory_dir, scene, role, text, stamp=None):
     d = ensure_role(memory_dir, scene, role)
     name = "%s%s.md" % (SUMMARY_PREFIX, stamp or time.strftime("%Y%m%d-%H%M%S"))
     path = os.path.join(d, name)
-    with io.open(path, "w", encoding="utf-8", newline="\n") as f:
-        f.write(text)
+    atomic_io.write_text(path, text)      # 摘要也是"丢了就没了"的东西，不许半截
     return path
 
 

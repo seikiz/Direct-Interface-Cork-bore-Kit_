@@ -12,6 +12,8 @@
 #   6. 示例对话解析支持 {{user}}/{{char}}/<user>/<char>/用户：/角色： 等格式
 # ============================================================
 import os
+
+import atomic_io
 import json
 import uuid
 import base64
@@ -156,8 +158,7 @@ class ImportTavernCard(PluginBase):
                 i += 1
             char_path = f"{base}_{i}{ext}"
 
-        with open(char_path, 'w', encoding='utf-8') as f:
-            json.dump(character_card, f, ensure_ascii=False, indent=2)
+        atomic_io.write_json(char_path, character_card)
         result.append(f"✅ 角色卡已保存: {os.path.basename(char_path)}")
 
         # ----- 世界卡 -----
@@ -193,8 +194,7 @@ class ImportTavernCard(PluginBase):
             "entries": active_entries,
         }
 
-        with open(world_path, 'w', encoding='utf-8') as f:
-            json.dump(world_data, f, ensure_ascii=False, indent=2)
+        atomic_io.write_json(world_path, world_data)
         msg = f"🌍 世界卡已保存: {os.path.basename(world_path)}（{len(active_entries)} 个条目"
         if skipped:
             msg += f"，跳过 {skipped} 个禁用条目"
@@ -205,8 +205,7 @@ class ImportTavernCard(PluginBase):
         if index_data['entries']:
             index_filename = self._generate_index_filename(world_data['name'], character_card['name'])
             index_path = os.path.join(self.index_dir, index_filename)
-            with open(index_path, 'w', encoding='utf-8') as f:
-                json.dump(index_data, f, ensure_ascii=False, indent=2)
+            atomic_io.write_json(index_path, index_data)
             result.append(f"📇 索引已创建: {index_filename}")
 
         return result

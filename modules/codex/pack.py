@@ -16,12 +16,39 @@
 
 import json
 import os
+import tempfile
 import shutil
 import struct
 import zipfile
 
 from .constants import SUBDIRS, classify_file
 
+
+
+def _atomic_write_json(path, obj):
+    """块内原子写：写一半断电不会把 codex.json 变成半个文件。
+
+    为什么不 from atomic_io import …：块不许依赖根目录（ARCHITECTURE 十二、可移植性闸门）。
+    所以这 12 行在本块里自带一份，逻辑与根目录那份一致。
+    """
+    d = os.path.dirname(os.path.abspath(path)) or "."
+    os.makedirs(d, exist_ok=True)
+    fd, tmp = tempfile.mkstemp(prefix=".codex-", suffix=".tmp", dir=d)
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8", newline="\n") as f:
+            json.dump(obj, f, ensure_ascii=False, indent=2)
+            f.flush()
+            try:
+                os.fsync(f.fileno())
+            except Exception:
+                pass
+        os.replace(tmp, path)
+    except Exception:
+        try:
+            os.remove(tmp)
+        except Exception:
+            pass
+        raise
 
 def make_template(name="我的故事"):
     """生成一个开箱即用的示例剧本（可直接播放，验证播放器）"""
@@ -118,8 +145,7 @@ def import_folder(src_dir, dest_root, name):
         # 把实际存在的资源名写进场景引用，保证播放器开箱能显示
         tpl = _wire_resources(tpl, dst)
         try:
-            with open(os.path.join(dst, "codex.json"), "w", encoding="utf-8") as f:
-                json.dump(tpl, f, ensure_ascii=False, indent=2)
+            _atomic_write_json(os.path.join(dst, "codex.json"), tpl)
         except Exception:
             pass
     total = sum(counts.values())
@@ -189,8 +215,7 @@ def make_sample_package(dest_root, name="示例·夏日祭"):
         tpl["scenes"][0]["lines"][1]["voice"] = "voice/01.wav"
         tpl["scenes"][1]["lines"][0]["sprite"] = "sprites/咲_笑.png"
         tpl["scenes"][2]["lines"][0]["sprite"] = "sprites/咲_怒.png"
-        with open(os.path.join(dst, "codex.json"), "w", encoding="utf-8") as f:
-            json.dump(tpl, f, ensure_ascii=False, indent=2)
+        _atomic_write_json(os.path.join(dst, "codex.json"), tpl)
         return True, dst
     except Exception as e:
         return False, str(e)
