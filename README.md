@@ -66,6 +66,7 @@ python deploy\selfcheck_workshop.py --base http://127.0.0.1:8080 --full
 | 文案 | `tests/test_no_emoji_ui.py`、`tests/test_no_dev_copy.py` | UI 里的 emoji 字符、HTTP 码/地址/gzip 这类技术说明 |
 | 唯一真相 | `tools/gen_*.py --check` | 手改了生成产物（图标/文案/令牌/卡片字段/对拍表） |
 | 行数硬闸 | `tests/test_file_size_limit.py` | **全项目单文件 ≤1000 行，豁免表已清空**（`EXEMPT = {}`） |
+| 落盘安全 | `tests/test_atomic_io.py` | 关键路径必须 `atomic_io`（临时文件→fsync→os.replace）；出现裸 `open(path,'w')` 覆盖写就红 |
 | 全套 | `python tools/run_local_suite.py` | 116 脚本 / 3,932 断言；CI 三平台（Linux 3.11/3.12 + Windows）都跑，并且**先跑 `accept.py` 再跑全测** |
 
 规矩本身怎么改，写在 [ARCHITECTURE.md](ARCHITECTURE.md) 第八节（反修正主义：改铁律要写原因、同期改测试与基线、留修订记录）；改代码的手艺在第九/十节（**替换优先**、**积木协议：架构由人定，AI 只在已声明的块里填文件**）。
@@ -143,6 +144,28 @@ memory/<场景>/_world/…                    世界记忆按场景各一份
 | 每轮只送最近 **24~36** 条；私聊 **32** / 群聊 **48** 触发压缩；2 小时空闲也整理一次 | 条数管成本、token 管爆预算，两道闸 | `test_mem_policy.py` |
 | 事实只记用户明确说过的，必须带出处；推测走 `rapport` | 无源"事实"就是第二个幻觉来源 | `test_mem_facts.py` |
 | 压缩**不许碰树** | 压缩只改"这一轮送什么"，不改"存了什么"；回档跳回旧节点内容仍在 | `test_mem_tree_safe.py` |
+
+---
+
+## 落盘为什么都用原子写
+
+直接 `open(path, "w")` 覆盖写，写到一半断电、进程被杀、更新程序正在替换文件，
+目标文件就成了**半个 JSON**——存档、配置、角色卡一起报废，而且不可逆。
+
+所以持久化的写一律走 `atomic_io`：
+
+```
+① 同目录建临时文件（必须同卷：跨盘 os.replace 会退化成"先删再拷"，断电窗口里原文件已经没了）
+② 写完 flush + fsync（内容先落盘，再谈换名）
+③ os.replace 原子换名，最后尽力 fsync 目录
+```
+
+任何一步失败都**清理临时文件并原样抛出**：调用方该报错就报错，但原来的文件必须还在。
+块（`modules/*`）不许 import 根目录，所以 `modules/codex/pack.py` 自带一份同样逻辑的
+`_atomic_write_json`。
+
+`tests/test_atomic_io.py` 里除了正常写，还专门模拟了"换名失败"和"序列化失败"两种情况：
+断言原文件完好、临时文件被清理。清单里出现裸覆盖写，这条闸门就红。
 
 ---
 
