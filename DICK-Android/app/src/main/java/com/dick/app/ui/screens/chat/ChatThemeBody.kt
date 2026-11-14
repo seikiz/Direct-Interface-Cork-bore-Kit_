@@ -2,6 +2,8 @@ package com.dick.app
 
 // 从 ChatScreen 抽出的主界面<seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌（状态与逻辑都在 ChatState）
 
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.foundation.layout.heightIn
 import android.content.Intent
 import android.graphics.BitmapFactory
 import android.speech.tts.TextToSpeech
@@ -394,6 +396,14 @@ DickTheme(mode = theme.mode, accentIdx = st.accentIdx) {
                             onEdit = { st.editMsgTarget = it; st.editMsgText = it.content },
                             onRegen = { st.regenerate(it) },
                             onSwipe = { msg, delta -> st.switchSwipe(msg, delta) },
+                            onQuote = { msg ->
+                                st.quoteDraft = com.dick.core.Quote.make(
+                                    id = msg.nodeId ?: "",
+                                    role = if (msg.isUser) "user" else "assistant",
+                                    speaker = if (msg.isUser) null else msg.role,
+                                    text = msg.content,
+                                )
+                            },
                         )
                     }
                     if (showLoadingBubble()) {
@@ -496,6 +506,25 @@ DickTheme(mode = theme.mode, accentIdx = st.accentIdx) {
             Spacer(Modifier.height(6.dp))
             // 输入栏上方的一行状态：忙/生成中。贴着输入框，不进对话（与桌面同一套语义）。
             BusyStatusLine(busy = st.busy, theme = theme, accent = accent)
+            st.quoteDraft?.let { q ->
+                Surface(color = theme.bubble, shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 2.dp)) {
+                    Row(Modifier.padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Box(Modifier.width(3.dp).heightIn(min = 16.dp)
+                            .background(accent, RoundedCornerShape(2.dp)))
+                        Spacer(Modifier.width(6.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text(q.who(), fontSize = 11.sp, fontWeight = FontWeight.Bold,
+                                color = theme.muted, maxLines = 1)
+                            Text(q.excerpt, fontSize = 12.sp, color = theme.muted,
+                                maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        }
+                        TextButton(onClick = { st.quoteDraft = null }) {
+                            Text("×", fontSize = 16.sp, color = theme.muted)
+                        }
+                    }
+                }
+            }
             ChatComposer(
                 input = st.input,
                 onInput = { st.input = it },

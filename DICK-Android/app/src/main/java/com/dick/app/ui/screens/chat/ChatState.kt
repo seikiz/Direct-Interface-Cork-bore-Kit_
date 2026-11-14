@@ -138,7 +138,7 @@ internal class ChatState(
     _finFolded: MutableState<Boolean>,
     context: android.content.Context,
     tts: android.speech.tts.TextToSpeech,
-    doSend: (String, androidx.compose.ui.graphics.ImageBitmap?, String?) -> Unit,
+    doSend: (String, androidx.compose.ui.graphics.ImageBitmap?, String?, com.dick.core.QuoteRef?) -> Unit,
     ensureOpeningLine: () -> Unit,
     _wsRefresh: () -> Unit,
 ) {
@@ -150,6 +150,8 @@ internal class ChatState(
     internal val context = context
     internal val tts = tts
     internal val doSendCb = doSend
+    /** 正在引用的那条消息（null = 没引用）；发送后清空 */
+    var quoteDraft by androidx.compose.runtime.mutableStateOf<com.dick.core.QuoteRef?>(null)
     internal val ensureOpening = ensureOpeningLine
     internal val wsRefresh = _wsRefresh
     internal val scope = scope

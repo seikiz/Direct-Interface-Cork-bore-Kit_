@@ -239,7 +239,8 @@ internal fun ChatState.refreshChain() {
                 swTot = sibs.size
                 swIdx = sibs.indexOfFirst { it.id == n.id }.coerceAtLeast(0)
             }
-            messages.add(ChatMsg(role, n.content, nodeImages[n.id], n.id, swIdx, swTot, n.role == "user"))
+            messages.add(ChatMsg(role, n.content, nodeImages[n.id], n.id, swIdx, swTot, n.role == "user",
+                    com.dick.core.Quote.fromNode(n)))
         }
     }
 

@@ -734,7 +734,7 @@ val importCardLauncher = rememberLauncherForActivityResult(ActivityResultContrac
     // 这里接到界面上那份（与电脑端读 time_scale 等价）。
     SpaceCore.scaleProvider = { TimeScale.current }
 
-    var doSend: (String, ImageBitmap?, String?) -> Unit = { _, _, _ -> }
+    var doSend: (String, ImageBitmap?, String?, com.dick.core.QuoteRef?) -> Unit = { _, _, _, _ -> }
     var showQuickPanel by vm.showQuickPanel
     val finFoldedState = remember { mutableStateOf(true) }
     var finFolded by finFoldedState   // 加号面板「财报」折叠区块默认收起
@@ -747,7 +747,7 @@ fun wsRefreshLocal() {
         vm, scope, engine, registry, tree, worldCards, dice, memory, swipe, gal, mech,
         search, financial, jp, uiPlugin, speakCounts,
         mechTickState, lastSpeakerState, pendingImageState, finFoldedState,
-        context, tts, { t, bmp, d -> doSend(t, bmp, d) }, { ensureOpeningLine() }, { wsRefreshLocal() },
+        context, tts, { t, bmp, d, q -> doSend(t, bmp, d, q) }, { ensureOpeningLine() }, { wsRefreshLocal() },
     ) }
     val insertCmd: (String) -> Unit = { cmd ->
         input = if (input.isBlank()) cmd else input + " " + cmd
@@ -811,7 +811,7 @@ fun wsRefreshLocal() {
         }
     }
 
-    doSend = doSend@{ text, image, visionNote ->
+    doSend = doSend@{ text, image, visionNote, quote ->
         showQuickPanel = false
         // 零宽字符防线：必须放在宏展开/正则之前 ——
         // ① 不清就被存进树、发给 API，用户看不见却白烧 token；
@@ -834,6 +834,7 @@ fun wsRefreshLocal() {
         val treeContent = if (visionNote == null) sent else "用户发送了一张图片。视觉模型对图片的描述：\n" + visionNote + "\n\n用户输入：" + sent
         val meta = J.Obj()
         meta.fields["speaker"] = if (persona.isBlank()) J.Null else J.Str(st.userDisplayName())
+        quote?.let { meta.fields["quote"] = com.dick.core.Quote.toJson(it) }
         mech.state?.let { meta.fields["ms"] = mech.snapshot() ?: J.Null }
         val parentId = tree.addNode("user", treeContent, parentId = tree.currentLeafId, metadata = meta)
         if (image != null) nodeImages[parentId] = image

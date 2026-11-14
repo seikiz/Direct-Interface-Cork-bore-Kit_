@@ -2752,6 +2752,14 @@
       "used_by": [
         "desktop_web"
       ]
+    },
+    "btn_quote": {
+      "zh": "引用",
+      "en": "Quote",
+      "ja": "引用",
+      "used_by": [
+        "android"
+      ]
     }
   },
   "_legacy": {
@@ -3316,6 +3324,7 @@
     "save",
     "st_temp",
     "weContent",
-    "weDepth"
+    "weDepth",
+    "btn_quote"
   ]
 }

@@ -45,6 +45,7 @@ internal object I18nStrings {
         "btn_new_role" to "新建角色",
         "btn_new_world" to "新建世界",
         "btn_persona_card" to "玩家角色卡",
+        "btn_quote" to "引用",
         "btn_regenerate" to "↻",
         "btn_remove" to "移除",
         "btn_save" to "保存",

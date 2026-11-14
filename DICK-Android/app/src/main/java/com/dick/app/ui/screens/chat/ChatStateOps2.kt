@@ -235,13 +235,16 @@ internal fun ChatState.send() {
                         sysMsgs.add(ChatMsg("系统", I18n.t("vision_fail", "图片没认出来，稍后再试一次")))
                         refreshChain()
                     } else {
-                        doSendCb(text, img.bmp, "【图片描述】" + desc)
+                        doSendCb(text, img.bmp, "【图片描述】" + desc, quoteDraft)
+                quoteDraft = null
                     }
                 }
             }
             return
         }
-        doSendCb(text, null, null)
+        val q = quoteDraft
+        quoteDraft = null          // 引用是一次性的：发出去就清，别粘住下一句
+        doSendCb(text, null, null, q)
     }
 
 internal fun ChatState.pickChoice(item: GalgamePlugin.ChoiceItem) {
@@ -309,7 +312,7 @@ internal fun ChatState.pickChoice(item: GalgamePlugin.ChoiceItem) {
         gal.clearChoices()
         // 选项是按钮上的短标签；真正发言用 say（生成时补全好的玩家台词）。
         // 没有 say（旧选项、模型没给）就退回标签 —— 行为与以前一致。
-        doSendCb(item.say?.takeIf { it.isNotBlank() } ?: item.text, null, null)
+        doSendCb(item.say?.takeIf { it.isNotBlank() } ?: item.text, null, null, quoteDraft)
     }
 
 internal fun ChatState.battleMove(moveId: String, moveName: String) {
@@ -335,7 +338,7 @@ internal fun ChatState.battleMove(moveId: String, moveName: String) {
             fields["prompt"] = J.Str("（战斗结算）$t 请以角色口吻演出受击反应与战况。")
         }
         mechTick++
-        doSendCb("使用 $moveName", null, null)
+        doSendCb("使用 $moveName", null, null, quoteDraft)
     }
 
 internal fun ChatState.landAssistantReply(raw: String, parentId: String?, userText: String) {

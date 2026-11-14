@@ -92,7 +92,10 @@ class ChatEngine(
             // 上下文算不出来（没时间戳/没选角色）就不注入，别把整轮请求带崩
         }
         for (node in chain) {
-            if (node.content.isNotBlank()) messages.items.add(role(node.role, node.content))
+            // 引用：只有 user 节点可能带（metadata["quote"]），拼成「〔引用 谁：…〕\n正文」
+            val text = if (node.role == "user") Quote.apply(node.content, Quote.fromNode(node))
+                       else node.content
+            if (text.isNotBlank()) messages.items.add(role(node.role, text))
         }
         val body = J.Obj()
         body.fields["model"] = J.Str(model)

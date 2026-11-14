@@ -1,5 +1,6 @@
 package com.dick.app
 
+import androidx.compose.ui.text.style.TextOverflow
 import android.graphics.BitmapFactory
 import android.speech.tts.TextToSpeech
 import android.webkit.WebView
@@ -271,6 +272,7 @@ fun Bubble(
     onEdit: (ChatMsg) -> Unit,
     onRegen: (ChatMsg) -> Unit,
     onSwipe: (ChatMsg, Int) -> Unit,
+    onQuote: (ChatMsg) -> Unit = {},
 ) {
     val isUser = m.isUser
     val displayRole = when (m.role) {
@@ -301,6 +303,22 @@ fun Bubble(
                     border = if (isUser) BorderStroke(1.dp, pal.border) else null,
                 ) {
                     Column(Modifier.padding(10.dp)) {
+                        // 引用块：竖线 + 谁 + 摘要（一行截断），正文照旧在下面
+                        m.quote?.let { q ->
+                            Row(Modifier.fillMaxWidth().padding(bottom = 6.dp)) {
+                                Box(
+                                    Modifier.width(3.dp).heightIn(min = 16.dp)
+                                        .background(pal.accent, RoundedCornerShape(2.dp))
+                                )
+                                Spacer(Modifier.width(6.dp))
+                                Column {
+                                    Text(q.who(), fontWeight = FontWeight.Bold, fontSize = 11.sp,
+                                        color = pal.textDim, maxLines = 1)
+                                    Text(q.excerpt, fontSize = 12.sp, color = pal.textDim,
+                                        maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                }
+                            }
+                        }
                         if (m.image != null) {
                             Image(m.image!!, contentDescription = null, modifier = Modifier.size(width = 220.dp, height = 150.dp))
                             Spacer(Modifier.height(6.dp))
@@ -324,6 +342,9 @@ fun Bubble(
                 horizontalArrangement = if (isUser) Arrangement.End else Arrangement.Start,
             ) {
                 // 图标按钮：文案本来就只有那个图标，图标名走 icon 参数（文案表里不留 emoji 键）
+                TextButton(onClick = { onQuote(m) }, modifier = Modifier.heightIn(min = 44.dp)) {
+                    IconText(I18n.t("btn_quote", "引用"), fontSize = 12.sp, icon = "format_quote")
+                }
                 TextButton(onClick = { onEdit(m) }, modifier = Modifier.heightIn(min = 44.dp)) { IconText("", fontSize = 12.sp, icon = "edit") }
                 if (!isUser && m.role != "系统") {
                     if (m.swipeTotal > 1) {

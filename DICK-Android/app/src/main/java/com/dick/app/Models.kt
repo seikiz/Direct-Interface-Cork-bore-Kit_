@@ -33,6 +33,8 @@ data class ChatMsg(
     val swipeIndex: Int = 0,
     val swipeTotal: Int = 0,
     val isUser: Boolean = false,
+    /** 引用：这条消息回复了哪一句（null = 没引用） */
+    val quote: com.dick.core.QuoteRef? = null,
 )
 
 data class PendingImg(val bytes: ByteArray, val mime: String, val bmp: ImageBitmap)
