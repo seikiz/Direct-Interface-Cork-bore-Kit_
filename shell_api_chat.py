@@ -268,7 +268,7 @@ class ApiChatMixin:
 
 
 
-    def api_send(self, text, image_b64=None, mime=None):
+    def api_send(self, text, image_b64=None, mime=None, quote=None):
         text = (text or "").strip()
         if self.busy:
             return {"ok": False, "err": "busy"}
@@ -324,7 +324,7 @@ class ApiChatMixin:
         if image_b64:
             self.busy = True
             speaker = (self.persona or {}).get("name") or "你"
-            node_id = self.core.add_user_message(display_text)  # 树里存原文（翻译隐藏）
+            node_id = self.core.add_user_message(display_text, quote=quote)  # 树里存原文（翻译隐藏）
             try:
                 self.core.tree.nodes[node_id].metadata["speaker"] = speaker
             except Exception:

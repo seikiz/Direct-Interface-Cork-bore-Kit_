@@ -412,6 +412,8 @@ function appendMessage(m) {
   var ctl = '';
   if ((m.kind === 'user' || m.kind === 'ai') && m.node_id) {
     ctl += '<button data-act="edit">' + _iconHtml('[ic:edit]') + '</button>';
+    // 引用：把这条消息挂到输入框上，发出去时带 {id, role, speaker, excerpt}
+    ctl += '<button data-act="quote" title="引用这条">' + _iconHtml('[ic:format_quote]') + '</button>';
   }
   if (m.kind === 'ai') {
     ctl += '<button data-act="speak" title="朗读">' + (_iconHtml('[ic:volume_up]')) + '</button>';
@@ -421,8 +423,14 @@ function appendMessage(m) {
     ctl += '<button data-act="regen">↻</button>';
   }
   if (ctl) ctl = '<div class="mctl">' + ctl + '</div>';
+  var quotePart = '';
+  if (m.quote && m.quote.excerpt) {
+    var qwho = m.quote.speaker || (m.quote.role === 'user' ? '你' : '对方');
+    quotePart = '<div class="quote-block"><span class="qwho">' + escapeHtml(qwho) +
+      '</span><span class="qtext">' + escapeHtml(m.quote.excerpt) + '</span></div>';
+  }
   div.innerHTML = av + '<div class="body"><span class="who ' + whoClass(m.kind) + '">' + escapeHtml(name) +
-    '</span><div class="bubble">' + imgPart + escapeHtml(m.content) + '</div>' + ctl + '</div>';
+    '</span><div class="bubble">' + quotePart + imgPart + escapeHtml(m.content) + '</div>' + ctl + '</div>';
   chat.appendChild(div);
   chat.scrollTop = chat.scrollHeight;
 }

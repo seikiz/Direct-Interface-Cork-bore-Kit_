@@ -120,7 +120,8 @@
     <div id="composerStatus" role="status" aria-live="polite" hidden></div>
     <div id="inputbar">
       <button class="plus" id="plusBtn">[ic:add]</button>
-      <textarea data-i18n-placeholder="placeholder" id="input" placeholder="输入消息... (使用 @角色名 指定说话者)"></textarea>
+      <div id="quoteBar" class="quote-bar"></div>
+    <textarea data-i18n-placeholder="placeholder" id="input" placeholder="输入消息... (使用 @角色名 指定说话者)"></textarea>
       <button id="cardFaceBtn" title="卡面" onclick="cardFaceShow()" style="background:none;border:none;color:var(--text);font-size:18px;cursor:pointer;padding:0 8px">[ic:style]</button>
       <button id="genImgBtn" title="生图" style="background:none;border:none;color:var(--text);font-size:18px;cursor:pointer;padding:0 8px">[ic:palette]</button>
       <button data-i18n="send" id="send">发送</button>

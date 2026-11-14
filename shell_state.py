@@ -86,9 +86,13 @@ class StateMixin:
                 elif not speaker:
                     # 单角色：AI 消息显示当前激活角色名；群聊/无角色时显示 AI
                     speaker = self.selected_roles[0] if len(self.selected_roles) == 1 else "AI"
-                msgs.append({"seq": seq, "kind": kind, "speaker": speaker,
-                             "content": n.content, "image": self.node_images.get(n.id),
-                             "node_id": n.id})
+                item = {"seq": seq, "kind": kind, "speaker": speaker,
+                        "content": n.content, "image": self.node_images.get(n.id),
+                        "node_id": n.id}
+                _q = meta.get("quote")
+                if _q:
+                    item["quote"] = _q      # 引用：前端按 {speaker, excerpt} 画一条引用条
+                msgs.append(item)
             # 滑条信息：AI 消息的父用户节点有多个 assistant 子节点时给箭头
             for i, m in enumerate(msgs):
                 if m["kind"] != "ai" or not m["node_id"]:

@@ -11,6 +11,8 @@
 import uuid
 import random
 import re
+
+import msg_quote
 import threading
 import os
 
@@ -384,13 +386,17 @@ class ChatCore(PromptMixin, MechMixin, FetchMixin):
 
 
     # ---------- 对话操作 ----------
-    def add_user_message(self, content: str) -> str:
+    def add_user_message(self, content: str, quote: Optional[Dict] = None) -> str:
+        """追加一条用户消息。quote：引用某条旧消息时传 {id, role, speaker, excerpt}。"""
         if self.tree.current_leaf_id is None:
             self._rebuild_system_node()
         # 启用玩家角色卡时，用户消息归属玩家角色名下
         speaker = self.player_persona.get('name') if self.player_persona else None
+        meta: Dict = {"speaker": speaker}
+        if quote:
+            meta["quote"] = quote
         return self.tree.add_node('user', content, parent_id=self.tree.current_leaf_id,
-                                  metadata={"speaker": speaker})
+                                  metadata=meta)
 
     def add_assistant_message(self, content: str, parent_id: str, metadata: Optional[Dict] = None) -> str:
         return self.tree.add_node('assistant', content, parent_id=parent_id, metadata=metadata)
@@ -590,6 +596,12 @@ class ChatCore(PromptMixin, MechMixin, FetchMixin):
             if name == roster_name:
                 return roster_name, m.group(2).strip()
         return None, reply
+
+    def _format_user_content(self, msg: Dict) -> str:
+        """用户消息：如果带引用，把「引用 谁：摘要」接在正文前面（模型才知道你在回哪句）。"""
+        content = msg.get('content', '')
+        q = msg_quote.from_metadata(msg.get('metadata'))
+        return msg_quote.apply_quote(content, q)
 
     def _format_assistant_content(self, msg: Dict) -> str:
         """assistant 历史消息带上 [发言者]: 前缀，让模型学会群聊格式"""

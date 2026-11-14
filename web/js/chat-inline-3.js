@@ -40,6 +40,19 @@ document.getElementById('chat').addEventListener('click', function (e) {
       sbtn.disabled = false;
       if (r && !r.ok && r.err) alert(r.err);
     }).catch(function () { sbtn.disabled = false; });
+  } else if (act === 'quote') {
+    // 引用：只记 id/角色/发音者/摘要（不用整条正文，上下文成本可控）
+    var bubEl = msgEl.querySelector('.bubble');
+    var qtext = bubEl ? (bubEl.textContent || '') : '';
+    var who = msgEl.querySelector('.who');
+    window.__quote = {
+      id: msgEl.getAttribute('data-node') || '',
+      role: msgEl.classList.contains('user') ? 'user' : 'assistant',
+      speaker: who ? who.textContent : '',
+      excerpt: qtext.slice(0, 200),
+      seq: seq
+    };
+    showQuoteBar(window.__quote);
   } else if (act === 'regen') {
     pywebview.api.regenerate(seq).then(function (r) {
       if (r && !r.ok) alert((r && r.err) || 'failed');

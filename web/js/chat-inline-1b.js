@@ -422,11 +422,13 @@ function send() {
   var imgB64 = hasImg ? pendingImage.b64 : null;
   var imgMime = hasImg ? pendingImage.mime : null;
   if (text) lastUserText = text;
-  pywebview.api.send(text, imgB64, imgMime).then(function (r) {
+  var q = window.__quote || null;
+  pywebview.api.send(text, imgB64, imgMime, q).then(function (r) {
     if (r && r.ok) {
       document.getElementById('input').value = '';
       clearImage();
       closeQuick();
+      clearQuote();
     }
   });
 }
@@ -555,3 +557,27 @@ document.getElementById('offlineUndoBtn').onclick = function () {
     }
   });
 };
+
+// ---------- 引用条 ----------
+function showQuoteBar(q) {
+  var bar = document.getElementById('quoteBar');
+  if (!bar) {
+    bar = document.createElement('div');
+    bar.id = 'quoteBar';
+    bar.className = 'quote-bar';
+    var inp = document.getElementById('input');
+    if (inp && inp.parentNode) inp.parentNode.insertBefore(bar, inp);
+  }
+  var who = q.speaker || (q.role === 'user' ? '你' : '对方');
+  bar.innerHTML = '<span class="qwho">' + who + '</span>' +
+    '<span class="qtext">' + q.excerpt + '</span>' +
+    '<button class="qx" title="取消引用">×</button>';
+  bar.style.display = 'flex';
+  bar.querySelector('.qx').onclick = clearQuote;
+}
+
+function clearQuote() {
+  window.__quote = null;
+  var bar = document.getElementById('quoteBar');
+  if (bar) { bar.style.display = 'none'; bar.innerHTML = ''; }
+}

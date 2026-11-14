@@ -54,3 +54,22 @@ button .ic{ margin-right:2px; }
  border-radius:7px; padding:2px 8px; font-size:11px; cursor:pointer; }
 .msg .mctl button:hover{ border-color:var(--accent); color:var(--text); }
 .msg .mctl .swipe-n{ min-width:40px; text-align:center; }
+/* ---------- 引用对话（quote）---------- */
+.msg .bubble .quote-block{
+  display:flex; gap:6px; align-items:baseline; margin-bottom:4px; padding:4px 8px;
+  border-left:3px solid var(--accent); border-radius:4px;
+  background:var(--bubble); font-size:12px; opacity:.9;
+}
+.msg .bubble .quote-block .qwho{ font-weight:600; white-space:nowrap; }
+.msg .bubble .quote-block .qtext{
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:42ch;
+}
+.quote-bar{
+  display:none; gap:8px; align-items:center; margin:0 0 6px 0; padding:6px 10px;
+  border-left:3px solid var(--accent); border-radius:6px;
+  background:var(--bubble); font-size:12px;
+}
+.quote-bar .qwho{ font-weight:600; white-space:nowrap; }
+.quote-bar .qtext{ flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.quote-bar .qx{ border:0; background:transparent; cursor:pointer; font-size:14px; opacity:.7; }
+.quote-bar .qx:hover{ opacity:1; }

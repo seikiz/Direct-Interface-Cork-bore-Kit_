@@ -272,7 +272,8 @@ class FetchMixin:
                         messages.append({"role": "assistant",
                                          "content": self._format_assistant_content(msg)})
                     else:
-                        messages.append({"role": "user", "content": msg['content']})
+                        messages.append({"role": "user",
+                                         "content": self._format_user_content(msg)})
 
                 world_context = self._inject_world_context(user_input)
                 if world_context:
@@ -465,7 +466,8 @@ class FetchMixin:
                         messages.append({"role": "assistant",
                                          "content": self._format_assistant_content(msg)})
                     else:
-                        messages.append({"role": "user", "content": msg['content']})
+                        messages.append({"role": "user",
+                                         "content": self._format_user_content(msg)})
                 messages.append({"role": "user", "content":
                     f"（现在轮到群成员「{speaker_name}」发言。请以 {speaker_name} 的口吻简短自然地接话，"
                     f"回复格式：[{speaker_name}]: 内容。如果 {speaker_name} 此刻没有想说的，只回复：[{speaker_name}]: 沉默）"})
