@@ -48,7 +48,15 @@ fun WorldsScreen(vm: ChatViewModel, deps: DialogDeps) {
             text = {
                 Column(Modifier.verticalScroll(rememberScrollState())) {
                     for ((n, _) in worlds) {
-                        Row {
+                        // 长按整行 = 编辑这个世界卡（和角色卡一致；点按仍走左边 Checkbox）
+                        Row(Modifier.tapOrLongPress(
+                            onTap = {
+                                selectedWorlds = if (n in selectedWorlds) selectedWorlds - n
+                                                 else selectedWorlds + n
+                                if (currentWorld !in selectedWorlds) currentWorld = selectedWorlds.firstOrNull() ?: ""
+                            },
+                            onLongPress = { showWorldEdit = n },
+                        )) {
                             Checkbox(checked = n in selectedWorlds, onCheckedChange = { ck ->
                                 selectedWorlds = if (ck) selectedWorlds + n else selectedWorlds - n
                                 if (currentWorld !in selectedWorlds) currentWorld = selectedWorlds.firstOrNull() ?: ""

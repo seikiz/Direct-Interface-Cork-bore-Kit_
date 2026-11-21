@@ -125,7 +125,12 @@ fun RolesScreen(vm: ChatViewModel, deps: DialogDeps) {
                             .fillMaxWidth()
                             .padding(vertical = 10.dp)
                             // 整张卡片可点：选中与取消都走同一个函数（方框已经删了）
-                            .clickable { toggleRole(n) }
+                            // 点按 = 选中/取消；**长按 1 秒** = 打开编辑（仅安卓端）。
+                            // 手机上那排按钮常被横向挤掉，长按是稳定入口，不会误点到导入把卡顶掉。
+                            .tapOrLongPress(
+                                onTap = { toggleRole(n) },
+                                onLongPress = { roleEditName = n },
+                            )
                             .border(
                                 if (on) 2.dp else 1.dp,
                                 if (on) theme.palette.accent else theme.line,

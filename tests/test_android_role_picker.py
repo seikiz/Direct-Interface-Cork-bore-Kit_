@@ -164,8 +164,10 @@ def click_problems(code):
     probs = []
     if not re.search(r"fun\s+toggleRole\s*\(\s*n\s*:\s*String\s*\)", code):
         probs.append(u"没有 toggleRole(n: String) 这个局部函数")
-    if not re.search(r"clickable\s*\{\s*toggleRole\s*\(\s*n\s*\)\s*\}", code):
-        probs.append(u"整张卡片没有 clickable { toggleRole(n) }")
+    # 2026-11：点按选中之外还要长按编辑 → clickable 换成 combinedClickable，
+    # 断言只看"点按仍然走 toggleRole(n)"这一件事。
+    if not re.search(r"(?:onClick|onTap)\s*=\s*\{\s*toggleRole\s*\(\s*n\s*\)\s*\}", code):
+        probs.append(u"整张卡片点按没有走 toggleRole(n)")
     return probs
 
 
@@ -293,7 +295,7 @@ def main():
         (u"把 onCheckedChange 塞回去", code + u"\nval x = onCheckedChange\n",
          checkbox_problems, code),
         (u"删掉 clickable { toggleRole(n) }",
-         code.replace(".clickable { toggleRole(n) }", ""), click_problems, code),
+         code.replace("onTap = { toggleRole(n) }", ""), click_problems, code),
         (u"删掉 toggleRole 里的 saveConfig()",
          code.replace("        saveConfig()\n        gal.clearChoices()",
                       "        gal.clearChoices()"), behavior_problems, code),
