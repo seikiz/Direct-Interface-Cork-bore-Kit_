@@ -115,8 +115,11 @@ PROVIDERS = [
      "buy_url": "https://console.anthropic.com/"},
     {"id": "gemini", "name": "Google Gemini", "free": False,
      "base_url": "https://generativelanguage.googleapis.com/v1beta/openai",
-     "models": ["gemini-3.8-flash", "gemini-3.7-flash", "gemini-3.5-pro", "gemini-3.0-flash",
-                "gemini-2.5-pro", "gemini-2.5-flash"],
+     # 2026-11：Gemini 已到 4 代，4.x 排最前（主力），3.x / 2.5 留作兜底与对照。
+     # 预览名如果账号没开通会 404 model not found —— 报错就往下换一档。
+     "models": ["gemini-4-pro", "gemini-4-flash", "gemini-4-flash-lite",
+                "gemini-3.8-flash", "gemini-3.7-flash", "gemini-3.5-pro", "gemini-3.0-flash",
+                "gemini-2.5-pro", "gemini-2.5-flash", "gemini-2.5-flash-lite"],
      "buy_url": "https://aistudio.google.com/"},
     {"id": "ollama", "name": "Ollama 本地（免费）", "free": True,
      "base_url": "http://localhost:11434/v1",

@@ -118,9 +118,10 @@ val PROVIDERS = listOf(
             "claude-3-5-haiku-latest", "claude-3-opus-latest"),
         "https://console.anthropic.com/"),
     ProviderSpec("gemini", "Google Gemini", false, "https://generativelanguage.googleapis.com/v1beta/openai",
-        listOf("gemini-2.5-pro", "gemini-2.5-flash", "gemini-2.5-flash-lite",
-            "gemini-2.0-flash", "gemini-2.0-flash-lite", "gemini-2.0-flash-thinking-exp",
-            "gemini-1.5-pro", "gemini-1.5-flash"),
+        // 与桌面 shell_util.PROVIDERS 一致：4.x 主力在前，3.x / 2.5 兜底（未开通会 404）
+        listOf("gemini-4-pro", "gemini-4-flash", "gemini-4-flash-lite",
+            "gemini-3.8-flash", "gemini-3.7-flash", "gemini-3.5-pro", "gemini-3.0-flash",
+            "gemini-2.5-pro", "gemini-2.5-flash", "gemini-2.5-flash-lite"),
         "https://aistudio.google.com/"),
     ProviderSpec("ollama", "Ollama 本地", true, "http://localhost:11434/v1",
         listOf("qwen3:32b", "qwen3:14b", "qwen3:8b", "qwen2.5:14b",
