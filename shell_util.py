@@ -105,7 +105,10 @@ PROVIDERS = [
      "buy_url": "https://platform.stepfun.com"},
     {"id": "openai", "name": "OpenAI", "free": False,
      "base_url": "https://api.openai.com/v1",
-     "models": ["gpt-5.2", "gpt-5", "gpt-5-mini", "gpt-5-nano", "o5", "o5-mini",
+     # 2026-11 核实：6.2 代两张卡 —— Astra（Bedrock 模型卡写明日 2026-11-17，1.05M 上下文）
+     # 与 Sol；5.x 留作对照，4.1 兜底。
+     "models": ["gpt-6.2-astra", "gpt-6.2-sol",
+                "gpt-5.2", "gpt-5", "gpt-5-mini", "o5",
                 "gpt-4.1", "gpt-4.1-mini"],
      "buy_url": "https://platform.openai.com/"},
     {"id": "anthropic", "name": "Anthropic Claude", "free": False,
@@ -115,10 +118,9 @@ PROVIDERS = [
      "buy_url": "https://console.anthropic.com/"},
     {"id": "gemini", "name": "Google Gemini", "free": False,
      "base_url": "https://generativelanguage.googleapis.com/v1beta/openai",
-     # 2026-11：Gemini 已到 4 代，4.x 排最前（主力），3.x / 2.5 留作兜底与对照。
-     # 预览名如果账号没开通会 404 model not found —— 报错就往下换一档。
-     "models": ["gemini-4-pro", "gemini-4-flash", "gemini-4-flash-lite",
-                "gemini-3.8-flash", "gemini-3.7-flash", "gemini-3.5-pro", "gemini-3.0-flash",
+     # 2026-11 联网核实：4 代实际型号是 gemini-4-neon（**不存在 gemini-4-pro**，
+     # 多篇实测文都点明；4 代 Flash 尚未 GA）。3 代仍在，2.5 两档兜底。
+     "models": ["gemini-4-neon", "gemini-3-pro", "gemini-3-flash",
                 "gemini-2.5-pro", "gemini-2.5-flash", "gemini-2.5-flash-lite"],
      "buy_url": "https://aistudio.google.com/"},
     {"id": "ollama", "name": "Ollama 本地（免费）", "free": True,

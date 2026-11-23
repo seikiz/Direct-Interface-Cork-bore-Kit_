@@ -109,8 +109,10 @@ val PROVIDERS = listOf(
         listOf("step-2-16k", "step-1-8k", "step-1-32k", "step-1-128k", "step-1v-8k"),
         "https://platform.stepfun.com"),
     ProviderSpec("openai", "OpenAI", false, "https://api.openai.com/v1",
-        listOf("gpt-4o", "gpt-4o-mini", "gpt-4.1", "gpt-4.1-mini", "gpt-4.1-nano",
-            "o3", "o3-mini", "o4-mini", "chatgpt-4o-latest"),
+        // 与桌面一致：6.2 代两张卡（Astra / Sol），5.x 对照，4.1 兜底
+        listOf("gpt-6.2-astra", "gpt-6.2-sol",
+            "gpt-5.2", "gpt-5", "gpt-5-mini", "o5",
+            "gpt-4.1", "gpt-4.1-mini"),
         "https://platform.openai.com/"),
     ProviderSpec("anthropic", "Anthropic Claude", false, "https://api.anthropic.com/v1",
         listOf("claude-opus-4-20250514", "claude-sonnet-4-20250514",
@@ -118,9 +120,8 @@ val PROVIDERS = listOf(
             "claude-3-5-haiku-latest", "claude-3-opus-latest"),
         "https://console.anthropic.com/"),
     ProviderSpec("gemini", "Google Gemini", false, "https://generativelanguage.googleapis.com/v1beta/openai",
-        // 与桌面 shell_util.PROVIDERS 一致：4.x 主力在前，3.x / 2.5 兜底（未开通会 404）
-        listOf("gemini-4-pro", "gemini-4-flash", "gemini-4-flash-lite",
-            "gemini-3.8-flash", "gemini-3.7-flash", "gemini-3.5-pro", "gemini-3.0-flash",
+        // 与桌面一致：4 代是 gemini-4-neon（没有 4-pro）；3 代在，2.5 兜底
+        listOf("gemini-4-neon", "gemini-3-pro", "gemini-3-flash",
             "gemini-2.5-pro", "gemini-2.5-flash", "gemini-2.5-flash-lite"),
         "https://aistudio.google.com/"),
     ProviderSpec("ollama", "Ollama 本地", true, "http://localhost:11434/v1",
