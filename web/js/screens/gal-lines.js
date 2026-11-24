@@ -88,6 +88,7 @@ function galReorder(sc, targetIdx) {
   if (!galDrag || galDrag.scene !== sc.id) return;
   var src = galDrag.idx; galDrag = null;
   if (src === targetIdx) return;
+  galPushUndo();
   var mv = sc.lines.splice(src, 1)[0];
   sc.lines.splice(targetIdx, 0, mv);
   galRenderBody(sc, galBodies[sc.id], -1);
@@ -138,10 +139,12 @@ function galDrawConnectors() {
   ct.appendChild(svg);
 }
 function galDeleteAt(sc, i, body) {
+  galPushUndo();
   sc.lines.splice(i, 1);
   galRenderBody(sc, body, -1);
 }
 function galInsertAt(sc, i, body) {
+  galPushUndo();
   sc.lines.splice(i, 0, { kind: 'say', text: '' });
   galRenderBody(sc, body, i);
 }

@@ -56,12 +56,13 @@ function galNodeDown(ev, id, baseX, baseY) {
 }
 function galNodeMove(ev) {
   if (!galDragNode) return;
-  var dx = ev.clientX - galDragNode.sx, dy = ev.clientY - galDragNode.sy;
-  if (Math.abs(dx) > 3 || Math.abs(dy) > 3) {
+  var S = galScale || 1;
+  var dx = (ev.clientX - galDragNode.sx) / S, dy = (ev.clientY - galDragNode.sy) / S;
+  if (Math.abs(ev.clientX - galDragNode.sx) > 3 || Math.abs(ev.clientY - galDragNode.sy) > 3) {
     if (!galDragged) { galDragged = true; galPushUndo(); }
     var sc = (galScript.scenes || []).find(function (s) { return s.id === galDragNode.id; });
     if (sc) {
-      sc.gx = galDragNode.bx + dx; sc.gy = galDragNode.by + dy;
+      sc.gx = Math.round(galDragNode.bx + dx); sc.gy = Math.round(galDragNode.by + dy);
       if (!galRAF) galRAF = requestAnimationFrame(function () { galRAF = null; galRenderGraph(); });  // 实时重画(平滑)，线跟着走
     }
   }
@@ -129,8 +130,17 @@ function galConnectScene(srcId, tgtId, mode) {
   galPushUndo();
   var assertChoice = function () {
     var cp = (sc.lines || []).find(function (l) { return l && l.choice; });
-    if (cp) { cp.choice = cp.choice || []; cp.choice.push({ text: '选项', goto: tgtId }); }
-    else { sc.lines = sc.lines || []; sc.lines.push({ kind: 'choice', choice: [{ text: '选项', goto: tgtId }] }); }
+    if (cp) {
+      cp.choice = cp.choice || [];
+      if (cp.choice.some(function (o) { return o && o.goto === tgtId; })) {
+        galToast('已存在指向该场景的选项分支');
+        return;
+      }
+      cp.choice.push({ text: '选项', goto: tgtId });
+    } else {
+      sc.lines = sc.lines || [];
+      sc.lines.push({ kind: 'choice', choice: [{ text: '选项', goto: tgtId }] });
+    }
     galToast('[ic:shuffle] 已添加选项分支');
   };
   if (mode === 'choice') { assertChoice(); }

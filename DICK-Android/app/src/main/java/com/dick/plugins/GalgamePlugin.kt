@@ -45,9 +45,12 @@ class GalgamePlugin : Plugin {
     var error by mutableStateOf("")
 
     private var genUserNode: String? = null
+    /** 生成世代号：清空/发新消息/重生成时递增，拦截在途旧线程写回过期选项 */
+    private var genSeq: Long = 0L
 
     fun clearChoices() {
         synchronized(this) {
+            genSeq++
             choices.clear()
             loading = false
             error = ""
@@ -64,6 +67,7 @@ class GalgamePlugin : Plugin {
         for (c in choices) {
             val o = J.Obj()
             o.fields["text"] = J.Str(c.text)
+            c.say?.let { s -> o.fields["say"] = J.Str(s) }
             c.result?.let { r -> o.fields["result"] = J.Str(r) }
             c.aff?.let { a -> o.fields["aff"] = J.Num(a.toDouble()) }
             c.st?.let { st ->
@@ -88,11 +92,14 @@ class GalgamePlugin : Plugin {
         val restored = arr.items.mapNotNull { it as? J.Obj }.mapNotNull { o ->
             val text = o.fields["text"]?.str() ?: return@mapNotNull null
             val st = (o.fields["st"] as? J.Obj)?.fields?.mapNotNull { (k, v) -> k to (v.str() ?: "") }?.toMap()
-            ChoiceItem(text, o.fields["result"]?.str()?.takeIf { it.isNotBlank() }, (o.fields["aff"] as? J.Num)?.v?.toInt(), st)
+            val say = o.fields["say"]?.str()?.takeIf { it.isNotBlank() && it != text }
+            ChoiceItem(text, o.fields["result"]?.str()?.takeIf { it.isNotBlank() }, (o.fields["aff"] as? J.Num)?.v?.toInt(), st, say)
         }
         synchronized(this) {
+            genSeq++
             choices.clear()
             choices.addAll(restored)
+            loading = false
             genUserNode = lastUserNodeId()
             error = ""
         }
@@ -146,7 +153,10 @@ class GalgamePlugin : Plugin {
     }
 
     private fun startGenerate() {
+        val mySeq: Long
         synchronized(this) {
+            genSeq++
+            mySeq = genSeq
             loading = true
             error = ""
         }
@@ -156,7 +166,7 @@ class GalgamePlugin : Plugin {
         Lanes.on(Lanes.net, "生成 GAL 选项") {
             val e = engine
             if (e == null) {
-                synchronized(this) { loading = false; error = "引擎未就绪" }
+                synchronized(this) { if (genSeq == mySeq) { loading = false; error = "引擎未就绪" } }
                 return@on
             }
             val n = maxOf(2, minOf(4, count))
@@ -208,6 +218,7 @@ class GalgamePlugin : Plugin {
             val reply = e.complete(listOf(MessageNode(role = "user", content = buildTranscript())), system)
             val items = parseOptions(reply, n)
             synchronized(this) {
+                if (genSeq != mySeq) return@on
                 if (items.isNotEmpty()) {
                     choices.clear()
                     choices.addAll(items)
@@ -322,7 +333,7 @@ class GalgamePlugin : Plugin {
                 result = obj.fields["result"]?.str()?.takeIf { it.isNotBlank() }?.take(20)
                 say = obj.fields["say"]?.str()?.trim()?.trim('"')?.trim('\'')
                     ?.takeIf { it.isNotBlank() && it.length <= 200 }
-                aff = (obj.fields["aff"] as? J.Num)?.v?.toInt()
+                aff = (obj.fields["aff"] as? J.Num)?.v?.toInt()?.coerceIn(-20, 20)
                 val stObj = obj.fields["st"] as? J.Obj
                 if (stObj != null) {
                     st = stObj.fields.mapNotNull { (k, v) ->

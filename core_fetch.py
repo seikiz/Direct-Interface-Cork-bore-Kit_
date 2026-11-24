@@ -12,44 +12,65 @@ from core_context import time_context_for
 
 import base64
 import threading
+import time
+from urllib.parse import urlparse
+
+
+def _is_local_url(url: str) -> bool:
+    """判断地址是否为本机回环（如 Ollama localhost:11434）：本地地址绝不走公网中转。"""
+    try:
+        host = (urlparse((url or "").strip()).hostname or "").lower()
+        return host in ("localhost", "127.0.0.1", "::1", "0.0.0.0")
+    except Exception:
+        return False
+
 
 class FetchMixin:
-        # ---------- 基础<seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌设置 ----------
+        # ---------- 基础设置 ----------
         def _relay_target_url(self):
             """把直连 base_url 编码成内置中转的地址：<中转>/relay/<base64(base_url)>，
             客户端会把 /chat/completions 追加在后面，中转负责转发到真实厂商。"""
-            if not self.relay_base or not self.base_url:
+            if not self.relay_base or not self.base_url or _is_local_url(self.base_url):
                 return self.base_url
             enc = base64.urlsafe_b64encode(self.base_url.encode("utf-8")).decode("ascii").rstrip("=")
             return f"{self.relay_base}/relay/{enc}"
 
         def _build_client(self):
             """构造 OpenAI 客户端；配置了代理时走代理（保证被墙通道可用）；
-            relay_on 后改走内置中转通道。"""
+            relay_on 后改走内置中转通道。重建前释放旧 http_client 连接池。"""
+            old_hc = getattr(self, "_http_client", None)
+            if old_hc is not None:
+                try:
+                    old_hc.close()
+                except Exception:
+                    pass
+                self._http_client = None
             kw = {"api_key": self.api_key or "free", "base_url": self.base_url}
-            if self.relay_on and self.relay_base:
+            if self.relay_on and self.relay_base and not _is_local_url(self.base_url):
                 kw["base_url"] = self._relay_target_url()
             if httpx is not None:
                 try:
-                    if self.proxy:
-                        kw["http_client"] = httpx.Client(
+                    if self.proxy and not _is_local_url(self.base_url):
+                        hc = httpx.Client(
                             proxy=self.proxy,
                             timeout=httpx.Timeout(600.0, connect=20.0),
                         )
                     else:
-                        # 没配代理时【不要】继承 Windows 系统代理：
+                        # 没配代理或访问本地模型时【不要】继承 Windows 系统代理：
                         # 系统代理指向 127.0.0.1:7890 时，模型请求会被拖到超时。
-                        kw["http_client"] = httpx.Client(
+                        hc = httpx.Client(
                             trust_env=False,
                             timeout=httpx.Timeout(600.0, connect=20.0),
                         )
+                    kw["http_client"] = hc
+                    self._http_client = hc
                 except Exception:
                     pass
             return _ensure_openai()(**kw)
 
         def _maybe_switch_relay(self):
-            """直连网络失败 → 切内置中转通道并重建客户端。返回是否已切换。"""
-            if self.relay_on or not self.relay_base:
+            """直连网络失败 → 切内置中转通道并重建客户端。本机地址不切中转。返回是否已切换。"""
+            if self.relay_on or not self.relay_base or _is_local_url(self.base_url):
                 return False
             self.relay_on = True
             self.client = self._build_client()
@@ -59,6 +80,54 @@ class FetchMixin:
         @staticmethod
         def _is_net_error(e):
             return isinstance(e, (APIConnectionError, APITimeoutError))
+
+        @staticmethod
+        def _status_code_of(e):
+            code = getattr(e, "status_code", None)
+            if isinstance(code, int):
+                return code
+            resp = getattr(e, "response", None)
+            rc = getattr(resp, "status_code", None)
+            return rc if isinstance(rc, int) else None
+
+        @classmethod
+        def _is_retryable_status(cls, e):
+            return cls._status_code_of(e) in (429, 502, 503, 504)
+
+        @classmethod
+        def _format_api_error(cls, e):
+            """把底层 SDK/HTTP 异常转为清晰可读的中文提示（保留关键状态码与简短原因）。"""
+            if isinstance(e, APITimeoutError):
+                return "请求超时：模型响应过慢或网络不稳定，请稍后重试"
+            if isinstance(e, APIConnectionError):
+                return "网络连接失败：无法连上模型服务（检查网络、代理或 Base URL）"
+            code = cls._status_code_of(e)
+            detail = ""
+            body = getattr(e, "body", None)
+            if isinstance(body, dict):
+                err = body.get("error")
+                if isinstance(err, dict):
+                    detail = str(err.get("message") or "").strip()
+                elif err:
+                    detail = str(err).strip()
+                elif body.get("message"):
+                    detail = str(body.get("message")).strip()
+            if not detail:
+                detail = str(e).strip()
+            detail = detail.replace("\n", " ")[:120]
+            hints = {
+                400: "请求参数被拒（检查模型名或上下文格式）",
+                401: "API Key 无效或已过期",
+                402: "账户余额不足，请先充值",
+                403: "无权访问该模型（Key 权限不足或未开通）",
+                404: "模型名或接口地址不存在",
+                429: "触发限流或额度耗尽，请稍后再试",
+            }
+            if code in hints:
+                return f"{code} {hints[code]}" + (f"（{detail}）" if detail else "")
+            if code is not None and 500 <= code <= 599:
+                return f"{code} 服务商临时异常，请稍后重试" + (f"（{detail}）" if detail else "")
+            return detail or "模型调用失败"
 
         def generate_candidate(self, user_node_id: str, on_response=None, on_error=None, on_stream=None):
             """在指定用户节点下生成一条新的候选回复（树分支，不删除现有回复）"""
@@ -112,7 +181,7 @@ class FetchMixin:
             return usage_dict
 
         def _mk_stream(self, messages):
-            """构造流式请求（兼容不支持 stream_options 的服务商）；停止序列/采样参数透传。
+            """构造流式请求（兼容不支持 stream_options 的服务商并按端点缓存）；停止序列/采样参数透传。
 
             出网前统一剥掉内部字段：裁剪用的 _node_id/_ts 带下划线前缀，
             绝不能发给 API（服务商会因为多余字段直接报错）。这里集中剥一次，
@@ -120,22 +189,58 @@ class FetchMixin:
             """
             clean = [{k: v for k, v in m.items() if not str(k).startswith("_")}
                      if isinstance(m, dict) else m for m in messages]
-            kw = {"model": self.model, "messages": clean, "stream": True, "timeout": 30}
+            kw = {"model": self.model, "messages": clean, "stream": True, "timeout": 180}
             if self.stop_sequences:
                 kw["stop"] = self.stop_sequences
             if self.temperature is not None:
                 kw["temperature"] = self.temperature
             if self.top_p is not None:
                 kw["top_p"] = self.top_p
+            cache = getattr(self, "_no_stream_options", None)
+            if cache is None:
+                cache = set()
+                self._no_stream_options = cache
+            ep_key = (getattr(self, "base_url", "") or "", self.model or "")
+            if ep_key in cache:
+                return self.client.chat.completions.create(**kw)
             try:
                 return self.client.chat.completions.create(**kw, stream_options={"include_usage": True})
             except TypeError:
-                kw.pop("stream_options", None)
+                cache.add(ep_key)
                 return self.client.chat.completions.create(**kw)
+            except Exception as e:
+                if self._status_code_of(e) in (400, 422):
+                    cache.add(ep_key)
+                    return self.client.chat.completions.create(**kw)
+                raise
+
+        def complete_text(self, messages, timeout=60):
+            """统一非流式文本调用（供选项生成/摘要等插件复用）：自动剥离内部字段、切中转、瞬态重试。"""
+            clean = [{k: v for k, v in m.items() if not str(k).startswith("_")}
+                     if isinstance(m, dict) else m for m in messages]
+
+            def _call():
+                resp = self.client.chat.completions.create(
+                    model=self.model, messages=clean, stream=False, timeout=timeout,
+                )
+                return (resp.choices[0].message.content or "").strip()
+
+            try:
+                return _call()
+            except (APIConnectionError, APITimeoutError):
+                if self._maybe_switch_relay():
+                    return _call()
+                raise
+            except Exception as e:
+                if self._is_retryable_status(e):
+                    time.sleep(1.0)
+                    return _call()
+                raise
 
         def _stream_create(self, messages, on_stream):
             """流式调用 API：逐块回调 on_stream(累计全文)，返回 (全文, usage)。
             - 直连网络失败时自动切内置中转通道重试一次；
+            - 尚未收到首字时遇到 429/502/503/504 短退避重试一次；
             - 中途断流（长对话最常见）：若尚无可交付文本则重试，否则回传已收文本（不丢弃半截）。"""
             full = ""
             usage = None
@@ -174,9 +279,15 @@ class FetchMixin:
                 elif not full:
                     # 无法切中转（无备用通道），且没收到任何文本 → 抛给上层
                     raise
-            except Exception:
-                # 非网络类异常（如序列化/参数）：不吞，原样抛
-                raise
+            except Exception as e:
+                # 瞬态限流/网关抖动且尚未输出任何正文 → 短退避重试一次
+                if not full and self._is_retryable_status(e):
+                    time.sleep(1.0)
+                    _open_and_read(True)
+                elif full and self._is_retryable_status(e):
+                    pass
+                else:
+                    raise
             return full, usage
 
         def _fetch_response(self, user_input: str, speaker: Optional[str], on_response, on_error, parent_node_id: str, on_stream=None, _locked=False, on_busy=None):
@@ -413,7 +524,7 @@ class FetchMixin:
                     on_response(clean_reply, usage)
             except Exception as e:
                 if on_error:
-                    on_error(str(e))
+                    on_error(self._format_api_error(e))
             finally:
                 self.is_processing = False
 
@@ -431,10 +542,10 @@ class FetchMixin:
                     return
                 self.is_processing = True
             threading.Thread(target=self._fetch_auto_turn,
-                             args=(speaker_name, on_response, on_error, on_stream, True),
+                             args=(speaker_name, on_response, on_error, on_stream, True, on_busy),
                              daemon=True).start()
 
-        def _fetch_auto_turn(self, speaker_name: str, on_response, on_error, on_stream=None, _locked=False):
+        def _fetch_auto_turn(self, speaker_name: str, on_response, on_error, on_stream=None, _locked=False, on_busy=None):
             if not _locked:
                 with self._proc_lock:
                     if self.is_processing:
@@ -498,6 +609,6 @@ class FetchMixin:
                     on_response(final_reply, usage)
             except Exception as e:
                 if on_error:
-                    on_error(str(e))
+                    on_error(self._format_api_error(e))
             finally:
                 self.is_processing = False

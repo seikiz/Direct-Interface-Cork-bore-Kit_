@@ -198,14 +198,16 @@ class ApiMediaMixin:
             self.core.set_proxy(self.config["proxy"])
         # 换厂商后停止序列按新模型家族默认生效
         self.core.set_stop_sequences(self._effective_stop())
-        # 免费厂商默认走中转绕墙：免费链（OVH/本地）常被墙或不稳，直连大概率失败。
-        # 若配了中转地址，直接 relay_on，免费模型全程走中转，避免"第一次直连失败"的停顿。
+        # 免费公网厂商（如 OVH）默认走中转绕墙；本机回环地址（如 Ollama localhost）绝不走云端中转。
+        from core_fetch import _is_local_url
         prov = next((p for p in PROVIDERS if p["id"] == pid), None)
-        if prov and prov.get("free"):
+        is_local = (pid == "ollama") or _is_local_url(self.config.get("base_url") or "")
+        if prov and prov.get("free") and not is_local:
             self.core.relay_on = bool(self.core.relay_base or self.config.get("relay_url") or BUILTIN_RELAY)
             self.core.client = self.core._build_client()
         else:
             self.core.relay_on = False
+            self.core.client = self.core._build_client()
         self._save_config()
         # 进度同步：把模型连接配置推到工坊服务器（后台线程，不阻塞）
         self._ws_push_api()
@@ -224,6 +226,7 @@ class ApiMediaMixin:
         免 Key 厂商（OVH 免费链 / Ollama 本地）没有 Key 可验，直接落到保存。
         """
         import requests
+        import time as _t
         pid = (provider_id or self.provider_id or "deepseek").strip()
         prov = next((p for p in PROVIDERS if p["id"] == pid), None)
         k = (key or "").strip()
@@ -238,17 +241,23 @@ class ApiMediaMixin:
             return {"ok": False, "err": "还没有填 Key",
                     "hint": "回第②步粘一枚 Key；不想填就点「稍后再说」用免费链"}
 
+        t0 = _t.monotonic()
+
         def _save():
             self.api_save_key(k, base, m, pid)
-            return {"ok": True, "provider": pid, "model": m, "base_url": base}
+            return {"ok": True, "provider": pid, "model": m, "base_url": base,
+                    "latency_ms": int((_t.monotonic() - t0) * 1000)}
 
         if free:
             return _save()
-        proxy = self.config.get("proxy") or None
+        proxy = (self.config.get("proxy") or "").strip() or None
         proxies = {"http": proxy, "https": proxy} if proxy else None
         headers = {"Authorization": "Bearer " + k}
+        sess = requests.Session()
+        # 与 core_fetch 保持一致：未显式配置代理时不继承系统代理，避免被失效系统代理拖死
+        sess.trust_env = bool(proxy)
         try:
-            r = requests.get(base + "/models", headers=headers, proxies=proxies, timeout=12)
+            r = sess.get(base + "/models", headers=headers, proxies=proxies, timeout=12)
             if r.status_code in (200, 201):
                 return _save()
             if r.status_code in (404, 405):
@@ -256,8 +265,8 @@ class ApiMediaMixin:
                         "max_tokens": 1, "stream": False}
                 h2 = dict(headers)
                 h2["Content-Type"] = "application/json"
-                r2 = requests.post(base + "/chat/completions", headers=h2, json=body,
-                                   proxies=proxies, timeout=25)
+                r2 = sess.post(base + "/chat/completions", headers=h2, json=body,
+                               proxies=proxies, timeout=25)
                 if r2.status_code in (200, 201):
                     return _save()
                 return {"ok": False, "err": self._probe_reason(r2.status_code, r2.text),
@@ -267,6 +276,11 @@ class ApiMediaMixin:
         except Exception as e:
             return {"ok": False, "err": "%s: %s" % (type(e).__name__, e),
                     "hint": "网络层失败：多半是超时或被墙，填个代理再试；也可以先点「稍后再说」用免费链"}
+        finally:
+            try:
+                sess.close()
+            except Exception:
+                pass
 
 
 

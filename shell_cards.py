@@ -135,9 +135,11 @@ class CardsMixin:
                     aff = None
             if aff is not None:
                 if kind == "crit":
-                    effect["aff"] = aff * 2
+                    # 正向好感暴击翻倍；负向好感（如冷嘲热讽）遇好运则减轻惩罚，不把扣分翻倍还报喜
+                    effect["aff"] = aff * 2 if aff >= 0 else int(aff / 2)
                 elif kind == "fail":
-                    effect["aff"] = -aff
+                    # 正向好感大失败反扣；负向好感大失败则惩罚加倍，不反手加分
+                    effect["aff"] = -aff if aff >= 0 else aff * 2
                 else:
                     effect["aff"] = aff
             elif kind in ("crit", "fail"):

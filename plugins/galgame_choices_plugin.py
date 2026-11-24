@@ -53,6 +53,7 @@ class GalgameChoicesPlugin(PluginBase):
         self.choices_loading = False # 是否正在生成
         self.choices_error = ""      # 最近一次生成失败的原因
         self._gen_user_node = None   # 已为哪个用户节点生成过选项（避免滑条/群聊重复生成）
+        self._gen_seq = 0            # 生成世代号：发新消息/切分支/清空时递增，拦截过期线程覆盖
         self._lock = threading.Lock()
 
     def on_load(self):
@@ -61,10 +62,60 @@ class GalgameChoicesPlugin(PluginBase):
     # ---------- 状态 ----------
     def clear_choices(self):
         with self._lock:
+            self._gen_seq += 1
             self.choices = []
             self.choices_loading = False
             self.choices_error = ""
             self._gen_user_node = None
+
+    def save_options_to_node(self, target_node_id, items=None):
+        """把当前选项写进对应 AI 节点的 metadata["gal_options"]，供回档/切分支复原。"""
+        core = self.core
+        if core is None or not target_node_id:
+            return False
+        tree = getattr(core, "tree", None)
+        nodes = getattr(tree, "nodes", None) if tree is not None else None
+        if not isinstance(nodes, dict) or target_node_id not in nodes:
+            return False
+        node = nodes[target_node_id]
+        if getattr(node, "role", None) != "assistant":
+            return False
+        opts = list(items if items is not None else self.choices)
+        if not opts:
+            return False
+        meta = getattr(node, "metadata", None)
+        if not isinstance(meta, dict):
+            meta = {}
+            try:
+                node.metadata = meta
+            except Exception:
+                return False
+        meta["gal_options"] = [dict(x) for x in opts if isinstance(x, dict)]
+        return True
+
+    def restore_options_from_node(self, node_id):
+        """回档/切分支到指定节点：若节点存过选项则复原，否则清空（避免残留其他分支的选项）。"""
+        core = self.core
+        tree = getattr(core, "tree", None) if core is not None else None
+        nodes = getattr(tree, "nodes", None) if tree is not None else None
+        node = nodes.get(node_id) if isinstance(nodes, dict) and node_id else None
+        saved = None
+        if node is not None and isinstance(getattr(node, "metadata", None), dict):
+            saved = node.metadata.get("gal_options")
+        if not isinstance(saved, list) or not saved:
+            self.clear_choices()
+            return False
+        restored = self._clean(saved, max(4, len(saved)))
+        if not restored:
+            self.clear_choices()
+            return False
+        with self._lock:
+            self._gen_seq += 1
+            self.choices = restored
+            self.choices_loading = False
+            self.choices_error = ""
+            self._gen_user_node = self._last_user_node_id()
+        return True
 
     def on_message_send(self, user_input):
         # 玩家输入新内容（打字或点选项）后，旧选项作废
@@ -116,9 +167,12 @@ class GalgameChoicesPlugin(PluginBase):
 
     def _start_generate(self):
         with self._lock:
+            self._gen_seq += 1
+            seq = self._gen_seq
             self.choices_loading = True
             self.choices_error = ""
-        threading.Thread(target=self._generate, daemon=True).start()
+        target_leaf = getattr(getattr(self.core, "tree", None), "current_leaf_id", None)
+        threading.Thread(target=self._generate, args=(seq, target_leaf), daemon=True).start()
 
     def _last_user_node_id(self):
         core = self.core
@@ -133,18 +187,51 @@ class GalgameChoicesPlugin(PluginBase):
             pass
         return None
 
-    def _generate(self):
+    def _active_choice_role(self):
+        """读取当前角色卡模式（card_modes）：区分 GAL 行动选项 vs 乙女·梦向心意选项。"""
+        try:
+            roles = getattr(self.core, "active_roles", None) or []
+            if not roles:
+                return "action"
+            import card_modes as _cm
+            for r in roles:
+                if not isinstance(r, dict):
+                    continue
+                adv = r.get("advanced") if isinstance(r.get("advanced"), dict) else {}
+                raw_mode = adv.get("mode") or r.get("mode") or ""
+                dflt = _cm.mode_defaults(raw_mode)
+                if dflt.get("choice_role"):
+                    return dflt["choice_role"]
+        except Exception:
+            pass
+        return "action"
+
+    def _is_stale(self, seq):
+        with self._lock:
+            return seq != self._gen_seq
+
+    def _generate(self, seq=None, target_leaf=None):
+        if seq is None:
+            with self._lock:
+                seq = self._gen_seq
         # 等待主对话空闲（滑条候选可能还在收尾），最多等 60 秒
         deadline = time.time() + 60
         try:
             while self.core.is_processing and time.time() < deadline:
+                if self._is_stale(seq):
+                    return
                 time.sleep(0.02)
         except Exception:
             pass
+        if self._is_stale(seq):
+            return
+        if target_leaf is None:
+            target_leaf = getattr(getattr(self.core, "tree", None), "current_leaf_id", None)
         count = int(self.get_setting("count", 3) or 3)
         count = max(2, min(4, count))
         try:
             transcript = self._build_transcript()
+            choice_role = self._active_choice_role()
             # 机制卡：若启用好感/状态，选项需附带机制效果（前端小字展示）
             mech = getattr(self.core, "_mech_config", None) or {}
             has_aff = isinstance(mech.get("affection"), dict) and bool(mech["affection"].get("enabled"))
@@ -170,10 +257,20 @@ class GalgameChoicesPlugin(PluginBase):
                                   + f"（当前值：{'，'.join(cur_vals)}）。整数型必须用 ±N 相对值"
                                   + '（如 "sex":+1 表示在当前值上加 1），禁止写绝对值目标值；'
                                   + '枚举型给新值（如 "心情":"开心"）')
+            if choice_role == "feeling":
+                role_hint = (
+                    "当前是【乙女·梦向】代入模式：选项不要写成机械的攻略动作，"
+                    "而是写「你心里那句话怎么说出口 / 此刻的反应」（坦率说出、欲言又止、先压在心里等）。"
+                )
+            else:
+                role_hint = (
+                    "选项应有明确区分度（如积极拉近 / 试探观察 / 克制回避），"
+                    "贴合当前角色性格与剧情走向。"
+                )
             system = (
                 "你是视觉小说（Galgame）的选项生成器。根据下方【最近对话】和【当前状态/事件】，"
                 f"为玩家（用户）生成 {count} 个简短、可行、有区分度的下一步行动选项。"
-                "要求：每个选项不超过 18 个字，口语化，贴合当前角色性格与剧情走向；"
+                "要求：每个选项不超过 18 个字，口语化；" + role_hint +
                 "不要剧透后续剧情，不要输出编号或'选项一'这类前缀。"
                 '每个选项必须带 "result"：一句事件结果提示（≤12 字，模糊、不剧透具体数值，'
                 '如 "她可能会心头一暖" / "气氛可能会尴尬"）。'
@@ -205,33 +302,47 @@ class GalgameChoicesPlugin(PluginBase):
                     '{"text":"转身离开","say":"我在门口站了一会儿，还是转身走了。",'
                     '"result":"可能会就此错过"}]'
                 )
-            resp = self.core.client.chat.completions.create(
-                model=self.core.model,
-                messages=[
-                    {"role": "system", "content": system},
-                    {"role": "user", "content": transcript},
-                ],
-                stream=False,
-                timeout=60,
-            )
-            raw = (resp.choices[0].message.content or "").strip()
+            req_msgs = [
+                {"role": "system", "content": system},
+                {"role": "user", "content": transcript},
+            ]
+            if hasattr(self.core, "complete_text"):
+                raw = (self.core.complete_text(req_msgs, timeout=60) or "").strip()
+            else:
+                resp = self.core.client.chat.completions.create(
+                    model=self.core.model,
+                    messages=req_msgs,
+                    stream=False,
+                    timeout=60,
+                )
+                raw = (resp.choices[0].message.content or "").strip()
+            if self._is_stale(seq):
+                return
             items = self._parse_options(raw, count)
             with self._lock:
+                if seq != self._gen_seq:
+                    return
                 if items:
                     self.choices = items
                     self.choices_error = ""
                     self._gen_user_node = self._last_user_node_id()
+                    self.save_options_to_node(target_leaf, items)
                 else:
                     self.choices = []
                     self.choices_error = "未能解析出选项（模型输出格式异常）"
         except Exception as e:
+            err_msg = (self.core._format_api_error(e)
+                       if hasattr(self.core, "_format_api_error") else str(e)[:120])
             with self._lock:
+                if seq != self._gen_seq:
+                    return
                 self.choices = []
-                self.choices_error = str(e)[:120]
+                self.choices_error = err_msg[:120]
             print(f"[Galgame 选项] 生成失败: {e}")
         finally:
             with self._lock:
-                self.choices_loading = False
+                if seq == self._gen_seq:
+                    self.choices_loading = False
             print(f"[Galgame 选项] 完成，{len(self.choices)} 个选项")
 
     # ---------- 上下文 ----------
@@ -385,7 +496,7 @@ class GalgameChoicesPlugin(PluginBase):
             if result:
                 item["result"] = str(result).strip()[:20]
             if aff is not None:
-                item["aff"] = aff
+                item["aff"] = max(-20, min(20, aff))
             if st:
                 item["st"] = {str(k).strip()[:20]: v for k, v in st.items() if str(k).strip()}
             out.append(item)

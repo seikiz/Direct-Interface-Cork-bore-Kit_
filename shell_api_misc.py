@@ -300,6 +300,9 @@ class ApiMiscMixin(ApiMediaMixin, ApiCardMixin, ApiChatMixin):
             return {"ok": False, "err": "节点不存在"}
         tree.current_leaf_id = node_id
         self.core.restore_mechanisms(node_id)
+        p = self._choices_plugin()
+        if p and hasattr(p, "restore_options_from_node"):
+            p.restore_options_from_node(node_id)
         self._save_tree()
         self._rebuild_messages()
         return {"ok": True}
@@ -314,6 +317,9 @@ class ApiMiscMixin(ApiMediaMixin, ApiCardMixin, ApiChatMixin):
             return {"ok": True}
         tree.current_leaf_id = node_id
         self.core.restore_mechanisms(node_id)
+        p = self._choices_plugin()
+        if p and hasattr(p, "restore_options_from_node"):
+            p.restore_options_from_node(node_id)
         self._save_tree()
         self._rebuild_messages()
         return {"ok": True}
