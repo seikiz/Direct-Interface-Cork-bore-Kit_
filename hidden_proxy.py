@@ -533,17 +533,43 @@ _GLOBAL_PROXY: LocalTunnelProxy | None = None
 _GLOBAL_STATIC_URL: str = ""
 _CONFIG_LOADED = False
 _CACHED_CFG: dict | None = None
+_ENABLED: bool | None = None  # None = 跟随环境变量，默认关闭（False）
+
+
+def is_enabled() -> bool:
+    """内置隐藏代理开关状态（默认关闭；仅显式开启或设 DICK_HIDDEN_PROXY_ENABLED=1 时为 True）。"""
+    with _GLOBAL_LOCK:
+        if _ENABLED is not None:
+            return bool(_ENABLED)
+    raw = (os.environ.get("DICK_HIDDEN_PROXY_ENABLED") or "").strip().lower()
+    return raw in ("1", "true", "on", "yes")
+
+
+def set_enabled(flag: bool) -> bool:
+    """显式开启或关闭内置隐藏代理；关闭时立即回收已打开的本地回环端口与隧道。"""
+    global _ENABLED, _GLOBAL_PROXY
+    val = bool(flag)
+    to_stop = None
+    with _GLOBAL_LOCK:
+        _ENABLED = val
+        if not val and _GLOBAL_PROXY is not None:
+            to_stop = _GLOBAL_PROXY
+            _GLOBAL_PROXY = None
+    if to_stop is not None:
+        to_stop.stop()
+    return val
 
 
 def reload_config():
-    """清空缓存配置（测试或重新密封后调用）。"""
-    global _GLOBAL_PROXY, _GLOBAL_STATIC_URL, _CONFIG_LOADED, _CACHED_CFG
+    """清空缓存配置并重置开关为默认关闭（测试或重新密封后调用）。"""
+    global _GLOBAL_PROXY, _GLOBAL_STATIC_URL, _CONFIG_LOADED, _CACHED_CFG, _ENABLED
     with _GLOBAL_LOCK:
         old = _GLOBAL_PROXY
         _GLOBAL_PROXY = None
         _GLOBAL_STATIC_URL = ""
         _CONFIG_LOADED = False
         _CACHED_CFG = None
+        _ENABLED = None
     if old is not None:
         old.stop()
 
@@ -556,20 +582,30 @@ def _get_cfg_locked() -> dict | None:
     return _CACHED_CFG
 
 
-def is_configured() -> bool:
-    """是否已配置隐藏隧道（不触发建连、不暴露任何节点细节）。"""
+def has_node_config() -> bool:
+    """是否存在已密封或环境变量节点配置（不受开关影响，不触发建连）。"""
     with _GLOBAL_LOCK:
         return _get_cfg_locked() is not None
+
+
+def is_configured() -> bool:
+    """是否已开启且具备隐藏隧道配置（默认关闭，不触发建连、不暴露任何节点细节）。"""
+    if not is_enabled():
+        return False
+    return has_node_config()
 
 
 def ensure_proxy(for_url: str | None = None) -> str | None:
     """按需拉起隐藏本地代理，返回回环代理 URL（如 http://127.0.0.1:<port>）。
 
+    - 默认关闭：未开启时直接返回 None（绝不建连、不占端口）；
     - 本机/私网地址一律返回 None（绝不走隧道）；
     - 未配置隐藏节点时静默返回 None；
     - 首次调用时才绑定回环端口并准备按需 SSH 传输，绝不在应用启动时建连。
     """
     global _GLOBAL_PROXY, _GLOBAL_STATIC_URL
+    if not is_enabled():
+        return None
     if for_url and is_local_or_private(for_url):
         return None
     with _GLOBAL_LOCK:
@@ -658,35 +694,41 @@ def _cli(argv: list[str]) -> int:
 
     if args.status:
         cfg = load_config()
+        sw = "已开启" if is_enabled() else "默认关闭"
         if not cfg:
-            print("状态：未配置内置隐藏代理（直连模式）")
+            print(f"状态：未配置内置隐藏代理（开关：{sw}）")
             return 1
-        print(f"状态：已就绪（模式={cfg.get('mode', 'ssh')}，按需懒启动，节点信息已隐藏）")
+        print(f"状态：节点已就绪（模式={cfg.get('mode', 'ssh')}，开关={sw}，按需懒启动，节点信息已隐藏）")
         return 0
 
     if args.test:
         import requests
+        prev = is_enabled()
+        set_enabled(True)
         probes = [
             ("OpenAI", "https://api.openai.com/v1/models"),
             ("Gemini", "https://generativelanguage.googleapis.com/v1beta/models"),
             ("Claude", "https://api.anthropic.com/v1/models"),
         ]
         ok_all = True
-        for name, url in probes:
-            px = ensure_proxy(url)
-            if not px:
-                print(f"  FAIL {name}: 未配置隐藏代理")
-                ok_all = False
-                continue
-            t0 = time.monotonic()
-            try:
-                r = requests.get(url, proxies={"http": px, "https": px}, timeout=15)
-                ms = int((time.monotonic() - t0) * 1000)
-                print(f"  OK   {name}: HTTP {r.status_code}（{ms} ms，已连通）")
-            except Exception as e:
-                print(f"  FAIL {name}: {type(e).__name__}")
-                ok_all = False
-        shutdown()
+        try:
+            for name, url in probes:
+                px = ensure_proxy(url)
+                if not px:
+                    print(f"  FAIL {name}: 未配置隐藏代理")
+                    ok_all = False
+                    continue
+                t0 = time.monotonic()
+                try:
+                    r = requests.get(url, proxies={"http": px, "https": px}, timeout=15)
+                    ms = int((time.monotonic() - t0) * 1000)
+                    print(f"  OK   {name}: HTTP {r.status_code}（{ms} ms，已连通）")
+                except Exception as e:
+                    print(f"  FAIL {name}: {type(e).__name__}")
+                    ok_all = False
+        finally:
+            shutdown()
+            set_enabled(prev)
         return 0 if ok_all else 1
 
     ap.print_help()

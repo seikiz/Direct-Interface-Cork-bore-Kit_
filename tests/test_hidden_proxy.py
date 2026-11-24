@@ -229,6 +229,32 @@ class TestIntegrationFallbackAndZeroLeak(unittest.TestCase):
     def tearDown(self):
         hidden_proxy.reload_config()
 
+    def test_default_off_and_explicit_toggle(self):
+        hidden_proxy.reload_config()
+        env = {"DICK_HIDDEN_PROXY": "http://127.0.0.1:18888", "DICK_HIDDEN_PROXY_ENABLED": ""}
+        with mock.patch.dict(os.environ, env, clear=False):
+            # 默认关闭：即便存在节点配置，也不生效、不返回代理地址
+            self.assertTrue(hidden_proxy.has_node_config())
+            self.assertFalse(hidden_proxy.is_enabled())
+            self.assertFalse(hidden_proxy.is_configured())
+            self.assertIsNone(hidden_proxy.ensure_proxy("https://api.openai.com/v1"))
+            self.assertEqual(hidden_proxy.fallback_for_url("https://api.anthropic.com/v1"), "")
+            # 显式开启后生效
+            hidden_proxy.set_enabled(True)
+            self.assertTrue(hidden_proxy.is_configured())
+            self.assertEqual(hidden_proxy.ensure_proxy("https://api.openai.com/v1"), "http://127.0.0.1:18888")
+            # 关闭后立即停止生效
+            hidden_proxy.set_enabled(False)
+            self.assertFalse(hidden_proxy.is_configured())
+            self.assertIsNone(hidden_proxy.ensure_proxy("https://api.openai.com/v1"))
+        # 环境变量 DICK_HIDDEN_PROXY_ENABLED=1 可直接启用
+        hidden_proxy.reload_config()
+        with mock.patch.dict(os.environ, {"DICK_HIDDEN_PROXY": "http://127.0.0.1:18888",
+                                          "DICK_HIDDEN_PROXY_ENABLED": "1"}, clear=False):
+            self.assertTrue(hidden_proxy.is_enabled())
+            self.assertEqual(hidden_proxy.ensure_proxy("https://api.openai.com/v1"), "http://127.0.0.1:18888")
+        hidden_proxy.reload_config()
+
     def test_core_fetch_silent_fallback_without_exposing_proxy(self):
         from DICK_core import ChatCore
         core = ChatCore()

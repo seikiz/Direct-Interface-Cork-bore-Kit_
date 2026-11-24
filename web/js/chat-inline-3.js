@@ -755,6 +755,8 @@ document.getElementById('stSave').onclick = function () {
   pywebview.api.save_key(key, document.getElementById('stBaseInput').value, document.getElementById('stModelInput').value, currentProviderId).then(function () {
     pywebview.api.set_proxy(document.getElementById('stProxyInput').value.trim()).then(function () {});
     pywebview.api.set_relay(document.getElementById('stRelayInput').value.trim()).then(function () {});
+    var hpChk = document.getElementById('stHiddenProxyInput');
+    if (hpChk && pywebview.api.set_hidden_proxy) pywebview.api.set_hidden_proxy(hpChk.checked).then(function () {});
     pywebview.api.set_stop(document.getElementById('stStopInput').value).then(function () {});
     // 正则规则：文本行 → JSON 数组
     var rrList = [];

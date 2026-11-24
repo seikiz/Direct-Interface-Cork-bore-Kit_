@@ -249,6 +249,12 @@ class HtmlApp(StateMixin, FlowMixin, CardsMixin, ApiMiscMixin, ApiGoMixin, ApiSe
             self.core.set_api_key(key)
             if self.config.get("base_url"):
                 self.core.set_base_url(self.config["base_url"])
+        # 内置隐藏隧道代理：默认关闭，仅用户显式启用时按需拉起
+        try:
+            import hidden_proxy
+            hidden_proxy.set_enabled(bool(self.config.get("hidden_proxy_enabled", False)))
+        except Exception:
+            pass
         # LLM 通道代理（保证被墙厂商可用）
         if self.config.get("proxy"):
             self.core.set_proxy(self.config["proxy"])

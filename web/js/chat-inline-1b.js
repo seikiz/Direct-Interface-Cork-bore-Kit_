@@ -215,6 +215,8 @@ function loadStateFill(s) {
     document.getElementById('stBaseInput').value = s.base_url || document.getElementById('stBaseInput').value;
     document.getElementById('stProxyInput').value = s.proxy || '';
     document.getElementById('stRelayInput').value = s.relay_url || '';
+    var hpChk = document.getElementById('stHiddenProxyInput');
+    if (hpChk) hpChk.checked = !!s.hidden_proxy_enabled;
     var rs = document.getElementById('relayStatus');
     // 2026-12 文案清理：说明"备用线路"就够了，不再向用户解释中转/直连的实现（用户原话：
     // 「去掉应用内所有技术说明部分」）。

@@ -257,6 +257,7 @@ internal object I18nStrings {
         "st_free_suffix" to "（免 Key）",
         "st_gal_auto" to "自动生成",
         "st_gal_count" to "每轮选项：",
+        "st_hidden_proxy" to "内置通道",
         "st_humanize" to "去 AI 味（具体细节/生活有变化/口语不完美/引用共同记忆）",
         "st_lang" to "语言",
         "st_lifespace" to "生活 / 空间 / 世界卡库（吃饭 · 不能瞬移 · 卡包）",

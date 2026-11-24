@@ -517,3 +517,19 @@ class ApiSettingsMixin:
         self._save_config()
         return {"ok": True}
 
+
+    def api_set_hidden_proxy(self, enabled):
+        """设置内置隐藏隧道开关（默认关闭；不暴露任何节点地址）。"""
+        val = bool(enabled)
+        self.config["hidden_proxy_enabled"] = val
+        try:
+            import hidden_proxy
+            hidden_proxy.set_enabled(val)
+        except Exception:
+            pass
+        if not val and getattr(self.core, "_hidden_proxy", None):
+            self.core._hidden_proxy = None
+            self.core.client = self.core._build_client()
+        self._save_config()
+        return {"ok": True, "enabled": val}
+

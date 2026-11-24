@@ -42,6 +42,7 @@ class ApiChatMixin:
                 "providers": PROVIDERS,
                 "provider": self.provider_id,
                 "proxy": self.config.get("proxy", ""),
+                "hidden_proxy_enabled": bool(self.config.get("hidden_proxy_enabled", False)),
                 "relay_url": self.config.get("relay_url") or BUILTIN_RELAY,
                 "relay_on": bool(getattr(self.core, "relay_on", False)),
                 "stop_input": list(self.config.get("stop_sequences") or []),

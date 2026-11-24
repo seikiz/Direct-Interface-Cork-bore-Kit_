@@ -1684,6 +1684,14 @@
         "android"
       ]
     },
+    "st_hidden_proxy": {
+      "zh": "内置通道",
+      "en": "Built-in route",
+      "ja": "内蔵ルート",
+      "used_by": [
+        "desktop_web"
+      ]
+    },
     "st_stop": {
       "zh": "停止序列",
       "en": "Stop sequences",
