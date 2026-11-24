@@ -1,8 +1,7 @@
 # Direct-Interface Cork-bore Kit（DICK）
 
-> 本地 AI 角色扮演 / 交互叙事平台 · 树状记忆 · 机制养成 · CODEX 成作引擎
-> **电脑**（Python + pywebview）· **手机**（Kotlin + Compose）· **原生播放器**（Compose Multiplatform）
-> 免费 · 离线优先 · 数据全在你自己机器上
+> 本地优先的 AI 角色扮演与交互叙事平台 · 免费 · 离线可用 · 数据全在你自己机器上
+> **电脑**（Windows 桌面版）· **手机**（Android 原生 App）· **原生播放器**（桌面 / 安卓同源）
 
 ![主界面（OLED 主题 · 加密备份）](docs/screens/app-oled.png)
 
@@ -10,29 +9,63 @@
 
 ---
 
-## 一分钟看懂
+## 它能干嘛
 
-| 项 | 现状 |
-|---|---|
-| **是什么** | 和 SillyTavern（酒馆）同一沙盒的另一种玩法：轻量、开箱即用，侧重"把角色卡变成能玩的东西"（GAL 选项 / 机制养成 / 一键成作）。角色卡与酒馆互通（v1/v2/v3、PNG 嵌卡） |
-| **三端** | 桌面（Python + pywebview）· 安卓（Kotlin + Compose）· 原生播放器（Compose Multiplatform，EXE 与 APK 同源） |
-| **规模** | 受控文件 **505 个**；Python 224 / Kotlin 110 / JS 28；单测 **96 个脚本**（整套 91 个脚本 / **3,103 条断言 / 0 失败**） |
-| **架构** | **微内核**：`kernel/`（装模块、给服务、发事件）+ `modules/<id>/`（业务块）+ 壳层（桌面/安卓/服务器）。规则见 [ARCHITECTURE.md](ARCHITECTURE.md) |
-| **版号** | `version.json` 是唯一真相，四段 `大版本.架构大改.插件更新.功能测试`，当前 **1.0.0.1**（code 1000001） |
-| **许可** | MIT |
+DICK 和 SillyTavern（酒馆）处在同一个沙盒里，但重点放在**把角色卡变成真的能玩、有生活、有世界演进、还能做成独立作品的东西**——同时顺手装进了跑团、办公写作与财报分析，开箱即用。
+
+### 1. 角色扮演、群聊与多模式互动
+
+- **角色卡与酒馆互通**：支持结构化角色设定（外貌、性格、经历、说话方式、开场白、对话示例）与 AI 一键起草；原生双向兼容酒馆（SillyTavern）v1/v2/v3 JSON 与 PNG/WebP 嵌卡，导入即用、导出可回酒馆。
+- **单聊与群聊**：单选即单聊，多选直接拉群；支持 `@角色名` 指定发言、角色自动接话、按角色分色显示。
+- **多玩法模式**：区分 **GAL 攻略（观测视角）**、**乙女·梦向（代入视角）**、**单推 / 小说叙事 / 跑团主持人** 等不同演出口径，配套选项推进、好感/数值机制养成与玩家角色卡（PC）。
+- **树状对话与消息操作**：任意节点编辑并开新分支、随时切回历史分支不丢内容；支持多候选回复（Swipe）、流式输出，以及**引用某条消息回复**（桌面与安卓互通，引用摘要自动带进上下文）。
+
+### 2. 平行世界、生活层与空间层
+
+- **平行世界自由穿梭**：角色卡与世界卡彻底解耦，多选世界卡即组成可穿梭世界池；随时 `/穿越` 切换世界而完整保留角色人设与记忆。支持 8 项世界参数（科技、超自然、物理法则、时间流速等）与完整世界书（关键词/正则、权重、概率、递归触发、常驻条目）。
+- **生活层（吃饭与世界时钟）**：按时间倍率运转的世界时钟，内置 10 个历史年代的厨具与食材约束（比如史前没有铁锅不能炒、明清之前吃不到辣椒和土豆），让角色的三餐与日常细节有连续性。
+- **空间层（不能瞬移）**：内置地点路程、路费、营业时间与室内家屋约束，角色移动需要耗费时间，不会凭空瞬移。
+- **离线推进**：隔一段时间重新打开，世界会按软件时间往前走（好感衰减、数值回归、事件冷却）；先弹预览卡片，确认才生效，且支持一键撤销。
+
+### 3. 长期记忆（私聊 / 群聊不串味）
+
+- **按角色与场景独立存档**：私聊、群聊与共享世界记忆分开存储，互不污染又能随时互读；对话超长时自动归档原文并生成摘要，但**不改写原始对话树**，回档随时找回原文。
+- **事实、推测与画像分离**：用户亲口说过/做过的事记入带出处的事实库（`facts`），模型的相处推测单独记录（`rapport`），再由长期事实聚合出人物画像，避免把一次性说法或幻觉洗成设定。
+
+### 4. GAL 制作器与 CODEX 一键成作
+
+- **可视化节点图编辑器**：线-点-分支式 GAL 编辑器，直接编排剧情节点、分支走向、立绘与演出。
+- **CODEX 成作引擎**：支持剧本/立绘导入、工程校验、导出与打包；配合跨平台原生播放器（`DICK-Narrative`，桌面 EXE 与安卓 APK 同源），把做好的互动故事直接打包成可玩作品。
+
+### 5. TRPG 跑团
+
+- 独立跑团界面，搭配玩家角色卡（PC）、世界书、朝代/年代常识库、状态变量与数值判定机制，方便单人或 AI 主持跑团。
+
+### 6. 生图、语音与界面定制
+
+- **AI 生图**：内置生图面板与自定义风格预设，支持固定种子复现、一键重抽，以及聊天附图与头像裁剪。
+- **语音朗读（TTS）**：支持日文等语音合成朗读与本地缓存。
+- **界面与主题**：支持 OLED 暗色与多套主题、Live2D 展示、中 / 英 / 日三语切换。
+
+### 7. 办公写作与财报分析
+
+- **办公 / 公文模式**：内置公文写作预设，支持直接读写与规范排版 Word / Excel 文档。
+- **财报与个股分析**：内置 1617–2026 金融史年表、政策抓取与免 Key 个股分析数据源，可联动联网搜索做综合研判。
 
 ---
 
 ## 怎么跑起来
 
-### 桌面（Windows，Python 3.11 / 3.12）
+### 电脑端（Windows，Python 3.11 / 3.12）
 
 ```powershell
 pip install -r requirements.txt
 python "Direct-Interface Cork-bore Kit.py"
 ```
 
-### 安卓
+### 安卓端（Android）
+
+与电脑端数据互通，支持角色/世界卡长按 1 秒编辑、引用对话、生活/空间/世界记忆三层与创意工坊：
 
 ```powershell
 cd DICK-Android
@@ -40,161 +73,35 @@ cd DICK-Android
 # 产物：app\build\outputs\apk\debug\app-debug.apk
 ```
 
-### 创意工坊服务器（可选，局域网 / 公网分享用）
+### 自建创意工坊服务器（可选）
 
 ```powershell
-python net.py --host 0.0.0.0 --port 8080        # 有 waitress 自动用它跑多线程
-python deploy\selfcheck_workshop.py --base http://127.0.0.1:8080 --full
-```
-
-部署/迁移/扩容见 [创意工坊服务器部署.md](创意工坊服务器部署.md)；一键部署器 `deploy/deploy_workshop.py`。
-
----
-
-## 工程纪律（这是本项目最反常的地方）
-
-**代码不是写给人读的，是写给"三个月后的自己"审的。** 所以规矩都做成了机器能查的东西，而不是文档里的口号：
-
-| 闸门 | 命令 | 拦住什么 |
-|---|---|---|
-| 块验收 | `python tools/accept.py` → `ALL_BLOCKS_OK` | 块自检、依赖成环、行数棘轮、接口签名漂移、唯一真相互检 |
-| 内核边界 | `python tools/audit_kernel_boundaries.py` | 内核认识业务、模块互相 import、`# noqa` 绕过、块内可变全局 |
-| 可移植性 | `python tools/portability_check.py` | 块偷偷依赖宿主（搬家测试：只带 `kernel/` 拷到临时目录还能自检通过） |
-| UI 解耦 | `python tools/audit_ui_coupling.py` | 大文件、行内样式、硬编码颜色、全局变量、屏间耦合、组件复用（只看分数是否上升） |
-| 结构守恒 | `python tools/ui_snapshot.py --check` | 搬家时 DOM / CSS / 行内样式是否被顺手改掉 |
-| 视觉 | `python tools/audit_contrast.py`、`tests/test_no_dim_text.py` | 浅灰字、对比度 <4.5 |
-| 文案 | `tests/test_no_emoji_ui.py`、`tests/test_no_dev_copy.py` | UI 里的 emoji 字符、HTTP 码/地址/gzip 这类技术说明 |
-| 唯一真相 | `tools/gen_*.py --check` | 手改了生成产物（图标/文案/令牌/卡片字段/对拍表） |
-| 行数硬闸 | `tests/test_file_size_limit.py` | **全项目单文件 ≤1000 行，豁免表已清空**（`EXEMPT = {}`） |
-| 落盘安全 | `tests/test_atomic_io.py` | 关键路径必须 `atomic_io`（临时文件→fsync→os.replace）；出现裸 `open(path,'w')` 覆盖写就红 |
-| 全套 | `python tools/run_local_suite.py` | 116 脚本 / 3,932 断言；CI 三平台（Linux 3.11/3.12 + Windows）都跑，并且**先跑 `accept.py` 再跑全测** |
-
-规矩本身怎么改，写在 [ARCHITECTURE.md](ARCHITECTURE.md) 第八节（反修正主义：改铁律要写原因、同期改测试与基线、留修订记录）；改代码的手艺在第九/十节（**替换优先**、**积木协议：架构由人定，AI 只在已声明的块里填文件**）。
-
----
-
-## 代码地图
-
-```
-kernel/                    微内核：registry(服务) / bus(事件) / loader(按 manifest 装配) / manifest(五校验)
-                           config / paths / log / version —— 不认识任何业务
-modules/                   业务块（每块一个目录，唯一入口 module.py:register(kernel)）
-  backup/                  加密备份（crypto_core 能力 + 铺盘/回滚）
-  workshop/                创意工坊客户端（列表/上传/下载/点赞/进度，gzip 通道 + 500ms 闸门）
-
-Direct-Interface Cork-bore Kit.py  壳层：HtmlApp（对外 api_* 门面，内部转调块）
-DICK_core.py               对话内核（树状记忆、机制判定、提示词装配）
-mem_scene.py               记忆分场景（私聊 / 群聊各一套目录，随时可互读）
-mem_policy.py              上下文策略（窗口 24~36、私聊32/群聊48 压缩阈值、2 小时空闲、失败消息不计）
-mem_facts.py               事实层（只收用户亲口说过的，必须带出处；相处推测单独一份 rapport）
-net.py                     创意工坊服务器（类型注册表 cards/worlds/plugins/packs、gzip、限流、waitress）
-save_guard.py              存档修复/备份恢复（同秒备份分不出新旧时**停止自动恢复**，不静默挑一个）
-
-web/                       桌面前端（单页 + 碎片屏）
-  index.html               挂载点 + 骨架（13 个屏片段通过 <!--@screen:name--> 挂入）
-  screens/*.html           13 个屏片段
-  js/screens/*.js          屏逻辑；js/state.js(状态与总线) / js/router.js / js/store/
-  styles/*.css             令牌与各屏样式（全部从 HTML 抽出）
-  icons.js / i18n.js       生成物（来源 icons/icons.json、lang/strings.json）
-
-DICK-Android/              安卓（单包多模块目录）
-  ui/screens/<feature>/    10 个 feature 包（chat/settings/workshop/lifeSpace/trpg/cardEdit/backup/library/common/api）
-  ui/components/           共享组件（按钮/卡片/输入/对话框/空态）
-  core/                    平台能力（Workshop 客户端、CardIo、I18n…）
-
-design/ · lang/ · icons/   唯一真相源（令牌 / 文案三语 / 图标名），改这里再生成
-tools/                     生成器 + 审计器 + 部署器 + 跑批（19 个脚本）
-tests/                     96 个独立测试脚本（含 Node 图标回归、安卓结构检查、跨端对拍）
-deploy/                    工坊服务器部署器 / 自检 / nginx 样例
+python net.py --host 0.0.0.0 --port 8080
 ```
 
 ---
 
-## 唯一真相与生成链
+## 更多文档
 
-改**一处**，三端一起变；改漏了测试会红。
+- 详细操作与命令说明：[说明书.md](说明书.md)
+- 状态变量与机制写法：[状态变量说明.md](状态变量说明.md)
+- 创意工坊服务器部署：[创意工坊服务器部署.md](创意工坊服务器部署.md)
+- 插件开发说明：[PLUGIN_DEV.md](PLUGIN_DEV.md)
+- 架构与工程规范（面向开发者）：[ARCHITECTURE.md](ARCHITECTURE.md)
 
-| 数据 | 唯一真相 | 生成物 | 防漂移 |
-|---|---|---|---|
-| 界面文案（中/英/日） | `lang/strings.json` | `web/i18n.js`、`I18nStrings.kt` | `gen_i18n.py --check` + `test_i18n_langs.py` |
-| 图标（名字 → Material Symbols） | `icons/icons.json` | `web/icons.js`、`IconNames.kt` | `gen_icons.py --check` + `test_icon_scopes.py` |
-| 设计令牌（颜色/间距/字号） | `design/tokens.json` | `web/theme.css`、`Tokens.kt`、`DickTheme` | `gen_tokens.py --check` + `audit_contrast.py` |
-| 角色卡字段渲染顺序 | `design/card_fields.json` | `web/card_fields.js`、`CardFields.kt` | `gen_card_fields.py --check` + `test_card_view.py` |
-| 版号 | `version.json` | 桌面运行时 / Gradle / 前端 `api_state()` | `test_version_consistency.py` |
-
----
-
-## 记忆怎么存（私聊 / 群聊不串味）
-
-```
-memory/private/<角色>/chain.json         该角色的会话链
-                        facts.json        用户亲口说过/做过的事（每条带 source + 时间）
-                        rapport.json      模型的相处推测（**永不与 facts 合并**）
-                        summary-*.md      压缩摘要
-                        archive-*.json    原文归档（只增不改）
-memory/group/<角色>/…                     群聊独立一套
-memory/<场景>/_world/…                    世界记忆按场景各一份
-```
-
-四条规矩（都有测试盯着）：
-
-| 规矩 | 为什么 | 守它的测试 |
-|---|---|---|
-| 场景是**存储维度**，不是访问闸门 | 面板要能同时看私聊与群聊，不该"切场景" | `test_mem_scene.py` |
-| 每轮只送最近 **24~36** 条；私聊 **32** / 群聊 **48** 触发压缩；2 小时空闲也整理一次 | 条数管成本、token 管爆预算，两道闸 | `test_mem_policy.py` |
-| 事实只记用户明确说过的，必须带出处；推测走 `rapport` | 无源"事实"就是第二个幻觉来源 | `test_mem_facts.py` |
-| 压缩**不许碰树** | 压缩只改"这一轮送什么"，不改"存了什么"；回档跳回旧节点内容仍在 | `test_mem_tree_safe.py` |
-
----
-
-## 落盘为什么都用原子写
-
-直接 `open(path, "w")` 覆盖写，写到一半断电、进程被杀、更新程序正在替换文件，
-目标文件就成了**半个 JSON**——存档、配置、角色卡一起报废，而且不可逆。
-
-所以持久化的写一律走 `atomic_io`：
-
-```
-① 同目录建临时文件（必须同卷：跨盘 os.replace 会退化成"先删再拷"，断电窗口里原文件已经没了）
-② 写完 flush + fsync（内容先落盘，再谈换名）
-③ os.replace 原子换名，最后尽力 fsync 目录
-```
-
-任何一步失败都**清理临时文件并原样抛出**：调用方该报错就报错，但原来的文件必须还在。
-块（`modules/*`）不许 import 根目录，所以 `modules/codex/pack.py` 自带一份同样逻辑的
-`_atomic_write_json`。
-
-`tests/test_atomic_io.py` 里除了正常写，还专门模拟了"换名失败"和"序列化失败"两种情况：
-断言原文件完好、临时文件被清理。清单里出现裸覆盖写，这条闸门就红。
-
----
-
-## 现在的欠账（不粉饰）
-
-| 欠账 | 规模 | 什么时候必须还 |
-|---|---|---|
-| 网页组件层仍薄 | `index.html` 已拆到 568 行（内联脚本进 `js/chat-inline-*.js`），但裸控件还多 | 做主题/浅色适配时 |
-| 网页组件层还很薄 | 只有 `Button.js`，`index.html` 里仍有大量裸控件 | 做主题/浅色适配时 |
-| 硬编码颜色残留 | 审计 ~268 处 | 同上 |
-| 内核只迁了 2 个块 | 剩余清单：`image_gen` → `voice` → `codex` → 导出/文档 → `world_packs` → `trpg` → `cards` → `memory` → `chat`(DICK_core，最硬) | 按批次迁，不搞大手术 |
-| 索引是单个 `index.json` | 作品数到 300~500 会疼 | 到量换 SQLite（WAL） |
+当前版本：**1.0.1.0**（见 `version.json`）· **MIT License**
 
 ---
 
 ## English (short)
 
-**DICK** is a **local-first AI roleplay / interactive-narrative platform** — a lightweight alternative in the
-same sandbox as SillyTavern, focused on turning character cards into playable things (choice-driven scenes,
-mechanics/affection systems, one-click story export).
+**DICK (Direct-Interface Cork-bore Kit)** is a **local-first, free AI roleplay and interactive-narrative platform** for Windows desktop, Android, and a cross-platform native story player (`DICK-Narrative`). All your characters, chats, worlds, and memories stay on your own machine.
 
-- **Three targets, one spec:** Python + pywebview desktop · Kotlin/Compose Android · Compose Multiplatform player
-- **Micro-kernel architecture:** `kernel/` (services, event bus, manifest-driven loader) + `modules/<id>/`
-  portability-checked blocks + thin shells. Rules live in [ARCHITECTURE.md](ARCHITECTURE.md)
-- **Engineering gates in CI:** block acceptance (`tools/accept.py`), kernel boundaries, portability
-  relocation tests, UI coupling score, contrast/emoji/dev-copy gates, and generated-artifact drift checks —
-  91 scripts / 3,103 assertions, green on Linux 3.11/3.12 and Windows
-- **Runs from source:** `pip install -r requirements.txt` then `python "Direct-Interface Cork-bore Kit.py"`
-  (Python 3.11/3.12, Windows). The UI ships in 中文 / English / 日本語
-- **Your data stays on your machine** · MIT licensed
+**What it can do:**
+- **Roleplay & Group Chat:** SillyTavern-compatible cards (v1/v2/v3 JSON & PNG), single/group chats with `@mentions` and auto-reply, branching conversation trees, swipes, and message quoting across desktop and Android.
+- **Playable Worlds & Simulation:** Decoupled parallel worlds you can travel between (`/穿越`), full lorebook logic, a time-scaled **Life layer** (meals & historical cookware constraints across 10 eras), a **Space layer** (travel time/cost instead of teleporting), and previewable **offline time progression**.
+- **Long-Term Memory:** Isolated per-character private/group/world memory with non-destructive archiving, source-backed facts separated from speculation, and long-term persona profiles.
+- **GAL Editor & CODEX Maker:** Visual node-graph scene editor and packaging engine to turn stories into standalone playable works.
+- **TRPG, Media & Utility Modes:** Dedicated TRPG mode, AI image generation, TTS voice playback, Live2D, themes (Chinese / English / Japanese UI), plus built-in office document (Word/Excel) and financial/stock analysis modes.
 
-Issue reports currently arrive over QQ rather than GitHub Issues; English docs are not available yet.
+MIT licensed · Data stays local.
