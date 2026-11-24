@@ -17,6 +17,8 @@ life_config.json
 # API Key / 密钥（任何地方）
 *.key
 .env
+hidden_proxy.enc
+hidden_proxy_local.json
 
 # 构建产物
 build/

@@ -37,6 +37,9 @@ datas = [('web', 'web'), ('plugins', 'plugins'), ('saves', 'saves'), ('worlds', 
          # 树权重/剪枝：DICK_core 和主程序都是【函数内部】才 import，
          # PyInstaller 静态分析看不到 —— 漏了就是本地能打分、打包版报「缺少模块」。
          ('tree_weight.py', '.'),
+         ('tree_index.py', '.'),
+         ('card_modes.py', '.'),
+         ('hidden_proxy.py', '.'),
          # 前瞻展开：主程序在函数内部 import
          ('lookahead.py', '.'),
          # 偏好导出：函数内部 import
@@ -92,15 +95,19 @@ hiddenimports = ['openai', 'PIL', 'requests', 'flask', 'openpyxl', 'docx', 'edge
                  'cryptography',
                  'cryptography.hazmat.primitives.ciphers.aead',
                  'cryptography.hazmat.primitives.kdf.pbkdf2',
-                 'cryptography.hazmat.bindings._rust']
+                 'cryptography.hazmat.bindings._rust',
+                 # 内置按需隧道代理（SSH direct-tcpip）
+                 'paramiko', 'bcrypt', 'nacl']
 
 # UTAU 进程内合成：从 3.11 utau_env 收集 putao 及其依赖（numpy 等编译扩展必须走 binaries）
 # 注意：customtkinter 已不再收集（随 Tk 插件一起退役）
 import os as _os
+if _os.path.isfile('C:/Users/seiki/Desktop/dist/hidden_proxy.enc'):
+    datas.append(('hidden_proxy.enc', '.'))
 _UTAU_SP = 'C:/Users/seiki/Desktop/dist/utau_env/Lib/site-packages'
 if _os.path.isdir(_UTAU_SP):
     for _pkg in ('putao', 'numpy', 'pykakasi', 'pypinyin', 'pydub', 'jaconv', 'mido',
-                 'cryptography'):
+                 'cryptography', 'paramiko', 'bcrypt', 'nacl'):
         try:
             _tmp = collect_all(_pkg)
             datas += _tmp[0]; binaries += _tmp[1]; hiddenimports += _tmp[2]

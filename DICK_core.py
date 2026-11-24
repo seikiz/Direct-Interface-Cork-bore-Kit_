@@ -50,6 +50,7 @@ class ChatCore(PromptMixin, MechMixin, FetchMixin):
         self.base_url = "https://api.deepseek.com"
         self.api_key = None
         self.proxy = None  # LLM 通道代理（http/https/socks5；None=直连）
+        self._hidden_proxy = None  # 内置隐藏本地隧道（仅内存兜底，不回显、不落盘）
         self.relay_base = None  # 内置中转通道地址（直连失败自动走这里）
         self.relay_on = False   # 已切换至中转通道
 
@@ -115,12 +116,14 @@ class ChatCore(PromptMixin, MechMixin, FetchMixin):
 
     def set_base_url(self, url: str):
         self.base_url = url
+        self._hidden_proxy = None
         # 无条件重建客户端：空 Key（免费厂商）也用占位符构造，避免沿用旧厂商 URL/Key
         self.client = self._build_client()
 
     def set_proxy(self, proxy: str):
         """设置 LLM 通道代理（http/https 或 socks5；空串 = 直连）"""
         self.proxy = (proxy or "").strip() or None
+        self._hidden_proxy = None
         self.client = self._build_client()
 
     def set_relay(self, url: str):

@@ -33,6 +33,44 @@ BUILD = os.path.join(ROOT, "dist", "DICK-HTML")
 REL = os.environ.get("DICK_REL_DIR") or os.path.join(os.path.dirname(ROOT), "DICK-发布")
 PY = os.path.join(ROOT, "utau_env", "Scripts", "python.exe")
 
+
+def _py_cmd_env():
+    """返回 (python_exe, env)。优先用 utau_env/Scripts/python.exe；
+    某些非交互终端下 Windows venv launcher 会以 0xC0000142 退出，此时退回
+    pyvenv.cfg 的基础 python.exe + PYTHONPATH=utau_env/Lib/site-packages。"""
+    env = os.environ.copy()
+    if os.path.isfile(PY):
+        try:
+            r = subprocess.run([PY, "-c", "pass"], capture_output=True, timeout=15)
+            if r.returncode == 0:
+                return PY, env
+        except Exception:
+            pass
+        cfg = os.path.join(ROOT, "utau_env", "pyvenv.cfg")
+        sp = os.path.join(ROOT, "utau_env", "Lib", "site-packages")
+        base_exe = None
+        if os.path.isfile(cfg):
+            try:
+                with open(cfg, encoding="utf-8", errors="ignore") as f:
+                    for line in f:
+                        if "=" not in line:
+                            continue
+                        k, v = [x.strip() for x in line.split("=", 1)]
+                        if k == "executable" and os.path.isfile(v):
+                            base_exe = v
+                            break
+                        if k == "home":
+                            cand = os.path.join(v, "python.exe")
+                            if os.path.isfile(cand):
+                                base_exe = cand
+            except Exception:
+                pass
+        if base_exe and os.path.isdir(sp):
+            old_pp = env.get("PYTHONPATH", "")
+            env["PYTHONPATH"] = sp + (os.pathsep + old_pp if old_pp else "")
+            return base_exe, env
+    return (PY if os.path.isfile(PY) else sys.executable), env
+
 # 包内前端必须含这些串，<seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌否则说明打进去的是旧前端
 FEATURES = {
     "🎬 播放器 按钮": "galPlayerBtn",
@@ -185,7 +223,9 @@ def step_build():
         print("   已清 dist/DICK-HTML")
         print("== 2) PyInstaller 构建（几分钟）==")
         t0 = time.time()
-        r = subprocess.run([PY, "-m", "PyInstaller", "DICK_HTML.spec", "--noconfirm"], cwd=ROOT)
+        py_exe, py_env = _py_cmd_env()
+        r = subprocess.run([py_exe, "-m", "PyInstaller", "DICK_HTML.spec", "--noconfirm"],
+                           cwd=ROOT, env=py_env)
         if r.returncode != 0:
             fail("PyInstaller 失败（退出码 %d）" % r.returncode)
         print("   构建完成，用时 %.0f 秒" % (time.time() - t0))
@@ -339,6 +379,7 @@ def step_selfcheck():
     # 插件的 import 不会被 PyInstaller 跟进，懒加载的模块也可能漏收。
     required = [
         ("crypto_core.py", "加密备份模块：缺了备份功能直接报『缺少加密模块』"),
+        ("hidden_proxy.py", "内置隐藏隧道代理：缺了直连失败无法静默兜底"),
         ("tree_weight.py", "树权重/剪枝：缺了树打分与剪枝整块失效"),
         ("lookahead.py", "前瞻展开：缺了前瞻直接静默不生效（不报错，更难发现）"),
         ("preference_export.py", "偏好导出：缺了就再也抽不出历史偏好数据（不可追溯）"),
@@ -472,10 +513,10 @@ def step_selfcheck_kernel():
              "modules/（模块是运行时按目录装配的，静态分析看不到）" % bad)
 
     # 真的装一遍：boot 内核 + 取两个块的服务
-    probe_py = PY if os.path.isfile(PY) else sys.executable
+    probe_py, probe_env = _py_cmd_env()
     try:
         r = subprocess.run([probe_py, "-X", "utf8", "-c", KERNEL_PROBE, internal],
-                           capture_output=True, timeout=180)
+                           capture_output=True, timeout=180, env=probe_env)
     except Exception as e:
         fail("内核 boot 自检跑不起来：%s" % str(e)[:200])
     stdout = r.stdout.decode("utf-8", "replace")

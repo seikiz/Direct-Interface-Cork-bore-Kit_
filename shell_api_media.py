@@ -104,6 +104,19 @@ class ApiMediaMixin:
         if not c["key"] and image_gen.needs_key(c["base_url"], c["backend"]):
             return {"ok": False, "err": "未配置生图 API Key（设置 → 生图；"
                                         "或把端点换成免费的 Pollinations / 本地 SD）"}
+        # 代理通道：用户显式代理优先；未配代理且非本地后端（SD/ComfyUI）时注入隐藏隧道静默兜底
+        eff_backend = image_gen.resolve_backend(c["base_url"], c["backend"])
+        is_local_img = eff_backend in ("sdwebui", "comfyui")
+        user_proxy = (self.config.get("proxy") or "").strip()
+        image_gen.proxy = "" if is_local_img else user_proxy
+        if is_local_img or user_proxy:
+            image_gen.fallback_proxy = None
+        else:
+            try:
+                import hidden_proxy
+                image_gen.fallback_proxy = hidden_proxy.fallback_for_url
+            except Exception:
+                image_gen.fallback_proxy = None
         presets = image_gen.load_presets(self.base_dir)
         # 只有「空」才算随机；seed=0 是合法种子，别当成没填
         if seed is None or (isinstance(seed, str) and not seed.strip()):
@@ -251,36 +264,60 @@ class ApiMediaMixin:
         if free:
             return _save()
         proxy = (self.config.get("proxy") or "").strip() or None
-        proxies = {"http": proxy, "https": proxy} if proxy else None
-        headers = {"Authorization": "Bearer " + k}
-        sess = requests.Session()
-        # 与 core_fetch 保持一致：未显式配置代理时不继承系统代理，避免被失效系统代理拖死
-        sess.trust_env = bool(proxy)
-        try:
-            r = sess.get(base + "/models", headers=headers, proxies=proxies, timeout=12)
-            if r.status_code in (200, 201):
-                return _save()
-            if r.status_code in (404, 405):
-                body = {"model": m, "messages": [{"role": "user", "content": "hi"}],
-                        "max_tokens": 1, "stream": False}
-                h2 = dict(headers)
-                h2["Content-Type"] = "application/json"
-                r2 = sess.post(base + "/chat/completions", headers=h2, json=body,
-                               proxies=proxies, timeout=25)
-                if r2.status_code in (200, 201):
+        is_claude = ("api.anthropic.com" in base.lower()) or (pid == "anthropic")
+        if is_claude:
+            headers = {"x-api-key": k, "anthropic-version": "2023-06-01"}
+        else:
+            headers = {"Authorization": "Bearer " + k}
+
+        def _probe_once(px_url):
+            proxies = {"http": px_url, "https": px_url} if px_url else None
+            sess = requests.Session()
+            # 与 core_fetch 保持一致：未显式配置代理时不继承系统代理，避免被失效系统代理拖死
+            sess.trust_env = bool(px_url)
+            try:
+                r = sess.get(base + "/models", headers=headers, proxies=proxies, timeout=12)
+                if r.status_code in (200, 201):
                     return _save()
-                return {"ok": False, "err": self._probe_reason(r2.status_code, r2.text),
-                        "hint": self._probe_hint(r2.status_code)}
-            return {"ok": False, "err": self._probe_reason(r.status_code, r.text),
-                    "hint": self._probe_hint(r.status_code)}
+                if r.status_code in (404, 405):
+                    h2 = dict(headers)
+                    h2["Content-Type"] = "application/json"
+                    if is_claude:
+                        body = {"model": m, "max_tokens": 1,
+                                "messages": [{"role": "user", "content": "hi"}]}
+                        r2 = sess.post(base + "/messages", headers=h2, json=body,
+                                       proxies=proxies, timeout=25)
+                    else:
+                        body = {"model": m, "messages": [{"role": "user", "content": "hi"}],
+                                "max_tokens": 1, "stream": False}
+                        r2 = sess.post(base + "/chat/completions", headers=h2, json=body,
+                                       proxies=proxies, timeout=25)
+                    if r2.status_code in (200, 201):
+                        return _save()
+                    return {"ok": False, "err": self._probe_reason(r2.status_code, r2.text),
+                            "hint": self._probe_hint(r2.status_code)}
+                return {"ok": False, "err": self._probe_reason(r.status_code, r.text),
+                        "hint": self._probe_hint(r.status_code)}
+            finally:
+                try:
+                    sess.close()
+                except Exception:
+                    pass
+
+        try:
+            return _probe_once(proxy)
         except Exception as e:
+            # 未配显式代理且直连网络失败 → 静默走内置隐藏隧道重试一次（不暴露任何隧道地址）
+            if not proxy:
+                try:
+                    import hidden_proxy
+                    hp = hidden_proxy.ensure_proxy(base)
+                    if hp:
+                        return _probe_once(hp)
+                except Exception:
+                    pass
             return {"ok": False, "err": "%s: %s" % (type(e).__name__, e),
                     "hint": "网络层失败：多半是超时或被墙，填个代理再试；也可以先点「稍后再说」用免费链"}
-        finally:
-            try:
-                sess.close()
-            except Exception:
-                pass
 
 
 

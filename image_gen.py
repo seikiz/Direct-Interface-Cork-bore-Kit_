@@ -24,6 +24,9 @@
 
 import time                                      # image_gen.time：块退避用的时钟（可被替换）
 
+proxy = ""                                     # 宿主注入的显式代理（空=直连）
+fallback_proxy = None                          # 宿主注入的静默兜底代理回调 fallback_proxy(url) -> str
+
 _SERVICE = None
 
 

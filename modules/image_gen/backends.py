@@ -53,7 +53,7 @@ class Net(object):
         self.host = host
         self.proxy = proxy
         self.log = log
-        self._opener_cache = None
+        self._opener_cache = (None, None)
 
     # ---- 宿主能力 ----
     def clock(self):
@@ -74,33 +74,43 @@ class Net(object):
     def proxy_of(self):
         return getattr(self.host, "proxy", "") or self.proxy or ""
 
-    def _opener(self):
-        proxy = self.proxy_of()
+    def _opener(self, proxy_override=None):
+        proxy = proxy_override if proxy_override is not None else self.proxy_of()
         if not proxy:
             return urllib.request.urlopen          # 默认行为：环境变量代理
-        if self._opener_cache is None:
+        if self._opener_cache[0] != proxy:
             handler = urllib.request.ProxyHandler({"http": proxy, "https": proxy})
-            self._opener_cache = urllib.request.build_opener(handler).open
-        return self._opener_cache
+            self._opener_cache = (proxy, urllib.request.build_opener(handler).open)
+        return self._opener_cache[1]
+
+    def _open_with_fallback(self, req, url, timeout):
+        try:
+            return self._opener()(req, timeout=timeout)
+        except urllib.error.HTTPError:
+            raise
+        except (urllib.error.URLError, TimeoutError, OSError):
+            fb = getattr(self.host, "fallback_proxy", None)
+            alt = (fb(url) or "") if (not self.proxy_of() and callable(fb)) else ""
+            if not alt:
+                raise
+            return self._opener(alt)(req, timeout=timeout)
 
     def _note(self, msg):
         log = self.log or getattr(self.host, "log", None)
         if log is not None:
-            try:
-                log.warn(msg, "image_gen")
-            except Exception:
-                pass
+            try: log.warn(msg, "image_gen")
+            except Exception: pass
 
     # ---- 两个动词 ----
     def post(self, url, body, headers, timeout=300):
         data = json.dumps(body).encode("utf-8")
         req = urllib.request.Request(url, data=data, headers=headers, method="POST")
-        with self._opener()(req, timeout=timeout) as r:
+        with self._open_with_fallback(req, url, timeout) as r:
             return json.loads(r.read().decode("utf-8"))
 
     def get(self, url, timeout=60):
         req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
-        with self._opener()(req, timeout=timeout) as r:
+        with self._open_with_fallback(req, url, timeout) as r:
             return r.read()
 
 

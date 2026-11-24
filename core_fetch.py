@@ -50,17 +50,20 @@ class FetchMixin:
                 kw["base_url"] = self._relay_target_url()
             if httpx is not None:
                 try:
-                    if self.proxy and not _is_local_url(self.base_url):
+                    is_local = _is_local_url(self.base_url)
+                    eff_proxy = None if is_local else (self.proxy or getattr(self, "_hidden_proxy", None))
+                    if eff_proxy:
                         hc = httpx.Client(
-                            proxy=self.proxy,
+                            proxy=eff_proxy,
                             timeout=httpx.Timeout(600.0, connect=20.0),
                         )
                     else:
                         # 没配代理或访问本地模型时【不要】继承 Windows 系统代理：
                         # 系统代理指向 127.0.0.1:7890 时，模型请求会被拖到超时。
+                        conn_to = 12.0 if (not is_local and self._has_hidden_proxy()) else 20.0
                         hc = httpx.Client(
                             trust_env=False,
-                            timeout=httpx.Timeout(600.0, connect=20.0),
+                            timeout=httpx.Timeout(600.0, connect=conn_to),
                         )
                     kw["http_client"] = hc
                     self._http_client = hc
@@ -68,13 +71,35 @@ class FetchMixin:
                     pass
             return _ensure_openai()(**kw)
 
+        @staticmethod
+        def _has_hidden_proxy() -> bool:
+            try:
+                import hidden_proxy
+                return hidden_proxy.is_configured()
+            except Exception:
+                return False
+
         def _maybe_switch_relay(self):
-            """直连网络失败 → 切内置中转通道并重建客户端。本机地址不切中转。返回是否已切换。"""
-            if self.relay_on or not self.relay_base or _is_local_url(self.base_url):
+            """直连网络失败 → 优先静默启用内置隐藏隧道，其次切换用户配置的备用线路。本机地址不切换。"""
+            if _is_local_url(self.base_url):
+                return False
+            # 1) 用户未手动指定代理时，先尝试内置隐藏本地隧道（不回显、不落盘、不打节点日志）
+            if not self.proxy and not getattr(self, "_hidden_proxy", None):
+                try:
+                    import hidden_proxy
+                    hp = hidden_proxy.ensure_proxy(self.base_url)
+                    if hp:
+                        self._hidden_proxy = hp
+                        self.client = self._build_client()
+                        return True
+                except Exception:
+                    pass
+            # 2) 回落到用户显式配置的备用线路
+            if self.relay_on or not self.relay_base:
                 return False
             self.relay_on = True
             self.client = self._build_client()
-            print("[代理通道] 直连失败，已自动切换内置中转通道（后续请求走中转）")
+            print("[代理通道] 直连失败，已自动切换备用线路")
             return True
 
         @staticmethod

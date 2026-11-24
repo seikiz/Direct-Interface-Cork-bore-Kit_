@@ -795,7 +795,10 @@ _VISION_MODELS = ["Qwen3.5-397B-A17B", "Qwen2.5-VL-72B-Instruct", "Qwen3.6-27B",
 
 def _vision_describe(image_b64, mime, proxies=None):
     import requests
+    endpoint = "https://oai.endpoints.kepler.ai.cloud.ovh.net/v1/chat/completions"
     data_url = "data:" + mime + ";base64," + image_b64
+    eff_proxies = proxies
+    tried_hidden = False
     for model in _VISION_MODELS:
         body = {
             "model": model,
@@ -806,19 +809,45 @@ def _vision_describe(image_b64, mime, proxies=None):
             "max_tokens": 4096,
             "stream": False,
         }
+        sess = requests.Session()
+        sess.trust_env = bool(eff_proxies)
         try:
-            r = requests.post("https://oai.endpoints.kepler.ai.cloud.ovh.net/v1/chat/completions",
-                              json=body, headers={"Content-Type": "application/json"},
-                              timeout=90, proxies=proxies)
-            if r.status_code == 429:
-                continue
-            if r.status_code >= 400:
+            r = sess.post(endpoint, json=body, headers={"Content-Type": "application/json"},
+                          timeout=90, proxies=eff_proxies)
+            if r.status_code == 429 or r.status_code >= 400:
                 continue
             content = ((r.json().get("choices") or [{}])[0].get("message") or {}).get("content")
             if isinstance(content, str) and content.strip():
                 return content.strip()
+        except requests.exceptions.RequestException:
+            if not eff_proxies and not tried_hidden:
+                tried_hidden = True
+                try:
+                    import hidden_proxy
+                    hp = hidden_proxy.ensure_proxy(endpoint)
+                    if hp:
+                        eff_proxies = {"http": hp, "https": hp}
+                        sess2 = requests.Session()
+                        sess2.trust_env = False
+                        try:
+                            r2 = sess2.post(endpoint, json=body, headers={"Content-Type": "application/json"},
+                                            timeout=90, proxies=eff_proxies)
+                            if r2.status_code < 400:
+                                content = ((r2.json().get("choices") or [{}])[0].get("message") or {}).get("content")
+                                if isinstance(content, str) and content.strip():
+                                    return content.strip()
+                        finally:
+                            sess2.close()
+                except Exception:
+                    pass
+            continue
         except Exception:
             continue
+        finally:
+            try:
+                sess.close()
+            except Exception:
+                pass
     return None
 
 
@@ -841,7 +870,12 @@ def main():
         "Direct-Interface Cork-bore Kit " + app_version.display(), html_path, js_api=app,
         width=1060, height=820, min_size=(860, 640), background_color="#0f1115")
     webview.start()
-    # 窗口关掉之后收线：别再让分道线程拖着进程
+    # 窗口关掉之后收线：别再让分道线程或隐藏隧道拖着进程
+    try:
+        import hidden_proxy
+        hidden_proxy.shutdown()
+    except Exception:
+        pass
     try:
         import jobs
         jobs.shutdown()

@@ -16,44 +16,113 @@ import re
 class HostMixin:
     """shell_host"""
 
-    def _vision_describe(self, image_b64, mime):
-        """看图描述：DICK 的眼睛 = 官方视觉理解（V4.1 Flash 起原生多模态，模型名仍填 deepseek-flash）。
-        只要配了 DeepSeek key 就固定用它看图（与主对话模型无关），失败才回落免费链。"""
+    @staticmethod
+    def _vision_http_post(url, body, headers, timeout, user_proxy=None):
+        """视觉识图统一 POST：不继承坏系统代理，用户未配代理且直连网络失败时静默走内置隐藏隧道。"""
         import requests
-        proxy = self.config.get("proxy") or None
-        proxies = {"http": proxy, "https": proxy} if proxy else None
-        ds_key = (self.config.get("api_key") or "").strip()
-        ds_base = (self.config.get("base_url") or "https://api.deepseek.com").strip()
-        # 视觉模型 ID：2026-09-10 起 <seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌V4.1 Flash 原生支持视觉理解，
-        # 旧的 deepseek-v4-flash-vision-exp 已下线（官方暂时路由），统一填 deepseek-flash。
-        vision_model = "deepseek-flash"
-        if ds_key and ds_base:
-            data_url = "data:" + mime + ";base64," + image_b64
-            body = {
-                "model": vision_model,
-                "messages": [{"role": "user", "content": [
-                    {"type": "image_url", "image_url": {"url": data_url}},
-                    {"type": "text", "text": "请用中文详细描述这张图片的内容（包括文字、物体、场景、数据，如有表格请逐项列出）。"},
-                ]}],
-                "max_tokens": 4096,
-                "stream": False,
+
+        def _send(px):
+            proxies = {"http": px, "https": px} if px else None
+            sess = requests.Session()
+            sess.trust_env = bool(px)
+            try:
+                return sess.post(url, json=body, headers=headers, timeout=timeout, proxies=proxies)
+            finally:
+                try:
+                    sess.close()
+                except Exception:
+                    pass
+
+        try:
+            return _send(user_proxy)
+        except requests.exceptions.RequestException:
+            if not user_proxy:
+                try:
+                    import hidden_proxy
+                    hp = hidden_proxy.ensure_proxy(url)
+                    if hp:
+                        return _send(hp)
+                except Exception:
+                    pass
+            raise
+
+    def _vision_endpoint(self, image_b64, mime, prompt_text, sys_prompt="", max_tokens=4096):
+        """按当前模型商构造视觉请求（兼容 DeepSeek / OpenAI / Gemini / Anthropic Claude）。"""
+        key = (self.config.get("api_key") or "").strip()
+        base = (self.config.get("base_url") or "https://api.deepseek.com").strip().rstrip("/")
+        if not key or not base:
+            return None, None, None, False
+        low = base.lower()
+        is_claude = ("api.anthropic.com" in low) or (getattr(self, "provider_id", "") == "anthropic")
+        if "deepseek.com" in low:
+            model = "deepseek-flash"
+        else:
+            model = (self.config.get("model") or getattr(self.core, "model", "") or "deepseek-flash").strip()
+        eff_mime = mime or "image/png"
+        if is_claude:
+            url = base + "/messages"
+            headers = {
+                "Content-Type": "application/json",
+                "x-api-key": key,
+                "anthropic-version": "2023-06-01",
             }
+            body = {
+                "model": model,
+                "max_tokens": max_tokens,
+                "messages": [{"role": "user", "content": [
+                    {"type": "image", "source": {"type": "base64", "media_type": eff_mime, "data": image_b64}},
+                    {"type": "text", "text": prompt_text},
+                ]}],
+            }
+            if sys_prompt:
+                body["system"] = sys_prompt
+            return url, body, headers, True
+        url = base + "/chat/completions"
+        headers = {"Content-Type": "application/json", "Authorization": "Bearer " + key}
+        data_url = "data:" + eff_mime + ";base64," + image_b64
+        msgs = []
+        if sys_prompt:
+            msgs.append({"role": "system", "content": sys_prompt})
+        msgs.append({"role": "user", "content": [
+            {"type": "image_url", "image_url": {"url": data_url}},
+            {"type": "text", "text": prompt_text},
+        ]})
+        body = {"model": model, "messages": msgs, "max_tokens": max_tokens, "stream": False}
+        return url, body, headers, False
+
+    @staticmethod
+    def _extract_vision_text(resp, is_claude=False):
+        if resp is None or resp.status_code >= 400:
+            return None
+        data = resp.json() or {}
+        if is_claude:
+            parts = [b.get("text", "") for b in (data.get("content") or [])
+                     if isinstance(b, dict) and b.get("type") == "text"]
+            txt = "".join(parts).strip()
+            return txt or None
+        content = ((data.get("choices") or [{}])[0].get("message") or {}).get("content")
+        return content.strip() if isinstance(content, str) and content.strip() else None
+
+    def _vision_describe(self, image_b64, mime):
+        """看图描述：优先用当前配置的视觉模型（DeepSeek / OpenAI / Gemini / Claude），失败回落免费链。"""
+        proxy = (self.config.get("proxy") or "").strip() or None
+        proxies = {"http": proxy, "https": proxy} if proxy else None
+        url, body, headers, is_claude = self._vision_endpoint(
+            image_b64, mime,
+            "请用中文详细描述这张图片的内容（包括文字、物体、场景、数据，如有表格请逐项列出）。",
+            max_tokens=4096,
+        )
+        if url:
             try:
                 # 走 vision 线：并发有上限（不会一次堆十个看图请求）、耗时可见、超时可控
                 import jobs as _jobs
-                _ok, r, _err = _jobs.run("vision", requests.post,
-                                         ds_base.rstrip("/") + "/chat/completions",
-                                         timeout=95, name="看图描述",
-                                         json=body,
-                                         headers={"Content-Type": "application/json",
-                                                  "Authorization": "Bearer " + ds_key},
-                                         proxies=proxies)
+                _ok, r, _err = _jobs.run("vision", self._vision_http_post,
+                                         url, body, headers, 95, proxy, name="看图描述")
                 if not _ok or r is None:
                     raise RuntimeError(_err or "看图请求失败")
-                if r.status_code < 400:
-                    content = ((r.json().get("choices") or [{}])[0].get("message") or {}).get("content")
-                    if isinstance(content, str) and content.strip():
-                        return content.strip()
+                txt = self._extract_vision_text(r, is_claude=is_claude)
+                if txt:
+                    return txt
             except Exception:
                 pass
         # 回落：免费视觉链
@@ -114,46 +183,28 @@ class HostMixin:
 
 
     def _vision_then_send(self, node_id, text, image_b64, mime):
-        """发图 = 视觉模型直接看图回答（deepseek-flash 的多模态能力）：基于图片+用户文本，
+        """发图 = 视觉模型直接看图回答（支持 DeepSeek / OpenAI / Gemini / Claude）：基于图片+用户文本，
         以角色口吻直接生成回复。失败则回落到"描述中转 + 主模型"。"""
-        import requests
-        proxy = self.config.get("proxy") or None
-        proxies = {"http": proxy, "https": proxy} if proxy else None
+        proxy = (self.config.get("proxy") or "").strip() or None
         node = self.core.tree.nodes.get(node_id)
-        ds_key = (self.config.get("api_key") or "").strip()
-        ds_base = (self.config.get("base_url") or "https://api.deepseek.com").strip()
-        vision_model = "deepseek-flash"
-        data_url = "data:" + (mime or "image/png") + ";base64," + image_b64
         direct = None
-        if ds_key and ds_base:
-            # 用当前系统提示（角色人设）让 DSFVE 以角色身份看图回答
+        sys_prompt = ""
+        for _nid, n in (self.core.tree.nodes or {}).items():
+            if n.role == "system" and n.content:
+                sys_prompt = n.content
+                break
+        url, body, headers, is_claude = self._vision_endpoint(
+            image_b64, mime or "image/png",
+            text or "请描述这张图片并自然回应。",
+            sys_prompt=sys_prompt or "你是角色扮演助手，请以角色口吻自然回应。",
+            max_tokens=1024,
+        )
+        if url:
             try:
-                sys_prompt = ""
-                for nid, n in (self.core.tree.nodes or {}).items():
-                    if n.role == "system" and n.content:
-                        sys_prompt = n.content
-                        break
-                body = {
-                    "model": vision_model,
-                    "messages": [{"role": "system", "content": sys_prompt or "你是角色扮演助手，请以角色口吻自然回应。"},
-                                 {"role": "user", "content": [
-                                     {"type": "image_url", "image_url": {"url": data_url}},
-                                     {"type": "text", "text": text or "请描述这张图片并自然回应。"},
-                                 ]}],
-                    "max_tokens": 1024,
-                    "stream": False,
-                }
-                r = requests.post(ds_base.rstrip("/") + "/chat/completions",
-                                  json=body,
-                                  headers={"Content-Type": "application/json",
-                                           "Authorization": "Bearer " + ds_key},
-                                  timeout=120, proxies=proxies)
-                if r.status_code < 400:
-                    content = ((r.json().get("choices") or [{}])[0].get("message") or {}).get("content")
-                    if isinstance(content, str) and content.strip():
-                        direct = content.strip()
+                r = self._vision_http_post(url, body, headers, 120, user_proxy=proxy)
+                direct = self._extract_vision_text(r, is_claude=is_claude)
             except Exception as e:
-                print(f"[视觉] DSFVE 直答失败: {e}")
+                print(f"[视觉] 直答失败: {type(e).__name__}")
         if direct:
             # DSFVE 直接回答 → 作为 AI 回复（新增 assistant 节点，不动 user 节点）
             self._vision_direct_done(node_id, direct)
