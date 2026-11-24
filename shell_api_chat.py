@@ -380,7 +380,10 @@ class ApiChatMixin:
         if not node:
             return {"ok": False, "err": "节点不存在"}
         if node.role == "assistant":
-            node.content = new_content
+            if hasattr(self.core.tree, "update_node"):
+                self.core.tree.update_node(node.id, content=new_content)
+            else:
+                node.content = new_content
             self._save_tree()
             self._rebuild_messages()
             return {"ok": True}
@@ -397,26 +400,30 @@ class ApiChatMixin:
 
 
     def api_branches(self):
-        """列出可切换的其他分支（叶子节点）"""
+        """列出可切换的其他分支（叶子节点）—— 直接查 TreeIndex.leaves，无需 O(N) 扫全树。"""
         tree = self.core.tree
         out = []
-        for nid, node in tree.nodes.items():
-            if node.role == "system" or node.children_ids:
+        idx = getattr(tree, "index", None)
+        leaf_ids = list(idx.leaves) if idx is not None else [
+            nid for nid, n in tree.nodes.items() if not n.children_ids
+        ]
+        for nid in leaf_ids:
+            node = tree.nodes.get(nid)
+            if not node or node.role == "system" or node.children_ids:
                 continue
             if nid == tree.current_leaf_id:
                 continue
             previews = []
             n = node
-            depth = 0
             while n is not None and len(previews) < 2:
                 if n.role != "system":
                     previews.append(n.content)
-                depth += 1
                 if n.parent_id and n.parent_id in tree.nodes:
                     n = tree.nodes[n.parent_id]
                 else:
                     break
             previews.reverse()
+            depth = idx.depth_of(nid) + 1 if idx is not None else len(previews)
             out.append({"node_id": nid, "kind": node.role, "depth": depth,
                         "preview": " / ".join((p or "").replace(chr(10), " ")[:40] for p in previews)})
         out.sort(key=lambda x: -x["depth"])

@@ -7,10 +7,12 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Button
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -23,8 +25,11 @@ internal fun ChatComposer(
     showQuickPanel: Boolean,
     onToggleQuick: () -> Unit,
     onSend: () -> Unit,
+    hasImage: Boolean = false,
+    onStop: (() -> Unit)? = null,
 ) {
-                    Row(Modifier.fillMaxWidth()) {
+                    val canSend = !busy && (input.isNotBlank() || hasImage)
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                         TextButton(onClick = { onToggleQuick() }) {
                             // 快捷面板开/关：图标名跟着状态走（原来是  /  两个 emoji）
                             IconText("", fontSize = 20.sp, icon = if (showQuickPanel) "close" else "add")
@@ -37,6 +42,10 @@ internal fun ChatComposer(
                             maxLines = 4,
                         )
                         Spacer(Modifier.width(6.dp))
-                        Button(onClick = onSend, enabled = !busy) { Text(I18n.t("btn_send", "发送")) }
+                        if (busy && onStop != null) {
+                            OutlinedButton(onClick = onStop) { Text(I18n.t("btn_stop", "停止")) }
+                        } else {
+                            Button(onClick = onSend, enabled = canSend) { Text(I18n.t("btn_send", "发送")) }
+                        }
                     }
 }

@@ -133,53 +133,68 @@ class ApiGoMixin:
         平铺展示（branch_root 置空，不做分支收纳行），用于分线剧情下快速聚焦选项。"""
         tree = self.core.tree
         nodes = tree.nodes
-        # 当前路径（root → 当前叶子），主线 = 路径上的节点
+        # 当前路径（root → 当前叶子），主线 = 路径上的节点（带环保护）
         path = set()
         nid = tree.current_leaf_id
-        while nid and nid in nodes:
+        while nid and nid in nodes and nid not in path:
             path.add(nid)
             nid = nodes[nid].parent_id
 
-        def subtree_size(nid):
-            node = nodes.get(nid)
-            if not node:
-                return 0
-            return 1 + sum(subtree_size(c) for c in node.children_ids)
+        # 迭代后序一次算出所有节点子树大小（O(N)，避免深树递归爆栈与重复计算）
+        sub_sizes = {}
+        if tree.root_id and tree.root_id in nodes:
+            post_stack = [(tree.root_id, False)]
+            seen_sz = set()
+            while post_stack:
+                cur_id, expanded = post_stack.pop()
+                node = nodes.get(cur_id)
+                if not node:
+                    continue
+                if expanded:
+                    sub_sizes[cur_id] = 1 + sum(sub_sizes.get(c, 0) for c in node.children_ids)
+                elif cur_id not in seen_sz:
+                    seen_sz.add(cur_id)
+                    post_stack.append((cur_id, True))
+                    for c in node.children_ids:
+                        if c not in seen_sz and c in nodes:
+                            post_stack.append((c, False))
 
         out = []
         branch_sizes = {}
-
-        def walk(nid, in_branch, branch_depth):
-            node = nodes.get(nid)
-            if not node:
-                return
-            on_path = nid in path
-            if on_path:
-                in_branch = None
-                branch_depth = 0
-            elif in_branch is None:
-                in_branch = nid
-                branch_depth = 0
-                branch_sizes[nid] = subtree_size(nid)
-            else:
-                branch_depth += 1
-            out.append({
-                "id": nid,
-                "role": node.role,
-                "content": (node.content or "").replace("\n", " ")[:60],
-                "on_path": on_path,
-                "branch_root": in_branch,
-                "branch_depth": branch_depth,
-                "branch_size": branch_sizes.get(in_branch, 0),
-                "is_current": nid == tree.current_leaf_id,
-                "is_leaf": not node.children_ids,
-                "is_choice": bool((node.metadata or {}).get("is_choice")),
-            })
-            for c in node.children_ids:
-                walk(c, in_branch, branch_depth)
-
-        if tree.root_id:
-            walk(tree.root_id, None, 0)
+        if tree.root_id and tree.root_id in nodes:
+            walk_stack = [(tree.root_id, None, 0)]
+            seen_walk = set()
+            while walk_stack:
+                cur_id, in_branch, branch_depth = walk_stack.pop()
+                if cur_id in seen_walk or cur_id not in nodes:
+                    continue
+                seen_walk.add(cur_id)
+                node = nodes[cur_id]
+                on_path = cur_id in path
+                if on_path:
+                    in_branch = None
+                    branch_depth = 0
+                elif in_branch is None:
+                    in_branch = cur_id
+                    branch_depth = 0
+                    branch_sizes[cur_id] = sub_sizes.get(cur_id, 1)
+                else:
+                    branch_depth += 1
+                out.append({
+                    "id": cur_id,
+                    "role": node.role,
+                    "content": (node.content or "").replace("\n", " ")[:60],
+                    "on_path": on_path,
+                    "branch_root": in_branch,
+                    "branch_depth": branch_depth,
+                    "branch_size": branch_sizes.get(in_branch, 0),
+                    "is_current": cur_id == tree.current_leaf_id,
+                    "is_leaf": not node.children_ids,
+                    "is_choice": bool((node.metadata or {}).get("is_choice")),
+                })
+                for c in reversed(node.children_ids):
+                    if c not in seen_walk and c in nodes:
+                        walk_stack.append((c, in_branch, branch_depth))
 
         if scope == "choices":
             # 选项骨架：保留分支归属（branch_root/branch_depth），前端据此按支线分组，

@@ -532,6 +532,8 @@ DickTheme(mode = theme.mode, accentIdx = st.accentIdx) {
                 showQuickPanel = st.showQuickPanel,
                 onToggleQuick = { st.showQuickPanel = !st.showQuickPanel },
                 onSend = { st.send() },
+                hasImage = st.pendingImage != null,
+                onStop = { st.engine.stop(); st.busy = false; st.streaming = "" },
             )
         }
     }

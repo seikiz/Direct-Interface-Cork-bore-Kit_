@@ -50,6 +50,7 @@ internal object I18nStrings {
         "btn_remove" to "移除",
         "btn_save" to "保存",
         "btn_send" to "发送",
+        "btn_stop" to "停止",
         "btn_workshop" to "创意工坊",
         "budgetUnlimited" to "不限",
         "budget_prefix" to "预算：",

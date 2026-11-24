@@ -403,8 +403,37 @@ function renderPresets(presets, current) {
   window.__presetItems = items;
 }
 
+var _sending = false;
+function autoResizeInput(el) {
+  el = el || document.getElementById('input');
+  if (!el) return;
+  el.style.height = 'auto';
+  var h = Math.min(120, Math.max(38, el.scrollHeight || 38));
+  el.style.height = h + 'px';
+}
+
+function attachImageFile(f) {
+  if (!f) return false;
+  var reader = new FileReader();
+  reader.onload = function () {
+    pendingImage = { b64: reader.result.split(',')[1], mime: f.type || 'image/png' };
+    document.getElementById('imgprevImg').src = reader.result;
+    document.getElementById('imgprev').style.display = 'flex';
+    document.getElementById('imgprevText').textContent = T.imgAttached || '已附图片';
+  };
+  reader.readAsDataURL(f);
+  return true;
+}
+
 function send() {
-  var text = document.getElementById('input').value.trim();
+  if (_sending) return;
+  var inputEl = document.getElementById('input');
+  var sendBtn = document.getElementById('send');
+  if (sendBtn && sendBtn.disabled) {
+    if (window.DICK_STATUS) window.DICK_STATUS('正在处理中，请稍候');
+    return;
+  }
+  var text = inputEl.value.trim();
   var hasImg = !!pendingImage;
   if (!text && !hasImg) return;
   // 零宽字符防线：发出去之前先清干净，别让它白烧 token
@@ -413,7 +442,7 @@ function send() {
     if (nz) {
       var wasBomb = nz > 24;
       text = stripInvisible(text);
-      try { document.getElementById('input').value = text; } catch (e) {}
+      try { inputEl.value = text; } catch (e) {}
       if (wasBomb) {
         galToast('[ic:warning] 已剔除 ' + nz + ' 个零宽字符（看不见却会白烧 token、卡界面）');
       }
@@ -423,19 +452,37 @@ function send() {
   var imgMime = hasImg ? pendingImage.mime : null;
   if (text) lastUserText = text;
   var q = window.__quote || null;
+  _sending = true;
+  if (sendBtn) sendBtn.disabled = true;
   pywebview.api.send(text, imgB64, imgMime, q).then(function (r) {
+    _sending = false;
     if (r && r.ok) {
-      document.getElementById('input').value = '';
+      inputEl.value = '';
+      autoResizeInput(inputEl);
       clearImage();
       closeQuick();
       clearQuote();
+    } else {
+      if (sendBtn) sendBtn.disabled = false;
+      var err = (r && r.err) || '';
+      if (err === 'busy') {
+        if (window.DICK_STATUS) window.DICK_STATUS('正在处理中，请稍候');
+      } else if (err && window.DICK_TOAST) {
+        window.DICK_TOAST('发送未完成：' + err);
+      }
     }
+  }).catch(function () {
+    _sending = false;
+    if (sendBtn) sendBtn.disabled = false;
+    if (window.DICK_TOAST) window.DICK_TOAST('发送失败，请稍后重试');
   });
 }
 
 function clearImage() {
   pendingImage = null;
   document.getElementById('imgprev').style.display = 'none';
+  var fi = document.getElementById('fileInput');
+  if (fi) { try { fi.value = ''; } catch (e) {} }
 }
 
 function closeQuick() {
@@ -478,21 +525,13 @@ document.querySelectorAll('.chip[data-cmd]').forEach(function (c) {
     var cmd = this.getAttribute('data-cmd');
     var input = document.getElementById('input');
     input.value = input.value.trim() ? input.value + ' ' + cmd : cmd;
+    autoResizeInput(input);
     input.focus();
   };
 });
 document.getElementById('qcImage').onclick = function () { document.getElementById('fileInput').click(); };
 document.getElementById('fileInput').onchange = function () {
-  var f = this.files[0];
-  if (!f) return;
-  var reader = new FileReader();
-  reader.onload = function () {
-    pendingImage = { b64: reader.result.split(',')[1], mime: f.type || 'image/png' };
-    document.getElementById('imgprevImg').src = reader.result;
-    document.getElementById('imgprev').style.display = 'flex';
-    document.getElementById('imgprevText').textContent = T.imgAttached;
-  };
-  reader.readAsDataURL(f);
+  attachImageFile(this.files && this.files[0]);
 };
 document.getElementById('imgprevRemove').onclick = clearImage;
 document.getElementById('send').onclick = send;
@@ -565,15 +604,17 @@ function showQuoteBar(q) {
     bar = document.createElement('div');
     bar.id = 'quoteBar';
     bar.className = 'quote-bar';
-    var inp = document.getElementById('input');
-    if (inp && inp.parentNode) inp.parentNode.insertBefore(bar, inp);
+    var ib = document.getElementById('inputbar');
+    if (ib && ib.parentNode) ib.parentNode.insertBefore(bar, ib);
   }
   var who = q.speaker || (q.role === 'user' ? '你' : '对方');
-  bar.innerHTML = '<span class="qwho">' + who + '</span>' +
-    '<span class="qtext">' + q.excerpt + '</span>' +
+  bar.innerHTML = '<span class="qwho">' + escapeHtml(who) + '</span>' +
+    '<span class="qtext">' + escapeHtml(q.excerpt || '') + '</span>' +
     '<button class="qx" title="取消引用">×</button>';
   bar.style.display = 'flex';
   bar.querySelector('.qx').onclick = clearQuote;
+  var inp = document.getElementById('input');
+  if (inp) inp.focus();
 }
 
 function clearQuote() {

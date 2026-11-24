@@ -16,16 +16,8 @@ import uuid
 from datetime import datetime
 from typing import Dict, List, Optional
 
+from tree_index import TreeIndex, iso_to_epoch as _iso_to_epoch
 from tree_repair import repair_links
-
-def _iso_to_epoch(ts):
-    """ISO 时间戳 → epoch 秒。解析不了就返回 0（调用方按"没有时间"处理）。"""
-    if not ts:
-        return 0.0
-    try:
-        return datetime.fromisoformat(str(ts)).timestamp()
-    except (ValueError, TypeError):
-        return 0.0
 
 
 class MessageNode:
@@ -65,36 +57,76 @@ class MessageNode:
 # ============================================================
 
 class TreeManager:
-    """管理树状对话历史的所有操作（节点增删改查、链追踪、叶子修正）"""
+    """管理树状对话历史的所有操作（节点增删改查、索引维护、链缓存、叶子修正）"""
     def __init__(self):
         self.nodes: Dict[str, MessageNode] = {}
         self.root_id: Optional[str] = None
         self.current_leaf_id: Optional[str] = None
+        self.index: TreeIndex = TreeIndex()
+        self._version: int = 0
+        self._chain_cache_key = None
+        self._chain_cache_nodes: List[MessageNode] = []
+
+    def bump_version(self):
+        self._version += 1
+        self._chain_cache_key = None
 
     # ---------- 节点操作 ----------
     def add_node(self, role: str, content: str, parent_id: Optional[str] = None, metadata: Optional[Dict] = None) -> str:
         node = MessageNode(role, content, parent_id, metadata)
         self.nodes[node.id] = node
-        if parent_id and parent_id in self.nodes:
-            self.nodes[parent_id].children_ids.append(node.id)
+        parent_node = self.nodes.get(parent_id) if parent_id else None
+        if parent_node is not None:
+            parent_node.children_ids.append(node.id)
         if self.root_id is None:
             self.root_id = node.id
         self.current_leaf_id = node.id
+        self.index.on_add(node, parent_node)
+        self.bump_version()
         return node.id
 
+    def update_node(self, node_id: str, content: Optional[str] = None, metadata: Optional[Dict] = None) -> bool:
+        """原地修改节点内容或元数据，并同步刷新索引与链缓存。"""
+        node = self.nodes.get(node_id)
+        if node is None:
+            return False
+        if content is not None:
+            node.content = content
+        if metadata is not None:
+            node.metadata = metadata
+        self.index.on_update(node)
+        self.bump_version()
+        return True
+
     def delete_node(self, node_id: str):
+        """迭代栈删除节点及其全部后代（避免千层深树 RecursionError），并同步维护索引。"""
         if node_id not in self.nodes:
             return
-        node = self.nodes[node_id]
-        for cid in node.children_ids[:]:
-            self.delete_node(cid)
-        if node.parent_id and node.parent_id in self.nodes:
-            parent = self.nodes[node.parent_id]
-            if node_id in parent.children_ids:
-                parent.children_ids.remove(node_id)
-        del self.nodes[node_id]
-        if self.current_leaf_id == node_id:
-            self.current_leaf_id = node.parent_id
+        root_del = self.nodes[node_id]
+        parent_node = self.nodes.get(root_del.parent_id) if root_del.parent_id else None
+        if parent_node is not None and node_id in parent_node.children_ids:
+            parent_node.children_ids.remove(node_id)
+        # 后序迭代收集整棵待删子树（带环保护）
+        stack = [node_id]
+        to_remove: List[str] = []
+        seen = set()
+        while stack:
+            cur_id = stack.pop()
+            if cur_id in seen or cur_id not in self.nodes:
+                continue
+            seen.add(cur_id)
+            to_remove.append(cur_id)
+            stack.extend(self.nodes[cur_id].children_ids)
+        leaf_deleted = self.current_leaf_id in seen
+        for rid in reversed(to_remove):
+            n = self.nodes.pop(rid, None)
+            if n is not None:
+                self.index.on_delete(n, parent_node if rid == node_id else None)
+        if leaf_deleted:
+            self.current_leaf_id = root_del.parent_id
+        if self.root_id in seen:
+            self.root_id = None
+        self.bump_version()
 
     def delete_subtree(self, node_id: str):
         if node_id not in self.nodes:
@@ -103,16 +135,28 @@ class TreeManager:
         for cid in node.children_ids[:]:
             self.delete_node(cid)
         node.children_ids = []
+        self.index.leaves.add(node_id)
+        self.bump_version()
 
     def get_node(self, node_id: str) -> Optional[MessageNode]:
         return self.nodes.get(node_id)
 
+    def search_nodes(self, query: str, role: Optional[str] = None,
+                     speaker: Optional[str] = None, limit: int = 20) -> List[MessageNode]:
+        """利用倒排索引快速搜索历史节点。"""
+        ids = self.index.search(self.nodes, query, role=role, speaker=speaker, limit=limit)
+        return [self.nodes[nid] for nid in ids if nid in self.nodes]
+
     # ---------- 链追踪 ----------
-    def get_current_chain(self) -> List[Dict]:
-        if not self.current_leaf_id or self.current_leaf_id not in self.nodes:
+    def get_current_chain_nodes(self) -> List[MessageNode]:
+        """返回 root → current_leaf 的 MessageNode 列表（带版本号缓存与环保护）。"""
+        leaf = self.current_leaf_id
+        if not leaf or leaf not in self.nodes:
             return []
-        chain = []
-        node = self.nodes.get(self.current_leaf_id)
+        cache_key = (self._version, leaf, len(self.nodes))
+        if self._chain_cache_key == cache_key:
+            return list(self._chain_cache_nodes)
+        node = self.nodes.get(leaf)
         ancestors, _seen = [], set()
         while node and node.id not in _seen:   # 环保护：父子互指的坏存档会死循环
             _seen.add(node.id)
@@ -122,13 +166,22 @@ class TreeManager:
             else:
                 break
         ancestors.reverse()
+        self._chain_cache_key = cache_key
+        self._chain_cache_nodes = ancestors
+        return list(ancestors)
+
+    def get_current_chain(self) -> List[Dict]:
+        ancestors = self.get_current_chain_nodes()
+        if not ancestors:
+            return []
+        chain = []
         for n in ancestors:
             # _node_id/_ts 是给 salience 算清晰度用的内部字段（下划线前缀，
             # 出网前会被 _mk_stream 剥掉），不是给模型看的。
             chain.append({"role": n.role, "content": n.content,
                           "timestamp": n.timestamp,
                           "_node_id": n.id,
-                          "_ts": _iso_to_epoch(n.timestamp),
+                          "_ts": self.index.epoch_of(n.id, n.timestamp),
                           "metadata": dict(n.metadata or {})})
         return chain
 
@@ -136,13 +189,16 @@ class TreeManager:
         return {
             "nodes": {nid: node.to_dict() for nid, node in self.nodes.items()},
             "root_id": self.root_id,
-            "current_leaf_id": self.current_leaf_id
+            "current_leaf_id": self.current_leaf_id,
+            "index": self.index.to_summary(),
         }
 
     def load_nodes_data(self, data: Dict):
         self.nodes = {}
         self.root_id = None
         self.current_leaf_id = None
+        self.index.clear()
+        self.bump_version()
         if not isinstance(data, dict):
             print("[TreeManager] 加载历史树失败：数据不是对象，已重置为空树")
             return
@@ -159,6 +215,8 @@ class TreeManager:
         self.root_id, self.current_leaf_id = data.get('root_id'), data.get('current_leaf_id')
         repair_links(self)     # 老存档可能没 children_ids：按 parent_id 重建，否则回档只剩一个节点
         self.fix_leaf()
+        self.index.rebuild(self)
+        self.bump_version()
         print(f"[TreeManager] 加载后链长度: {len(self.get_current_chain())}")
 
     # ---------- 叶子修正 ----------
@@ -179,6 +237,7 @@ class TreeManager:
             else:
                 break
         self.current_leaf_id = node.id
+        self._chain_cache_key = None
         print(f"[TreeManager] 叶子节点修正: {node.id} ({node.role})")
 
     def ensure_valid_leaf(self):
@@ -192,6 +251,8 @@ class TreeManager:
         self.nodes = {}
         self.root_id = None
         self.current_leaf_id = None
+        self.index.clear()
+        self.bump_version()
 
 
 # ============================================================

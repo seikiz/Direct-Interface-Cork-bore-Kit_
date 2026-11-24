@@ -33,9 +33,49 @@ function jobResolveEvents(events) {
   });
 }
 
-document.getElementById('input').addEventListener('keydown', function (e) {
-  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); }
-});
+// 交互栏输入逻辑：IME 防误发 / 自动撑高 / 剪贴板贴图 / Esc 取消引用与面板 / ↑ 回填上句
+(function () {
+  var inp = document.getElementById('input');
+  if (!inp) return;
+  var imeComposing = false;
+  inp.addEventListener('compositionstart', function () { imeComposing = true; });
+  inp.addEventListener('compositionend', function () { imeComposing = false; });
+  inp.addEventListener('input', function () { autoResizeInput(inp); });
+  inp.addEventListener('paste', function (e) {
+    var cd = e.clipboardData || window.clipboardData;
+    var items = cd && cd.items;
+    if (!items) return;
+    for (var i = 0; i < items.length; i++) {
+      if (items[i].type && items[i].type.indexOf('image/') === 0) {
+        var f = items[i].getAsFile && items[i].getAsFile();
+        if (f && attachImageFile(f)) {
+          e.preventDefault();
+          break;
+        }
+      }
+    }
+  });
+  inp.addEventListener('keydown', function (e) {
+    if (e.isComposing || imeComposing || e.keyCode === 229) return;
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      send();
+      return;
+    }
+    if (e.key === 'Escape') {
+      if (window.__quote) { clearQuote(); e.preventDefault(); return; }
+      var qp = document.getElementById('quickpanel');
+      if (qp && qp.classList.contains('open')) { closeQuick(); e.preventDefault(); }
+      return;
+    }
+    if (e.key === 'ArrowUp' && !inp.value && lastUserText) {
+      inp.value = lastUserText;
+      autoResizeInput(inp);
+      try { inp.setSelectionRange(inp.value.length, inp.value.length); } catch (_e) {}
+      e.preventDefault();
+    }
+  });
+})();
 document.getElementById('roleList').addEventListener('change', function (e) {
   if (e.target.getAttribute('data-role')) {
     // 切换角色 = 保存当前会话并初始化界面（类似微信切换会话）

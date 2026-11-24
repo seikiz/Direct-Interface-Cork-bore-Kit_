@@ -2760,6 +2760,14 @@
       "used_by": [
         "android"
       ]
+    },
+    "btn_stop": {
+      "zh": "停止",
+      "en": "Stop",
+      "ja": "停止",
+      "used_by": [
+        "android"
+      ]
     }
   },
   "_legacy": {
@@ -3325,6 +3333,7 @@
     "st_temp",
     "weContent",
     "weDepth",
-    "btn_quote"
+    "btn_quote",
+    "btn_stop"
   ]
 }

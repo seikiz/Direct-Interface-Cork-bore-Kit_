@@ -43,6 +43,8 @@ class StateMixin:
     def _chain_nodes(self):
         """从 core 树里取当前链（跳过 system 节点），返回 MessageNode 列表（root→leaf）"""
         tree = self.core.tree
+        if hasattr(tree, "get_current_chain_nodes"):
+            return [n for n in tree.get_current_chain_nodes() if n.role != "system"]
         leaf = tree.current_leaf_id
         if not leaf or leaf not in tree.nodes:
             return []
@@ -116,17 +118,23 @@ class StateMixin:
         # 跑团会期锁定：被锁卡不可被当前会话清写/推送记忆树（防导入存档与跑团混淆）
         if self.selected_roles[0] in self._trpg_locked_names():
             return
-        tree_data = self.core.get_all_nodes_data()
+        tree = self.core.tree
         # 空树（只有系统节点）不覆盖已有历史，防止切换/误操作清档
-        if len(tree_data.get("nodes", {})) <= 1:
+        if len(tree.nodes) <= 1:
             return
+        role_name = self.selected_roles[0]
+        save_sig = (role_name, getattr(tree, "_version", None), tree.current_leaf_id, len(tree.nodes))
+        # 自动落盘（wait=False）时若树版本与叶子均无变化，跳过冗余序列化与磁盘覆盖写
+        if not wait and getattr(self, "_last_saved_tree_sig", None) == save_sig:
+            return
+        tree_data = self.core.get_all_nodes_data()
         for r in self.roles:
-            if r["name"] == self.selected_roles[0]:
+            if r["name"] == role_name:
                 data = dict(r.get("data") or {})
                 data["name"] = r["name"]
                 data["system_prompt"] = r["prompt"]
                 data["kind"] = "dick_card"
-                data["history_tree"] = self.core.get_all_nodes_data()
+                data["history_tree"] = tree_data
                 # 机制状态显式持久化到角色卡（修复"清空/重选回落 initial"：
                 # 不依赖树的临时 ms 快照，保存当前状态供还原）
                 try:
@@ -152,6 +160,7 @@ class StateMixin:
                         _jobs.submit("io", save_guard.atomic_write_json, _path, data,
                                      name="自动落盘：" + str(r["name"]),
                                      on_done=lambda _r, _e: None)
+                    self._last_saved_tree_sig = save_sig
                 except Exception:
                     pass
                 # 同步内存快照：勾选/取消勾选切换时 _activate_core 从
@@ -295,7 +304,9 @@ class StateMixin:
             if len(self.selected_roles) != 1:
                 return 0                     # 群聊不做开场，避免多个角色抢话
             tree = self.core.tree
-            # 已有历史（续聊/存档）就不再演，否则每次切回来都重演一遍
+            # 已有历史（续聊/存档）就不再演，否则每次切回来都重演一遍（走索引 O(1) 判断）
+            if hasattr(tree, "index") and tree.index.has_conversation():
+                return 0
             for n in tree.nodes.values():
                 if n.role in ("user", "assistant"):
                     return 0

@@ -65,11 +65,11 @@ button .ic{ margin-right:2px; }
   overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:42ch;
 }
 .quote-bar{
-  display:none; gap:8px; align-items:center; margin:0 0 6px 0; padding:6px 10px;
+  display:none; gap:8px; align-items:center; margin:0 14px 6px 14px; padding:6px 10px;
   border-left:3px solid var(--accent); border-radius:6px;
   background:var(--bubble); font-size:12px;
 }
 .quote-bar .qwho{ font-weight:600; white-space:nowrap; }
 .quote-bar .qtext{ flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.quote-bar .qx{ border:0; background:transparent; cursor:pointer; font-size:14px; opacity:.7; }
+.quote-bar .qx{ border:0; background:transparent; color:var(--sub); cursor:pointer; font-size:14px; opacity:.75; }
 .quote-bar .qx:hover{ opacity:1; }
