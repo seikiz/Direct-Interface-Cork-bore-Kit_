@@ -56,7 +56,9 @@
         <div class="field"><label>生图后端</label>
           <select id="stImgBackend">
             <option value="auto">自动识别（推荐）</option>
-            <option value="openai">OpenAI 兼容</option>
+            <option value="gemini">Google Gemini / Imagen</option>
+            <option value="gpt">OpenAI GPT Image</option>
+            <option value="openai">OpenAI 兼容（硅基/智谱）</option>
             <option value="pollinations">Pollinations 免费</option>
             <option value="sdwebui">本地 A1111 / Forge</option>
             <option value="comfyui">本地 ComfyUI</option>
@@ -66,7 +68,7 @@
         <div class="field"><label>生图地址</label>
           <input id="stImgBase"></div>
         <div class="field"><label>生图模型</label>
-          <input id="stImgModel" placeholder="如 flux / turbo"></div>
+          <input id="stImgModel" placeholder="如 gemini-2.5-flash-image / gpt-image-1 / flux"></div>
         <button class="btn2 ghost" id="stImgSave" style="width:auto;margin:0">[ic:save] 保存生图设置</button>
         <div style="font-size:11px;color:var(--sub);margin-top:6px" id="stImgState"></div>
       </div>

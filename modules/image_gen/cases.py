@@ -16,6 +16,7 @@ import tempfile
 import time
 import urllib.error
 from .service import ImageGenService
+from . import cases_cloud as _cc
 from .harness import FakeHost, FakeLog, FakeNet, JPG, PNG, WEBP, _contains, _eq, _svc, _tmpdir, _true, http_error
 import types  # CASES 只读视图（十一：块里不许有模块级可变全局）
 
@@ -23,6 +24,9 @@ import types  # CASES 只读视图（十一：块里不许有模块级可变全�
 def case_backend_table():
     cases = [
         ("https://api.siliconflow.cn/v1", "openai", True),
+        ("https://api.openai.com/v1", "gpt", True),
+        ("https://generativelanguage.googleapis.com/v1beta", "gemini", True),
+        ("https://generativelanguage.googleapis.com/v1beta/openai", "gemini", True),
         ("http://127.0.0.1:3000/v1", "openai", True),
         ("https://image.pollinations.ai", "pollinations", False),
         ("http://127.0.0.1:7860", "sdwebui", False),
@@ -38,7 +42,7 @@ def case_backend_table():
     _eq(svc.resolve_backend("http://gpu-box:9999", "comfyui"), "comfyui",
         "显式后端要覆盖自动识别")
     _eq(svc.resolve_backend("http://127.0.0.1:7860", "banana"), "sdwebui", "非法后端回落自动识别")
-    _eq(set(svc.BACKENDS), {"openai", "pollinations", "sdwebui", "comfyui"}, "后端清单")
+    _eq(set(svc.BACKENDS), {"openai", "gpt", "gemini", "pollinations", "sdwebui", "comfyui"}, "后端清单")
 
 def case_size_and_mime():
     svc = _svc()
@@ -365,5 +369,9 @@ CASES = types.MappingProxyType({
     "dispatch_presets_table": case_dispatch_presets_table,
     "bind_and_progress": case_bind_and_progress,
     "quick_test": case_quick_test,
+    "gemini_generate_content": _cc.case_gemini_generate_content,
+    "gemini_imagen_and_fallback": _cc.case_gemini_imagen_and_fallback,
+    "gpt_image_1_and_dalle": _cc.case_gpt_image_1_and_dalle,
+    "cloud_bad_inputs": _cc.case_cloud_bad_inputs,
 })
 # <seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌

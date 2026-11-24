@@ -24,12 +24,15 @@ import urllib.parse
 import urllib.request
 import uuid
 
+from . import cloud_backends as cloud_mod
 from . import presets as presets_mod
 
-BACKENDS = ("openai", "pollinations", "sdwebui", "comfyui")
+BACKENDS = ("openai", "gpt", "gemini", "pollinations", "sdwebui", "comfyui")
 
-# 后端识别关键字（base_url 里<seiki>‌​‌​‌​‍‌‌​​‎‌​‍‎‌‌‎‎‌​​‎‌​‎‎‌​‌​‌​‌‌‌‌‍​‌‌‎‎‌‌​‎‌​‍‌‌​‌‎‌‌‎‎​‎‌‎‌‍‌‍​‎​‎‌‍​‌​‎‍‌‌‍​‎​‎​‍‌‍‌‌出现即命中）；顺序有意义：先具体后笼统
+# 后端识别关键字（base_url 里出现即命中）；顺序有意义：先具体后笼统
 BACKEND_HINTS = (
+    ("gemini", ("generativelanguage.googleapis.com", "aiplatform.googleapis.com")),
+    ("gpt", ("api.openai.com",)),
     ("pollinations", ("pollinations",)),
     ("comfyui", ("comfyui", ":8188")),
     ("sdwebui", ("sdwebui", "a1111", "automatic1111", "forge", "fooocus", ":7860")),
@@ -120,7 +123,7 @@ def resolve_backend(base_url, backend="auto"):
 
 def needs_key(base_url, backend="auto"):
     """这个后端要不要 API Key（三种本地/免费后端都留空即可）。"""
-    return resolve_backend(base_url, backend) == "openai"
+    return resolve_backend(base_url, backend) in ("openai", "gpt", "gemini")
 
 
 def split_size(size, default=1024):
@@ -372,6 +375,16 @@ def generate(net, prompt, preset="anime", size="1024x1024", api_key="",
             return False, None, msg
         return True, {"b64": base64.b64encode(raw).decode("ascii"), "preset": preset,
                       "mime": mime_of(raw), "seed": seed}, "ok"
+
+    if be == "gemini":
+        return cloud_mod.gemini_generate(
+            net, base_url, full, negative_prompt, size, model, api_key, seed,
+            preset, timeout=timeout or 300)
+
+    if be == "gpt":
+        return cloud_mod.gpt_generate(
+            net, base_url, full, negative_prompt, size, model, api_key, seed,
+            preset, timeout=timeout or 300)
 
     return openai_generate(net, base_url, full, negative_prompt, size, model, api_key, seed,
                            preset, timeout=timeout or 300)

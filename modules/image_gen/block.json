@@ -10,6 +10,8 @@
     "backends.py",
     "block.json",
     "cases.py",
+    "cases_cloud.py",
+    "cloud_backends.py",
     "harness.py",
     "manifest.json",
     "module.py",

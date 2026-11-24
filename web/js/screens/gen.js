@@ -92,7 +92,9 @@ window.GenScreen = (function (global) {
     var be = (document.getElementById('stImgBackend') || {}).value || 'auto';
     var base = (document.getElementById('stImgBase') || {}).value || '';
     if (be === 'auto') {
-      if (/pollinations/i.test(base)) be = 'pollinations';
+      if (/generativelanguage\.googleapis\.com|aiplatform\.googleapis\.com/i.test(base)) be = 'gemini';
+      else if (/api\.openai\.com/i.test(base)) be = 'gpt';
+      else if (/pollinations/i.test(base)) be = 'pollinations';
       else if (/:8188|comfyui/i.test(base)) be = 'comfyui';
       else if (/:7860|sdwebui|a1111|forge|fooocus/i.test(base)) be = 'sdwebui';
       else be = 'openai';
@@ -101,7 +103,9 @@ window.GenScreen = (function (global) {
     if (!hint) return;
     hint.textContent = (be === 'pollinations')
       ? '这个后端不支持负面提示词，风格词请写进「补充风格词」。'
-      : (be === 'comfyui' ? '尺寸用 512 的倍数效果最好。' : '');
+      : (be === 'gemini' || be === 'gpt'
+        ? '负面提示词会自动作为避免约束并入生图描述。'
+        : (be === 'comfyui' ? '尺寸用 512 的倍数效果最好。' : ''));
   }
 
   /* ---------------- 挂载 / 卸载（router 注入片段之后调用） ---------------- */

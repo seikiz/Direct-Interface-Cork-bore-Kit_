@@ -180,12 +180,38 @@ class FakePoll(Handler):
         return self._send(200, JPG, "image/jpeg")
 
 
+class FakeGemini(Handler):
+    def do_POST(self):
+        st = type(self).state
+        st.setdefault("calls", []).append({
+            "path": self.path,
+            "key": self.headers.get("x-goog-api-key"),
+            "body": self._read_json(),
+        })
+        if st.get("fail401"):
+            return self._send(401, json.dumps({"error": {"message": "API key invalid"}}))
+        if ":predict" in self.path:
+            return self._send(200, json.dumps({
+                "predictions": [{"bytesBase64Encoded": b64_of(JPG), "mimeType": "image/jpeg"}]
+            }))
+        if ":generateContent" in self.path:
+            return self._send(200, json.dumps({
+                "candidates": [{"content": {"parts": [
+                    {"inlineData": {"mimeType": "image/png", "data": b64_of(PNG)}}
+                ]}}]
+            }))
+        return self._send(404, "{}")
+
+
 # ---------------- 各段审计 ----------------
 def test_backend_detect():
     print(u"\n== ① 后端识别与 Key 需求 ==")
     cases = [
         ("https://api.siliconflow.cn/v1", "openai", True),
         ("https://open.bigmodel.cn/api/paas/v4", "openai", True),
+        ("https://api.openai.com/v1", "gpt", True),
+        ("https://generativelanguage.googleapis.com/v1beta", "gemini", True),
+        ("https://generativelanguage.googleapis.com/v1beta/openai", "gemini", True),
         ("http://127.0.0.1:3000/v1", "openai", True),
         ("https://image.pollinations.ai", "pollinations", False),
         ("https://image.pollinations.ai/prompt", "pollinations", False),
@@ -200,14 +226,18 @@ def test_backend_detect():
     bad = [(u, image_gen.backend_of(u), image_gen.needs_key(u)) for u, be, nk in cases
            if image_gen.backend_of(u) != be or image_gen.needs_key(u) != nk]
     check(u"%d 种端点都识别正确" % len(cases), not bad, u"错的：%s" % bad)
-    check(u"只有 OpenAI 兼容后端要 Key",
-          image_gen.needs_key("https://api.siliconflow.cn/v1")
+    check(u"云端付费后端要 Key，免费/本地后端不要 Key",
+          all(image_gen.needs_key(u) for u in
+              ("https://api.siliconflow.cn/v1", "https://api.openai.com/v1",
+               "https://generativelanguage.googleapis.com/v1beta"))
           and not any(image_gen.needs_key(u) for u in
                       ("https://image.pollinations.ai", "http://127.0.0.1:7860",
                        "http://127.0.0.1:8188")))
     check(u"显式指定后端可覆盖自动识别（非默认端口也能用）",
           image_gen.resolve_backend("http://192.168.1.9:9999", "comfyui") == "comfyui"
-          and image_gen.resolve_backend("https://api.siliconflow.cn/v1", "sdwebui") == "sdwebui")
+          and image_gen.resolve_backend("https://api.siliconflow.cn/v1", "sdwebui") == "sdwebui"
+          and image_gen.resolve_backend("http://127.0.0.1:9999", "gemini") == "gemini"
+          and image_gen.resolve_backend("http://127.0.0.1:9999", "gpt") == "gpt")
     check(u"显式后端填了非法值/auto/空 就回落到自动识别",
           image_gen.resolve_backend("http://127.0.0.1:7860", "banana") == "sdwebui"
           and image_gen.resolve_backend("http://127.0.0.1:7860", "auto") == "sdwebui"
@@ -216,7 +246,7 @@ def test_backend_detect():
           not image_gen.needs_key("http://192.168.1.9:9999", "comfyui")
           and not image_gen.needs_key("http://192.168.1.9:9999", "sdwebui"))
     check(u"后端清单与 resolve 取值一致",
-          set(image_gen.BACKENDS) == {"openai", "pollinations", "sdwebui", "comfyui"})
+          set(image_gen.BACKENDS) == {"openai", "gpt", "gemini", "pollinations", "sdwebui", "comfyui"})
 
 
 def test_sizes_and_mime():
@@ -507,6 +537,55 @@ def test_pollinations():
     check(u"连不上时报错不抛异常", (not ok) and data is None and bool(msg), msg)
 
 
+def test_gemini_and_gpt():
+    print(u"\n== ⑦b Gemini / Imagen 与 OpenAI GPT Image 后端 ==")
+    use(FakeGemini)
+    st = {}
+    url = start(st)
+    ok, data, msg = image_gen.generate(
+        u"雨夜书房", preset="anime", size="1024x768", api_key="AIza-local",
+        base_url=url + "/v1beta/openai", model="gemini-2.5-flash-image",
+        negative_prompt=u"水印", backend="gemini",
+    )
+    check(u"Gemini generateContent 出图成功", ok and data and base64.b64decode(data["b64"]) == PNG, msg)
+    c0 = st["calls"][0]
+    check(u"Gemini 自动剥离 /openai 并打到 :generateContent",
+          c0["path"] == "/v1beta/models/gemini-2.5-flash-image:generateContent", c0["path"])
+    check(u"Gemini 走 x-goog-api-key 请求头", c0["key"] == "AIza-local", str(c0["key"]))
+    check(u"Gemini 1024x768 映射为 4:3",
+          c0["body"]["generationConfig"]["imageConfig"]["aspectRatio"] == "4:3")
+
+    st["calls"] = []
+    ok_im, data_im, msg_im = image_gen.generate(
+        u"樱花", size="768x1024", api_key="AIza-im",
+        base_url=url + "/v1beta", model="imagen-3.0-generate-002",
+        negative_prompt=u"文字", backend="gemini",
+    )
+    check(u"Gemini Imagen :predict 出图成功",
+          ok_im and data_im and base64.b64decode(data_im["b64"]) == JPG and data_im["mime"] == "image/jpeg", msg_im)
+    check(u"Imagen 路径与参数正确",
+          st["calls"][0]["path"].endswith("/models/imagen-3.0-generate-002:predict")
+          and st["calls"][0]["body"]["parameters"]["aspectRatio"] == "3:4")
+
+    st["fail401"] = True
+    ok_err, _, msg_err = image_gen.generate(u"x", api_key="bad", base_url=url + "/v1beta", backend="gemini")
+    check(u"Gemini 401 返回可读中文报错", (not ok_err) and "401" in msg_err, msg_err)
+
+    use(FakeOpenAI)
+    st_g = {}
+    url_g = start(st_g)
+    ok_g, data_g, msg_g = image_gen.generate(
+        u"咖啡馆", preset="anime", size="1024x768", api_key="sk-gpt",
+        base_url=url_g, model="gpt-image-1", negative_prompt=u"模糊", seed=7, backend="gpt",
+    )
+    check(u"GPT gpt-image-1 出图成功", ok_g and data_g and base64.b64decode(data_g["b64"]) == PNG, msg_g)
+    gb = st_g["calls"][0]["body"]
+    check(u"gpt-image-1 不传 response_format / negative_prompt / seed",
+          "response_format" not in gb and "negative_prompt" not in gb and "seed" not in gb, str(gb))
+    check(u"gpt-image-1 把 1024x768 映射为 1536x1024 且并入 Avoid 约束",
+          gb["size"] == "1536x1024" and u"Avoid: 模糊" in gb["prompt"], str(gb))
+
+
 def test_dispatch():
     print(u"\n== ⑧ 分发：预设表可整体替换 ==")
     use(FakeOpenAI)
@@ -641,6 +720,7 @@ def main():
         test_sdwebui()
         test_comfyui()
         test_pollinations()
+        test_gemini_and_gpt()
         test_dispatch()
         test_web_bridge()
     finally:

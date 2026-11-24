@@ -101,7 +101,8 @@ class ImageGenService(object):
     def quick_test(self):
         """给设置面板/自检看的一句话提示"""
         return ("生图引擎就绪。端点决定后端（也可在「生图后端」里手选）：OpenAI 兼容"
-                "（硅基流动/智谱…需 Key）· https://image.pollinations.ai（免 Key 免费，有限流）· "
+                "（硅基流动/智谱…需 Key）· Google Gemini / Imagen（需 Key）· "
+                "OpenAI GPT Image（需 Key）· https://image.pollinations.ai（免 Key 免费，有限流）· "
                 "http://127.0.0.1:7860（本地 A1111/Forge）· http://127.0.0.1:8188（本地 ComfyUI）")
 
     # ---------------------------------------------------------------- 预设
